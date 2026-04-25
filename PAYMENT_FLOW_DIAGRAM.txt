@@ -1,0 +1,382 @@
+# Payment Flow Diagram (Text-based)
+
+## Complete Payment Lifecycle
+
+```
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                          PAYMENT FLOW COMPLETE LIFECYCLE                       │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+PHASE 1: CHECKOUT
+═══════════════════════════════════════════════════════════════════════════════
+
+    ┌─────────────────────┐
+    │   User in App       │
+    │  (Adds to cart)     │
+    └──────────┬──────────┘
+               │
+               ├─→ Cart items
+               ├─→ Discount applied
+               └─→ Total calculated
+               │
+    ┌──────────▼──────────┐
+    │  CHECKOUT REQUEST   │
+    │  POST /checkout     │
+    └──────────┬──────────┘
+               │
+    ┌──────────▼──────────────────────┐
+    │   1. Validate cart              │
+    │   2. Re-fetch current prices    │
+    │   3. Calculate totals (server)  │
+    │   4. Check stock availability   │
+    └──────────┬──────────────────────┘
+               │
+    ┌──────────▼──────────────────────┐
+    │   5. LOCK STOCK (Atomic)        │
+    │      reserved += qty            │
+    │      Condition: avail >= qty    │
+    └──────────┬──────────────────────┘
+               │
+    ┌──────────▼──────────────────────┐
+    │   6. Create Order (PENDING)     │
+    │      Items: snapshot            │
+    │      Pricing: snapshot          │
+    │      Status: PENDING            │
+    └──────────┬──────────────────────┘
+               │
+    ┌──────────▼──────────────────────┐
+    │   7. Create Payment             │
+    │      Amount: locked to order    │
+    │      Status: pending            │
+    │      expires_at: 30 min         │
+    └──────────┬──────────────────────┘
+               │
+    ┌──────────▼──────────────────────┐
+    │   8. Generate Payment URL       │
+    │      Call VNPay API             │
+    │      Get payment session/URL    │
+    └──────────┬──────────────────────┘
+               │
+    ┌──────────▼──────────────────────┐
+    │  RESPONSE to Client             │
+    │  { paymentId, payment, URL }    │
+    └──────────┬──────────────────────┘
+               │
+    ┌──────────▼──────────────────────┐
+    │  STOCK STATE AFTER CHECKOUT:    │
+    │  available: -100                │
+    │  reserved:  +100  ← LOCKED      │
+    │  sold:       0                  │
+    └─────────────────────────────────┘
+
+
+PHASE 2: PAYMENT (User on VNPay)
+═══════════════════════════════════════════════════════════════════════════════
+
+    ┌─────────────────────────────┐
+    │  User redirected to VNPay   │
+    │  (Enters payment info)      │
+    └──────────┬──────────────────┘
+               │
+               ├─→ User completes payment ✅
+               │   └─→ VNPay server processes
+               │
+               └─→ User cancels ❌
+                   └─→ VNPay server rejects
+
+
+PHASE 3A: RETURN URL (Browser Redirect)
+═══════════════════════════════════════════════════════════════════════════════
+⚠️  IMPORTANT: DISPLAY ONLY, NOT TRUSTED
+
+    ┌────────────────────────────────────────┐
+    │  VNPay Auto-Redirects to Return URL    │
+    │  GET /api/v1/payments/vnpay-return     │
+    │  ?vnp_ResponseCode=XX&...              │
+    └──────────┬─────────────────────────────┘
+               │
+    ┌──────────▼──────────────────────────────┐
+    │  handleVNPayReturn() Handler            │
+    │  ┌────────────────────────────────────┐ │
+    │  │ if (code === '00') {               │ │
+    │  │   redirect(/checkout/success)      │ │
+    │  │ } else {                           │ │
+    │  │   redirect(/checkout/failed)       │ │
+    │  │ }                                  │ │
+    │  │                                    │ │
+    │  │ // ⚠️ NEVER update database!      │ │
+    │  │ // ⚠️ Return URL can be spoofed!  │ │
+    │  └────────────────────────────────────┘ │
+    └──────────┬──────────────────────────────┘
+               │
+    ┌──────────▼──────────────────────┐
+    │  302 Redirect to Frontend       │
+    │  /checkout/success (or failed)  │
+    │                                 │
+    │  User can check real status:    │
+    │  GET /api/v1/payments/:id       │
+    └─────────────────────────────────┘
+
+
+PHASE 3B: IPN WEBHOOK (Server-to-Server) ⭐ SOURCE OF TRUTH
+═══════════════════════════════════════════════════════════════════════════════
+✅ TRUSTED SOURCE (signature verified)
+
+    ┌────────────────────────────────────────┐
+    │  VNPay Server Callback (IPN)           │
+    │  POST /api/v1/payments/webhook/vnpay   │
+    │  { vnp_ResponseCode, vnp_Amount, ... } │
+    └──────────┬─────────────────────────────┘
+               │
+    ┌──────────▼──────────────────────────────┐
+    │  1. Verify Webhook Signature (HMAC)     │
+    │     Invalid? → Return 400, stop         │
+    └──────────┬──────────────────────────────┘
+               │
+    ┌──────────▼──────────────────────────────┐
+    │  2. Find Payment by vnp_TxnRef          │
+    │     Not found? → Return 404, stop       │
+    └──────────┬──────────────────────────────┘
+               │
+    ┌──────────▼──────────────────────────────┐
+    │  3. Verify Amount Matches Order         │
+    │     Mismatch? → Return 409, stop        │
+    └──────────┬──────────────────────────────┘
+               │
+    ┌──────────▼──────────────────────────────┐
+    │  4. Check Idempotency                   │
+    │     if (payment.status != 'pending')    │
+    │       Already processed → Return 200    │
+    │       Log: payment_success_idempotent   │
+    └──────────┬──────────────────────────────┘
+               │
+               ├─→ SUCCESS (ResponseCode = 00)
+               │   │
+               │   ┌──────────────────────────────────┐
+               │   │ 5a. Update Payment               │
+               │   │     status: paid                 │
+               │   │     verified: true               │
+               │   │     paid_at: now                 │
+               │   └──────────┬───────────────────────┘
+               │              │
+               │   ┌──────────▼───────────────────────┐
+               │   │ 6a. Update Order                 │
+               │   │     status: CONFIRMED            │
+               │   │     payment.status: PAID         │
+               │   └──────────┬───────────────────────┘
+               │              │
+               │   ┌──────────▼───────────────────────┐
+               │   │ 7a. FINALIZE STOCK ⭐ NEW!       │
+               │   │     for each item:               │
+               │   │       qty = qty_ordered * sz     │
+               │   │       reserved -= qty            │
+               │   │       sold += qty                │
+               │   │       Log: stock_finalized       │
+               │   │     Error? Throw, stop           │
+               │   └──────────┬───────────────────────┘
+               │              │
+               │   ┌──────────▼───────────────────────┐
+               │   │ 8a. Log Success                  │
+               │   │     event: payment_success       │
+               │   │     payment_id, order_id, etc    │
+               │   └──────────┬───────────────────────┘
+               │              │
+               │   ┌──────────▼───────────────────────┐
+               │   │ 9a. Return 200 OK to VNPay       │
+               │   │     { RspCode: '00', ... }       │
+               │   └──────────────────────────────────┘
+               │
+               └─→ FAILED (ResponseCode != 00)
+                   │
+                   ┌──────────────────────────────────┐
+                   │ 5b. Update Payment               │
+                   │     status: failed               │
+                   │     verified: true               │
+                   │     failure_reason: ...          │
+                   └──────────┬───────────────────────┘
+                              │
+                   ┌──────────▼───────────────────────┐
+                   │ 6b. Update Order                 │
+                   │     status: CANCELLED            │
+                   │     payment.status: FAILED       │
+                   └──────────┬───────────────────────┘
+                              │
+                   ┌──────────▼───────────────────────┐
+                   │ 7b. RELEASE STOCK                │
+                   │     for each item:               │
+                   │       qty = qty_ordered * sz     │
+                   │       reserved -= qty            │
+                   │       available += qty           │
+                   │       Log: stock_released        │
+                   │     Error? Abort transaction     │
+                   └──────────┬───────────────────────┘
+                              │
+                   ┌──────────▼───────────────────────┐
+                   │ 8b. Log Failure                  │
+                   │     event: payment_failed        │
+                   │     reason, code, etc            │
+                   └──────────┬───────────────────────┘
+                              │
+                   ┌──────────▼───────────────────────┐
+                   │ 9b. Return 200 OK to VNPay       │
+                   │     { RspCode: '00', ... }       │
+                   │     (Always 200 for webhook)     │
+                   └──────────────────────────────────┘
+
+
+PHASE 4: FINAL STOCK STATE
+═══════════════════════════════════════════════════════════════════════════════
+
+AFTER PAYMENT SUCCESS:
+┌─────────────────────────────────────┐
+│  Stock State (after finalization)   │
+│  available:  ORIGINAL - qty         │
+│  reserved:   0                      │
+│  sold:       qty        ← PERMANENT │
+│  total:      ORIGINAL               │
+└─────────────────────────────────────┘
+
+AFTER PAYMENT FAILED:
+┌─────────────────────────────────────┐
+│  Stock State (after release)        │
+│  available:  ORIGINAL               │
+│  reserved:   0                      │
+│  sold:       0                      │
+│  total:      ORIGINAL               │
+└─────────────────────────────────────┘
+
+
+PHASE 5: FULFILLMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+    ┌─────────────────────────────────────────┐
+    │  Order Status: CONFIRMED                │
+    │  Payment Status: PAID                   │
+    │  Stock Status: SOLD                     │
+    └──────────┬──────────────────────────────┘
+               │
+    ┌──────────▼──────────────────────────────┐
+    │  Admin Packing & Shipment               │
+    │  (Update order status: SHIPPING)        │
+    │  (Stock remains: SOLD)                  │
+    └──────────┬──────────────────────────────┘
+               │
+    ┌──────────▼──────────────────────────────┐
+    │  Customer Receives Order                │
+    │  (Update order status: COMPLETED)       │
+    │  (Stock remains: SOLD - now fulfilled)  │
+    └─────────────────────────────────────────┘
+
+
+DATA FLOW SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+Request Flow:
+   Client
+     ↓
+   payment.controller.js (asyncHandler wrapped)
+     ↓
+   payment.service.js (business logic)
+     ↓
+   payment.model.js + variant.model.js (DB operations)
+     ↓
+   payment.mapper.js (DTO transformation)
+     ↓
+   Response (JSON)
+
+Error Handling:
+   Any error → asyncHandler catches → errorHandler middleware
+     ↓
+   AppError response with code + message
+
+Logging:
+   logger.info() / logger.error() → console (JSON)
+     ↓
+   Can be aggregated: ELK, Datadog, CloudWatch
+
+
+CRITICAL CONTROL POINTS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Stock Checkout:
+   ✅ Condition: stock.available >= qty
+   ✅ Atomic: updateOne with $gte
+   ✅ Prevents: Overselling
+
+2. Stock Finalization:
+   ✅ Trigger: After payment success (IPN)
+   ✅ Atomic: updateOne with $gte
+   ✅ Prevents: Double finalization
+
+3. Stock Release:
+   ✅ Trigger: After payment failure (IPN)
+   ✅ Atomic: Transaction with session
+   ✅ Prevents: Orphaned reserved stock
+
+4. Idempotency:
+   ✅ Guard: status = 'pending' check
+   ✅ Result: Same IPN = same result
+   ✅ Prevents: Double payment processing
+
+5. Return URL:
+   ✅ Guard: No DB updates
+   ✅ Source: Redirect only
+   ✅ Prevents: Unauthorized state changes
+```
+
+---
+
+## State Transitions
+
+```
+PAYMENT STATES:
+pending ──(IPN success)──→ paid
+  └──(IPN failure)──→ failed
+  └──(user cancel)──→ failed
+  └──(timeout 30m)──→ expired
+
+ORDER STATES:
+PENDING ──(payment success IPN)──→ CONFIRMED
+  └──(payment failure IPN)──→ CANCELLED
+  └──(timeout)──→ CANCELLED
+
+STOCK STATES:
+available ──(checkout)──→ reserved
+             └──(IPN success)──→ sold
+             └──(IPN failure)──→ available
+```
+
+---
+
+## Message Sequence Chart
+
+```
+User          Frontend      Backend       VNPay
+ │               │             │           │
+ │─(click pay)──→│             │           │
+ │               │─(create payment)──→     │
+ │               │             │─(API)──→  │
+ │               │←(paymentURL)│           │
+ │←(redirect URL)│             │           │
+ │────(go to VNPay)───────────────────────→│
+ │                             │           │
+ │               (User enters payment)     │
+ │                             │           │
+ │←───(auto redirect)────────←(return URL) │
+ │               │             │           │
+ │(Check status) │             │           │
+ │               │─(GET /payments/:id)──→  │
+ │               │←────(status)───────     │
+ │               │             │           │
+ │               │      ↓ (Meanwhile)      │
+ │               │      ↓ (IPN Webhook)    │
+ │               │             │←(IPN)────│
+ │               │             │(verify sig)
+ │               │             │(update DB)
+ │               │             │(finalize stock)
+ │               │             │(log events)
+ │               │             │(return 200)───→│
+ │               │             │                │
+ │               │─(GET /payments/:id again)─→  │
+ │               │←────(PAID)───────────────     │
+```
