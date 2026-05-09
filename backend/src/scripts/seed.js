@@ -4,7 +4,7 @@ const bcrypt = require("bcryptjs");
 
 const User = require("../modules/users/user.model");
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGO_URI;
 const BCRYPT_SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 
 if (!MONGODB_URI) {
@@ -13,13 +13,13 @@ if (!MONGODB_URI) {
 
 const seedUsers = [
     {
-        email: "admin@example.com",
+        email: "khoiphamvk123@gmail.com",
         password: process.env.SEED_ADMIN_PASSWORD || "Admin@123",
         roles: ["ADMIN"],
         profile: { full_name: "System Admin" },
     },
     {
-        email: "manager@example.com",
+        email: "anhkhoivk8939@gmail.com",
         password: process.env.SEED_MANAGER_PASSWORD || "Manager@123",
         roles: ["MANAGER"],
         profile: { full_name: "Manager User" },
@@ -28,7 +28,9 @@ const seedUsers = [
 
 const run = async () => {
     try {
-        await mongoose.connect(MONGODB_URI);
+        await mongoose.connect(MONGODB_URI, {
+            dbName: process.env.MONGODB_DB_NAME || "nguyenlien_db"
+        });
         console.log("✓ MongoDB connected");
 
         for (const user of seedUsers) {
@@ -60,6 +62,7 @@ const run = async () => {
     } finally {
         await mongoose.disconnect();
         console.log("✓ MongoDB disconnected");
+        console.log("DB NAME:", mongoose.connection.name);
     }
 };
 

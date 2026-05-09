@@ -10,7 +10,6 @@ const hashToken = (rawToken) =>
  * @param {Object} data - { user_id, jti, token_hash, user_agent, ip_address, is_revoked }
  */
 const createRefreshToken = async (data) => {
-    // ✅ FIX #1: Accept flexible input (auth.service passes token_hash already)
     const tokenData = {
         user_id: data.user_id,
         jti: data.jti,
@@ -18,9 +17,8 @@ const createRefreshToken = async (data) => {
         user_agent: data.user_agent || "",
         ip_address: data.ip_address || "",
         is_revoked: data.is_revoked ?? false,
-        expires_at: data.expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        expires_at: data.expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     };
-
     try {
         return await RefreshToken.create(tokenData);
     } catch (error) {
@@ -36,9 +34,8 @@ const createRefreshToken = async (data) => {
  */
 const findByJti = async (jti) => {
     if (!jti) {
-        throw new AppError("JTI required", 400, "VALIDATION_ERROR");
+        throw new AppError("JTI is required", 400, "JTI_REQUIRED");
     }
-
     return RefreshToken.findOne({ jti });
 };
 
@@ -50,12 +47,10 @@ const findByJti = async (jti) => {
  */
 const revokeByJti = async (jti, reason = "manual", replacedByJti = null) => {
     if (!jti) {
-        throw new AppError("JTI required", 400, "VALIDATION_ERROR");
+        throw new AppError("JTI is required", 400, "JTI_REQUIRED");
     }
-
-    // ✅ FIX #2: Use findOneAndUpdate to return updated doc
     const updated = await RefreshToken.findOneAndUpdate(
-        { jti, is_revoked: false }, // Only revoke if not already revoked
+        { jti, is_revoked: false },
         {
             $set: {
                 is_revoked: true,
@@ -66,15 +61,9 @@ const revokeByJti = async (jti, reason = "manual", replacedByJti = null) => {
         },
         { new: true }
     );
-
-    // ✅ FIX #3: Log if token not found or already revoked
     if (!updated) {
-        console.warn("[token.service.revokeByJti] Token already revoked or not found", {
-            jti,
-            reason,
-        });
+        console.warn("[token.service.revokeByJti] Token already revoked or not found", { jti, reason });
     }
-
     return updated;
 };
 
@@ -117,19 +106,12 @@ const revokeAllByUser = async (userId, reason = "security") => {
  */
 const verifyTokenVersion = async (userId, tokenVersion) => {
     const user = await require("../../users/user.model").findById(userId).select("+token_version");
-
     if (!user) {
         throw new AppError("User not found", 404, "USER_NOT_FOUND");
     }
-
     if (user.token_version !== tokenVersion) {
-        throw new AppError(
-            "Token version mismatch - session invalidated",
-            401,
-            "TOKEN_REVOKED"
-        );
+        throw new AppError("Token version mismatch - session invalidated", 401, "TOKEN_VERSION_MISMATCH");
     }
-
     return true;
 };
 

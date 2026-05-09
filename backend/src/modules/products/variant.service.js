@@ -20,67 +20,46 @@ class VariantService {
     static async createVariant(productId, data) {
         const { size, fabric_type, stock, ...rest } = data;
 
-        // ✅ Check product exists
         const product = await Product.findById(productId);
         if (!product) {
-            throw new AppError(
-                'Product not found',
-                404,
-                'PRODUCT_NOT_FOUND'
-            );
+            throw new AppError('Product not found', 404);
         }
 
-        // ✅ FIX #4: Generate + validate SKU
-        const sku = VariantService.generateSKU(
-            product.slug,
-            size,
-            fabric_type
-        );
+        const sku = VariantService.generateSKU(product.slug, size, fabric_type);
 
-        // ✅ Check SKU unique
         const existingSKU = await Variant.findOne({ sku });
         if (existingSKU) {
-            throw new AppError(
-                'SKU already exists',
-                409,
-                'SKU_CONFLICT'
-            );
+            throw new AppError('SKU exists', 409);
         }
 
-        // ✅ FIX #5: Check size + fabric combination unique
         const existingCombo = await Variant.findOne({
             product_id: productId,
             size,
-            fabric_type,
+            fabric_type
         });
         if (existingCombo) {
-            throw new AppError(
-                'Variant (size + fabric) combination already exists',
-                409,
-                'VARIANT_CONFLICT'
-            );
+            throw new AppError('Variant exists', 409);
         }
 
-        // ✅ FIX #2: Stock format validation
-        const initialStock = {
-            available: stock?.available || 0,
-            reserved: 0,
-            sold: 0,
-        };
+        const available = stock?.available || 0;
+        if (available < 0) {
+            throw new AppError('Stock cannot be negative', 400);
+        }
 
         const variant = new Variant({
             product_id: productId,
             sku,
             size,
             fabric_type,
-            stock: initialStock,
-            ...rest,
+            stock: {
+                available,
+                reserved: 0,
+                sold: 0
+            },
+            ...rest
         });
 
         await variant.save();
-
-        // ✅ FIX #3: Update product price cache (no variants yet, will be 0)
-        await ProductService.recalcuatePriceCache(productId);
 
         return VariantMapper.toResponseDTO(variant);
     }
@@ -92,7 +71,10 @@ class VariantService {
      * @returns {Object} Variant DTO with units
      */
     static async getVariantById(variantId) {
-        const variant = await Variant.findById(variantId).lean();
+        const variant = await Variant.findOne({
+            _id: variantId,
+            is_deleted: false
+        }).lean();
         if (!variant) {
             throw new AppError(
                 'Variant not found',
@@ -103,6 +85,7 @@ class VariantService {
 
         const units = await VariantUnit.find({
             variant_id: variantId,
+            // is_deleted: false (nếu có)
         }).lean();
 
         return VariantMapper.toDetailDTO(variant, units);
@@ -115,20 +98,33 @@ class VariantService {
      * @returns {Array} Variant DTOs with units
      */
     static async getVariantsByProduct(productId) {
-        const variants = await Variant.find({
-            product_id: productId,
-        }).lean();
+        const variants = await Variant.aggregate([
+            {
+                $match: {
+                    product_id: new mongoose.Types.ObjectId(productId),
+                    is_deleted: false
+                }
+            },
+            {
+                $lookup: {
+                    from: 'variantunits',
+                    let: { variantId: '$_id' },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ['$variant_id', '$$variantId'] },
+                                is_deleted: false // nếu có field này
+                            }
+                        }
+                    ],
+                    as: 'units'
+                }
+            }
+        ]);
 
-        const variantsWithUnits = await Promise.all(
-            variants.map(async (variant) => {
-                const units = await VariantUnit.find({
-                    variant_id: variant._id,
-                }).lean();
-                return VariantMapper.toDetailDTO(variant, units);
-            })
+        return variants.map(v =>
+            VariantMapper.toDetailDTO(v, v.units)
         );
-
-        return variantsWithUnits;
     }
 
     /**
@@ -158,35 +154,21 @@ class VariantService {
             );
         }
 
-        // ✅ FIX #5: If updating size/fabric, check combo still unique
-        if (
-            (updateData.size || updateData.fabric_type) &&
-            (updateData.size !== variant.size ||
-                updateData.fabric_type !== variant.fabric_type)
-        ) {
-            const newSize = updateData.size || variant.size;
-            const newFabric = updateData.fabric_type || variant.fabric_type;
+        const allowedFields = ['status'];
 
-            const existingCombo = await Variant.findOne({
-                _id: { $ne: variantId },
-                product_id: variant.product_id,
-                size: newSize,
-                fabric_type: newFabric,
-            });
+        const sanitizedUpdate = {};
 
-            if (existingCombo) {
-                throw new AppError(
-                    'Variant (size + fabric) combination already exists',
-                    409,
-                    'VARIANT_CONFLICT'
-                );
+        for (const key of Object.keys(updateData)) {
+            if (!allowedFields.includes(key)) {
+                throw new AppError(`Field ${key} is not allowed to update`, 400);
             }
+            sanitizedUpdate[key] = updateData[key];
         }
 
         try {
             const updated = await Variant.findByIdAndUpdate(
                 variantId,
-                { $set: updateData },
+                { $set: sanitizedUpdate },
                 { new: true, runValidators: true }
             );
 
@@ -204,44 +186,41 @@ class VariantService {
      */
     static async deleteVariant(variantId) {
         const session = await mongoose.startSession();
-        session.startTransaction();
 
         try {
-            const variant = await Variant.findById(variantId).session(
-                session
-            );
-            if (!variant) {
-                throw new AppError(
-                    'Variant not found',
-                    404,
-                    'VARIANT_NOT_FOUND'
+            let productId = null;
+
+            await session.withTransaction(async () => {
+                const variant = await Variant.findById(variantId).session(session);
+
+                if (!variant) {
+                    throw new AppError('Variant not found', 404);
+                }
+
+                productId = variant.product_id;
+
+                await Variant.updateOne(
+                    { _id: variantId },
+                    {
+                        is_deleted: true,
+                        deleted_at: new Date()
+                    },
+                    { session }
                 );
-            }
+            });
 
-            // ✅ Soft-delete variant
-            await Variant.updateOne(
-                { _id: variantId },
-                {
-                    is_deleted: true,
-                    deleted_at: new Date(),
-                },
-                { session }
-            );
+            await ProductService.recalcuatePriceCache(productId);
 
-            // ✅ Update product price cache
-            await session.commitTransaction();
-            await ProductService.recalcuatePriceCache(variant.product_id);
-
-            return {
-                message: 'Variant deleted successfully (soft delete)',
-                variantId,
-            };
-        } catch (error) {
-            await session.abortTransaction();
-            throw error;
+        } catch (err) {
+            console.error('Delete variant failed:', err);
+            throw err;
         } finally {
             session.endSession();
         }
+        return {
+            message: 'Variant deleted successfully',
+            variantId
+        };
     }
 
     /**
@@ -254,11 +233,13 @@ class VariantService {
      * @returns {Boolean} True if stock available
      */
     static async hasStock(variantId, qtyItems) {
-        return await Variant.hasStock(
-            variantId,
-            Math.ceil(qtyItems / 100), // Convert to packs (rough estimate)
-            100 // assuming 100 items per pack
-        );
+        const variant = await Variant.findById(variantId, 'stock');
+
+        if (!variant) {
+            throw new AppError('Variant not found', 404);
+        }
+
+        return variant.stock.available >= qtyItems;
     }
 
     /**
@@ -268,8 +249,31 @@ class VariantService {
      * @param {Number} qtyItems - Số cái
      * @returns {Object} Updated stock
      */
-    static async reserveStock(variantId, qtyItems) {
-        return await Variant.reserveStock(variantId, qtyItems);
+    static async reserveStock(variantId, qty_items) {
+        if (qty_items <= 0) {
+            throw new AppError('Quantity must be > 0', 400);
+        }
+        const variant = await Variant.findOneAndUpdate(
+            {
+                _id: variantId,
+                'stock.available': { $gte: qty_items }, // check đủ hàng
+            },
+            {
+                $inc: {
+                    'stock.available': -qty_items,
+                    'stock.reserved': qty_items,
+                },
+            },
+            { new: true }
+        );
+
+
+
+        if (!variant) {
+            throw new AppError('Not enough stock', 400);
+        }
+
+        return variant;
     }
 
     /**
@@ -279,8 +283,28 @@ class VariantService {
      * @param {Number} qtyItems
      * @returns {Object} Updated stock
      */
-    static async completeSale(variantId, qtyItems) {
-        return await Variant.completeSale(variantId, qtyItems);
+    static async completeSale(variantId, qty_items) {
+        if (qty_items <= 0) {
+            throw new AppError('Quantity must be > 0', 400);
+        }
+        const variant = await Variant.findOneAndUpdate(
+            {
+                _id: variantId,
+                'stock.reserved': { $gte: qty_items }
+            },
+            {
+                $inc: {
+                    'stock.reserved': -qty_items,
+                    'stock.sold': qty_items,
+                },
+            },
+            { new: true }
+        );
+
+        if (!variant) {
+            throw new AppError('Invalid reserved stock', 400);
+        }
+        return variant;
     }
 
     /**
@@ -290,8 +314,28 @@ class VariantService {
      * @param {Number} qtyItems
      * @returns {Object} Updated stock
      */
-    static async releaseReservedStock(variantId, qtyItems) {
-        return await Variant.releaseReservedStock(variantId, qtyItems);
+    static async releaseReservedStock(variantId, qty_items) {
+        if (qty_items <= 0) {
+            throw new AppError('Quantity must be > 0', 400);
+        }
+        const variant = await Variant.findOneAndUpdate(
+            {
+                _id: variantId,
+                'stock.reserved': { $gte: qty_items }
+            },
+            {
+                $inc: {
+                    'stock.reserved': -qty_items,
+                    'stock.available': qty_items,
+                },
+            },
+            { new: true }
+        );
+
+        if (!variant) {
+            throw new AppError('Invalid reserved stock', 400);
+        }
+        return variant;
     }
 
     /**
@@ -327,7 +371,10 @@ class VariantService {
      * @returns {String} Generated SKU
      */
     static generateSKU(productSlug, size, fabricType) {
-        const slugify = (str) => str.toUpperCase().replace(/\s+/g, '');
+        const slugify = (str) =>
+            str
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '')
 
         return `${slugify(productSlug)}-${slugify(size)}-${slugify(fabricType)}`;
     }
@@ -341,17 +388,18 @@ class VariantService {
      * @param {Number} packSize
      * @returns {Number} Max quantity of packs user can order
      */
-    static async getMaxOrderQty(variantId, packSize = 100) {
+    static async getMaxOrderQty(variantId) {
         const variant = await Variant.findById(variantId, 'stock');
-        if (!variant) {
-            throw new AppError(
-                'Variant not found',
-                404,
-                'VARIANT_NOT_FOUND'
-            );
-        }
+        if (!variant) return 0;
 
-        return Math.floor(variant.stock.available / packSize);
+        const unit = await VariantUnit.findOne({
+            variant_id: variantId,
+            is_default: true
+        });
+
+        if (!unit) return 0;
+
+        return Math.floor(variant.stock.available / unit.pack_size);
     }
 }
 

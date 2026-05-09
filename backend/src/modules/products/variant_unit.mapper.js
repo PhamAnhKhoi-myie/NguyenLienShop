@@ -30,7 +30,10 @@ class VariantUnitMapper {
             pack_size: doc.pack_size,
 
             // ✅ FIX #1: Price tiers (critical)
-            price_tiers: this.transformPriceTiers(doc.price_tiers || []),
+            price_tiers: this.transformPriceTiers(
+                doc.price_tiers || [],
+                doc.pack_size
+            ),
 
             // ✅ Order rules
             min_order_qty: doc.min_order_qty || 1,
@@ -238,27 +241,20 @@ class VariantUnitMapper {
      * - price_per_unit = unit_price / pack_size
      * - price_range_label
      */
-    static transformPriceTiers(priceTiers) {
+    static transformPriceTiers(priceTiers, packSize) {
         if (!Array.isArray(priceTiers) || priceTiers.length === 0) {
             return [];
         }
 
-        return priceTiers.map((tier, index) => {
-            const packSize = 100; // ⚠️ This should come from parent unit!
-            // Better approach: pass packSize as parameter (below)
-
-            return {
-                tier_number: index + 1,
-                min_qty: tier.min_qty,
-                max_qty: tier.max_qty,
-                unit_price: tier.unit_price,
-
-                // ✅ Range label (for UI)
-                qty_range: this.formatQtyRange(tier.min_qty, tier.max_qty),
-            };
-        });
+        return priceTiers.map((tier, index) => ({
+            tier_number: index + 1,
+            min_qty: tier.min_qty,
+            max_qty: tier.max_qty,
+            unit_price: tier.unit_price,
+            price_per_unit: Math.round(tier.unit_price / packSize), // ✅ FIX
+            qty_range: this.formatQtyRange(tier.min_qty, tier.max_qty),
+        }));
     }
-
     /**
      * ✅ Helper: Transform price tiers WITH pack_size
      * 

@@ -4599,6 +4599,8 @@ const swaggerSpec = {
         },
     },
     paths: {
+
+        // Auth
         "/api/v1/auth/register": {
             post: {
                 tags: ["Auth"],
@@ -4708,6 +4710,8 @@ const swaggerSpec = {
                 },
             },
         },
+
+        // User
         "/api/v1/users/me": {
             get: {
                 tags: ["Users"],
@@ -4868,6 +4872,8 @@ const swaggerSpec = {
                 },
             },
         },
+
+        // User Address
         "/api/v1/user-addresses": {
             post: {
                 tags: ["User Addresses"],
@@ -4895,37 +4901,51 @@ const swaggerSpec = {
                     "500": { $ref: "#/components/responses/InternalError" },
                 },
             },
-        },
-        "/api/v1/user-addresses/{userId}": {
             get: {
                 tags: ["User Addresses"],
-                summary: "Get all addresses for a user",
+                summary: "Get current user's addresses",
+                security: [{ bearerAuth: [] }],
+                responses: {
+                    "200": {
+                        description: "OK",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/UserAddressListResponse" }
+                            }
+                        }
+                    },
+                    "401": { $ref: "#/components/responses/Unauthorized" }
+                }
+            }
+        },
+        "/api/v1/user-addresses/user/{userId}": {
+            get: {
+                tags: ["User Addresses"],
+                summary: "Get addresses by userId (Admin only)",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
                         in: "path",
                         name: "userId",
                         required: true,
-                        schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                        description: "User ID",
-                    },
+                        schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" }
+                    }
                 ],
                 responses: {
                     "200": {
                         description: "OK",
                         content: {
                             "application/json": {
-                                schema: { $ref: "#/components/schemas/UserAddressListResponse" },
-                            },
-                        },
+                                schema: { $ref: "#/components/schemas/UserAddressListResponse" }
+                            }
+                        }
                     },
                     "401": { $ref: "#/components/responses/Unauthorized" },
-                    "403": { $ref: "#/components/responses/Forbidden" },
-                    "404": { $ref: "#/components/responses/NotFound" },
-                },
-            },
+                    "403": { $ref: "#/components/responses/Forbidden" }
+                }
+            }
         },
-        "/api/v1/user-addresses/{userId}/{addressId}": {
+        "/api/v1/user-addresses/{addressId}": {
             patch: {
                 tags: ["User Addresses"],
                 summary: "Update an address",
@@ -4933,39 +4953,24 @@ const swaggerSpec = {
                 parameters: [
                     {
                         in: "path",
-                        name: "userId",
-                        required: true,
-                        schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                    },
-                    {
-                        in: "path",
                         name: "addressId",
                         required: true,
-                        schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                    },
+                        schema: { type: "string" }
+                    }
                 ],
                 requestBody: {
                     required: true,
                     content: {
                         "application/json": {
-                            schema: { $ref: "#/components/schemas/UpdateUserAddressInput" },
-                        },
-                    },
+                            schema: { $ref: "#/components/schemas/UpdateUserAddressInput" }
+                        }
+                    }
                 },
                 responses: {
                     "200": {
-                        description: "OK",
-                        content: {
-                            "application/json": {
-                                schema: { $ref: "#/components/schemas/UpdateUserAddressResponse" },
-                            },
-                        },
-                    },
-                    "400": { $ref: "#/components/responses/BadRequest" },
-                    "401": { $ref: "#/components/responses/Unauthorized" },
-                    "403": { $ref: "#/components/responses/Forbidden" },
-                    "404": { $ref: "#/components/responses/NotFound" },
-                },
+                        description: "OK"
+                    }
+                }
             },
             delete: {
                 tags: ["User Addresses"],
@@ -4974,33 +4979,19 @@ const swaggerSpec = {
                 parameters: [
                     {
                         in: "path",
-                        name: "userId",
-                        required: true,
-                        schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                    },
-                    {
-                        in: "path",
                         name: "addressId",
                         required: true,
-                        schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                    },
+                        schema: { type: "string" }
+                    }
                 ],
                 responses: {
                     "200": {
-                        description: "OK",
-                        content: {
-                            "application/json": {
-                                schema: { $ref: "#/components/schemas/DeleteUserAddressResponse" },
-                            },
-                        },
-                    },
-                    "401": { $ref: "#/components/responses/Unauthorized" },
-                    "403": { $ref: "#/components/responses/Forbidden" },
-                    "404": { $ref: "#/components/responses/NotFound" },
-                },
-            },
+                        description: "OK"
+                    }
+                }
+            }
         },
-        "/api/v1/user-addresses/{userId}/{addressId}/set-default": {
+        "/api/v1/user-addresses/{addressId}/set-default": {
             patch: {
                 tags: ["User Addresses"],
                 summary: "Set address as default",
@@ -5008,32 +4999,27 @@ const swaggerSpec = {
                 parameters: [
                     {
                         in: "path",
-                        name: "userId",
-                        required: true,
-                        schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                    },
-                    {
-                        in: "path",
                         name: "addressId",
                         required: true,
-                        schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                    },
+                        schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" }
+                    }
                 ],
                 responses: {
                     "200": {
                         description: "OK",
                         content: {
                             "application/json": {
-                                schema: { $ref: "#/components/schemas/UpdateUserAddressResponse" },
-                            },
-                        },
+                                schema: { $ref: "#/components/schemas/UpdateUserAddressResponse" }
+                            }
+                        }
                     },
                     "401": { $ref: "#/components/responses/Unauthorized" },
-                    "403": { $ref: "#/components/responses/Forbidden" },
-                    "404": { $ref: "#/components/responses/NotFound" },
-                },
-            },
+                    "404": { $ref: "#/components/responses/NotFound" }
+                }
+            }
         },
+
+        // Category
         "/api/v1/categories/tree": {
             get: {
                 tags: ["Categories"],
@@ -5248,7 +5234,7 @@ const swaggerSpec = {
             },
         },
 
-        // ✅ PRODUCT PATHS
+        //PRODUCT PATHS
         "/api/v1/products": {
             get: {
                 tags: ["Products"],

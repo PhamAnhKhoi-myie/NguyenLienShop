@@ -35,7 +35,7 @@ router.get('/:categoryId', getCategoryById);
 router.post(
     '/',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate(createCategorySchema),
     createCategory
 );
@@ -43,7 +43,7 @@ router.post(
 router.patch(
     '/:categoryId',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate(updateCategorySchema),
     updateCategory
 );
@@ -52,7 +52,7 @@ router.patch(
 router.delete(
     '/:categoryId',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     deleteCategory
 );
 

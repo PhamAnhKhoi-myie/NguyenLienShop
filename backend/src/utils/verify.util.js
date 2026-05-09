@@ -1,63 +1,114 @@
 const jwt = require("jsonwebtoken");
-const { getAccessSecret, getRefreshSecret, baseVerifyOptions } = require("../utils/constants.util");
+const AppError = require("../utils/appError.util");
+const {
+    getAccessSecret,
+    getRefreshSecret,
+    baseVerifyOptions,
+} = require("../utils/constants.util");
 
 const verifyAccessToken = (token) => {
     try {
-        const decoded = jwt.verify(token, getAccessSecret(), baseVerifyOptions());
+        const decoded = jwt.verify(
+            token,
+            getAccessSecret(),
+            baseVerifyOptions()
+        );
+
         if (decoded.type !== "access") {
-            const err = new Error("Invalid token type");
-            err.code = "INVALID_TOKEN";
-            throw err;
+            throw new AppError(
+                "Invalid token type",
+                401,
+                "INVALID_TOKEN"
+            );
         }
+
         return decoded;
     } catch (err) {
-        if (err.code === "INVALID_TOKEN") throw err;
+        if (err instanceof AppError) {
+            throw err;
+        }
 
         if (err.name === "TokenExpiredError") {
-            const e = new Error("Token expired");
-            e.code = "TOKEN_EXPIRED";
-            e.name = "TokenExpiredError";
-            throw e;
+            throw new AppError(
+                "Token expired",
+                401,
+                "TOKEN_EXPIRED"
+            );
         }
 
-        if (err.name === "JsonWebTokenError" || err.name === "NotBeforeError") {
-            const e = new Error("Invalid token");
-            e.code = "INVALID_TOKEN";
-            throw e;
+        if (
+            err.name === "JsonWebTokenError" ||
+            err.name === "NotBeforeError"
+        ) {
+            throw new AppError(
+                "Invalid token",
+                401,
+                "INVALID_TOKEN"
+            );
         }
 
-        throw err;
+        throw new AppError(
+            "Token verification failed",
+            401,
+            "TOKEN_VERIFICATION_FAILED"
+        );
     }
 };
 
 const verifyRefreshToken = (token) => {
     try {
-        const decoded = jwt.verify(token, getRefreshSecret(), baseVerifyOptions());
+        const decoded = jwt.verify(
+            token,
+            getRefreshSecret(),
+            baseVerifyOptions()
+        );
 
         if (decoded.type !== "refresh") {
-            throw new jwt.JsonWebTokenError("Invalid token type");
+            throw new AppError(
+                "Invalid refresh token type",
+                401,
+                "INVALID_TOKEN"
+            );
         }
 
         if (!decoded.jti) {
-            throw new jwt.JsonWebTokenError("Missing JTI in token");
+            throw new AppError(
+                "Missing JTI in token",
+                401,
+                "INVALID_TOKEN"
+            );
         }
 
         return decoded;
     } catch (err) {
+        if (err instanceof AppError) {
+            throw err;
+        }
+
         if (err.name === "TokenExpiredError") {
-            const e = new Error("Refresh token expired");
-            e.code = "TOKEN_EXPIRED";
-            e.name = "TokenExpiredError";
-            throw e;
+            throw new AppError(
+                "Refresh token expired",
+                401,
+                "TOKEN_EXPIRED"
+            );
         }
 
-        if (err.name === "JsonWebTokenError" || err.name === "NotBeforeError") {
-            const e = new Error("Invalid refresh token");
-            e.code = "INVALID_TOKEN";
-            throw e;
+        if (
+            err.name === "JsonWebTokenError" ||
+            err.name === "NotBeforeError"
+        ) {
+            throw new AppError(
+                "Invalid refresh token",
+                401,
+                "INVALID_TOKEN"
+            );
         }
 
-        throw err;
+        throw new AppError(
+            "Refresh token verification failed",
+            401,
+            "TOKEN_VERIFICATION_FAILED"
+        );
     }
 };
 

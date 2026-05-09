@@ -8,6 +8,19 @@ const {
     calculatePriceSchema,
     validatePriceTiersSchema,
 } = require('../variant_unit.validator');
+const { authenticate } = require('../../../middlewares/auth.middleware');
+const { authorize } = require('../../../middlewares/authorize.middleware');
+const { validateObjectId } = require('../../../utils/validator.util');
+
+const validateVariantId = (req, res, next) => {
+    validateObjectId(req.params.variantId);
+    next();
+};
+
+const validateUnitId = (req, res, next) => {
+    validateObjectId(req.params.unitId);
+    next();
+};
 
 // ============================================================================
 // ===== VARIANT UNIT ROUTES =====
@@ -19,10 +32,8 @@ const {
  * GET /api/v1/variants/:variantId/units
  * Get all units for a variant
  */
-router.get(
-    '/',
-    variantUnitController.getVariantUnitsByVariant
-);
+router.get('/', validateVariantId, variantUnitController.getVariantUnitsByVariant);
+
 
 /**
  * GET /api/v1/variant-units/default/:variantId
@@ -30,19 +41,15 @@ router.get(
  * 
  * ⚠️ IMPORTANT: This route MUST come before /:unitId
  */
-router.get(
-    '/default/:variantId',
-    variantUnitController.getDefaultVariantUnit
-);
+router.get('/default/:variantId', validateVariantId, variantUnitController.getDefaultVariantUnit);
+
 
 /**
  * GET /api/v1/variant-units/:unitId
  * Get variant unit by ID
  */
-router.get(
-    '/:unitId',
-    variantUnitController.getVariantUnitById
-);
+router.get('/:unitId', validateUnitId, variantUnitController.getVariantUnitById);
+
 
 /**
  * GET /api/v1/variant-units/:unitId/price-tiers
@@ -50,19 +57,15 @@ router.get(
  * 
  * ✅ FIX #1: Returns formatted tier list
  */
-router.get(
-    '/:unitId/price-tiers',
-    variantUnitController.getPriceTierSummary
-);
+router.get('/:unitId/price-tiers', validateUnitId, variantUnitController.getPriceTierSummary);
+
 
 /**
  * GET /api/v1/variant-units/:unitId/max-orderable-qty
  * Get maximum orderable quantity for unit
  */
-router.get(
-    '/:unitId/max-orderable-qty',
-    variantUnitController.getMaxOrderableQty
-);
+router.get('/:unitId/max-orderable-qty', validateUnitId, variantUnitController.getMaxOrderableQty);
+
 
 /**
  * POST /api/v1/variant-units/:unitId/calculate-price
@@ -75,6 +78,7 @@ router.get(
  */
 router.post(
     '/:unitId/calculate-price',
+    validateUnitId,
     validate({ body: calculatePriceSchema }),
     variantUnitController.calculatePrice
 );
@@ -94,6 +98,8 @@ router.post(
  */
 router.post(
     '/validate-tiers',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
     validate({ body: validatePriceTiersSchema }),
     variantUnitController.validatePriceTiers
 );
@@ -115,6 +121,9 @@ router.post(
  */
 router.post(
     '/',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
+    validateVariantId,
     validate({ body: createVariantUnitSchema }),
     variantUnitController.createVariantUnit
 );
@@ -125,6 +134,9 @@ router.post(
  */
 router.patch(
     '/:unitId',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
+    validateUnitId,
     validate({ body: updateVariantUnitSchema }),
     variantUnitController.updateVariantUnit
 );
@@ -135,6 +147,9 @@ router.patch(
  */
 router.delete(
     '/:unitId',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
+    validateUnitId,
     variantUnitController.deleteVariantUnit
 );
 

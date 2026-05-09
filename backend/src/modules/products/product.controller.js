@@ -126,8 +126,11 @@ const getProductBySlug = asyncHandler(async (req, res) => {
 const getProductById = asyncHandler(async (req, res) => {
     validateObjectId(req.params.productId);
 
+    const includeUnits = req.query.include_units === 'true';
+
     const product = await ProductService.getProductById(
-        req.params.productId
+        req.params.productId,
+        { includeUnits }
     );
 
     res.status(200).json({

@@ -177,6 +177,14 @@ const updateVariant = asyncHandler(async (req, res) => {
 
     validateObjectId(req.params.variantId);
 
+    const forbiddenFields = ['size', 'fabric_type', 'sku'];
+
+    for (const field of forbiddenFields) {
+        if (req.body[field] !== undefined) {
+            throw new AppError(`${field} cannot be updated`, 400);
+        }
+    }
+
     // req.body already validated by validate middleware
     const variant = await VariantService.updateVariant(
         req.params.variantId,

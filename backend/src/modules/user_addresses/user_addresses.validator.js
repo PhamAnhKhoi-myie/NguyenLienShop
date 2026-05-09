@@ -20,6 +20,7 @@ const updateUserAddressSchema = z.object({
     city: z.string().min(1).optional(),
     district: z.string().min(1).optional(),
     ward: z.string().min(1).optional(),
+    is_default: z.boolean().optional(),
 });
 
 

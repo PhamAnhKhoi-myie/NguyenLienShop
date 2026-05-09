@@ -27,19 +27,20 @@ const generateAccessToken = (payload) => {
 };
 
 // ✅ FIX #3: Accept plain object for auth.service compatibility
-const generateRefreshToken = (payload, jti = randomUUID()) => {
+const generateRefreshToken = (payload) => {
     // Support both: { userId: "...", jti: "..." } and { _id: ObjectId, jti: "..." }
     const userId = payload.userId || payload._id?.toString?.();
 
     if (!userId) {
         throw new Error("userId or _id required in payload");
     }
+    const jti = payload.jti || randomUUID();
 
     return jwt.sign(
         {
             userId,
-            jti: jti || payload.jti,
-            tokenVersion: payload.tokenVersion || 0, // ✅ Add tokenVersion
+            jti,
+            tokenVersion: payload.tokenVersion || 0,
             type: "refresh",
         },
         getRefreshSecret(),

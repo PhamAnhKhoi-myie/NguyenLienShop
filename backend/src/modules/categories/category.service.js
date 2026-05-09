@@ -18,7 +18,10 @@ class CategoryService {
         }
 
         // Kiểm tra slug tồn tại
-        const existingSlug = await Category.findOne({ slug: finalSlug });
+        const existingSlug = await Category.findOne({
+            slug: finalSlug,
+            is_deleted: { $ne: true }
+        });
         if (existingSlug) {
             throw new AppError('Slug already exists', 409, 'SLUG_CONFLICT');
         }
@@ -163,7 +166,11 @@ class CategoryService {
             // Kiểm tra slug
             if (data.slug && data.slug !== category.slug) {
                 const existingSlug = await Category.findOne(
-                    { slug: data.slug, _id: { $ne: categoryId } }
+                    {
+                        slug: data.slug,
+                        _id: { $ne: categoryId },
+                        is_deleted: { $ne: true }
+                    }
                 ).session(session);
                 if (existingSlug) {
                     throw new AppError('Slug already exists', 409, 'SLUG_CONFLICT');

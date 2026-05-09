@@ -17,6 +17,7 @@ const shopInfoRoutes = require('../modules/shop_info/shop_info.routes');
 const notificationRoutes = require('../modules/notifications/notification.routes');
 const chatRoutes = require('../modules/chats/chat.routes');
 const paymentRoutes = require('../modules/payments/payment.routes');
+const auditLogRoutes = require("../modules/audit_logs/audit_log.routes");
 
 // ============================================================================
 // ===== MOUNT ALL ROUTES =====
@@ -61,6 +62,8 @@ router.use("/notifications", notificationRoutes);
 router.use('/payments', paymentRoutes);
 
 router.use('/chats', chatRoutes);
+
+router.use("/audit-logs", auditLogRoutes);
 
 
 // ✅ Product module routes (contains: products, variants, variant-units)

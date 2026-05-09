@@ -1,10 +1,28 @@
-const errorHandler = (err, req, res, next) => {
-    const statusCode = err.statusCode || 500;
+const AppError = require("../utils/appError.util");
 
-    return res.status(statusCode).json({
-        success: false,
-        code: err.code || "INTERNAL_ERROR",
+const errorHandler = (err, req, res, next) => {
+
+    console.error({
         message: err.message,
+        stack: err.stack,
+        method: req.method,
+        url: req.originalUrl,
+    });
+
+    // Known application error
+    if (err instanceof AppError) {
+        return res.status(err.statusCode).json({
+            success: false,
+            code: err.code,
+            message: err.message,
+        });
+    }
+
+    // Unknown system error
+    return res.status(500).json({
+        success: false,
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Internal server error",
     });
 };
 

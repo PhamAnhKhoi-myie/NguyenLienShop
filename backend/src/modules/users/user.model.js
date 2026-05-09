@@ -76,6 +76,13 @@ const userSchema = new mongoose.Schema(
             default: null,
             select: false,
         },
+
+        deleted_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+            select: false,
+        }
     },
     {
         timestamps: {
@@ -95,15 +102,13 @@ userSchema.index(
         },
     }
 );
-
 userSchema.index(
     { email: 1, deleted_at: 1, status: 1 },
     { partialFilterExpression: { deleted_at: null } }
 );
-
+userSchema.index({ deleted_at: 1 });
 userSchema.index({ status: 1, deleted_at: 1 });
 userSchema.index({ is_email_verified: 1, deleted_at: 1 });
-
 userSchema.index(
     { 'profile.phone_number': 1 },
     {
@@ -115,7 +120,6 @@ userSchema.index(
         },
     }
 );
-
 userSchema.index({ _id: 1, token_version: 1 });
 
 // ===== MIDDLEWARE =====
@@ -133,7 +137,6 @@ userSchema.pre('find', excludeDeleted);
 userSchema.pre('findOne', excludeDeleted);
 userSchema.pre('countDocuments', excludeDeleted);
 userSchema.pre('findOneAndUpdate', excludeDeleted);
-
 userSchema.pre('aggregate', function (next) {
     const pipeline = this.pipeline();
 
@@ -149,7 +152,6 @@ userSchema.pre('aggregate', function (next) {
 
     next();
 });
-
 userSchema.pre('save', function (next) {
     if (this.email) {
         this.email = this.email.toLowerCase().trim();

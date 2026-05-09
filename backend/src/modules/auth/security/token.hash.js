@@ -1,4 +1,3 @@
-// filepath: e:\MyEffort\NguyenLien\backend\src\modules\auth\security\token.hash.js
 const { hashToken } = require('../../../utils/crypto.util');
 
 class TokenHash {

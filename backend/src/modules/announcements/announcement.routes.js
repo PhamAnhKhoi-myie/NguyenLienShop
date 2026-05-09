@@ -57,7 +57,7 @@ router.get('/:id', AnnouncementController.getOne);
 router.get(
     '/admin/all',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     AnnouncementController.getAll
 );
 
@@ -71,7 +71,7 @@ router.get(
 router.get(
     '/admin/scheduled',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     AnnouncementController.getScheduled
 );
 
@@ -85,7 +85,7 @@ router.get(
 router.get(
     '/admin/expired',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     AnnouncementController.getExpired
 );
 
@@ -100,7 +100,7 @@ router.get(
 router.get(
     '/admin/deleted',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     AnnouncementController.getDeleted
 );
 
@@ -117,7 +117,7 @@ router.get(
 router.post(
     '/',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     validate(createAnnouncementSchema),
     AnnouncementController.create
 );
@@ -136,7 +136,7 @@ router.post(
 router.put(
     '/:id',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     validate(updateAnnouncementSchema),
     AnnouncementController.update
 );
@@ -154,7 +154,7 @@ router.put(
 router.delete(
     '/:id',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     AnnouncementController.delete
 );
 
@@ -171,7 +171,7 @@ router.delete(
 router.post(
     '/:id/restore',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     AnnouncementController.restore
 );
 

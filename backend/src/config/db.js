@@ -23,7 +23,7 @@ const connectDB = async (retries = 5, baseDelayMs = 5000) => {
 
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-            const conn = await mongoose.connect(process.env.MONGODB_URI, {
+            const conn = await mongoose.connect(process.env.MONGO_URI, {
                 dbName,
             });
 

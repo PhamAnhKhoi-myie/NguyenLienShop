@@ -1,4 +1,3 @@
-// filepath: c:\MyEffort\NguyenLien\backend\src\modules\user_addresses\user_addresses.model.js
 const mongoose = require('mongoose');
 
 const userAddressSchema = new mongoose.Schema({
@@ -11,21 +10,33 @@ const userAddressSchema = new mongoose.Schema({
     district: { type: String, required: true },
     ward: { type: String, required: true },
     is_default: { type: Boolean, default: false },
-    created_at: { type: Date, default: Date.now },
-    updated_at: { type: Date, default: Date.now },
+    deleted_at: { type: Date, default: null, select: false },
+    deleted_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, select: false }
+}, {
+    timestamps: {
+        createdAt: 'created_at',
+        updatedAt: 'updated_at'
+    }
 });
 
-// Indexes
 userAddressSchema.index({ user_id: 1 });
 userAddressSchema.index(
     { user_id: 1, is_default: 1 },
-    { unique: true, partialFilterExpression: { is_default: true } }
+    {
+        unique: true,
+        partialFilterExpression: {
+            is_default: true,
+            deleted_at: null
+        }
+    }
 );
 
-// Update timestamp on save
-userAddressSchema.pre('save', function (next) {
-    this.updated_at = Date.now();
-    next();
-});
+userAddressSchema.pre(
+    ['find', 'findOne', 'countDocuments', 'findOneAndUpdate', 'updateMany', 'updateOne'],
+    function (next) {
+        this.where({ deleted_at: null });
+        next();
+    }
+);
 
 module.exports = mongoose.model('UserAddress', userAddressSchema);

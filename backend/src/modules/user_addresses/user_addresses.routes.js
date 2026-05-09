@@ -1,10 +1,13 @@
 // filepath: c:\MyEffort\NguyenLien\backend\src\modules\user_addresses\user_addresses.routes.js
 const express = require('express');
-const { createAddress, getUserAddresses, setDefaultAddress, updateAddress, deleteAddress } = require('./user_addresses.controller');
+const { createAddress, getUserAddressesByAdmin, setDefaultAddress, updateAddress, deleteAddress, getMyAddresses } = require('./user_addresses.controller');
 const { ZodError } = require("zod");
 const { createUserAddressSchema, updateUserAddressSchema } = require("../user_addresses/user_addresses.validator");
 const { authenticate } = require('../../middlewares/auth.middleware');
 const validate = require("../../middlewares/validate.middleware")
+const {
+    authorize
+} = require("../../middlewares/authorize.middleware");
 
 const router = express.Router();
 
@@ -17,25 +20,32 @@ router.post(
     createAddress
 );
 
-// ===== GET ADDRESSES =====
-router.get('/:userId', authenticate, getUserAddresses);
+router.get(
+    '/user/:userId',
+    authenticate,
+    authorize(["ADMIN"]),
+    getUserAddressesByAdmin
+);
 
-// ===== UPDATE ADDRESS =====
+// GET addresses của chính mình
+router.get('/', authenticate, getMyAddresses);
+
+// SET DEFAULT
 router.patch(
-    '/:userId/:addressId',
+    '/:addressId/set-default',
+    authenticate,
+    setDefaultAddress
+);
+
+// UPDATE
+router.patch(
+    '/:addressId',
     authenticate,
     validate(updateUserAddressSchema),
     updateAddress
 );
 
-// ===== SET DEFAULT ADDRESS =====
-router.patch(
-    '/:userId/:addressId/set-default',
-    authenticate,
-    setDefaultAddress
-);
-
-// ===== DELETE ADDRESS =====
-router.delete('/:userId/:addressId', authenticate, deleteAddress);
+// DELETE
+router.delete('/:addressId', authenticate, deleteAddress);
 
 module.exports = router;

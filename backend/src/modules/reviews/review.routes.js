@@ -82,7 +82,7 @@ router.post(
 router.get(
     '/admin/pending',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     ReviewController.getPendingReviews
 );
 
@@ -90,7 +90,7 @@ router.get(
 router.get(
     '/admin/flagged',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     ReviewController.getFlaggedReviews
 );
 
@@ -98,7 +98,7 @@ router.get(
 router.post(
     '/:reviewId/approve',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     ReviewController.approveReview
 );
 
@@ -106,7 +106,7 @@ router.post(
 router.post(
     '/:reviewId/reject',
     authenticate,
-    authorize('admin'),
+    authorize(['ADMIN']),
     validate(rejectReviewSchema),
     ReviewController.rejectReview
 );

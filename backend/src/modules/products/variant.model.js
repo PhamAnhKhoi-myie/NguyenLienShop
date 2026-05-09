@@ -198,6 +198,7 @@ variantSchema.index(
     }
 );
 
+
 // ===== MIDDLEWARE =====
 
 /**
@@ -394,5 +395,6 @@ const sanitizeTransform = (_, ret) => {
 
 variantSchema.set('toJSON', { transform: sanitizeTransform });
 variantSchema.set('toObject', { transform: sanitizeTransform });
+variantSchema.set('optimisticConcurrency', true);
 
 module.exports = mongoose.model('Variant', variantSchema);

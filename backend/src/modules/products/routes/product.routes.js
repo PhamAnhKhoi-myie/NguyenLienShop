@@ -9,7 +9,19 @@ const {
     searchProductsSchema,
     getProductsByCategorySchema,
 } = require('../product.validator');
+const { authenticate } = require('../../../middlewares/auth.middleware');
+const { authorize } = require('../../../middlewares/authorize.middleware');
+const { validateObjectId } = require('../../../utils/validator.util');
 
+const validateProductId = (req, res, next) => {
+    validateObjectId(req.params.productId);
+    next();
+};
+
+const validateCategoryId = (req, res, next) => {
+    validateObjectId(req.params.categoryId);
+    next();
+};
 // ============================================================================
 // ===== PRODUCT ROUTES =====
 // ============================================================================
@@ -60,6 +72,8 @@ router.get(
  */
 router.get(
     '/category/:categoryId',
+    validateCategoryId,
+    validate({ query: getProductsByCategorySchema }),
     productController.getProductsByCategory
 );
 
@@ -80,6 +94,7 @@ router.get(
  */
 router.get(
     '/:productId',
+    validateProductId,
     productController.getProductById
 );
 
@@ -102,6 +117,8 @@ router.get(
  */
 router.post(
     '/',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
     validate({ body: createProductSchema }),
     productController.createProduct
 );
@@ -114,6 +131,9 @@ router.post(
  */
 router.patch(
     '/:productId',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
+    validateProductId,
     validate({ body: updateProductSchema }),
     productController.updateProduct
 );
@@ -124,6 +144,9 @@ router.patch(
  */
 router.delete(
     '/:productId',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
+    validateProductId,
     productController.deleteProduct
 );
 

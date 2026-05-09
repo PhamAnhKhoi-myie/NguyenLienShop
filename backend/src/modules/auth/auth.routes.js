@@ -1,29 +1,36 @@
 const express = require("express");
-const { ZodError } = require("zod");
+
 const authController = require("./auth.controller");
 const { registerSchema, loginSchema } = require("./auth.validator");
 
+const validate = require("../../middlewares/validate.middleware");
+const { authenticate } = require("../../middlewares/auth.middleware");
+
 const router = express.Router();
 
-const validate = (schema) => (req, res, next) => {
-    try {
-        req.body = schema.parse(req.body || {});
-        next();
-    } catch (error) {
-        if (error instanceof ZodError) {
-            return res.status(400).json({
-                success: false,
-                code: "VALIDATION_ERROR",
-                message: error.issues.map((e) => e.message).join("; "),
-            });
-        }
-        return next(error);
-    }
-};
+// ===== PUBLIC =====
+router.post(
+    "/register",
+    validate(registerSchema),
+    authController.register
+);
 
-router.post("/register", validate(registerSchema), authController.register);
-router.post("/login", validate(loginSchema), authController.login);
-router.post("/refresh", authController.refresh);
-router.post("/logout", authController.logout);
+router.post(
+    "/login",
+    validate(loginSchema),
+    authController.login
+);
+
+router.post(
+    "/refresh",
+    authController.refresh
+);
+
+// ===== AUTHENTICATED =====
+router.post(
+    "/logout",
+    authenticate,
+    authController.logout
+);
 
 module.exports = router;

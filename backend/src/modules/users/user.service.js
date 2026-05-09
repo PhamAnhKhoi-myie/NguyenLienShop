@@ -1,6 +1,9 @@
 const User = require('./user.model');
 const UserMapper = require('./user.mapper');
 const AppError = require('../../utils/appError.util');
+const { ALL_ROLES } = require('../../constants/roles');
+const AuditLogService = require('../audit_logs/audit_log.service');
+const { AUDIT_ACTIONS, ENTITY_TYPES } = require('../../constants/audit');
 
 class UserService {
     /**
@@ -116,15 +119,28 @@ class UserService {
      * @returns {Object} Deletion confirmation
      * @throws {AppError} If user not found
      */
-    static async deleteUser(userId) {
-        const user = await User.findByIdAndUpdate(
-            userId,
-            { deleted_at: new Date() },
-            { new: true }
+    static async deleteUser(userId, actorId) {
+
+        const user = await User.findOneAndUpdate(
+            {
+                _id: userId,
+                deleted_at: null,
+            },
+            {
+                deleted_at: new Date(),
+                deleted_by: actorId,
+            },
+            {
+                new: true,
+            }
         );
 
         if (!user) {
-            throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+            throw new AppError(
+                'User not found or already deleted',
+                404,
+                'USER_NOT_FOUND'
+            );
         }
 
         return UserMapper.toResponseDTO(user);
@@ -137,7 +153,9 @@ class UserService {
      * @returns {Object} Updated user DTO
      * @throws {AppError} If user not found or invalid roles
      */
-    static async updateUserRoles(userId, roles) {
+    static async updateUserRoles(userId, roles, adminId, metadata = {}) {
+
+        // ===== VALIDATE INPUT =====
         if (!Array.isArray(roles) || roles.length === 0) {
             throw new AppError(
                 'Roles must be a non-empty array',
@@ -146,9 +164,11 @@ class UserService {
             );
         }
 
-        // Validate role enum
-        const validRoles = ['CUSTOMER', 'MANAGER', 'ADMIN'];
-        const invalidRoles = roles.filter((r) => !validRoles.includes(r));
+        roles = [...new Set(roles)];
+
+        const invalidRoles = roles.filter(
+            (role) => !ALL_ROLES.includes(role)
+        );
 
         if (invalidRoles.length > 0) {
             throw new AppError(
@@ -158,14 +178,93 @@ class UserService {
             );
         }
 
-        const updated = await User.findByIdAndUpdate(
-            userId,
-            { roles },
-            { new: true }
+        // ===== GET CURRENT USER =====
+        const existingUser = await User.findOne({
+            _id: userId,
+            deleted_at: null,
+        });
+
+        if (!existingUser) {
+            throw new AppError(
+                'User not found',
+                404,
+                'USER_NOT_FOUND'
+            );
+        }
+
+        const oldRoles = existingUser.roles;
+        const normalize = (arr) => [...arr].sort();
+
+        const isSame =
+            JSON.stringify(normalize(oldRoles)) ===
+            JSON.stringify(normalize(roles));
+
+        if (isSame) {
+            throw new AppError(
+                'Roles are unchanged',
+                400,
+                'NO_CHANGE'
+            );
+        }
+
+
+        // ===== ADMIN SAFETY CHECK =====
+        const currentlyAdmin = oldRoles.includes('ADMIN');
+        const willRemainAdmin = roles.includes('ADMIN');
+
+        if (currentlyAdmin && !willRemainAdmin) {
+            const adminCount = await User.countDocuments({
+                roles: 'ADMIN',
+                deleted_at: null,
+            });
+
+            if (adminCount <= 1) {
+                throw new AppError(
+                    'System must have at least one ADMIN',
+                    400,
+                    'LAST_ADMIN'
+                );
+            }
+        }
+
+        // ===== UPDATE =====
+        const updated = await User.findOneAndUpdate(
+            {
+                _id: userId,
+                deleted_at: null,
+            },
+            {
+                $set: { roles },
+                $inc: { token_version: 1 },
+            },
+            {
+                new: true,
+                runValidators: true,
+            }
         );
 
         if (!updated) {
-            throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+            throw new AppError(
+                'User not found',
+                404,
+                'USER_NOT_FOUND'
+            );
+        }
+
+        // ===== AUDIT LOG =====
+        try {
+            await AuditLogService.createLog({
+                actor_id: adminId,
+                action: AUDIT_ACTIONS.UPDATE_USER_ROLES,
+                entity_type: ENTITY_TYPES.USER,
+                entity_id: userId,
+                old_values: { roles: oldRoles },
+                new_values: { roles },
+                ip_address: metadata.ip || null,
+                user_agent: metadata.userAgent || null,
+            });
+        } catch (error) {
+            console.error('Audit log failed:', error);
         }
 
         return UserMapper.toResponseDTO(updated);

@@ -10,7 +10,22 @@ const {
     releaseReservedStockSchema,
     getMaxOrderQtySchema,
 } = require('../variant.validator');
+const { authenticate } = require('../../../middlewares/auth.middleware');
+const { authorize } = require('../../../middlewares/authorize.middleware');
+const { requireInternal } = require('../../../middlewares/internal.middleware');
+const { validateObjectId } = require('../../../utils/validator.util');
 
+
+// helper
+const validateVariantId = (req, res, next) => {
+    validateObjectId(req.params.variantId);
+    next();
+};
+
+const validateProductId = (req, res, next) => {
+    validateObjectId(req.params.productId);
+    next();
+};
 // ============================================================================
 // ===== VARIANT ROUTES =====
 // ============================================================================
@@ -23,6 +38,7 @@ const {
  */
 router.get(
     '/',
+    validateProductId,
     variantController.getVariantsByProduct
 );
 
@@ -32,6 +48,7 @@ router.get(
  */
 router.get(
     '/id/:variantId',
+    validateVariantId,
     variantController.getVariantById
 );
 
@@ -43,6 +60,7 @@ router.get(
  */
 router.get(
     '/id/:variantId/stock',
+    validateVariantId,
     variantController.checkVariantStock
 );
 
@@ -55,6 +73,7 @@ router.get(
  */
 router.get(
     '/id/:variantId/max-order-qty',
+    validateVariantId,
     validate({ query: getMaxOrderQtySchema }),
     variantController.getMaxOrderQty
 );
@@ -73,6 +92,9 @@ router.get(
  */
 router.post(
     '/',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
+    validateProductId,
     validate({ body: createVariantSchema }),
     variantController.createVariant
 );
@@ -83,6 +105,8 @@ router.post(
  */
 router.patch(
     '/id/:variantId',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
     validate({ body: updateVariantSchema }),
     variantController.updateVariant
 );
@@ -93,6 +117,8 @@ router.patch(
  */
 router.delete(
     '/id/:variantId',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
     variantController.deleteVariant
 );
 
@@ -109,6 +135,8 @@ router.delete(
  */
 router.post(
     '/id/:variantId/reserve-stock',
+    requireInternal,
+    validateVariantId,
     validate({ body: reserveStockSchema }),
     variantController.reserveStock
 );
@@ -122,6 +150,8 @@ router.post(
  */
 router.post(
     '/id/:variantId/complete-sale',
+    requireInternal,
+    validateVariantId,
     validate({ body: completeSaleSchema }),
     variantController.completeSale
 );
@@ -135,6 +165,8 @@ router.post(
  */
 router.post(
     '/id/:variantId/release-stock',
+    requireInternal,
+    validateVariantId,
     validate({ body: releaseReservedStockSchema }),
     variantController.releaseReservedStock
 );

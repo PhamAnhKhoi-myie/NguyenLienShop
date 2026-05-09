@@ -13,15 +13,21 @@ class UserAddressService {
                 { user_id: userId }
             ).session(session);
 
+            if (count >= 10) {
+                throw new AppError(
+                    'Maximum 10 addresses allowed',
+                    400,
+                    'ADDRESS_LIMIT'
+                );
+            }
+
             if (data.is_default) {
-                // Client explicitly set as default - clear others
                 await UserAddress.updateMany(
-                    { user_id: userId },
+                    { user_id: userId, is_default: true },
                     { is_default: false },
                     { session }
                 );
             } else if (count === 0) {
-                // First address - auto-set as default
                 data.is_default = true;
             }
 
@@ -34,6 +40,15 @@ class UserAddressService {
             return UserAddressMapper.toResponseDTO(address[0]);
         } catch (error) {
             await session.abortTransaction();
+
+            if (error.code === 11000) {
+                throw new AppError(
+                    'Default address conflict, please retry',
+                    409,
+                    'DEFAULT_ADDRESS_CONFLICT'
+                );
+            }
+
             throw error;
         } finally {
             session.endSession();
@@ -58,16 +73,16 @@ class UserAddressService {
                 throw new AppError('Address not found', 404, 'ADDRESS_NOT_FOUND');
             }
 
-            // Clear all defaults for this user
+            // 1. Chỉ clear những record đang là default
             await UserAddress.updateMany(
-                { user_id: userId },
+                { user_id: userId, is_default: true },
                 { is_default: false },
                 { session }
             );
 
-            // Set this address as default
+            // 2. Set default cho address target
             await UserAddress.updateOne(
-                { _id: addressId },
+                { _id: addressId, user_id: userId },
                 { is_default: true },
                 { session }
             );
@@ -76,8 +91,19 @@ class UserAddressService {
 
             const updatedAddress = await UserAddress.findById(addressId);
             return UserAddressMapper.toResponseDTO(updatedAddress);
+
         } catch (error) {
             await session.abortTransaction();
+
+            // 3. Handle duplicate key (race condition)
+            if (error.code === 11000) {
+                throw new AppError(
+                    'Default address conflict, please retry',
+                    409,
+                    'DEFAULT_ADDRESS_CONFLICT'
+                );
+            }
+
             throw error;
         } finally {
             session.endSession();
@@ -89,10 +115,23 @@ class UserAddressService {
         session.startTransaction();
 
         try {
-            if (data.is_default) {
-                // If setting as default, clear others
+            if (data.is_default === false) {
+                const current = await UserAddress.findOne(
+                    { _id: addressId, user_id: userId }
+                ).session(session);
+
+                if (current?.is_default) {
+                    throw new AppError(
+                        'Cannot unset default address directly',
+                        400,
+                        'INVALID_OPERATION'
+                    );
+                }
+            }
+
+            if (data.is_default === true) {
                 await UserAddress.updateMany(
-                    { user_id: userId },
+                    { user_id: userId, is_default: true },
                     { is_default: false },
                     { session }
                 );
@@ -101,7 +140,7 @@ class UserAddressService {
             const address = await UserAddress.findOneAndUpdate(
                 { _id: addressId, user_id: userId },
                 data,
-                { new: true, session }
+                { new: true, runValidators: true, session }
             );
 
             if (!address) {
@@ -112,31 +151,47 @@ class UserAddressService {
             return UserAddressMapper.toResponseDTO(address);
         } catch (error) {
             await session.abortTransaction();
+
+            if (error.code === 11000) {
+                throw new AppError(
+                    'Default address conflict, please retry',
+                    409,
+                    'DEFAULT_ADDRESS_CONFLICT'
+                );
+            }
+
             throw error;
         } finally {
             session.endSession();
         }
     }
 
-    static async deleteAddress(userId, addressId) {
+    static async deleteAddress(userId, addressId, actorId) {
         const session = await UserAddress.startSession();
         session.startTransaction();
 
         try {
-            const address = await UserAddress.findOneAndDelete(
-                { _id: addressId, user_id: userId },
-                { session }
+            const address = await UserAddress.findOneAndUpdate(
+                { _id: addressId, user_id: userId, deleted_at: null },
+                {
+                    deleted_at: new Date(),
+                    deleted_by: actorId,
+                    is_default: false
+                },
+                { new: true, session }
             );
 
             if (!address) {
                 throw new AppError('Address not found', 404, 'ADDRESS_NOT_FOUND');
             }
 
-            // If deleted address was default, promote next oldest
+            // Nếu address bị xóa là default → promote cái khác
             if (address.is_default) {
                 const nextDefault = await UserAddress.findOne(
-                    { user_id: userId }
-                ).sort({ created_at: 1 }).session(session);
+                    { user_id: userId, deleted_at: null }
+                )
+                    .sort({ updated_at: -1, created_at: -1 })
+                    .session(session);
 
                 if (nextDefault) {
                     await UserAddress.updateOne(
@@ -147,10 +202,20 @@ class UserAddressService {
                 }
             }
 
-            await session.commitTransaction({ writeConcern: { w: 'majority' } });
+            await session.commitTransaction();
             return UserAddressMapper.toResponseDTO(address);
+
         } catch (error) {
             await session.abortTransaction();
+
+            if (error.code === 11000) {
+                throw new AppError(
+                    'Default address conflict, please retry',
+                    409,
+                    'DEFAULT_ADDRESS_CONFLICT'
+                );
+            }
+
             throw error;
         } finally {
             session.endSession();
