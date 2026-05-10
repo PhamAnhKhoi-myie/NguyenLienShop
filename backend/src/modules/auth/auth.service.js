@@ -27,6 +27,14 @@ class AuthService {
     }
 
     async changePassword(...args) { return coreService.changePassword(...args); }
+
+    async forgotPassword(...args) {
+        return coreService.forgotPassword(...args);
+    }
+
+    async resetPassword(...args) {
+        return coreService.resetPassword(...args);
+    }
 }
 
 module.exports = new AuthService();

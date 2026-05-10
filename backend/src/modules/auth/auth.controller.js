@@ -130,10 +130,38 @@ const changePassword = asyncHandler(async (req, res) => {
     });
 });
 
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    const result = await authService.forgotPassword(email);
+
+    return res.status(200).json({
+        success: true,
+        message: result.message
+    });
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+
+    const result = await authService.resetPassword(
+        email,
+        otp,
+        newPassword
+    );
+
+    return res.status(200).json({
+        success: true,
+        message: result.message
+    });
+});
+
 module.exports = {
     register,
     login,
     refresh,
     logout,
     changePassword,
+    forgotPassword,
+    resetPassword
 };

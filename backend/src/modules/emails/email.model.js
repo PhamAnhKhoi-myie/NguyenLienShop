@@ -4,7 +4,7 @@ const emailJobSchema = new mongoose.Schema({
     to: [{ type: String, required: true }],
     template: {
         type: String,
-        enum: ['REGISTER_SUCCESS', 'ORDER_CONFIRMATION', 'ORDER_DELIVERED'],
+        enum: ['REGISTER_SUCCESS', 'ORDER_CONFIRMATION', 'ORDER_DELIVERED', 'RESET_PASSWORD_LINK', 'FORGOT_PASSWORD_OTP'],
         required: true
     },
     payload: { type: Object, required: true },
@@ -21,6 +21,10 @@ const emailJobSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // CRITICAL: Index để Worker quét jobs nhanh và chính xác
-emailJobSchema.index({ status: 1, scheduled_at: 1 });
+emailJobSchema.index({
+    status: 1,
+    scheduled_at: 1,
+    retry_count: 1
+});
 
 module.exports = mongoose.model('EmailJob', emailJobSchema);

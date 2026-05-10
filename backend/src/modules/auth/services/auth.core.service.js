@@ -6,6 +6,8 @@ const TokenHash = require('../security/token.hash');
 const AppError = require('../../../utils/appError.util');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const PasswordReset = require('../models/password-reset.model');
+const EmailService = require('../../emails/email.service');
 
 class AuthCoreService {
     async register(email, password, fullName = null) {
@@ -116,6 +118,148 @@ class AuthCoreService {
         await User.findByIdAndUpdate(userId, { password_hash: hashedNewPassword, $inc: { token_version: 1 } });
         await TokenService.revokeAllByUser(userId, 'password_changed');
         return { message: 'Mật khẩu đã được thay đổi' };
+    }
+
+    async forgotPassword(email) {
+        const user = await User.findOne({ email });
+
+        // Không leak thông tin email tồn tại hay không
+        if (!user) {
+            return { message: 'Nếu email tồn tại, chúng tôi đã gửi mã xác nhận' };
+        }
+
+        const FIFTEEN_MIN = 15 * 60 * 1000;
+        const ONE_MIN = 60 * 1000;
+
+        // Rate limit 5 lần / 15 phút
+        const count = await PasswordReset.countDocuments({
+            email,
+            createdAt: { $gte: new Date(Date.now() - FIFTEEN_MIN) }
+        });
+
+        if (count >= 5) {
+            throw new AppError(
+                'Bạn đã yêu cầu quá nhiều lần. Vui lòng thử lại sau',
+                429,
+                'TOO_MANY_REQUESTS'
+            );
+        }
+
+        // Rate limit 1 lần / 60s
+        const latest = await PasswordReset.findOne({ email }).sort({ createdAt: -1 });
+
+        if (latest && Date.now() - latest.createdAt < ONE_MIN) {
+            throw new AppError(
+                'Vui lòng đợi trước khi yêu cầu mã mới',
+                429,
+                'OTP_RATE_LIMIT'
+            );
+        }
+
+        // Tạo OTP
+        const otp = crypto.randomInt(100000, 999999).toString();
+
+        const otp_hash = crypto
+            .createHash('sha256')
+            .update(otp)
+            .digest('hex');
+
+        await PasswordReset.findOneAndUpdate(
+            { email },
+            {
+                otp_hash,
+                expires_at: new Date(Date.now() + 5 * 60 * 1000),
+                attempt_count: 0
+            },
+            { upsert: true }
+        );
+
+        await EmailService.enqueueEmail({
+            to: [email],
+            template: 'FORGOT_PASSWORD_OTP',
+            payload: {
+                email,
+                otp,
+                expires_in: 5
+            }
+        });
+
+        return { message: 'Nếu email tồn tại, chúng tôi đã gửi mã xác nhận' };
+    }
+
+    async resetPassword(email, otp, newPassword) {
+        const record = await PasswordReset.findOne({
+            email,
+            expires_at: { $gt: new Date() }
+        }).sort({ createdAt: -1 });
+
+        if (!record) {
+            throw new AppError(
+                'OTP không hợp lệ',
+                400,
+                'INVALID_OTP'
+            );
+        }
+
+        if (record.expires_at < new Date()) {
+            throw new AppError(
+                'OTP đã hết hạn',
+                400,
+                'OTP_EXPIRED'
+            );
+        }
+
+        const hashedOtp = crypto
+            .createHash('sha256')
+            .update(otp)
+            .digest('hex');
+        if (record.attempt_count >= 5) {
+            throw new AppError(
+                'Bạn đã nhập sai quá nhiều lần',
+                429,
+                'OTP_BLOCKED'
+            );
+        }
+
+        if (hashedOtp !== record.otp_hash) {
+            record.attempt_count += 1;
+
+            if (record.attempt_count >= 5) {
+                await PasswordReset.deleteOne({ _id: record._id });
+            } else {
+                await record.save();
+            }
+
+            throw new AppError(
+                'OTP không đúng',
+                400,
+                'INVALID_OTP'
+            );
+        }
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            throw new AppError(
+                'Không tìm thấy người dùng',
+                404,
+                'USER_NOT_FOUND'
+            );
+        }
+
+        const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+        await User.findByIdAndUpdate(user._id, {
+            password_hash: hashedNewPassword,
+            $inc: { token_version: 1 }
+        });
+
+        await TokenService.revokeAllByUser(user._id, 'password_reset');
+
+        // Xóa OTP sau khi dùng
+        await PasswordReset.deleteOne({ _id: record._id });
+
+        return { message: 'Mật khẩu đã được đặt lại' };
     }
 }
 

@@ -29,18 +29,31 @@ const loginSchema = z.object({
     password: z.string().min(1, "Mật khẩu là bắt buộc"),
 });
 
-const changePasswordSchema = z
-    .object({
-        currentPassword: z.string().min(1, "Mật khẩu hiện tại là bắt buộc"),
-        newPassword: passwordField,
-    })
-    .refine((data) => data.currentPassword !== data.newPassword, {
-        message: "Mật khẩu mới phải khác mật khẩu hiện tại",
-        path: ["newPassword"],
-    });
+const changePasswordSchema = z.object({
+    currentPassword: z.string().min(1, "Mật khẩu hiện tại là bắt buộc"),
+    newPassword: passwordField,
+}).refine((data) => data.currentPassword !== data.newPassword, {
+    message: "Mật khẩu mới phải khác mật khẩu hiện tại",
+    path: ["newPassword"],
+});
+
+const forgotPasswordSchema = z.object({
+    email: emailField
+});
+
+const resetPasswordSchema = z.object({
+    email: emailField,
+    otp: z
+        .string()
+        .length(6, "OTP phải có 6 chữ số")
+        .regex(/^\d+$/, "OTP chỉ được chứa số"),
+    newPassword: passwordField
+});
 
 module.exports = {
     registerSchema,
     loginSchema,
     changePasswordSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema
 };
