@@ -1,22 +1,38 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
 const AuditLogService = require('./audit_log.service');
 const { validateObjectId } = require('../../utils/validator.util');
+const AppError = require('../../utils/appError.util');
 
-/**
- * @desc    Lấy danh sách Audit Logs (Phân trang & Lọc)
- * @route   GET /api/v1/audit-logs
- * @access  Private/Admin
- */
 const getAllLogs = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;
 
+    const actor_id = req.query.actor_id;
+    const level = req.query.level;
+    const domain = req.query.domain;
+
+    // validate actor_id
+    if (actor_id && !validateObjectId(actor_id)) {
+        throw new AppError('Invalid actor_id', 400, 'INVALID_ID');
+    }
+
+    // validate level
+    const ALLOWED_LEVELS = ['INFO', 'IMPORTANT', 'SECURITY'];
+    if (level && !ALLOWED_LEVELS.includes(level)) {
+        throw new AppError('Invalid level', 400, 'INVALID_LEVEL');
+    }
+
+    // validate domain
+    const ALLOWED_DOMAINS = ['USER'];
+    if (domain && !ALLOWED_DOMAINS.includes(domain)) {
+        throw new AppError('Invalid domain', 400, 'INVALID_DOMAIN');
+    }
+
     const filters = {
-        entity_type: req.query.entity_type || undefined,
+        domain,
         action: req.query.action || undefined,
-        actor_id: req.query.actor_id && validateObjectId(req.query.actor_id)
-            ? req.query.actor_id
-            : undefined,
+        level,
+        actor_id,
         page,
         limit
     };
@@ -30,11 +46,6 @@ const getAllLogs = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * @desc    Lấy chi tiết 1 Audit Log
- * @route   GET /api/v1/audit-logs/:id
- * @access  Private/Admin
- */
 const getLogById = asyncHandler(async (req, res) => {
     validateObjectId(req.params.id);
 
@@ -46,7 +57,14 @@ const getLogById = asyncHandler(async (req, res) => {
     });
 });
 
+const getUserLogs = asyncHandler(async (req, res) => {
+    req.query.domain = 'USER';
+
+    return getAllLogs(req, res);
+});
+
 module.exports = {
     getAllLogs,
-    getLogById
+    getLogById,
+    getUserLogs
 };

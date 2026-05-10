@@ -1,40 +1,57 @@
 const UserAuditLog = require('./user_audit_log/user_audit_log.model');
 const AppError = require('../../utils/appError.util');
 
+const DOMAIN_MODELS = [
+    { name: 'USER', model: UserAuditLog },
+];
+
 class AuditLogService {
 
-    static async getAllLogs({ action, actor_id, page = 1, limit = 20 }) {
-        const filter = {};
+    static async getAllLogs({ domain, action, level, actor_id, page = 1, limit = 20 }) {
 
-        if (action) filter.action = action;
-        if (actor_id) filter.actor_id = actor_id;
+        const ALLOWED_LEVELS = ['INFO', 'IMPORTANT', 'SECURITY'];
+
+        if (level && !ALLOWED_LEVELS.includes(level)) {
+            throw new AppError('Invalid level', 400, 'INVALID_LEVEL');
+        }
 
         const skip = (page - 1) * limit;
 
         let allLogs = [];
+        let total = 0;
 
-        for (const domain of DOMAIN_MODELS) {
-            const logs = await domain.model.find(filter).lean();
+        const domains = domain
+            ? DOMAIN_MODELS.filter(d => d.name === domain)
+            : DOMAIN_MODELS;
+
+        for (const d of domains) {
+            const filter = {};
+
+            if (action) filter.action = action;
+            if (actor_id) filter.actor_id = actor_id;
+            if (level) filter.level = level;
+
+            const logs = await d.model
+                .find(filter)
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean();
+
+            const count = await d.model.countDocuments(filter);
+
+            total += count;
 
             allLogs.push(
                 ...logs.map(l => ({
                     ...l,
-                    domain: domain.name
+                    domain: d.name
                 }))
             );
         }
 
-        // sort
-        allLogs.sort((a, b) =>
-            new Date(b.created_at) - new Date(a.created_at)
-        );
-
-        const total = allLogs.length;
-
-        const paginated = allLogs.slice(skip, skip + limit);
-
         return {
-            data: paginated,
+            data: allLogs, // ❗ KHÔNG slice nữa
             pagination: {
                 current_page: page,
                 total_pages: Math.ceil(total / limit),
