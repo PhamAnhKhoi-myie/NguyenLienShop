@@ -46,7 +46,7 @@ class AuthCoreService {
     }
 
     async login(email, password, userAgent = null, ipAddress = null) {
-        const user = await User.findOne({ email }).select('+password_hash');
+        const user = await User.findOne({ email }).select('+password_hash +token_version');
 
         if (!user) {
             throw new AppError(

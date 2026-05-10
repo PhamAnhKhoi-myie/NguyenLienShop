@@ -65,6 +65,7 @@ const authenticate = asyncHandler(async (req, res, next) => {
         }
 
         if (dbUser.token_version !== decoded.tokenVersion) {
+
             throw new AppError(
                 "Token has been revoked",
                 401,

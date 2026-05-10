@@ -1,7 +1,7 @@
 const express = require("express");
 
 const authController = require("./auth.controller");
-const { registerSchema, loginSchema } = require("./auth.validator");
+const { registerSchema, loginSchema, changePasswordSchema } = require("./auth.validator");
 
 const validate = require("../../middlewares/validate.middleware");
 const { authenticate } = require("../../middlewares/auth.middleware");
@@ -24,6 +24,13 @@ router.post(
 router.post(
     "/refresh",
     authController.refresh
+);
+
+router.post(
+    "/change-password",
+    authenticate,
+    validate(changePasswordSchema),
+    authController.changePassword
 );
 
 // ===== AUTHENTICATED =====

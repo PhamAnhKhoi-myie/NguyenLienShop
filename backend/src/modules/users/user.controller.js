@@ -81,59 +81,57 @@ const deleteUser = asyncHandler(async (req, res) => {
     });
 });
 
-const updateUserRoles =
-    asyncHandler(async (req, res) => {
+const updateUserRoles = asyncHandler(async (req, res) => {
+    validateObjectId(req.params.id);
 
-        validateObjectId(req.params.id);
+    const { roles } = req.body;
 
-        const { roles } = req.body;
-
-        if (!Array.isArray(roles) || roles.length === 0) {
-            throw new AppError(
-                'Roles must be a non-empty array',
-                400,
-                'VALIDATION_ERROR'
-            );
-        }
-
-        const invalidRoles = roles.filter(
-            (r) => !ALL_ROLES.includes(r)
+    if (!Array.isArray(roles) || roles.length === 0) {
+        throw new AppError(
+            'Roles must be a non-empty array',
+            400,
+            'VALIDATION_ERROR'
         );
+    }
 
-        if (invalidRoles.length > 0) {
-            throw new AppError(
-                `Invalid roles: ${invalidRoles.join(', ')}`,
-                400,
-                'INVALID_ROLE'
-            );
-        }
+    const invalidRoles = roles.filter(
+        (r) => !ALL_ROLES.includes(r)
+    );
 
-        // Prevent self-demotion
-        if (
-            req.user.id === req.params.id &&
-            !roles.includes('ADMIN')
-        ) {
-            throw new AppError(
-                'You cannot remove your own ADMIN role',
-                403,
-                'FORBIDDEN'
-            );
-        }
-
-        const metadata = buildAuditMetadata(req);
-
-        const updated = await UserService.updateUserRoles(
-            req.params.id,
-            roles,
-            req.user.id,
-            metadata
+    if (invalidRoles.length > 0) {
+        throw new AppError(
+            `Invalid roles: ${invalidRoles.join(', ')}`,
+            400,
+            'INVALID_ROLE'
         );
+    }
 
-        return res.status(200).json({
-            success: true,
-            data: updated,
-        });
+    // Prevent self-demotion
+    if (
+        req.user.id === req.params.id &&
+        !roles.includes('ADMIN')
+    ) {
+        throw new AppError(
+            'You cannot remove your own ADMIN role',
+            403,
+            'FORBIDDEN'
+        );
+    }
+
+    const metadata = buildAuditMetadata(req);
+
+    const updated = await UserService.updateUserRoles(
+        req.params.id,
+        roles,
+        req.user.id,
+        metadata
+    );
+
+    return res.status(200).json({
+        success: true,
+        data: updated,
     });
+});
 
 module.exports = {
     getMe,

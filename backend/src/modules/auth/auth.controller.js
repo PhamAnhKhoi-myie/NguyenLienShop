@@ -1,6 +1,5 @@
+const asyncHandler = require('../../utils/asyncHandler.util');
 const authService = require("./auth.service");
-const { registerSchema, loginSchema } = require("./auth.validator");
-const { verifyAccessToken } = require("../../utils/verify.util");
 const AuthMapper = require('./auth.mapper');
 const AppError = require('../../utils/appError.util');
 
@@ -19,122 +18,122 @@ const getClientIp = (req) =>
     req.socket?.remoteAddress ||
     "";
 
-class AuthController {
-    async register(req, res, next) {
-        try {
-            const { email, password, full_name } = req.body;
+const register = asyncHandler(async (req, res) => {
+    const { email, password, full_name } = req.body;
 
-            const result = await authService.register(
-                email,
-                password,
-                full_name
-            );
+    const result = await authService.register(
+        email,
+        password,
+        full_name
+    );
 
-            return res.status(201).json({
-                success: true,
-                message: "Đăng ký thành công",
-                data: result,
-            });
+    return res.status(201).json({
+        success: true,
+        message: "Đăng ký thành công",
+        data: result,
+    });
+});
 
-        } catch (error) {
-            next(error);
-        }
+const login = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+
+    const userAgent = req.headers["user-agent"] || "";
+    const ipAddress = getClientIp(req);
+
+    const result = await authService.login(
+        email,
+        password,
+        userAgent,
+        ipAddress
+    );
+
+    res.cookie(
+        REFRESH_COOKIE_NAME,
+        result.tokens.refreshToken,
+        getCookieOptions()
+    );
+
+    return res.status(200).json({
+        success: true,
+        message: "Đăng nhập thành công",
+        data: AuthMapper.toLoginResponse(
+            result.user,
+            result.tokens
+        ),
+    });
+});
+
+const refresh = asyncHandler(async (req, res) => {
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
+
+    if (!refreshToken) {
+        throw new AppError(
+            'Refresh token không tồn tại',
+            401,
+            'REFRESH_TOKEN_REQUIRED'
+        );
     }
 
-    async login(req, res, next) {
-        try {
-            const { email, password } = req.body;
+    const userAgent = req.headers["user-agent"] || "";
+    const ipAddress = getClientIp(req);
 
-            const userAgent = req.headers["user-agent"] || "";
-            const ipAddress = getClientIp(req);
+    const result = await authService.refresh(
+        refreshToken,
+        userAgent,
+        ipAddress
+    );
 
-            const result = await authService.login(
-                email,
-                password,
-                userAgent,
-                ipAddress
-            );
+    res.cookie(
+        REFRESH_COOKIE_NAME,
+        result.refreshToken,
+        getCookieOptions()
+    );
 
-            res.cookie(
-                REFRESH_COOKIE_NAME,
-                result.tokens.refreshToken,
-                getCookieOptions()
-            );
+    return res.status(200).json({
+        success: true,
+        message: "Refresh token thành công",
+        data: { accessToken: result.accessToken },
+    });
+});
 
-            return res.status(200).json({
-                success: true,
-                message: "Đăng nhập thành công",
-                data: AuthMapper.toLoginResponse(
-                    result.user,
-                    result.tokens
-                ),
-            });
+const logout = asyncHandler(async (req, res) => {
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
 
-        } catch (error) {
-            next(error);
-        }
+    if (refreshToken) {
+        await authService.logout(refreshToken);
     }
 
-    async refresh(req, res, next) {
-        try {
-            const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
+    res.clearCookie(
+        REFRESH_COOKIE_NAME,
+        getCookieOptions()
+    );
 
-            if (!refreshToken) {
-                throw new AppError('Refresh token không tồn tại', 401, 'REFRESH_TOKEN_REQUIRED');
-            }
+    return res.status(200).json({
+        success: true,
+        message: "Đăng xuất thành công",
+        data: null,
+    });
+});
 
-            const userAgent = req.headers["user-agent"] || "";
-            const ipAddress = getClientIp(req);
+const changePassword = asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
 
-            const result = await authService.refresh(refreshToken, userAgent, ipAddress);
+    const result = await authService.changePassword(
+        req.user.id,
+        currentPassword,
+        newPassword
+    );
 
-            res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getCookieOptions());
+    return res.status(200).json({
+        success: true,
+        message: result.message,
+    });
+});
 
-            return res.status(200).json({
-                success: true,
-                message: "Refresh token thành công",
-                data: { accessToken: result.accessToken },
-            });
-        } catch (error) {
-            // Xóa cookie nếu có lỗi liên quan đến token
-            res.clearCookie(REFRESH_COOKIE_NAME, getCookieOptions());
-            next(error);
-        }
-    }
-
-    async logout(req, res, next) {
-        try {
-            const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
-
-            if (refreshToken) {
-                try {
-                    const decoded = verifyRefreshToken(refreshToken);
-
-                    await authService.logout(refreshToken);
-
-                } catch (e) {
-                    console.warn("[logout]", {
-                        message: e.message,
-                        code: e.code,
-                    });
-                }
-            }
-
-            res.clearCookie(
-                REFRESH_COOKIE_NAME,
-                getCookieOptions()
-            );
-
-            return res.status(200).json({
-                success: true,
-                message: "Đăng xuất thành công",
-                data: null,
-            });
-
-        } catch (err) {
-            next(err);
-        }
-    }
-}
-
-module.exports = new AuthController();
+module.exports = {
+    register,
+    login,
+    refresh,
+    logout,
+    changePassword,
+};
