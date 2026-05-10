@@ -36,6 +36,20 @@ router.get(
     userController.getAllUsers
 );
 
+router.patch(
+    "/:id/status",
+    authenticate,
+    authorize(["ADMIN"]),
+    userController.updateUserStatus
+);
+
+router.patch(
+    "/:id/roles",
+    authenticate,
+    authorize(["ADMIN"]),
+    userController.updateUserRoles
+);
+
 // ===== UPDATE USER =====
 router.patch(
     "/:id",
@@ -51,14 +65,6 @@ router.delete(
     authenticate,
     checkOwnershipOrAdmin(),
     userController.deleteUser
-);
-
-// ===== UPDATE ROLE =====
-router.patch(
-    "/:id/roles",
-    authenticate,
-    authorize(["ADMIN"]),
-    userController.updateUserRoles
 );
 
 module.exports = router;

@@ -2,16 +2,10 @@ const User = require('./user.model');
 const UserMapper = require('./user.mapper');
 const AppError = require('../../utils/appError.util');
 const { ALL_ROLES } = require('../../constants/roles');
-const AuditLogService = require('../audit_logs/audit_log.service');
-const { AUDIT_ACTIONS, ENTITY_TYPES } = require('../../constants/audit');
+const UserAuditLogService = require('../audit_logs/user_audit_log/user_audit_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class UserService {
-    /**
-     * Get user by ID
-     * @param {String} userId - MongoDB ObjectId
-     * @returns {Object} User DTO
-     * @throws {AppError} If user not found
-     */
     static async getUserById(userId) {
         const user = await User.findById(userId);
 
@@ -22,23 +16,10 @@ class UserService {
         return UserMapper.toResponseDTO(user);
     }
 
-    /**
-     * Get current authenticated user
-     * @param {String} userId - MongoDB ObjectId
-     * @returns {Object} User DTO
-     */
     static async getMe(userId) {
         return UserService.getUserById(userId);
     }
 
-    /**
-     * Get all users with pagination and filtering
-     * @param {Number} page - Page number (1-indexed)
-     * @param {Number} limit - Items per page
-     * @param {String} search - Search query (email or name)
-     * @param {String} status - Filter by status
-     * @returns {Object} Paginated users with metadata
-     */
     static async getAllUsers(page = 1, limit = 20, search = null, status = null) {
         const skip = (page - 1) * limit;
         const filter = {};
@@ -71,14 +52,7 @@ class UserService {
         };
     }
 
-    /**
-     * Update user profile
-     * @param {String} userId - MongoDB ObjectId
-     * @param {Object} updateData - Data from UserMapper.toUpdatePayload()
-     * @returns {Object} Updated user DTO
-     * @throws {AppError} If user not found or validation fails
-     */
-    static async updateUser(userId, updateData) {
+    static async updateUserProfile(userId, updateData, actorId, metadata = {}) {
         if (!updateData || Object.keys(updateData).length === 0) {
             throw new AppError(
                 'No valid fields to update',
@@ -87,47 +61,98 @@ class UserService {
             );
         }
 
-        try {
-            const updated = await User.findByIdAndUpdate(
-                userId,
-                { $set: updateData },
-                { new: true, runValidators: true }
-            );
+        // ===== GET CURRENT USER =====
+        const existingUser = await User.findById(userId);
 
-            if (!updated) {
-                throw new AppError('User not found', 404, 'USER_NOT_FOUND');
-            }
-
-            return UserMapper.toResponseDTO(updated);
-        } catch (error) {
-            // Handle MongoDB duplicate key error
-            if (error.code === 11000) {
-                const field = Object.keys(error.keyPattern)[0];
-                throw new AppError(
-                    `${field} already exists`,
-                    409,
-                    'DUPLICATE_FIELD'
-                );
-            }
-            throw error;
+        if (!existingUser) {
+            throw new AppError('User not found', 404, 'USER_NOT_FOUND');
         }
+
+        // ===== MAP OLD DATA =====
+        const oldData = {
+            email: existingUser.email,
+            full_name: existingUser.profile?.full_name || null,
+            phone_number: existingUser.profile?.phone_number || null,
+            avatar_url: existingUser.profile?.avatar_url || null,
+        };
+
+        // ===== MAP NEW DATA =====
+        const newData = {
+            email: updateData.email ?? oldData.email,
+            full_name: updateData["profile.full_name"] ?? oldData.full_name,
+            phone_number: updateData["profile.phone_number"] ?? oldData.phone_number,
+            avatar_url: updateData["profile.avatar_url"] ?? oldData.avatar_url,
+        };
+
+        // ===== BUILD CHANGES =====
+        const changes = {};
+
+        for (const key in newData) {
+            if (oldData[key] !== newData[key]) {
+                changes[key] = {
+                    from: oldData[key],
+                    to: newData[key],
+                };
+            }
+        }
+
+        // ===== NO CHANGE =====
+        if (Object.keys(changes).length === 0) {
+            throw new AppError('No change detected', 400, 'NO_CHANGE');
+        }
+
+        // ===== UPDATE =====
+        const updated = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        // ===== AUDIT LOG =====
+        try {
+            await UserAuditLogService.createLog({
+                actor_id: actorId,
+                action: AUDIT_ACTIONS.UPDATE_USER_PROFILE,
+                user_id: userId,
+                changes,
+                ip_address: metadata.ip || null,
+                user_agent: metadata.userAgent || null,
+            });
+        } catch (error) {
+            console.error('Audit log failed:', error);
+        }
+
+        return UserMapper.toResponseDTO(updated);
     }
 
-    /**
-     * Delete user (soft delete)
-     * @param {String} userId - MongoDB ObjectId
-     * @returns {Object} Deletion confirmation
-     * @throws {AppError} If user not found
-     */
-    static async deleteUser(userId, actorId) {
+    static async deleteUser(userId, actorId, metadata = {}) {
 
-        const user = await User.findOneAndUpdate(
+        // ===== GET CURRENT USER =====
+        const existingUser = await User.findById(userId);
+
+        if (!existingUser) {
+            throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        }
+
+        // ===== ALREADY DELETED =====
+        if (existingUser.deleted_at) {
+            throw new AppError(
+                'User already deleted',
+                400,
+                'ALREADY_DELETED'
+            );
+        }
+
+        const now = new Date();
+
+        // ===== UPDATE =====
+        const deleted = await User.findOneAndUpdate(
             {
                 _id: userId,
                 deleted_at: null,
             },
             {
-                deleted_at: new Date(),
+                deleted_at: now,
                 deleted_by: actorId,
             },
             {
@@ -135,24 +160,36 @@ class UserService {
             }
         );
 
-        if (!user) {
+        if (!deleted) {
             throw new AppError(
-                'User not found or already deleted',
+                'User not found',
                 404,
                 'USER_NOT_FOUND'
             );
         }
 
-        return UserMapper.toResponseDTO(user);
+        // ===== AUDIT LOG =====
+        try {
+            await UserAuditLogService.createLog({
+                actor_id: actorId,
+                action: AUDIT_ACTIONS.DELETE_USER_SOFT,
+                user_id: userId,
+                changes: {
+                    deleted_at: {
+                        from: null,
+                        to: now,
+                    },
+                },
+                ip_address: metadata.ip || null,
+                user_agent: metadata.userAgent || null,
+            });
+        } catch (error) {
+            console.error('Audit log failed:', error);
+        }
+
+        return UserMapper.toResponseDTO(deleted);
     }
 
-    /**
-     * Update user roles (admin only)
-     * @param {String} userId - MongoDB ObjectId
-     * @param {Array<String>} roles - Array of roles ['CUSTOMER', 'MANAGER', 'ADMIN']
-     * @returns {Object} Updated user DTO
-     * @throws {AppError} If user not found or invalid roles
-     */
     static async updateUserRoles(userId, roles, adminId, metadata = {}) {
 
         // ===== VALIDATE INPUT =====
@@ -257,11 +294,10 @@ class UserService {
 
         // ===== AUDIT LOG =====
         try {
-            await AuditLogService.createLog({
+            await UserAuditLogService.createLog({
                 actor_id: adminId,
                 action: AUDIT_ACTIONS.UPDATE_USER_ROLES,
-                entity_type: ENTITY_TYPES.USER,
-                entity_id: userId,
+                user_id: userId,
                 changes: {
                     roles: {
                         from: normalizedOld,
@@ -278,14 +314,77 @@ class UserService {
         return UserMapper.toResponseDTO(updated);
     }
 
-    /**
-     * Logout all devices (increment token version)
-     * Used when user changes password or wants to logout all devices
-     * 
-     * @param {String} userId - MongoDB ObjectId
-     * @returns {Object} Logout confirmation
-     * @throws {AppError} If user not found
-     */
+    static async updateUserStatus(userId, status, actorId, metadata = {}) {
+
+        // ===== VALIDATE =====
+        const ALLOWED_STATUS = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
+
+        if (!ALLOWED_STATUS.includes(status)) {
+            throw new AppError(
+                'Invalid status',
+                400,
+                'INVALID_STATUS'
+            );
+        }
+
+        // ===== GET CURRENT USER =====
+        const existingUser = await User.findOne({
+            _id: userId,
+            deleted_at: null,
+        });
+
+        if (!existingUser) {
+            throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        }
+
+        const oldStatus = existingUser.status;
+
+        // ===== NO CHANGE =====
+        if (oldStatus === status) {
+            throw new AppError(
+                'Status unchanged',
+                400,
+                'NO_CHANGE'
+            );
+        }
+
+        // ===== UPDATE =====
+        const updated = await User.findOneAndUpdate(
+            {
+                _id: userId,
+                deleted_at: null,
+            },
+            {
+                $set: { status },
+            },
+            {
+                new: true,
+                runValidators: true,
+            }
+        );
+
+        // ===== AUDIT LOG =====
+        try {
+            await UserAuditLogService.createLog({
+                actor_id: actorId,
+                action: AUDIT_ACTIONS.UPDATE_USER_STATUS,
+                user_id: userId,
+                changes: {
+                    status: {
+                        from: oldStatus,
+                        to: status,
+                    },
+                },
+                ip_address: metadata.ip || null,
+                user_agent: metadata.userAgent || null,
+            });
+        } catch (error) {
+            console.error('Audit log failed:', error);
+        }
+
+        return UserMapper.toResponseDTO(updated);
+    }
+
     static async logoutAllDevices(userId) {
         const user = await User.findByIdAndUpdate(
             userId,
@@ -300,15 +399,6 @@ class UserService {
         return { message: 'Logged out from all devices' };
     }
 
-    /**
-     * Verify token version (check if token is revoked)
-     * Used in auth middleware to invalidate old tokens
-     * 
-     * @param {String} userId - MongoDB ObjectId
-     * @param {Number} tokenVersion - Version from JWT payload
-     * @returns {Boolean} True if token version is valid
-     * @throws {AppError} If user not found or token is revoked
-     */
     static async verifyTokenVersion(userId, tokenVersion) {
         const user = await User.findById(userId).select('+token_version');
 
@@ -327,14 +417,6 @@ class UserService {
         return true;
     }
 
-    /**
-     * Get user with token version (for auth middleware)
-     * Used in auth.middleware.js for token revocation check
-     * 
-     * @param {String} userId - MongoDB ObjectId
-     * @returns {Object} User document with token_version
-     * @throws {AppError} If user not found
-     */
     static async getUserWithTokenVersion(userId) {
         const user = await User.findById(userId).select('+token_version');
 

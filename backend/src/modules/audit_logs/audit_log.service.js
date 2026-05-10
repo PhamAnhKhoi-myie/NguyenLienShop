@@ -1,65 +1,56 @@
-const AuditLog = require('./audit_log.model');
+const UserAuditLog = require('./user_audit_log/user_audit_log.model');
 const AppError = require('../../utils/appError.util');
 
 class AuditLogService {
-    /**
-     * Tạo log mới (Các Service khác như UserService, CategoryService sẽ gọi hàm này)
-     * Hàm này không nên throw error làm gián đoạn luồng chính của app
-     */
-    static async createLog(logData) {
-        try {
-            const log = new AuditLog(logData);
-            await log.save();
-            return log;
-        } catch (error) {
-            // Chỉ log ra console, KHÔNG throw error để tránh làm hỏng API chính (như update user)
-            console.error('Lỗi khi ghi Audit Log:', error);
-        }
-    }
 
-    /**
-     * Lấy danh sách logs (Dành cho màn hình Admin) có phân trang và lọc
-     */
-    static async getAllLogs({ page = 1, limit = 20, entity_type, action, actor_id }) {
-        const query = {};
+    static async getAllLogs({ action, actor_id, page = 1, limit = 20 }) {
+        const filter = {};
 
-        // Xây dựng bộ lọc
-        if (entity_type) query.entity_type = entity_type;
-        if (action) query.action = action;
-        if (actor_id) query.actor_id = actor_id;
+        if (action) filter.action = action;
+        if (actor_id) filter.actor_id = actor_id;
 
         const skip = (page - 1) * limit;
 
-        const [logs, total] = await Promise.all([
-            AuditLog.find(query)
-                .populate('actor_id', 'name email roles') // Lấy thêm thông tin người thực hiện
-                .sort({ created_at: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            AuditLog.countDocuments(query)
-        ]);
+        let allLogs = [];
+
+        for (const domain of DOMAIN_MODELS) {
+            const logs = await domain.model.find(filter).lean();
+
+            allLogs.push(
+                ...logs.map(l => ({
+                    ...l,
+                    domain: domain.name
+                }))
+            );
+        }
+
+        // sort
+        allLogs.sort((a, b) =>
+            new Date(b.created_at) - new Date(a.created_at)
+        );
+
+        const total = allLogs.length;
+
+        const paginated = allLogs.slice(skip, skip + limit);
 
         return {
-            data: logs,
+            data: paginated,
             pagination: {
-                total,
-                page,
-                limit,
-                total_pages: Math.ceil(total / limit)
-            }
+                current_page: page,
+                total_pages: Math.ceil(total / limit),
+                total_items: total,
+                per_page: limit,
+            },
         };
     }
 
-    /**
-     * Lấy chi tiết 1 log (Để xem rõ old_values và new_values)
-     */
-    static async getLogById(logId) {
-        const log = await AuditLog.findById(logId).populate('actor_id', 'name email roles').lean();
+    static async getLogById(id) {
+        const log = await UserAuditLog.findById(id);
         if (!log) {
-            throw new AppError('Không tìm thấy bản ghi log này', 404, 'AUDIT_LOG_NOT_FOUND');
+            throw new AppError('Log not found', 404, 'LOG_NOT_FOUND');
         }
-        return log;
+
+        return { ...log.toObject(), domain: 'USER' };
     }
 }
 

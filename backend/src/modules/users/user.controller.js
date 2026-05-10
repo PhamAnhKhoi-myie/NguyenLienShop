@@ -54,9 +54,11 @@ const updateUser = asyncHandler(async (req, res) => {
         UserMapper.toUpdatePayload(req.body);
 
     const updated =
-        await UserService.updateUser(
+        await UserService.updateUserProfile(
             req.params.id,
-            updatePayload
+            updatePayload,
+            req.user.id,
+            buildAuditMetadata(req)
         );
 
     return res.status(200).json({
@@ -72,7 +74,8 @@ const deleteUser = asyncHandler(async (req, res) => {
     const result =
         await UserService.deleteUser(
             req.params.id,
-            req.user.id
+            req.user.id,
+            buildAuditMetadata(req)
         );
 
     return res.status(200).json({
@@ -133,10 +136,29 @@ const updateUserRoles = asyncHandler(async (req, res) => {
     });
 });
 
+const updateUserStatus = asyncHandler(async (req, res) => {
+    validateObjectId(req.params.id);
+
+    const { status } = req.body;
+
+    const updated = await UserService.updateUserStatus(
+        req.params.id,
+        status,
+        req.user.id,
+        buildAuditMetadata(req)
+    );
+
+    return res.status(200).json({
+        success: true,
+        data: updated,
+    });
+});
+
 module.exports = {
     getMe,
     getAllUsers,
     updateUser,
     deleteUser,
     updateUserRoles,
+    updateUserStatus
 };
