@@ -24,15 +24,10 @@ const auditLogSchema = new mongoose.Schema(
             required: true,
             description: 'ID của bản ghi bị tác động'
         },
-        old_values: {
+        changes: {
             type: mongoose.Schema.Types.Mixed,
-            default: null,
-            description: 'Giá trị trước khi thay đổi (dùng để rollback nếu cần)'
-        },
-        new_values: {
-            type: mongoose.Schema.Types.Mixed,
-            default: null,
-            description: 'Giá trị sau khi thay đổi'
+            required: true,
+            description: 'Các field thay đổi dạng diff { field: { from, to } }',
         },
         ip_address: {
             type: String,

@@ -164,8 +164,6 @@ class UserService {
             );
         }
 
-        roles = [...new Set(roles)];
-
         const invalidRoles = roles.filter(
             (role) => !ALL_ROLES.includes(role)
         );
@@ -179,6 +177,8 @@ class UserService {
         }
 
         // ===== GET CURRENT USER =====
+        roles = [...new Set(roles)];
+
         const existingUser = await User.findOne({
             _id: userId,
             deleted_at: null,
@@ -193,11 +193,15 @@ class UserService {
         }
 
         const oldRoles = existingUser.roles;
-        const normalize = (arr) => [...arr].sort();
+
+        const normalize = (arr) => [...new Set(arr)].sort();
+
+        const normalizedOld = normalize(oldRoles);
+        const normalizedNew = normalize(roles);
 
         const isSame =
-            JSON.stringify(normalize(oldRoles)) ===
-            JSON.stringify(normalize(roles));
+            JSON.stringify(normalizedOld) ===
+            JSON.stringify(normalizedNew);
 
         if (isSame) {
             throw new AppError(
@@ -258,8 +262,12 @@ class UserService {
                 action: AUDIT_ACTIONS.UPDATE_USER_ROLES,
                 entity_type: ENTITY_TYPES.USER,
                 entity_id: userId,
-                old_values: { roles: oldRoles },
-                new_values: { roles },
+                changes: {
+                    roles: {
+                        from: normalizedOld,
+                        to: normalizedNew,
+                    },
+                },
                 ip_address: metadata.ip || null,
                 user_agent: metadata.userAgent || null,
             });
