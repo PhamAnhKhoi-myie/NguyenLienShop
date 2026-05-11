@@ -2,26 +2,28 @@ const { z } = require('zod');
 const mongoose = require('mongoose');
 
 /**
- * Custom validators
+ * ObjectId
  */
-const objectIdSchema = z
-    .string()
-    .refine(
-        (val) => mongoose.Types.ObjectId.isValid(val),
-        { message: 'Invalid MongoDB ObjectId' }
-    );
+const objectIdSchema = z.string().refine(
+    (val) => mongoose.Types.ObjectId.isValid(val),
+    { message: 'Invalid MongoDB ObjectId' }
+);
 
-const objectIdOptionalSchema = z
-    .string()
-    .refine(
-        (val) => mongoose.Types.ObjectId.isValid(val),
-        { message: 'Invalid MongoDB ObjectId' }
-    )
-    .optional()
-    .nullable();
+const objectIdOptionalSchema = objectIdSchema.optional().nullable();
 
 /**
- * ✅ Stock schema (nested in variant)
+ * PARAMS (BẮT BUỘC CHO ROUTES)
+ */
+const variantIdParamSchema = z.object({
+    variantId: objectIdSchema
+});
+
+const productIdParamSchema = z.object({
+    productId: objectIdSchema
+});
+
+/**
+ * STOCK
  */
 const stockSchema = z.object({
     available: z
@@ -29,11 +31,13 @@ const stockSchema = z.object({
         .int()
         .nonnegative('Available stock cannot be negative')
         .default(0),
+
     reserved: z
         .number()
         .int()
         .nonnegative('Reserved stock cannot be negative')
         .default(0),
+
     sold: z
         .number()
         .int()
@@ -42,112 +46,78 @@ const stockSchema = z.object({
 });
 
 /**
- * CREATE Variant Schema
- * 
- * ✅ Require:
- * - size (e.g., "20x25")
- * - fabric_type (e.g., "Vải Không Dệt")
- * 
- * ✅ Optional:
- * - stock (initial inventory)
- * - status (default ACTIVE)
- * 
- * ⚠️ SKU is auto-generated (NOT in request body)
+ * CREATE
  */
 const createVariantSchema = z.object({
-    // ✅ FIX #5: Size must be unique per product (checked in service)
     size: z
         .string()
         .min(1, 'Size is required')
-        .max(50, 'Size must not exceed 50 characters')
+        .max(50)
         .trim(),
 
-    // ✅ FIX #5: Fabric type must be unique per product (checked in service)
     fabric_type: z
         .string()
         .min(1, 'Fabric type is required')
-        .max(100, 'Fabric type must not exceed 100 characters')
+        .max(100)
         .trim(),
 
-    // ✅ FIX #2: Initial stock (in items, NOT packs)
-    stock: stockSchema
-        .optional(),
+    stock: stockSchema.optional(),
 
-    // Status
     status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });
 
 /**
- * UPDATE Variant Schema
- * 
- * ✅ All optional (partial update)
- * ⚠️ Cannot update: sku (unique), size/fabric (need combo check)
+ * UPDATE
  */
 const updateVariantSchema = z.object({
     size: z
         .string()
-        .min(1, 'Size is required')
-        .max(50, 'Size must not exceed 50 characters')
+        .min(1)
+        .max(50)
         .trim()
         .optional(),
 
     fabric_type: z
         .string()
-        .min(1, 'Fabric type is required')
-        .max(100, 'Fabric type must not exceed 100 characters')
+        .min(1)
+        .max(100)
         .trim()
         .optional(),
 
-    // ✅ FIX #2: Update stock available
-    stock: stockSchema
-        .optional(),
+    stock: stockSchema.optional(),
 
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
 
 /**
- * Reserve Stock Schema
- * 
- * @param qtyItems - Number of items (cái) to reserve
+ * STOCK ACTIONS
  */
 const reserveStockSchema = z.object({
     qty_items: z
         .number()
         .int()
-        .positive('Quantity must be at least 1')
-        .max(1000000, 'Quantity exceeds maximum'),
+        .positive()
+        .max(1000000),
 });
 
-/**
- * Complete Sale Schema
- * 
- * @param qtyItems - Number of items to mark as sold
- */
 const completeSaleSchema = z.object({
     qty_items: z
         .number()
         .int()
-        .positive('Quantity must be at least 1')
-        .max(1000000, 'Quantity exceeds maximum'),
+        .positive()
+        .max(1000000),
 });
 
-/**
- * Release Reserved Stock Schema
- * 
- * @param qtyItems - Number of items to release
- */
 const releaseReservedStockSchema = z.object({
     qty_items: z
         .number()
         .int()
-        .positive('Quantity must be at least 1')
-        .max(1000000, 'Quantity exceeds maximum'),
+        .positive()
+        .max(1000000),
 });
 
 /**
- * Get Max Order Qty Schema
- * 
- * @param packSize - Size of pack (default 100)
+ * QUERY
  */
 const getMaxOrderQtySchema = z.object({
     pack_size: z
@@ -157,24 +127,6 @@ const getMaxOrderQtySchema = z.object({
         .default('100'),
 });
 
-/**
- * Get Variants by Product Schema
- * 
- * @param productId - Product MongoDB ObjectId
- */
-const getVariantsByProductSchema = z.object({
-    productId: objectIdSchema,
-});
-
-/**
- * Get Variant by ID Schema
- * 
- * @param variantId - Variant MongoDB ObjectId
- */
-const getVariantByIdSchema = z.object({
-    variantId: objectIdSchema,
-});
-
 module.exports = {
     createVariantSchema,
     updateVariantSchema,
@@ -182,6 +134,6 @@ module.exports = {
     completeSaleSchema,
     releaseReservedStockSchema,
     getMaxOrderQtySchema,
-    getVariantsByProductSchema,
-    getVariantByIdSchema,
+    variantIdParamSchema,
+    productIdParamSchema
 };

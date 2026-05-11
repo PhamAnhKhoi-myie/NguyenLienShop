@@ -1,24 +1,6 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
 
-/**
- * ============================================
- * PRODUCT SCHEMA
- * ============================================
- * 
- * Represents: Túi bao trái (product)
- * 
- * Key Points:
- * - min_price/max_price: UI display (cached từ variants)
- * - min_price_per_unit/max_price_per_unit: logic compare
- * - Soft delete: is_deleted + deleted_at + middleware
- * - Slug: unique + partial index (allow reuse after delete)
- * - Images: array of objects với is_primary, sort_order
- * 
- * Update Flow: Product → Variants → VariantUnits
- * (pricing cascade handled ở service layer)
- */
-
 const imageSchema = new mongoose.Schema(
     {
         url: {
@@ -201,7 +183,6 @@ const productSchema = new mongoose.Schema(
 
 // ===== INDEXES (Production Optimized) =====
 
-// ✅ FIX #5: Slug unique with partial filter (allow reuse after delete)
 productSchema.index(
     { slug: 1 },
     {
@@ -212,7 +193,6 @@ productSchema.index(
     }
 );
 
-// ✅ FIX #6: Compound index for listing (category + status + deleted + newest first)
 productSchema.index(
     { category_id: 1, status: 1, is_deleted: 1, created_at: -1 },
     {
@@ -258,21 +238,13 @@ productSchema.index(
 
 // ===== MIDDLEWARE =====
 
-/**
- * ✅ Pre-validate: Auto-generate slug từ name
- * Chạy trước validate để check duplicate slug
- */
 productSchema.pre('validate', function (next) {
-    if (this.isModified('name')) {
+    if (!this.slug) {
         this.slug = slugify(this.name, { lower: true, strict: true });
     }
     next();
 });
 
-/**
- * ✅ Pre-save: Ensure primary image
- * Nếu không có is_primary → auto set first image
- */
 productSchema.pre('save', function (next) {
     if (this.images.length > 0) {
         const hasPrimary = this.images.some((img) => img.is_primary);
@@ -288,14 +260,6 @@ productSchema.pre('save', function (next) {
     next();
 });
 
-/**
- * ✅ Pre-find middleware: Auto-exclude soft-deleted products
- * Pattern từ user.model.js
- * 
- * Usage:
- * - Normal: Product.find() → exclude is_deleted=true
- * - Include deleted: Product.find({ includeDeleted: true })
- */
 const excludeDeleted = function (next) {
     const options = this.getOptions?.() || {};
 
@@ -311,9 +275,7 @@ productSchema.pre('findOne', excludeDeleted);
 productSchema.pre('findOneAndUpdate', excludeDeleted);
 productSchema.pre('countDocuments', excludeDeleted);
 
-/**
- * ✅ Pre-aggregate: Auto-exclude soft-deleted ở aggregation pipeline
- */
+
 productSchema.pre('aggregate', function (next) {
     const pipeline = this.pipeline();
 
@@ -332,22 +294,10 @@ productSchema.pre('aggregate', function (next) {
 
 // ===== STATIC METHODS =====
 
-/**
- * ✅ Find by slug (common use case)
- */
 productSchema.statics.findBySlug = function (slug, options = {}) {
     return this.findOne({ slug }, null, options);
 };
 
-/**
- * ✅ Update price cache (CRITICAL - service layer calls this)
- * 
- * Logic:
- * - Product.min_price = min từ all variants
- * - Product.max_price = max từ all variants
- * - Product.min_price_per_unit = lowest unit price
- * - Product.max_price_per_unit = highest unit price
- */
 productSchema.statics.updatePriceCache = async function (productId) {
     const Variant = mongoose.model('Variant');
 
@@ -390,30 +340,25 @@ productSchema.statics.updatePriceCache = async function (productId) {
     });
 };
 
-/**
- * ✅ Soft delete (handle cascading)
- * 
- * Logic:
- * - Mark product as deleted
- * - Soft-delete all variants
- * - (VariantUnits: keep for audit, không xóa)
- */
-productSchema.statics.softDelete = async function (productId) {
+productSchema.statics.softDelete = async function (productId, session) {
     const Variant = mongoose.model('Variant');
 
-    // Soft-delete product
-    await this.findByIdAndUpdate(productId, {
-        is_deleted: true,
-        deleted_at: new Date(),
-    });
+    await this.findByIdAndUpdate(
+        productId,
+        {
+            is_deleted: true,
+            deleted_at: new Date(),
+        },
+        { session, includeDeleted: true }
+    );
 
-    // Soft-delete all variants
     await Variant.updateMany(
         { product_id: productId },
         {
             is_deleted: true,
             deleted_at: new Date(),
-        }
+        },
+        { session }
     );
 };
 

@@ -9,165 +9,104 @@ const {
     completeSaleSchema,
     releaseReservedStockSchema,
     getMaxOrderQtySchema,
+    variantIdParamSchema,
+    productIdParamSchema
 } = require('../variant.validator');
+
 const { authenticate } = require('../../../middlewares/auth.middleware');
 const { authorize } = require('../../../middlewares/authorize.middleware');
 const { requireInternal } = require('../../../middlewares/internal.middleware');
-const { validateObjectId } = require('../../../utils/validator.util');
 
+// ===== PUBLIC =====
 
-// helper
-const validateVariantId = (req, res, next) => {
-    validateObjectId(req.params.variantId);
-    next();
-};
-
-const validateProductId = (req, res, next) => {
-    validateObjectId(req.params.productId);
-    next();
-};
-// ============================================================================
-// ===== VARIANT ROUTES =====
-// ============================================================================
-
-// ===== PUBLIC ENDPOINTS =====
-
-/**
- * GET /api/v1/products/:productId/variants
- * Get all variants for a product
- */
 router.get(
     '/',
-    validateProductId,
+    validate({ params: productIdParamSchema }),
     variantController.getVariantsByProduct
 );
 
-/**
- * GET /api/v1/variants/:variantId
- * Get variant by ID (with units)
- */
 router.get(
-    '/id/:variantId',
-    validateVariantId,
-    variantController.getVariantById
-);
-
-/**
- * GET /api/v1/variants/:variantId/stock
- * Check available stock for variant
- * 
- * ✅ FIX #2: Returns stock in items (cái), NOT packs
- */
-router.get(
-    '/id/:variantId/stock',
-    validateVariantId,
+    '/:variantId/stock',
+    validate({ params: variantIdParamSchema }),
     variantController.checkVariantStock
 );
 
-/**
- * GET /api/v1/variants/:variantId/max-order-qty
- * Get maximum orderable quantity for variant
- * 
- * Query params:
- * - pack_size (optional, default 100)
- */
 router.get(
-    '/id/:variantId/max-order-qty',
-    validateVariantId,
-    validate({ query: getMaxOrderQtySchema }),
+    '/:variantId/max-order-qty',
+    validate({
+        params: variantIdParamSchema,
+        query: getMaxOrderQtySchema
+    }),
     variantController.getMaxOrderQty
 );
 
-// ===== ADMIN ENDPOINTS =====
+router.get(
+    '/:variantId',
+    validate({ params: variantIdParamSchema }),
+    variantController.getVariantById
+);
 
-/**
- * POST /api/v1/products/:productId/variants
- * Create new variant (manager+ only)
- * 
- * Body:
- * - size (required)
- * - fabric_type (required)
- * - stock (optional)
- * - status (optional)
- */
+// ===== ADMIN =====
+
 router.post(
     '/',
     authenticate,
     authorize(['ADMIN', 'MANAGER']),
-    validateProductId,
-    validate({ body: createVariantSchema }),
+    validate({
+        params: productIdParamSchema,
+        body: createVariantSchema
+    }),
     variantController.createVariant
 );
 
-/**
- * PATCH /api/v1/variants/:variantId
- * Update variant (manager+ only)
- */
 router.patch(
-    '/id/:variantId',
+    '/:variantId',
     authenticate,
     authorize(['ADMIN', 'MANAGER']),
-    validate({ body: updateVariantSchema }),
+    validate({
+        params: variantIdParamSchema,
+        body: updateVariantSchema
+    }),
     variantController.updateVariant
 );
 
-/**
- * DELETE /api/v1/variants/:variantId
- * Soft delete variant (manager+ only)
- */
 router.delete(
-    '/id/:variantId',
+    '/:variantId',
     authenticate,
     authorize(['ADMIN', 'MANAGER']),
+    validate({ params: variantIdParamSchema }),
     variantController.deleteVariant
 );
 
-// ===== STOCK MANAGEMENT (Internal) =====
+// ===== INTERNAL =====
 
-/**
- * POST /api/v1/variants/:variantId/reserve-stock
- * Reserve stock when item added to cart
- * 
- * Body:
- * - qty_items (required)
- * 
- * ⚠️ Internal endpoint - called from cart service
- */
 router.post(
-    '/id/:variantId/reserve-stock',
+    '/:variantId/reserve-stock',
     requireInternal,
-    validateVariantId,
-    validate({ body: reserveStockSchema }),
+    validate({
+        params: variantIdParamSchema,
+        body: reserveStockSchema
+    }),
     variantController.reserveStock
 );
 
-/**
- * POST /api/v1/variants/:variantId/complete-sale
- * Mark reserved stock as sold (order confirmed)
- * 
- * Body:
- * - qty_items (required)
- */
 router.post(
-    '/id/:variantId/complete-sale',
+    '/:variantId/complete-sale',
     requireInternal,
-    validateVariantId,
-    validate({ body: completeSaleSchema }),
+    validate({
+        params: variantIdParamSchema,
+        body: completeSaleSchema
+    }),
     variantController.completeSale
 );
 
-/**
- * POST /api/v1/variants/:variantId/release-stock
- * Release reserved stock (order cancelled)
- * 
- * Body:
- * - qty_items (required)
- */
 router.post(
-    '/id/:variantId/release-stock',
+    '/:variantId/release-stock',
     requireInternal,
-    validateVariantId,
-    validate({ body: releaseReservedStockSchema }),
+    validate({
+        params: variantIdParamSchema,
+        body: releaseReservedStockSchema
+    }),
     variantController.releaseReservedStock
 );
 

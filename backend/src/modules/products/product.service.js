@@ -6,12 +6,6 @@ const ProductMapper = require('./product.mapper');
 const AppError = require('../../utils/appError.util');
 
 class ProductService {
-    /**
-     * CREATE: Tạo product mới
-     * 
-     * @param {Object} data - { name, slug, category_id, brand, description, ... }
-     * @returns {Object} Product DTO
-     */
     static async createProduct(data) {
         const { name, category_id, ...rest } = data;
 
@@ -39,12 +33,6 @@ class ProductService {
         return ProductMapper.toResponseDTO(product);
     }
 
-    /**
-     * READ: Get product by ID (with variants + units)
-     * 
-     * @param {String} productId - MongoDB ObjectId
-     * @returns {Object} Product DTO with nested variants
-     */
     static async getProductById(productId) {
         const product = await Product.findById(productId).lean();
         if (!product) {
@@ -61,27 +49,36 @@ class ProductService {
             { includeDeleted: false }
         ).lean();
 
-        const variantsWithUnits = await Promise.all(
-            variants.map(async (variant) => {
-                const units = await VariantUnit.find(
-                    { variant_id: variant._id }
-                ).lean();
-                return {
-                    ...variant,
-                    units,
-                };
-            })
-        );
+        // 1. Lấy tất cả variantIds
+        const variantIds = variants.map(v => v._id);
+
+        // 2. Lấy tất cả units 1 lần
+        const allUnits = await VariantUnit.find({
+            variant_id: { $in: variantIds }
+        }).lean();
+
+        // 3. Group units theo variant_id
+        const unitsMap = {};
+
+        for (const unit of allUnits) {
+            const key = unit.variant_id.toString();
+            if (!unitsMap[key]) {
+                unitsMap[key] = [];
+            }
+            unitsMap[key].push(unit);
+        }
+
+        // 4. Gắn units vào variant
+        const variantsWithUnits = variants.map((variant) => {
+            return {
+                ...variant,
+                units: unitsMap[variant._id.toString()] || [],
+            };
+        });
 
         return ProductMapper.toDetailDTO(product, variantsWithUnits);
     }
 
-    /**
-     * Get product by slug
-     * 
-     * @param {String} slug - Product slug
-     * @returns {Object} Product DTO with variants
-     */
     static async getProductBySlug(slug) {
         const product = await Product.findBySlug(slug).lean();
         if (!product) {
@@ -93,29 +90,39 @@ class ProductService {
         }
 
         const variants = await Variant.find(
-            { product_id: product._id }
+            { product_id: product._id },
+            null,
+            { includeDeleted: false }
         ).lean();
 
-        const variantsWithUnits = await Promise.all(
-            variants.map(async (variant) => {
-                const units = await VariantUnit.find(
-                    { variant_id: variant._id }
-                ).lean();
-                return { ...variant, units };
-            })
-        );
+        // 1. Lấy tất cả variantIds
+        const variantIds = variants.map(v => v._id);
+
+        // 2. Lấy tất cả units 1 lần
+        const allUnits = await VariantUnit.find({
+            variant_id: { $in: variantIds }
+        }).lean();
+
+        // 3. Group
+        const unitsMap = {};
+
+        for (const unit of allUnits) {
+            const key = unit.variant_id.toString();
+            if (!unitsMap[key]) {
+                unitsMap[key] = [];
+            }
+            unitsMap[key].push(unit);
+        }
+
+        // 4. Map lại
+        const variantsWithUnits = variants.map((variant) => ({
+            ...variant,
+            units: unitsMap[variant._id.toString()] || []
+        }));
 
         return ProductMapper.toDetailDTO(product, variantsWithUnits);
     }
 
-    /**
-     * READ: Get all products with pagination + filtering
-     * 
-     * @param {Number} page
-     * @param {Number} limit
-     * @param {Object} filters - { category_id, min_price, max_price, search, status, sortBy }
-     * @returns {Object} Paginated products
-     */
     static async getAllProducts(
         page = 1,
         limit = 20,
@@ -136,12 +143,22 @@ class ProductService {
 
         // Filter by price range
         if (filters.min_price || filters.max_price) {
-            query.min_price = {};
-            if (filters.min_price) {
-                query.min_price.$gte = filters.min_price;
+            const priceConditions = [];
+
+            if (filters.min_price !== undefined) {
+                priceConditions.push({
+                    max_price: { $gte: filters.min_price }
+                });
             }
-            if (filters.max_price) {
-                query.min_price.$lte = filters.max_price;
+
+            if (filters.max_price !== undefined) {
+                priceConditions.push({
+                    min_price: { $lte: filters.max_price }
+                });
+            }
+
+            if (priceConditions.length > 0) {
+                query.$and = priceConditions;
             }
         }
 
@@ -179,13 +196,6 @@ class ProductService {
         };
     }
 
-    /**
-     * UPDATE: Update product info (NOT pricing - that's handled by variant service)
-     * 
-     * @param {String} productId
-     * @param {Object} updateData - { name, description, images, ... }
-     * @returns {Object} Updated product DTO
-     */
     static async updateProduct(productId, updateData) {
         if (!updateData || Object.keys(updateData).length === 0) {
             throw new AppError(
@@ -223,12 +233,6 @@ class ProductService {
         }
     }
 
-    /**
-     * DELETE: Soft-delete product (+ all variants)
-     * 
-     * @param {String} productId
-     * @returns {Object} Deletion confirmation
-     */
     static async deleteProduct(productId) {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -261,17 +265,6 @@ class ProductService {
         }
     }
 
-    /**
-     * INTERNAL: Update product price cache (called từ variant service)
-     * 
-     * ✅ FIX #3: When variant prices change, recalculate product min/max
-     * 
-     * Logic:
-     * - min_price = MIN dari tất cả active variants
-     * - max_price = MAX dari tất cả active variants
-     * - min_price_per_unit = MIN unit price
-     * - max_price_per_unit = MAX unit price
-     */
     static async recalcuatePriceCache(productId) {
         try {
             await Product.updatePriceCache(productId);
@@ -281,23 +274,10 @@ class ProductService {
         }
     }
 
-    /**
-     * ANALYTICS: Update product stats (called từ order service)
-     * 
-     * @param {String} productId
-     * @param {Object} stats - { sold_count, rating_avg, rating_count }
-     */
     static async updateProductStats(productId, stats) {
         await Product.findByIdAndUpdate(productId, { $set: stats });
     }
 
-    /**
-     * LIST by category with tree structure
-     * 
-     * @param {String} categoryId
-     * @param {Number} limit
-     * @returns {Array} Products in category
-     */
     static async getProductsByCategory(categoryId, limit = 50) {
         const products = await Product.find({
             category_id: categoryId,
@@ -310,13 +290,6 @@ class ProductService {
         return products.map(ProductMapper.toListDTO);
     }
 
-    /**
-     * Search products
-     * 
-     * @param {String} query
-     * @param {Number} limit
-     * @returns {Array} Matching products
-     */
     static async searchProducts(query, limit = 20) {
         const products = await Product.find(
             { $text: { $search: query } },

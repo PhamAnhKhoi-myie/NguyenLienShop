@@ -13,6 +13,9 @@ router.route('/')
     .get(auditLogController.getAllLogs);
 
 router.get('/users', auditLogController.getUserLogs);
+router.get('/user-addresses', auditLogController.getUserAddressLogs);
+router.get('/categories', auditLogController.getCategoryLogs);
+router.get('/auth', auditLogController.getAuthLogs);
 
 router.route('/:id')
     .get(auditLogController.getLogById);

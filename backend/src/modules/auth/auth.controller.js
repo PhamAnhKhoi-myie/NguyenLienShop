@@ -2,6 +2,7 @@ const asyncHandler = require('../../utils/asyncHandler.util');
 const authService = require("./auth.service");
 const AuthMapper = require('./auth.mapper');
 const AppError = require('../../utils/appError.util');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 const REFRESH_COOKIE_NAME = "refreshToken";
 
@@ -19,12 +20,14 @@ const getClientIp = (req) =>
     "";
 
 const register = asyncHandler(async (req, res) => {
+    const metadata = buildAuditMetadata(req);
     const { email, password, full_name } = req.body;
 
     const result = await authService.register(
         email,
         password,
-        full_name
+        full_name,
+        metadata
     );
 
     return res.status(201).json({
@@ -116,12 +119,14 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 const changePassword = asyncHandler(async (req, res) => {
+    const metadata = buildAuditMetadata(req);
     const { currentPassword, newPassword } = req.body;
 
     const result = await authService.changePassword(
         req.user.id,
         currentPassword,
-        newPassword
+        newPassword,
+        metadata
     );
 
     return res.status(200).json({
@@ -131,9 +136,13 @@ const changePassword = asyncHandler(async (req, res) => {
 });
 
 const forgotPassword = asyncHandler(async (req, res) => {
+    const metadata = buildAuditMetadata(req);
     const { email } = req.body;
 
-    const result = await authService.forgotPassword(email);
+    const result = await authService.forgotPassword(
+        email,
+        metadata
+    );
 
     return res.status(200).json({
         success: true,
@@ -142,12 +151,14 @@ const forgotPassword = asyncHandler(async (req, res) => {
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
+    const metadata = buildAuditMetadata(req);
     const { email, otp, newPassword } = req.body;
 
     const result = await authService.resetPassword(
         email,
         otp,
-        newPassword
+        newPassword,
+        metadata
     );
 
     return res.status(200).json({

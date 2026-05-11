@@ -1,36 +1,43 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
-const AuditLogService = require('./audit_log.service');
+const { AuditLogService, DOMAIN_MODELS, DOMAIN_ACTION_MAP } = require('./audit_log.service');
 const { validateObjectId } = require('../../utils/validator.util');
 const AppError = require('../../utils/appError.util');
+const { AUDIT_LEVELS, AUDIT_ACTIONS } = require('../../constants/audit');
+
+const ALLOWED_DOMAINS = DOMAIN_MODELS.map(d => d.name);
 
 const getAllLogs = asyncHandler(async (req, res) => {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 20;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limitRaw = parseInt(req.query.limit, 10) || 20;
+    const limit = Math.min(Math.max(limitRaw, 1), 100);
+    const actor_id = req.query.actor_id?.trim() || undefined;
+    const level = req.query.level?.trim() || undefined;
+    const domain = req.query.domain?.trim() || undefined;
+    const action = req.query.action?.trim() || undefined;
 
-    const actor_id = req.query.actor_id;
-    const level = req.query.level;
-    const domain = req.query.domain;
-
-    // validate actor_id
     if (actor_id && !validateObjectId(actor_id)) {
         throw new AppError('Invalid actor_id', 400, 'INVALID_ID');
     }
 
-    // validate level
-    const ALLOWED_LEVELS = ['INFO', 'IMPORTANT', 'SECURITY'];
-    if (level && !ALLOWED_LEVELS.includes(level)) {
+    if (level && !AUDIT_LEVELS.includes(level)) {
         throw new AppError('Invalid level', 400, 'INVALID_LEVEL');
     }
 
-    // validate domain
-    const ALLOWED_DOMAINS = ['USER'];
     if (domain && !ALLOWED_DOMAINS.includes(domain)) {
         throw new AppError('Invalid domain', 400, 'INVALID_DOMAIN');
     }
 
+    if (action && !Object.values(AUDIT_ACTIONS).includes(action)) {
+        throw new AppError('Invalid action', 400, 'INVALID_ACTION');
+    }
+
+    if (domain && action && !DOMAIN_ACTION_MAP[domain]?.includes(action)) {
+        throw new AppError('Action not valid for this domain', 400, 'INVALID_ACTION_FOR_DOMAIN');
+    }
+
     const filters = {
         domain,
-        action: req.query.action || undefined,
+        action,
         level,
         actor_id,
         page,
@@ -58,13 +65,38 @@ const getLogById = asyncHandler(async (req, res) => {
 });
 
 const getUserLogs = asyncHandler(async (req, res) => {
-    req.query.domain = 'USER';
+    return getAllLogs(
+        { ...req, query: { ...req.query, domain: 'USER' } },
+        res
+    );
+});
 
-    return getAllLogs(req, res);
+const getUserAddressLogs = asyncHandler(async (req, res) => {
+    return getAllLogs(
+        { ...req, query: { ...req.query, domain: 'USER_ADDRESS' } },
+        res
+    );
+});
+
+const getCategoryLogs = asyncHandler(async (req, res) => {
+    return getAllLogs(
+        { ...req, query: { ...req.query, domain: 'CATEGORY' } },
+        res
+    );
+});
+
+const getAuthLogs = asyncHandler(async (req, res) => {
+    return getAllLogs(
+        { ...req, query: { ...req.query, domain: 'AUTH' } },
+        res
+    );
 });
 
 module.exports = {
     getAllLogs,
     getLogById,
-    getUserLogs
+    getUserLogs,
+    getUserAddressLogs,
+    getCategoryLogs,
+    getAuthLogs
 };

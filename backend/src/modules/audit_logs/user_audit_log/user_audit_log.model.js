@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
-const { AUDIT_ACTIONS } = require('../../../constants/audit');
-
-const LEVELS = ['INFO', 'IMPORTANT', 'SECURITY'];
+const { AUDIT_ACTIONS, AUDIT_LEVELS } = require('../../../constants/audit');
 
 const schema = new mongoose.Schema(
     {
@@ -17,7 +15,7 @@ const schema = new mongoose.Schema(
         },
         level: {
             type: String,
-            enum: LEVELS,
+            enum: AUDIT_LEVELS,
             required: true,
         },
         user_id: {

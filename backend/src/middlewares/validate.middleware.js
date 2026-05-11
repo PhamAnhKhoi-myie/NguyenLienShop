@@ -1,20 +1,29 @@
 const { ZodError } = require('zod');
 const AppError = require('../utils/appError.util');
 
-const validate = (schema) => {
+const validate = (schemas) => {
     return (req, res, next) => {
         try {
-            req.body = schema.parse(req.body || {});
+            // BODY
+            if (schemas.body) {
+                req.body = schemas.body.parse(req.body || {});
+            }
 
-            return next();
+            // QUERY
+            if (schemas.query) {
+                req.query = schemas.query.parse(req.query || {});
+            }
 
+            // PARAMS
+            if (schemas.params) {
+                req.params = schemas.params.parse(req.params || {});
+            }
+
+            next();
         } catch (error) {
-
             if (error instanceof ZodError) {
-
                 const messages = error.issues.map((issue) => {
                     const path = issue.path.join('.');
-
                     return path
                         ? `${path}: ${issue.message}`
                         : issue.message;

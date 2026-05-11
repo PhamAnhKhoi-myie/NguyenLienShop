@@ -8,6 +8,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const PasswordReset = require('../models/password-reset.model');
 const EmailService = require('../../emails/email.service');
+const AuthAuditLogService = require('../../audit_logs/auth_audit_log/auth_log.service');
+const { AUDIT_ACTIONS } = require('../../../constants/audit');
 
 class AuthCoreService {
     async register(email, password, fullName = null) {
@@ -24,6 +26,22 @@ class AuthCoreService {
             });
 
             await user.save();
+
+            try {
+                await AuthAuditLogService.createLog({
+                    actor_id: user._id,
+                    user_id: user._id,
+                    action: AUDIT_ACTIONS.AUTH_REGISTER,
+                    changes: {
+                        user: {
+                            from: null,
+                            to: user.email,
+                        },
+                    },
+                });
+            } catch (err) {
+                console.error('Audit log failed:', err);
+            }
 
             return UserMapper.toResponseDTO(user);
 
@@ -90,6 +108,25 @@ class AuthCoreService {
             is_revoked: false,
         });
         await User.findByIdAndUpdate(user._id, { last_login_at: new Date() });
+
+        try {
+            await AuthAuditLogService.createLog({
+                actor_id: user._id,
+                user_id: user._id,
+                action: AUDIT_ACTIONS.AUTH_LOGIN,
+                changes: {
+                    login: {
+                        from: null,
+                        to: 'SUCCESS',
+                    },
+                },
+                ip_address: ipAddress,
+                user_agent: userAgent,
+            });
+        } catch (err) {
+            console.error('Audit log failed:', err);
+        }
+
         return { user: UserMapper.toResponseDTO(user), tokens: { accessToken, refreshToken } };
     }
 
@@ -116,6 +153,23 @@ class AuthCoreService {
 
         const hashedNewPassword = await bcrypt.hash(newPassword, 12);
         await User.findByIdAndUpdate(userId, { password_hash: hashedNewPassword, $inc: { token_version: 1 } });
+
+        try {
+            await AuthAuditLogService.createLog({
+                actor_id: userId,
+                user_id: userId,
+                action: AUDIT_ACTIONS.AUTH_CHANGE_PASSWORD,
+                changes: {
+                    password: {
+                        from: 'OLD',
+                        to: 'UPDATED',
+                    },
+                },
+            });
+        } catch (err) {
+            console.error('Audit log failed:', err);
+        }
+
         await TokenService.revokeAllByUser(userId, 'password_changed');
         return { message: 'Mật khẩu đã được thay đổi' };
     }
@@ -183,6 +237,22 @@ class AuthCoreService {
                 expires_in: 5
             }
         });
+
+        try {
+            await AuthAuditLogService.createLog({
+                actor_id: user?._id || null,
+                user_id: user?._id || null,
+                action: AUDIT_ACTIONS.AUTH_FORGOT_PASSWORD,
+                changes: {
+                    forgot_password: {
+                        from: null,
+                        to: email,
+                    },
+                },
+            });
+        } catch (err) {
+            console.error('Audit log failed:', err);
+        }
 
         return { message: 'Nếu email tồn tại, chúng tôi đã gửi mã xác nhận' };
     }
@@ -253,6 +323,22 @@ class AuthCoreService {
             password_hash: hashedNewPassword,
             $inc: { token_version: 1 }
         });
+
+        try {
+            await AuthAuditLogService.createLog({
+                actor_id: user._id,
+                user_id: user._id,
+                action: AUDIT_ACTIONS.AUTH_RESET_PASSWORD,
+                changes: {
+                    password: {
+                        from: 'RESET_REQUEST',
+                        to: 'RESET_SUCCESS',
+                    },
+                },
+            });
+        } catch (err) {
+            console.error('Audit log failed:', err);
+        }
 
         await TokenService.revokeAllByUser(user._id, 'password_reset');
 

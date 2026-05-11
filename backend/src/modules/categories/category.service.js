@@ -2,12 +2,14 @@ const mongoose = require('mongoose');
 const Category = require('./category.model');
 const AppError = require('../../utils/appError.util');
 const CategoryMapper = require('./category.mapper');
+const CategoryAuditLogService = require('../audit_logs/category_audit_log/category_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class CategoryService {
     /**
      * CREATE: Tạo category mới
      */
-    static async createCategory(data) {
+    static async createCategory(data, metadata) {
         const { name, slug, parent_id, ...rest } = data;
 
         // Auto-generate slug nếu không có
@@ -54,6 +56,21 @@ class CategoryService {
         });
 
         await category.save();
+
+        await CategoryAuditLogService.createLog({
+            actor_id: metadata.actorId,
+            action: AUDIT_ACTIONS.CREATE_CATEGORY,
+            category_id: category._id,
+            changes: {
+                category: {
+                    from: null,
+                    to: category.name,
+                },
+            },
+            ip_address: metadata.ip,
+            user_agent: metadata.userAgent,
+        });
+
         return CategoryMapper.toResponseDTO(category);
     }
 
@@ -153,7 +170,7 @@ class CategoryService {
      * - Xử lý parent change
      * - ✅ Update tất cả descendants khi parent thay đổi
      */
-    static async updateCategory(categoryId, data) {
+    static async updateCategory(categoryId, data, metadata) {
         const session = await mongoose.startSession();
         session.startTransaction();
 
@@ -162,6 +179,15 @@ class CategoryService {
             if (!category) {
                 throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
             }
+
+            // ====== 🔴 CAPTURE OLD DATA ======
+            const oldData = {
+                name: category.name,
+                slug: category.slug,
+                parent_id: category.parent_id,
+                status: category.status,
+                display_order: category.display_order,
+            };
 
             // Kiểm tra slug
             if (data.slug && data.slug !== category.slug) {
@@ -172,18 +198,20 @@ class CategoryService {
                         is_deleted: { $ne: true }
                     }
                 ).session(session);
+
                 if (existingSlug) {
                     throw new AppError('Slug already exists', 409, 'SLUG_CONFLICT');
                 }
             }
 
-            // ✅ FIX #3: XỬ LÝ PARENT CHANGE
+            // ====== HANDLE PARENT CHANGE ======
             let pathChanged = false;
             const oldPath = [...category.path];
 
-            if (data.parent_id !== undefined &&
-                String(data.parent_id) !== String(category.parent_id)) {
-
+            if (
+                data.parent_id !== undefined &&
+                String(data.parent_id) !== String(category.parent_id)
+            ) {
                 const newPath = await Category.calculateNewPath(categoryId, data.parent_id);
 
                 category.path = newPath;
@@ -191,7 +219,7 @@ class CategoryService {
                 pathChanged = true;
             }
 
-            // Update fields
+            // ====== UPDATE FIELDS ======
             if (data.name !== undefined) category.name = data.name;
             if (data.slug !== undefined) category.slug = data.slug;
             if (data.description !== undefined) category.description = data.description;
@@ -202,7 +230,7 @@ class CategoryService {
 
             await category.save({ session });
 
-            // ✅ FIX: Update tất cả descendants khi parent changed
+            // ====== UPDATE DESCENDANTS ======
             if (pathChanged) {
                 const descendants = await Category.find(
                     { path: categoryId },
@@ -211,7 +239,6 @@ class CategoryService {
                 );
 
                 for (const descendant of descendants) {
-                    // ✅ Replace old path prefix với new path
                     descendant.path = [
                         ...category.path,
                         categoryId,
@@ -222,8 +249,43 @@ class CategoryService {
             }
 
             await session.commitTransaction();
+
             const updated = await Category.findById(categoryId);
+
+            // ====== 🟢 BUILD CHANGES ======
+            const newData = {
+                name: updated.name,
+                slug: updated.slug,
+                parent_id: updated.parent_id,
+                status: updated.status,
+                display_order: updated.display_order,
+            };
+
+            const changes = {};
+
+            for (const key in newData) {
+                if (String(oldData[key]) !== String(newData[key])) {
+                    changes[key] = {
+                        from: oldData[key],
+                        to: newData[key],
+                    };
+                }
+            }
+
+            // ====== 🟢 AUDIT LOG (SAU COMMIT) ======
+            if (Object.keys(changes).length > 0) {
+                await CategoryAuditLogService.createLog({
+                    actor_id: metadata.actorId,
+                    action: AUDIT_ACTIONS.UPDATE_CATEGORY,
+                    category_id: categoryId,
+                    changes,
+                    ip_address: metadata.ip,
+                    user_agent: metadata.userAgent,
+                });
+            }
+
             return CategoryMapper.toResponseDTO(updated);
+
         } catch (error) {
             await session.abortTransaction();
             throw error;
@@ -237,7 +299,7 @@ class CategoryService {
      * Soft delete → is_deleted=true, deleted_at=timestamp
      * Descendants tự động soft delete
      */
-    static async deleteCategory(categoryId) {
+    static async deleteCategory(categoryId, metadata) {
         const session = await mongoose.startSession();
         session.startTransaction();
 
@@ -247,24 +309,36 @@ class CategoryService {
                 throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
             }
 
-            // TODO: Check product count
-            // const productCount = await Product.countDocuments({ category_id: categoryId });
-            // if (productCount > 0) {
-            //     throw new AppError(
-            //         'Cannot delete category with active products',
-            //         409,
-            //         'CATEGORY_HAS_PRODUCTS'
-            //     );
-            // }
+            // 🔴 CAPTURE OLD STATE
+            const oldState = {
+                is_deleted: category.is_deleted || false,
+            };
 
-            // ✅ FIX: Soft delete category + descendants
+            // Soft delete category + descendants
             await Category.softDelete(categoryId, session);
 
             await session.commitTransaction();
+
+            // 🟢 AUDIT LOG (SAU COMMIT)
+            await CategoryAuditLogService.createLog({
+                actor_id: metadata.actorId,
+                action: AUDIT_ACTIONS.DELETE_CATEGORY_SOFT,
+                category_id: categoryId,
+                changes: {
+                    is_deleted: {
+                        from: oldState.is_deleted,
+                        to: true,
+                    },
+                },
+                ip_address: metadata.ip,
+                user_agent: metadata.userAgent,
+            });
+
             return {
                 message: 'Category deleted successfully (soft delete)',
                 categoryId
             };
+
         } catch (error) {
             await session.abortTransaction();
             throw error;

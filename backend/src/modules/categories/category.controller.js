@@ -8,6 +8,7 @@ const {
     getCategoryTreeSchema,
 } = require('./category.validator');
 const { validateObjectId } = require('../../utils/validator.util');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 // ===== PUBLIC ENDPOINTS =====
 
@@ -139,10 +140,18 @@ const getCategoryDescendants = asyncHandler(async (req, res) => {
  * Create new category (admin only)
  */
 const createCategory = asyncHandler(async (req, res) => {
-    assertAuthenticated(req.user);
 
-    // req.body already validated by validate middleware
-    const category = await CategoryService.createCategory(req.body);
+    const user = assertAuthenticated(req.user);
+
+    const metadata = {
+        ...buildAuditMetadata(req),
+        actorId: user.id,
+    };
+
+    const category = await CategoryService.createCategory(
+        req.body,
+        metadata
+    );
 
     res.status(201).json({
         success: true,
@@ -155,11 +164,20 @@ const createCategory = asyncHandler(async (req, res) => {
  * Update category (admin only)
  */
 const updateCategory = asyncHandler(async (req, res) => {
-    assertAuthenticated(req.user);
+
+    const user = assertAuthenticated(req.user);
     validateObjectId(req.params.categoryId);
 
-    // req.body already validated by validate middleware
-    const category = await CategoryService.updateCategory(req.params.categoryId, req.body);
+    const metadata = {
+        ...buildAuditMetadata(req),
+        actorId: user.id,
+    };
+
+    const category = await CategoryService.updateCategory(
+        req.params.categoryId,
+        req.body,
+        metadata
+    );
 
     res.status(200).json({
         success: true,
@@ -172,10 +190,19 @@ const updateCategory = asyncHandler(async (req, res) => {
  * Soft delete category (admin only)
  */
 const deleteCategory = asyncHandler(async (req, res) => {
-    assertAuthenticated(req.user);
+
+    const user = assertAuthenticated(req.user);
     validateObjectId(req.params.categoryId);
 
-    const result = await CategoryService.deleteCategory(req.params.categoryId);
+    const metadata = {
+        ...buildAuditMetadata(req),
+        actorId: user.id,
+    };
+
+    const result = await CategoryService.deleteCategory(
+        req.params.categoryId,
+        metadata
+    );
 
     res.status(200).json({
         success: true,
@@ -188,10 +215,19 @@ const deleteCategory = asyncHandler(async (req, res) => {
  * Hard delete category permanently (admin only)
  */
 const hardDeleteCategory = asyncHandler(async (req, res) => {
-    assertAuthenticated(req.user);
+
+    const user = assertAuthenticated(req.user);
     validateObjectId(req.params.categoryId);
 
-    const result = await CategoryService.hardDeleteCategory(req.params.categoryId);
+    const metadata = {
+        ...buildAuditMetadata(req),
+        actorId: user.id,
+    };
+
+    const result = await CategoryService.hardDeleteCategory(
+        req.params.categoryId,
+        metadata
+    );
 
     res.status(200).json({
         success: true,
@@ -204,10 +240,19 @@ const hardDeleteCategory = asyncHandler(async (req, res) => {
  * Restore soft-deleted category (admin only)
  */
 const restoreCategory = asyncHandler(async (req, res) => {
-    assertAuthenticated(req.user);
+
+    const user = assertAuthenticated(req.user);
     validateObjectId(req.params.categoryId);
 
-    const category = await CategoryService.restoreCategory(req.params.categoryId);
+    const metadata = {
+        ...buildAuditMetadata(req),
+        actorId: user.id,
+    };
+
+    const category = await CategoryService.restoreCategory(
+        req.params.categoryId,
+        metadata
+    );
 
     res.status(200).json({
         success: true,
