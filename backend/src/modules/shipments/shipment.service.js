@@ -6,7 +6,6 @@ const AppError = require('../../utils/appError.util');
 // Import dependencies
 const Order = require('../orders/order.model');
 
-// ✅ Logger utility (structured JSON logging)
 const logger = {
     info: (data) => console.log(JSON.stringify({
         level: 'info',
@@ -27,49 +26,7 @@ const logger = {
     }))
 };
 
-/**
- * ============================================
- * SHIPMENT SERVICE
- * ============================================
- * 
- * ✅ Static class pattern (consistent with Order/Payment services)
- * ✅ Business logic layer: validation, stock management, state transitions
- * ✅ Delegates to model for DB operations
- * ✅ Returns DTOs via mapper (never raw MongoDB docs)
- * ✅ Uses asyncHandler in controller (no try/catch here)
- * 
- * CRITICAL RULES:
- * ✅ user_id on EVERY query (ownership check)
- * ✅ Shipping address snapshot (immutable, from order)
- * ✅ Tracking code unique (prevent duplicates)
- * ✅ Status follows state machine (pending → delivered/failed/cancelled)
- * ✅ Soft delete for audit trail
- * ✅ Detailed timeline for RCA
- * ✅ Retry logic for failed deliveries (max 3 attempts)
- */
-
 class ShipmentService {
-    /**
-     * ✅ CREATE SHIPMENT: Initialize shipment for confirmed order
-     * 
-     * Flow:
-     * 1. Verify order exists + belongs to user + status is confirmed
-     * 2. Validate carrier + tracking code (unique)
-     * 3. Copy address snapshot from order (immutable)
-     * 4. Initialize timeline with created_at
-     * 5. Create Shipment with status pending
-     * 6. Update Order status → shipping
-     * 7. Log shipment event
-     * 8. Return shipment DTO
-     * 
-     * ⚠️ CRITICAL: Address is snapshot (immutable after shipment creation)
-     * ⚠️ CRITICAL: Tracking code must be unique per shipment
-     * 
-     * @param {String} userId - From JWT token (ownership check)
-     * @param {String} orderId - Order MongoDB ID
-     * @param {Object} shipmentData - { carrier, tracking_code, shipping_address }
-     * @returns {Object} Created shipment DTO
-     */
     static async createShipment(userId, orderId, shipmentData) {
         if (!userId || !orderId) {
             throw new AppError(
@@ -79,7 +36,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ 1. Verify order exists + user owns it + status is confirmed
         const order = await Order.findOne({
             _id: orderId,
             user_id: userId,
@@ -94,7 +50,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ 2. Validate carrier + tracking code
         const { carrier, tracking_code, shipping_address } = shipmentData;
 
         if (!carrier || !tracking_code) {
@@ -105,7 +60,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Check tracking code uniqueness
         const existingShipment = await Shipment.findOne({
             tracking_code: tracking_code.toUpperCase(),
             is_deleted: false,
@@ -119,7 +73,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ 3. Use provided address or fallback to order address
         const addressSnapshot = shipping_address || {
             recipient_name: order.shipping_address?.recipient_name,
             phone: order.shipping_address?.phone,
@@ -131,7 +84,6 @@ class ShipmentService {
             country: order.shipping_address?.country || 'Vietnam',
         };
 
-        // ✅ 4. Create shipment with initialized timeline
         const shipment = await Shipment.create({
             order_id: orderId,
             user_id: userId,
@@ -157,13 +109,11 @@ class ShipmentService {
             max_retries: 3,
         });
 
-        // ✅ 5. Update order status → shipping
         await Order.updateOne(
             { _id: orderId },
             { status: 'SHIPPING', shipped_at: new Date() }
         );
 
-        // ✅ 6. Log shipment creation
         logger.info({
             event: 'shipment_created',
             shipment_id: shipment._id.toString(),
@@ -173,20 +123,9 @@ class ShipmentService {
             tracking_code: tracking_code.toUpperCase(),
         });
 
-        // ✅ 7. Return DTO
         return ShipmentMapper.toResponseDTO(shipment);
     }
 
-    /**
-     * ✅ READ: Get shipment by ID (with ownership check)
-     * 
-     * ⚠️ Customer can only see their own shipment
-     * Admin can see all shipments (enforce in controller)
-     * 
-     * @param {String} shipmentId - Shipment MongoDB ID
-     * @param {String} userId - From JWT token (null = admin mode)
-     * @returns {Object} Shipment detail DTO
-     */
     static async getShipment(shipmentId, userId = null) {
         const query = { _id: shipmentId, is_deleted: false };
 
@@ -208,15 +147,6 @@ class ShipmentService {
         return ShipmentMapper.toDetailDTO(shipment);
     }
 
-    /**
-     * ✅ READ: Get shipment by tracking code (public tracking)
-     * 
-     * Used for public tracking page (no auth required)
-     * Returns minimal info
-     * 
-     * @param {String} trackingCode - Carrier tracking code
-     * @returns {Object} Tracking DTO (minimal)
-     */
     static async getShipmentByTrackingCode(trackingCode) {
         const shipment = await Shipment.findByTrackingCode(
             trackingCode.toUpperCase()
@@ -233,17 +163,7 @@ class ShipmentService {
         return ShipmentMapper.toTrackingDTO(shipment);
     }
 
-    /**
-     * ✅ READ: Get shipments for order (with ownership check)
-     * 
-     * Customer can only see shipments for their own order
-     * 
-     * @param {String} orderId - Order MongoDB ID
-     * @param {String} userId - From JWT token (null = admin mode)
-     * @returns {Array} Shipments (sorted by created_at DESC)
-     */
     static async getShipmentsForOrder(orderId, userId = null) {
-        // ✅ Verify order exists
         const order = await Order.findOne({
             _id: orderId,
             ...(userId && { user_id: userId }), // Ownership check if not admin
@@ -257,7 +177,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Get shipments for order
         const shipments = await Shipment.find({
             order_id: orderId,
             is_deleted: false,
@@ -266,15 +185,6 @@ class ShipmentService {
         return ShipmentMapper.toResponseDTOList(shipments);
     }
 
-    /**
-     * ✅ READ: Get user shipment history (paginated)
-     * 
-     * @param {String} userId - User MongoDB ID
-     * @param {Number} page - Default 1
-     * @param {Number} limit - Default 20, max 100
-     * @param {Object} filters - { status, carrier, date_from, date_to }
-     * @returns {Object} { data: [...], pagination: {...} }
-     */
     static async getUserShipments(
         userId,
         page = 1,
@@ -284,7 +194,6 @@ class ShipmentService {
         const skip = (page - 1) * limit;
         const query = { user_id: userId, is_deleted: false };
 
-        // Filter by status
         if (filters.status) {
             if (Array.isArray(filters.status)) {
                 query.status = { $in: filters.status };
@@ -293,12 +202,10 @@ class ShipmentService {
             }
         }
 
-        // Filter by carrier
         if (filters.carrier) {
             query.carrier = filters.carrier;
         }
 
-        // Filter by date range
         if (filters.date_from || filters.date_to) {
             query.created_at = {};
             if (filters.date_from) {
@@ -309,7 +216,6 @@ class ShipmentService {
             }
         }
 
-        // Execute query
         const total = await Shipment.countDocuments(query);
         const shipments = await Shipment.find(query)
             .sort({ created_at: -1 })
@@ -327,28 +233,6 @@ class ShipmentService {
         };
     }
 
-    /**
-     * ✅ UPDATE: Record shipment status update (from carrier)
-     * 
-     * Flow:
-     * 1. Verify shipment exists + not deleted
-     * 2. Validate status transition (state machine)
-     * 3. Add timestamp to timeline
-     * 4. Update status
-     * 5. If delivered: update order → completed
-     * 6. Log status update
-     * 7. Return updated shipment DTO
-     * 
-     * ⚠️ CRITICAL: Status follows state machine
-     * pending → picked_up → in_transit → at_destination → delivered
-     * Any status can → failed (on delivery failure)
-     * Any status can → cancelled (admin action)
-     * 
-     * @param {String} shipmentId - Shipment MongoDB ID
-     * @param {String} newStatus - New status
-     * @param {Object} metadata - { notes, carrier_details }
-     * @returns {Object} Updated shipment DTO
-     */
     static async updateShipmentStatus(shipmentId, newStatus, metadata = {}) {
         const shipment = await Shipment.findById(shipmentId);
 
@@ -368,7 +252,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Validate status transition
         const validTransitions = {
             pending: ['picked_up', 'failed', 'cancelled'],
             picked_up: ['in_transit', 'failed', 'cancelled'],
@@ -388,7 +271,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Add timestamp to timeline
         const timelineField = this._getStatusTimestampField(newStatus);
         const update = {
             $set: {
@@ -407,7 +289,6 @@ class ShipmentService {
             { new: true }
         );
 
-        // ✅ If delivered: update order → completed
         if (newStatus === 'delivered') {
             await Order.updateOne(
                 { _id: updatedShipment.order_id },
@@ -415,7 +296,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Log status update
         logger.info({
             event: 'shipment_status_updated',
             shipment_id: shipmentId,
@@ -428,24 +308,6 @@ class ShipmentService {
         return ShipmentMapper.toResponseDTO(updatedShipment);
     }
 
-    /**
-     * ✅ UPDATE: Record delivery failure
-     * 
-     * Flow:
-     * 1. Verify shipment exists + in progress
-     * 2. Store failure reason + notes
-     * 3. Update status → failed
-     * 4. Add failed_at timestamp
-     * 5. Increment retry_count
-     * 6. Log failure event
-     * 7. If max_retries exceeded: mark as permanently failed
-     * 8. Return updated shipment DTO
-     * 
-     * @param {String} shipmentId - Shipment MongoDB ID
-     * @param {String} reason - Failure reason
-     * @param {String} notes - Additional notes
-     * @returns {Object} Updated shipment DTO
-     */
     static async recordDeliveryFailure(shipmentId, reason, notes = '') {
         const shipment = await Shipment.findById(shipmentId);
 
@@ -457,7 +319,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Can only fail in-progress shipments
         if (!shipment.isInProgress()) {
             throw new AppError(
                 'Cannot fail shipment that is not in progress',
@@ -466,7 +327,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Update failure info + status
         shipment.status = 'failed';
         shipment.failure_reason = reason;
         shipment.failure_notes = notes;
@@ -476,7 +336,6 @@ class ShipmentService {
 
         await shipment.save();
 
-        // ✅ Log failure
         logger.warn({
             event: 'shipment_delivery_failed',
             shipment_id: shipmentId,
@@ -489,22 +348,6 @@ class ShipmentService {
         return ShipmentMapper.toDetailDTO(shipment);
     }
 
-    /**
-     * ✅ UPDATE: Retry failed shipment
-     * 
-     * Flow:
-     * 1. Verify shipment exists + status is failed
-     * 2. Verify retry_count < max_retries
-     * 3. Reset status → pending
-     * 4. Clear failure info
-     * 5. Update last_retry_at
-     * 6. Notify carrier (optional)
-     * 7. Log retry event
-     * 8. Return updated shipment DTO
-     * 
-     * @param {String} shipmentId - Shipment MongoDB ID
-     * @returns {Object} Updated shipment DTO
-     */
     static async retryFailedShipment(shipmentId) {
         const shipment = await Shipment.findById(shipmentId);
 
@@ -516,7 +359,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Verify status is failed
         if (shipment.status !== 'failed') {
             throw new AppError(
                 'Can only retry failed shipments',
@@ -525,7 +367,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Verify retry limit not exceeded
         if (shipment.retry_count >= shipment.max_retries) {
             throw new AppError(
                 `Max retries (${shipment.max_retries}) exceeded`,
@@ -534,7 +375,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Reset to pending + clear failure info
         shipment.status = 'pending';
         shipment.failure_reason = null;
         shipment.failure_notes = null;
@@ -544,7 +384,6 @@ class ShipmentService {
 
         await shipment.save();
 
-        // ✅ Log retry
         logger.info({
             event: 'shipment_retry',
             shipment_id: shipmentId,
@@ -556,25 +395,6 @@ class ShipmentService {
         return ShipmentMapper.toDetailDTO(shipment);
     }
 
-    /**
-     * ✅ UPDATE: Cancel shipment (before delivery)
-     * 
-     * Flow:
-     * 1. Verify shipment exists + cancellable
-     * 2. Validate cancellation reason
-     * 3. Update status → cancelled
-     * 4. Add cancelled_at timestamp
-     * 5. Revert order status → confirmed (for potential re-ship)
-     * 6. Log cancellation event
-     * 7. Return updated shipment DTO
-     * 
-     * ⚠️ Can only cancel in-progress shipments
-     * Terminal states (delivered, cancelled, returned) cannot be cancelled
-     * 
-     * @param {String} shipmentId - Shipment MongoDB ID
-     * @param {String} reason - Cancellation reason
-     * @returns {Object} Updated shipment DTO
-     */
     static async cancelShipment(shipmentId, reason) {
         const shipment = await Shipment.findById(shipmentId);
 
@@ -586,7 +406,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Verify shipment is cancellable
         if (!shipment.canBeCancelled()) {
             throw new AppError(
                 'Cannot cancel shipment in current status',
@@ -595,7 +414,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Cancel shipment
         shipment.status = 'cancelled';
         shipment.failure_notes = reason;
         shipment.timeline.cancelled_at = new Date();
@@ -603,13 +421,11 @@ class ShipmentService {
 
         await shipment.save();
 
-        // ✅ Revert order status → confirmed (can re-ship)
         await Order.updateOne(
             { _id: shipment.order_id },
             { status: 'CONFIRMED' }
         );
 
-        // ✅ Log cancellation
         logger.info({
             event: 'shipment_cancelled',
             shipment_id: shipmentId,
@@ -620,20 +436,6 @@ class ShipmentService {
         return ShipmentMapper.toDetailDTO(shipment);
     }
 
-    /**
-     * ✅ UPDATE: Confirm delivery (manual or system)
-     * 
-     * Flow:
-     * 1. Verify shipment exists + status is at_destination
-     * 2. Update status → delivered
-     * 3. Add delivered_at timestamp
-     * 4. Update order → completed
-     * 5. Log delivery confirmation
-     * 6. Return updated shipment DTO
-     * 
-     * @param {String} shipmentId - Shipment MongoDB ID
-     * @returns {Object} Updated shipment DTO
-     */
     static async confirmDelivery(shipmentId) {
         const shipment = await Shipment.findById(shipmentId);
 
@@ -645,7 +447,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Can deliver from at_destination or in_transit (carrier edge case)
         if (
             !['in_transit', 'at_destination'].includes(shipment.status)
         ) {
@@ -656,20 +457,17 @@ class ShipmentService {
             );
         }
 
-        // ✅ Update shipment
         shipment.status = 'delivered';
         shipment.timeline.delivered_at = new Date();
         shipment.updated_at = new Date();
 
         await shipment.save();
 
-        // ✅ Update order → completed
         await Order.updateOne(
             { _id: shipment.order_id },
             { status: 'COMPLETED', completed_at: new Date() }
         );
 
-        // ✅ Log delivery
         logger.info({
             event: 'shipment_delivered',
             shipment_id: shipmentId,
@@ -680,19 +478,6 @@ class ShipmentService {
         return ShipmentMapper.toDetailDTO(shipment);
     }
 
-    /**
-     * ✅ UPDATE: Mark shipment as returned (refund scenario)
-     * 
-     * Flow:
-     * 1. Verify shipment exists + status is at_destination or failed
-     * 2. Update status → returned
-     * 3. Add returned_at timestamp
-     * 4. Log return event
-     * 5. Return updated shipment DTO
-     * 
-     * @param {String} shipmentId - Shipment MongoDB ID
-     * @returns {Object} Updated shipment DTO
-     */
     static async markAsReturned(shipmentId) {
         const shipment = await Shipment.findById(shipmentId);
 
@@ -704,7 +489,6 @@ class ShipmentService {
             );
         }
 
-        // ✅ Can mark as returned from failed or at_destination
         if (
             !['failed', 'at_destination', 'in_transit'].includes(
                 shipment.status
@@ -717,14 +501,12 @@ class ShipmentService {
             );
         }
 
-        // ✅ Update shipment
         shipment.status = 'returned';
         shipment.timeline.returned_at = new Date();
         shipment.updated_at = new Date();
 
         await shipment.save();
 
-        // ✅ Log return
         logger.info({
             event: 'shipment_returned',
             shipment_id: shipmentId,
@@ -734,19 +516,10 @@ class ShipmentService {
         return ShipmentMapper.toDetailDTO(shipment);
     }
 
-    /**
-     * ✅ ADMIN: Get all shipments (with filters)
-     * 
-     * @param {Number} page
-     * @param {Number} limit
-     * @param {Object} filters - { status, carrier, user_id, order_id, date_from, date_to }
-     * @returns {Object} { data: [...], pagination: {...} }
-     */
     static async getAllShipments(page = 1, limit = 20, filters = {}) {
         const skip = (page - 1) * limit;
         const query = { is_deleted: false };
 
-        // Filter by status
         if (filters.status) {
             if (Array.isArray(filters.status)) {
                 query.status = { $in: filters.status };
@@ -755,22 +528,18 @@ class ShipmentService {
             }
         }
 
-        // Filter by carrier
         if (filters.carrier) {
             query.carrier = filters.carrier;
         }
 
-        // Filter by user
         if (filters.user_id) {
             query.user_id = filters.user_id;
         }
 
-        // Filter by order
         if (filters.order_id) {
             query.order_id = filters.order_id;
         }
 
-        // Filter by date range
         if (filters.date_from || filters.date_to) {
             query.created_at = {};
             if (filters.date_from) {
@@ -781,7 +550,6 @@ class ShipmentService {
             }
         }
 
-        // Execute query
         const total = await Shipment.countDocuments(query);
         const shipments = await Shipment.find(query)
             .sort({ created_at: -1 })
@@ -799,11 +567,6 @@ class ShipmentService {
         };
     }
 
-    /**
-     * ✅ ADMIN: Get shipment statistics
-     * 
-     * @returns {Object} Stats (delivery rates, avg time, status breakdown)
-     */
     static async getShipmentStats() {
         const stats = await Shipment.aggregate([
             { $match: { is_deleted: false } },
@@ -909,11 +672,6 @@ class ShipmentService {
         return stats[0];
     }
 
-    /**
-     * ✅ ADMIN: Get pending shipments (for retry batch processing)
-     * 
-     * @returns {Array} Shipments ready for retry
-     */
     static async getPendingRetryShipments() {
         return Shipment.find({
             status: 'failed',
@@ -924,12 +682,6 @@ class ShipmentService {
             .lean();
     }
 
-    /**
-     * ✅ SOFT DELETE: Soft-delete shipment (admin action)
-     * 
-     * @param {String} shipmentId
-     * @returns {Object} Deleted shipment DTO
-     */
     static async softDeleteShipment(shipmentId) {
         const shipment = await Shipment.findByIdAndUpdate(
             shipmentId,
@@ -953,13 +705,6 @@ class ShipmentService {
 
     // ===== INTERNAL HELPERS =====
 
-    /**
-     * ✅ INTERNAL: Map carrier status to system status
-     * 
-     * @private
-     * @param {String} carrierStatus - Status from carrier API
-     * @returns {String} System status (or 'pending' if unknown)
-     */
     static _mapCarrierStatus(carrierStatus) {
         const mapping = {
             'ready_to_pick': 'pending',
@@ -975,13 +720,6 @@ class ShipmentService {
         return mapping[carrierStatus] || 'pending';
     }
 
-    /**
-     * ✅ INTERNAL: Get timeline field name for status
-     * 
-     * @private
-     * @param {String} status - Shipment status
-     * @returns {String|null} Timeline field name
-     */
     static _getStatusTimestampField(status) {
         const mapping = {
             'picked_up': 'picked_up_at',
@@ -996,14 +734,6 @@ class ShipmentService {
         return mapping[status] || null;
     }
 
-    /**
-     * ✅ INTERNAL: Build tracking URL
-     * 
-     * @private
-     * @param {String} carrier
-     * @param {String} trackingCode
-     * @returns {String|null} Tracking URL
-     */
     static _buildTrackingUrl(carrier, trackingCode) {
         if (!trackingCode) return null;
 
@@ -1018,13 +748,6 @@ class ShipmentService {
         return urls[carrier] || null;
     }
 
-    /**
-     * ✅ INTERNAL: Calculate next retry time (48 hours)
-     * 
-     * @private
-     * @param {Date} lastRetryAt
-     * @returns {Date} Next retry available time
-     */
     static _getNextRetryTime(lastRetryAt) {
         if (!lastRetryAt) return new Date(); // Can retry immediately
 

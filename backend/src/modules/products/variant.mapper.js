@@ -1,18 +1,4 @@
-/**
- * Variant DTO Mapper
- * Transform between MongoDB documents and API responses
- * 
- * ✅ Expose: sku, size, fabric_type, pricing, stock
- * ✅ Hide: is_deleted, internal fields
- */
-
 class VariantMapper {
-    /**
-     * ✅ Convert Mongoose document → API Response DTO (basic)
-     * 
-     * Dùng cho: Variant listing, create/update returns
-     * Include: variant info + pricing + stock
-     */
     static toResponseDTO(variant) {
         if (!variant) {
             return null;
@@ -49,11 +35,6 @@ class VariantMapper {
         };
     }
 
-    /**
-     * ✅ Convert array of documents → array of DTOs
-     * 
-     * Dùng cho: Get variants by product
-     */
     static toResponseDTOList(variants) {
         if (!Array.isArray(variants)) {
             return [];
@@ -61,12 +42,6 @@ class VariantMapper {
         return variants.map((variant) => this.toResponseDTO(variant));
     }
 
-    /**
-     * ✅ Convert Mongoose document → Detail DTO (with units)
-     * 
-     * Dùng cho: GET /variants/:id (full detail with units)
-     * Include: variant info + all units
-     */
     static toDetailDTO(variant, units = []) {
         if (!variant) {
             return null;
@@ -82,11 +57,6 @@ class VariantMapper {
         };
     }
 
-    /**
-     * ✅ Convert to List Item DTO (lightweight)
-     * 
-     * Dùng cho: Variant selection dropdown, summary
-     */
     static toListDTO(variant) {
         if (!variant) {
             return null;
@@ -100,23 +70,15 @@ class VariantMapper {
             size: doc.size,
             fabric_type: doc.fabric_type,
 
-            // ✅ Price range for display
             min_price: doc.min_price || 0,
             max_price: doc.max_price || 0,
 
-            // ✅ Stock for quick check
             available_stock: doc.stock?.available || 0,
 
             status: doc.status,
         };
     }
 
-    /**
-     * ✅ Convert for Shopping Cart
-     * 
-     * Dùng cho: Add to cart response
-     * Include: variant info + default unit
-     */
     static toCartDTO(variant, defaultUnit = null) {
         if (!variant) {
             return null;
@@ -157,11 +119,6 @@ class VariantMapper {
         };
     }
 
-    /**
-     * ✅ Convert for Order Item (snapshot at purchase time)
-     * 
-     * Dùng cho: Order confirmation, order history
-     */
     static toOrderItemDTO(variant) {
         if (!variant) {
             return null;
@@ -191,11 +148,6 @@ class VariantMapper {
         };
     }
 
-    /**
-     * ✅ Convert for Admin Dashboard (detailed stats)
-     * 
-     * Dùng cho: Admin panel, analytics
-     */
     static toAdminDTO(variant) {
         if (!variant) {
             return null;
@@ -210,7 +162,6 @@ class VariantMapper {
             size: doc.size,
             fabric_type: doc.fabric_type,
 
-            // ✅ Full stock details
             stock: {
                 available: doc.stock?.available || 0,
                 reserved: doc.stock?.reserved || 0,
@@ -220,7 +171,6 @@ class VariantMapper {
                     (doc.stock?.sold || 0),
             },
 
-            // ✅ Pricing
             pricing: {
                 min_price: doc.min_price || 0,
                 max_price: doc.max_price || 0,
@@ -234,9 +184,6 @@ class VariantMapper {
         };
     }
 
-    /**
-     * ✅ Helper: Transform unit detail (nested in variant detail)
-     */
     static transformUnitDetail(unit) {
         if (!unit) {
             return null;
@@ -250,14 +197,12 @@ class VariantMapper {
             display_name: doc.display_name,
             pack_size: doc.pack_size,
 
-            // ✅ Price tiers
             price_tiers: (doc.price_tiers || []).map((tier) => ({
                 min_qty: tier.min_qty,
                 max_qty: tier.max_qty,
                 unit_price: tier.unit_price,
             })),
 
-            // ✅ Order constraints
             min_order_qty: doc.min_order_qty || 1,
             max_order_qty: doc.max_order_qty || null,
             qty_step: doc.qty_step || 1,

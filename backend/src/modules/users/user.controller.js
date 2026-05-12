@@ -1,9 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
 const UserService = require('./user.service');
 const UserMapper = require('./user.mapper');
-const { validateObjectId } = require('../../utils/validator.util');
-const AppError = require('../../utils/appError.util');
-const { ALL_ROLES } = require('../../constants/roles');
 const { buildAuditMetadata } = require('../../utils/audit.util');
 
 const getMe = asyncHandler(async (req, res) => {
@@ -19,17 +16,12 @@ const getMe = asyncHandler(async (req, res) => {
 
 const getAllUsers = asyncHandler(async (req, res) => {
 
-    const page =
-        parseInt(req.query.page, 10) || 1;
-
-    const limit =
-        parseInt(req.query.limit, 10) || 20;
-
-    const search =
-        req.query.search || null;
-
-    const status =
-        req.query.status || null;
+    const {
+        page = 1,
+        limit = 20,
+        search = null,
+        status = null
+    } = req.query;
 
     const result =
         await UserService.getAllUsers(
@@ -48,14 +40,14 @@ const getAllUsers = asyncHandler(async (req, res) => {
 
 const updateUser = asyncHandler(async (req, res) => {
 
-    validateObjectId(req.params.id);
+    const { id } = req.params;
 
     const updatePayload =
         UserMapper.toUpdatePayload(req.body);
 
     const updated =
         await UserService.updateUserProfile(
-            req.params.id,
+            id,
             updatePayload,
             req.user.id,
             buildAuditMetadata(req)
@@ -69,11 +61,11 @@ const updateUser = asyncHandler(async (req, res) => {
 
 const deleteUser = asyncHandler(async (req, res) => {
 
-    validateObjectId(req.params.id);
+    const { id } = req.params;
 
     const result =
         await UserService.deleteUser(
-            req.params.id,
+            id,
             req.user.id,
             buildAuditMetadata(req)
         );
@@ -85,46 +77,14 @@ const deleteUser = asyncHandler(async (req, res) => {
 });
 
 const updateUserRoles = asyncHandler(async (req, res) => {
-    validateObjectId(req.params.id);
 
+    const { id } = req.params;
     const { roles } = req.body;
-
-    if (!Array.isArray(roles) || roles.length === 0) {
-        throw new AppError(
-            'Roles must be a non-empty array',
-            400,
-            'VALIDATION_ERROR'
-        );
-    }
-
-    const invalidRoles = roles.filter(
-        (r) => !ALL_ROLES.includes(r)
-    );
-
-    if (invalidRoles.length > 0) {
-        throw new AppError(
-            `Invalid roles: ${invalidRoles.join(', ')}`,
-            400,
-            'INVALID_ROLE'
-        );
-    }
-
-    // Prevent self-demotion
-    if (
-        req.user.id === req.params.id &&
-        !roles.includes('ADMIN')
-    ) {
-        throw new AppError(
-            'You cannot remove your own ADMIN role',
-            403,
-            'FORBIDDEN'
-        );
-    }
 
     const metadata = buildAuditMetadata(req);
 
     const updated = await UserService.updateUserRoles(
-        req.params.id,
+        id,
         roles,
         req.user.id,
         metadata
@@ -137,12 +97,12 @@ const updateUserRoles = asyncHandler(async (req, res) => {
 });
 
 const updateUserStatus = asyncHandler(async (req, res) => {
-    validateObjectId(req.params.id);
 
+    const { id } = req.params;
     const { status } = req.body;
 
     const updated = await UserService.updateUserStatus(
-        req.params.id,
+        id,
         status,
         req.user.id,
         buildAuditMetadata(req)

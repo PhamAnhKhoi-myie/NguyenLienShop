@@ -1,18 +1,4 @@
-/**
- * Variant Unit DTO Mapper
- * Transform between MongoDB documents and API responses
- * 
- * ✅ Expose: pack_size, display_name, price_tiers
- * ✅ Format: price_tiers with min_qty, max_qty, unit_price
- */
-
 class VariantUnitMapper {
-    /**
-     * ✅ Convert Mongoose document → API Response DTO
-     * 
-     * Dùng cho: Unit listing, create/update returns
-     * Include: all unit info + price tiers
-     */
     static toResponseDTO(unit) {
         if (!unit) {
             return null;
@@ -49,11 +35,6 @@ class VariantUnitMapper {
         };
     }
 
-    /**
-     * ✅ Convert array of documents → array of DTOs
-     * 
-     * Dùng cho: Get all units for variant
-     */
     static toResponseDTOList(units) {
         if (!Array.isArray(units)) {
             return [];
@@ -61,12 +42,6 @@ class VariantUnitMapper {
         return units.map((unit) => this.toResponseDTO(unit));
     }
 
-    /**
-     * ✅ Convert to List Item DTO (lightweight for display)
-     * 
-     * Dùng cho: Unit selection dropdown, variant options
-     * Include: display name + price range
-     */
     static toListDTO(unit) {
         if (!unit) {
             return null;
@@ -96,12 +71,6 @@ class VariantUnitMapper {
         };
     }
 
-    /**
-     * ✅ Convert to Price Calculator DTO (for cart/checkout)
-     * 
-     * Dùng cho: Add to cart, calculate price, checkout
-     * Include: unit info + tiers + price calculation logic
-     */
     static toPriceCalcDTO(unit) {
         if (!unit) {
             return null;
@@ -135,11 +104,6 @@ class VariantUnitMapper {
         };
     }
 
-    /**
-     * ✅ Convert for Order Item (snapshot)
-     * 
-     * Dùng cho: Order confirmation, order history
-     */
     static toOrderItemDTO(unit, qtyPacks) {
         if (!unit) {
             return null;
@@ -180,11 +144,6 @@ class VariantUnitMapper {
         };
     }
 
-    /**
-     * ✅ Convert for Admin Dashboard
-     * 
-     * Dùng cho: Admin panel, analytics
-     */
     static toAdminDTO(unit) {
         if (!unit) {
             return null;
@@ -234,13 +193,6 @@ class VariantUnitMapper {
         };
     }
 
-    /**
-     * ✅ Helper: Transform price tiers array
-     * 
-     * Add calculated fields:
-     * - price_per_unit = unit_price / pack_size
-     * - price_range_label
-     */
     static transformPriceTiers(priceTiers, packSize) {
         if (!Array.isArray(priceTiers) || priceTiers.length === 0) {
             return [];
@@ -255,11 +207,7 @@ class VariantUnitMapper {
             qty_range: this.formatQtyRange(tier.min_qty, tier.max_qty),
         }));
     }
-    /**
-     * ✅ Helper: Transform price tiers WITH pack_size
-     * 
-     * Include: price_per_unit calculation
-     */
+
     static transformPriceTiersWithCalc(priceTiers, packSize = 100) {
         if (!Array.isArray(priceTiers) || priceTiers.length === 0) {
             return [];
@@ -279,11 +227,6 @@ class VariantUnitMapper {
         }));
     }
 
-    /**
-     * ✅ Helper: Generate human-readable unit description
-     * 
-     * Example: "Gói 100 - từ 180k (mua 1-10 gói)"
-     */
     static generateUnitDescription(displayName, packSize, priceTiers = []) {
         if (!displayName) return '';
 
@@ -306,11 +249,6 @@ class VariantUnitMapper {
         return desc;
     }
 
-    /**
-     * ✅ Helper: Format quantity range for display
-     * 
-     * Examples: "1-10", "11-50", "51+"
-     */
     static formatQtyRange(minQty, maxQty) {
         if (maxQty === null) {
             return `${minQty}+`;
@@ -318,11 +256,6 @@ class VariantUnitMapper {
         return `${minQty}-${maxQty}`;
     }
 
-    /**
-     * ✅ Helper: Format price for display
-     * 
-     * Example: 180000 → "180k"
-     */
     static formatPrice(price) {
         if (price >= 1000000) {
             return `${(price / 1000000).toFixed(1)}M`;
@@ -333,11 +266,6 @@ class VariantUnitMapper {
         return price.toString();
     }
 
-    /**
-     * ✅ Helper: Find price tier matching quantity
-     * 
-     * Used for order calculations
-     */
     static findPriceTierForQty(qty, priceTiers) {
         if (!Array.isArray(priceTiers) || priceTiers.length === 0) {
             return null;

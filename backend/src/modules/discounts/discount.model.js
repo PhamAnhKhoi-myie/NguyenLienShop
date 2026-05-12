@@ -1,33 +1,5 @@
 const mongoose = require('mongoose');
 
-/**
- * ============================================
- * DISCOUNT SCHEMA
- * ============================================
- * 
- * Represents: Promo code / discount voucher
- * 
- * Key Points:
- * - code: unique, normalized (uppercase + trim)
- * - type: percent or fixed (choose one per discount)
- * - max_discount_amount: MANDATORY for percent (prevent runaway discounts)
- * - applicable_targets: explicit scope (all, products, categories, variants)
- * - user_eligibility: who can use (all, first-time, specific users)
- * - application_strategy: how to apply across items
- * - is_stackable + stack_priority: for future multi-discount support
- * - usage tracking: global limit + per-user limit
- * - time window: started_at + expiry_date (no status automation)
- * - Soft delete: is_deleted + deleted_at (consistent with Product, Cart)
- * 
- * Critical Rules:
- * ✅ code is unique (case-insensitive)
- * ✅ max_discount_amount capped for percent discounts
- * ✅ usage_count incremented atomically (with $lt condition)
- * ✅ TTL indexes for cleanup (optional: cleanup old usage logs)
- * ✅ Time validation at runtime (not via status automation)
- * ✅ Soft delete prevents code reuse while enabling audit
- */
-
 const applicableTargetsSchema = new mongoose.Schema(
     {
         // ===== SCOPE TYPE =====
@@ -293,7 +265,6 @@ const discountSchema = new mongoose.Schema(
 
 // ===== INDEXES (Production Optimized) =====
 
-// ✅ FIX #11.1: Code lookup (case-insensitive, unique)
 discountSchema.index(
     { code: 1 },
     {
@@ -302,7 +273,6 @@ discountSchema.index(
     }
 );
 
-// ✅ FIX #11.2: Active discounts by time window
 discountSchema.index(
     { status: 1, started_at: 1, expiry_date: 1 },
     {
@@ -314,7 +284,6 @@ discountSchema.index(
     }
 );
 
-// ✅ FIX #11.3: Product-specific discounts
 discountSchema.index(
     { 'applicable_targets.product_ids': 1 },
     {
@@ -323,7 +292,6 @@ discountSchema.index(
     }
 );
 
-// ✅ FIX #11.4: Variant-specific discounts (for checkout validation)
 discountSchema.index(
     { 'applicable_targets.variant_ids': 1 },
     {
@@ -332,7 +300,6 @@ discountSchema.index(
     }
 );
 
-// ✅ FIX #11.5: Category-specific discounts
 discountSchema.index(
     { 'applicable_targets.category_ids': 1 },
     {
@@ -341,7 +308,6 @@ discountSchema.index(
     }
 );
 
-// ✅ FIX #11.6: Stackable discounts (for multi-discount feature)
 discountSchema.index(
     { is_stackable: 1, stack_priority: -1 },
     {
@@ -352,7 +318,6 @@ discountSchema.index(
     }
 );
 
-// ✅ FIX #11.7: Soft delete queries
 discountSchema.index(
     { is_deleted: 1, created_at: -1 },
     {
@@ -360,7 +325,6 @@ discountSchema.index(
     }
 );
 
-// ✅ FIX #11.8: Admin listing
 discountSchema.index(
     { created_at: -1 },
     {
@@ -370,14 +334,6 @@ discountSchema.index(
 
 // ===== MIDDLEWARE: Auto-Exclude Soft-Deleted =====
 
-/**
- * ✅ FIX #12.1: Auto-exclude soft-deleted discounts
- * Consistent pattern with Product, Cart, Order models
- * 
- * Usage:
- * - Normal: Discount.find() → exclude is_deleted=true
- * - Include deleted: Discount.find({ includeDeleted: true })
- */
 const excludeDeleted = function (next) {
     const options = this.getOptions?.() || {};
 
@@ -393,9 +349,6 @@ discountSchema.pre('findOne', excludeDeleted);
 discountSchema.pre('findOneAndUpdate', excludeDeleted);
 discountSchema.pre('countDocuments', excludeDeleted);
 
-/**
- * ✅ FIX #12.2: Auto-exclude soft-deleted in aggregation pipeline
- */
 discountSchema.pre('aggregate', function (next) {
     const pipeline = this.pipeline();
     const options = this.getOptions?.() || {};
@@ -419,9 +372,6 @@ discountSchema.pre('aggregate', function (next) {
 
 // ===== MIDDLEWARE: Validation & Normalization =====
 
-/**
- * ✅ FIX #13.1: Validate max_discount_amount for percent discounts
- */
 discountSchema.pre('validate', function (next) {
     if (this.type === 'percent' && !this.max_discount_amount) {
         this.invalidate(
@@ -431,7 +381,6 @@ discountSchema.pre('validate', function (next) {
     }
 
     if (this.max_discount_amount && this.type === 'fixed') {
-        // Optional for fixed discounts, but if set, should be >= value
         if (this.max_discount_amount < this.value) {
             this.invalidate(
                 'max_discount_amount',
@@ -443,9 +392,6 @@ discountSchema.pre('validate', function (next) {
     next();
 });
 
-/**
- * ✅ FIX #13.2: Validate time window (expiry_date > started_at)
- */
 discountSchema.pre('validate', function (next) {
     if (this.started_at && this.expiry_date) {
         if (this.started_at >= this.expiry_date) {
@@ -459,9 +405,6 @@ discountSchema.pre('validate', function (next) {
     next();
 });
 
-/**
- * ✅ FIX #13.3: Normalize code (uppercase + trim) on save
- */
 discountSchema.pre('save', function (next) {
     if (this.isModified('code')) {
         this.code = this.code.toUpperCase().trim();
@@ -473,10 +416,6 @@ discountSchema.pre('save', function (next) {
 
 // ===== STATIC METHODS =====
 
-/**
- * ✅ FIX #14.1: Find by code (case-insensitive)
- * Common use case: customer enters code at checkout
- */
 discountSchema.statics.findByCode = function (code) {
     return this.findOne(
         { code: code.toUpperCase().trim(), is_deleted: false },
@@ -485,10 +424,6 @@ discountSchema.statics.findByCode = function (code) {
     );
 };
 
-/**
- * ✅ FIX #14.2: Find active discounts in time window
- * Useful for campaign listings
- */
 discountSchema.statics.findActiveDiscounts = function (
     page = 1,
     limit = 20,
@@ -530,15 +465,10 @@ discountSchema.statics.findActiveDiscounts = function (
     };
 };
 
-/**
- * ✅ FIX #14.3: Get discount for product/category/variant
- * Used in DiscountService.filterApplicableItems()
- */
 discountSchema.statics.findApplicableDiscounts = async function (
     filters = {},
     now = new Date()
 ) {
-    // filters = { product_ids: [], variant_ids: [], category_ids: [] }
     const query = {
         status: 'active',
         is_deleted: false,
@@ -546,7 +476,6 @@ discountSchema.statics.findApplicableDiscounts = async function (
         expiry_date: { $gt: now },
     };
 
-    // Build $or condition for targets
     const orConditions = [
         { 'applicable_targets.type': 'all' },
     ];
@@ -581,10 +510,6 @@ discountSchema.statics.findApplicableDiscounts = async function (
     return await this.find(query).lean();
 };
 
-/**
- * ✅ FIX #14.4: Get discounts for user
- * Check user_eligibility constraints
- */
 discountSchema.statics.findDiscountsForUser = async function (
     userId,
     filters = {},
@@ -597,14 +522,11 @@ discountSchema.statics.findDiscountsForUser = async function (
         expiry_date: { $gt: now },
     };
 
-    // User eligibility filter
     query.$or = [
         { 'user_eligibility.type': 'all' },
         { 'user_eligibility.type': 'specific_users', 'user_eligibility.user_ids': userId },
-        // Add more conditions for first_time_only, vip_users (require service layer check)
     ];
 
-    // Product/variant/category targets
     const targetOrConditions = [{ 'applicable_targets.type': 'all' }];
 
     if (filters.variant_ids?.length > 0) {
@@ -635,10 +557,6 @@ discountSchema.statics.findDiscountsForUser = async function (
     return await this.find(query).lean();
 };
 
-/**
- * ✅ FIX #14.5: Count failed verifications (for monitoring)
- * Shows webhook/verification issues
- */
 discountSchema.statics.countNearExpiry = async function (
     daysFromNow = 7,
     now = new Date()
@@ -658,42 +576,27 @@ discountSchema.statics.countNearExpiry = async function (
 
 // ===== INSTANCE METHODS =====
 
-/**
- * ✅ FIX #15.1: Check if discount is within valid time window
- */
 discountSchema.methods.isWithinTimeWindow = function (now = new Date()) {
     return this.started_at <= now && now < this.expiry_date;
 };
 
-/**
- * ✅ FIX #15.2: Check if discount is expired
- */
 discountSchema.methods.isExpired = function (now = new Date()) {
     return now >= this.expiry_date;
 };
 
-/**
- * ✅ FIX #15.3: Check if discount is not yet started
- */
 discountSchema.methods.isNotStarted = function (now = new Date()) {
     return now < this.started_at;
 };
 
-/**
- * ✅ FIX #15.4: Check if discount can be used (all constraints)
- */
 discountSchema.methods.isValid = function (now = new Date()) {
-    // 1. Check time window
     if (!this.isWithinTimeWindow(now)) {
         return false;
     }
 
-    // 2. Check status
     if (this.status !== 'active') {
         return false;
     }
 
-    // 3. Check usage limit
     if (this.usage_count >= this.usage_limit) {
         return false;
     }
@@ -701,28 +604,21 @@ discountSchema.methods.isValid = function (now = new Date()) {
     return true;
 };
 
-/**
- * ✅ FIX #15.5: Check if user can use this discount
- * (must check per-user limit separately)
- */
 discountSchema.methods.canUserUse = function (
     userId,
     userUsageCount = 0,
     now = new Date()
 ) {
-    // 1. Overall validity
     if (!this.isValid(now)) {
         return false;
     }
 
-    // 2. User eligibility
     if (this.user_eligibility.type === 'specific_users') {
         if (!this.user_eligibility.user_ids.includes(userId)) {
             return false;
         }
     }
 
-    // 3. Per-user limit
     if (userUsageCount >= this.usage_per_user_limit) {
         return false;
     }
@@ -730,29 +626,18 @@ discountSchema.methods.canUserUse = function (
     return true;
 };
 
-/**
- * ✅ FIX #15.6: Get safe response object (hide internal data)
- */
 discountSchema.methods.toSafeResponse = function () {
     const obj = this.toObject();
 
-    // Redact internal fields
     delete obj.__v;
 
-    // Optional: hide created_by/updated_by in public responses
-    // but keep for admin responses
     return obj;
 };
 
 // ===== RESPONSE SANITIZATION =====
 
-/**
- * ✅ FIX #16: Transform response (hide internal fields)
- * Consistent with Cart, Order, Product models
- */
 const sanitizeTransform = (_, ret) => {
     delete ret.__v;
-    // Keep most fields visible (discount is not sensitive like auth tokens)
     return ret;
 };
 

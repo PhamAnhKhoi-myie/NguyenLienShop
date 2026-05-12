@@ -1,28 +1,5 @@
 const mongoose = require('mongoose');
 
-/**
- * ============================================
- * VARIANT UNIT SCHEMA
- * ============================================
- * 
- * Represents: Pack size + Price tiers
- * (1 Variant có nhiều Units/packs)
- * 
- * Key Points:
- * - pack_size: 50, 100, 500 cái/pack
- * - price_tiers: quantity-based pricing
- *   {min_qty: 1, max_qty: 10, unit_price: 180000}
- *   (min/max là số pack, không phải cái)
- * - is_default: pack nào show default ở UI
- * - Validation: CRITICAL (no overlap, sorted)
- * 
- * Price Logic Example:
- * User nhập: 3 pack → 
- * - tier: [1-10] → 180k/pack
- * - total: 3 × 180k = 540k
- * - items: 3 × 100 = 300 cái
- */
-
 const priceTierSchema = new mongoose.Schema(
     {
         min_qty: {
@@ -156,11 +133,8 @@ const variantUnitSchema = new mongoose.Schema(
 );
 
 // ===== INDEXES =====
-
-// ✅ FIX #6: Efficient variant_unit lookups
 variantUnitSchema.index({ variant_id: 1 });
 
-// ✅ FIX #5: Unique pack size per variant (prevent duplicate)
 variantUnitSchema.index(
     { variant_id: 1, pack_size: 1 },
     {
@@ -168,7 +142,6 @@ variantUnitSchema.index(
     }
 );
 
-// Default unit lookup
 variantUnitSchema.index(
     { variant_id: 1, is_default: 1 },
     {
@@ -179,14 +152,9 @@ variantUnitSchema.index(
 );
 
 // ===== MIDDLEWARE =====
-
-/**
- * ✅ Pre-save: Update timestamp + auto-sort price tiers
- */
 variantUnitSchema.pre('save', function (next) {
     this.updated_at = new Date();
 
-    // Auto-sort price_tiers by min_qty (nếu validator chưa)
     if (this.price_tiers && this.price_tiers.length > 0) {
         this.price_tiers.sort((a, b) => a.min_qty - b.min_qty);
     }
@@ -195,19 +163,6 @@ variantUnitSchema.pre('save', function (next) {
 });
 
 // ===== STATIC METHODS =====
-
-/**
- * ✅ Validate price tiers (CRITICAL - called ở service layer)
- * 
- * Rules:
- * 1. Non-empty
- * 2. Sorted by min_qty ascending
- * 3. No overlap: prev.max_qty + 1 === current.min_qty (hoặc gaps ok nếu accept)
- * 4. Nếu last tier có max_qty → error (must be unlimited)
- * 5. All prices > 0
- * 
- * Return: { valid: true } hoặc throw error
- */
 variantUnitSchema.statics.validatePriceTiers = function (tiers) {
     if (!tiers || tiers.length === 0) {
         throw new Error('Price tiers cannot be empty');
@@ -271,12 +226,6 @@ variantUnitSchema.statics.validatePriceTiers = function (tiers) {
     return { valid: true, sorted };
 };
 
-/**
- * ✅ Get price by quantity
- * 
- * qty: số pack user muốn mua
- * return: unit_price từ matching tier
- */
 variantUnitSchema.statics.getPriceByQty = function (qty, priceTiers) {
     if (!priceTiers || priceTiers.length === 0) {
         throw new Error('No price tiers available');
@@ -297,13 +246,6 @@ variantUnitSchema.statics.getPriceByQty = function (qty, priceTiers) {
     return tier.unit_price;
 };
 
-/**
- * ✅ Calculate final price
- * 
- * qty: số pack
- * priceTiers: tiers array
- * return: { unit_price, total_price, total_items }
- */
 variantUnitSchema.statics.calculatePrice = function (
     qty,
     priceTiers,
@@ -323,9 +265,6 @@ variantUnitSchema.statics.calculatePrice = function (
     };
 };
 
-/**
- * ✅ Get default unit for variant
- */
 variantUnitSchema.statics.getDefault = function (variantId) {
     return this.findOne(
         { variant_id: variantId, is_default: true }

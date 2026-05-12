@@ -1,107 +1,81 @@
 const express = require('express');
-const validateMiddleware = require('../../middlewares/validate.middleware');
+
+const validate = require('../../middlewares/validate.middleware');
 const { authenticate } = require('../../middlewares/auth.middleware');
+
 const ShipmentController = require('./shipment.controller');
+
 const {
-    createShipmentSchema,
-    getShipmentSchema,
-    getShipmentsForOrderSchema,
-    listShipmentsSchema,
-    updateShipmentStatusSchema,
-    recordShipmentFailureSchema,
-    retryShipmentSchema,
-    cancelShipmentSchema,
-    confirmDeliverySchema,
-    trackShipmentSchema,
-    carrierWebhookSchema,
-    adminUpdateShipmentSchema,
-    adminListShipmentsSchema,
+    shipmentIdParamSchema,
+    orderIdParamSchema,
+    trackingCodeParamSchema,
+    carrierParamSchema,
+
+    createShipmentBodySchema,
+    cancelShipmentBodySchema,
+    updateShipmentStatusBodySchema,
+    recordShipmentFailureBodySchema,
+    adminUpdateShipmentBodySchema,
+    carrierWebhookBodySchema,
+
+    listShipmentsQuerySchema,
+    adminListShipmentsQuerySchema,
 } = require('./shipment.validator');
 
 const router = express.Router();
 
-// ✅ Create validate middleware factory
-const validate = (schema) => validateMiddleware(schema);
-
-// ===== PUBLIC ENDPOINTS (No Auth) =====
+// ===== PUBLIC =====
 
 router.get(
     '/track/:tracking_code',
-    validate(trackShipmentSchema),
+    validate({ params: trackingCodeParamSchema }),
     ShipmentController.trackShipment
 );
 
 router.post(
     '/webhook/:carrier',
+    validate({ params: carrierParamSchema, body: carrierWebhookBodySchema }),
     ShipmentController.handleCarrierWebhook
 );
 
-// ===== CUSTOMER ENDPOINTS (Authenticated) =====
+// ===== CUSTOMER =====
+
+router.get(
+    '/order/:orderId',
+    authenticate,
+    validate({ params: orderIdParamSchema }),
+    ShipmentController.getShipmentsForOrder
+);
+
+router.get(
+    '/',
+    authenticate,
+    validate({ query: listShipmentsQuerySchema }),
+    ShipmentController.listShipments
+);
+
+router.get(
+    '/:shipmentId',
+    authenticate,
+    validate({ params: shipmentIdParamSchema }),
+    ShipmentController.getShipment
+);
 
 router.post(
     '/:shipmentId/retry',
     authenticate,
-    validate(getShipmentSchema),
+    validate({ params: shipmentIdParamSchema }),
     ShipmentController.retryShipment
 );
 
 router.patch(
     '/:shipmentId/cancel',
     authenticate,
-    validate(cancelShipmentSchema),
+    validate({ params: shipmentIdParamSchema, body: cancelShipmentBodySchema }),
     ShipmentController.cancelShipment
 );
 
-router.get(
-    '/order/:orderId',
-    authenticate,
-    validate(getShipmentsForOrderSchema),
-    ShipmentController.getShipmentsForOrder
-);
-
-router.get(
-    '/:shipmentId',
-    authenticate,
-    validate(getShipmentSchema),
-    ShipmentController.getShipment
-);
-
-router.get(
-    '/',
-    authenticate,
-    validate(listShipmentsSchema),
-    ShipmentController.listShipments
-);
-
-// ===== ADMIN ENDPOINTS =====
-
-router.post(
-    '/',
-    authenticate,
-    validate(createShipmentSchema),
-    ShipmentController.createShipment
-);
-
-router.patch(
-    '/:shipmentId/status',
-    authenticate,
-    validate(updateShipmentStatusSchema),
-    ShipmentController.updateShipmentStatus
-);
-
-router.patch(
-    '/:shipmentId/failure',
-    authenticate,
-    validate(recordShipmentFailureSchema),
-    ShipmentController.recordShipmentFailure
-);
-
-router.post(
-    '/:shipmentId/confirm-delivery',
-    authenticate,
-    validate(confirmDeliverySchema),
-    ShipmentController.confirmDelivery
-);
+// ===== ADMIN =====
 
 router.get(
     '/admin/stats',
@@ -110,31 +84,59 @@ router.get(
 );
 
 router.get(
+    '/admin',
+    authenticate,
+    validate({ query: adminListShipmentsQuerySchema }),
+    ShipmentController.getAllShipments
+);
+
+router.get(
     '/admin/:shipmentId',
     authenticate,
-    validate(getShipmentSchema),
+    validate({ params: shipmentIdParamSchema }),
     ShipmentController.getAdminShipmentDetail
 );
 
 router.patch(
     '/admin/:shipmentId',
     authenticate,
-    validate(adminUpdateShipmentSchema),
+    validate({ params: shipmentIdParamSchema, body: adminUpdateShipmentBodySchema }),
     ShipmentController.adminUpdateShipment
-);
-
-router.get(
-    '/admin',
-    authenticate,
-    validate(adminListShipmentsSchema),
-    ShipmentController.getAllShipments
 );
 
 router.delete(
     '/admin/:shipmentId',
     authenticate,
-    validate(getShipmentSchema),
+    validate({ params: shipmentIdParamSchema }),
     ShipmentController.deleteShipment
+);
+
+router.post(
+    '/',
+    authenticate,
+    validate({ body: createShipmentBodySchema }),
+    ShipmentController.createShipment
+);
+
+router.patch(
+    '/:shipmentId/status',
+    authenticate,
+    validate({ params: shipmentIdParamSchema, body: updateShipmentStatusBodySchema }),
+    ShipmentController.updateShipmentStatus
+);
+
+router.patch(
+    '/:shipmentId/failure',
+    authenticate,
+    validate({ params: shipmentIdParamSchema, body: recordShipmentFailureBodySchema }),
+    ShipmentController.recordShipmentFailure
+);
+
+router.post(
+    '/:shipmentId/confirm-delivery',
+    authenticate,
+    validate({ params: shipmentIdParamSchema }),
+    ShipmentController.confirmDelivery
 );
 
 module.exports = router;

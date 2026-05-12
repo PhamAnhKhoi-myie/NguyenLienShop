@@ -1,20 +1,5 @@
-/**
- * Shipment DTO Mapper
- * Transform between MongoDB documents and API responses
- * 
- * ✅ Hide: internal fields (_id, __v, is_deleted, deleted_at)
- * ✅ Expose: id, order_id, carrier, tracking_code, status, timeline, failure_info
- * ✅ Nest: shipping_address (snapshot), timeline details, failure tracking
- * ✅ Security: Never expose raw webhook data
- */
-
 class ShipmentMapper {
-    /**
-     * ✅ Convert Mongoose document → API Response DTO (basic)
-     * 
-     * Dùng cho: Shipment listing, create/update returns
-     * Include: shipment summary + status + tracking
-     */
+
     static toResponseDTO(shipment) {
         if (!shipment) {
             return null;
@@ -25,21 +10,17 @@ class ShipmentMapper {
         return {
             id: doc._id?.toString(),
 
-            // ✅ References
             order_id: doc.order_id?.toString(),
             user_id: doc.user_id?.toString(),
 
-            // ✅ Carrier info
             carrier: doc.carrier,
             tracking_code: doc.tracking_code,
 
-            // ✅ Tracking URL for customer
             tracking_url: this.buildTrackingUrl(
                 doc.carrier,
                 doc.tracking_code
             ),
 
-            // ✅ Address snapshot
             shipping_address: {
                 recipient_name: doc.shipping_address?.recipient_name,
                 phone: doc.shipping_address?.phone,
@@ -51,11 +32,9 @@ class ShipmentMapper {
                 country: doc.shipping_address?.country || 'Vietnam',
             },
 
-            // ✅ Status (state machine)
             status: doc.status,
             status_label: this.getStatusLabel(doc.status),
 
-            // ✅ Timeline (key timestamps)
             timeline: {
                 created_at: doc.timeline?.created_at,
                 picked_up_at: doc.timeline?.picked_up_at || null,
@@ -67,10 +46,8 @@ class ShipmentMapper {
                 returned_at: doc.timeline?.returned_at || null,
             },
 
-            // ✅ Progress indicator
             progress: this.calculateProgress(doc.status),
 
-            // ✅ Failure info (if applicable)
             failure: doc.status === 'failed'
                 ? {
                     reason: doc.failure_reason,
@@ -82,17 +59,11 @@ class ShipmentMapper {
                 }
                 : null,
 
-            // ✅ Timestamps
             created_at: doc.created_at,
             updated_at: doc.updated_at,
         };
     }
 
-    /**
-     * ✅ Convert array of documents → array of DTOs
-     * 
-     * Dùng cho: Shipment listing endpoints
-     */
     static toResponseDTOList(shipments) {
         if (!Array.isArray(shipments) || shipments.length === 0) {
             return [];
@@ -103,12 +74,6 @@ class ShipmentMapper {
         );
     }
 
-    /**
-     * ✅ Convert to List Item DTO (lightweight for listing)
-     * 
-     * Dùng cho: Shipment history listing, order shipments table
-     * Include: minimal info for cards/rows
-     */
     static toListDTO(shipment) {
         if (!shipment) {
             return null;
@@ -120,40 +85,29 @@ class ShipmentMapper {
             id: doc._id?.toString(),
             order_id: doc.order_id?.toString(),
 
-            // ✅ Quick identification
             carrier: doc.carrier,
             tracking_code: doc.tracking_code,
 
-            // ✅ Status for filtering/display
             status: doc.status,
             status_label: this.getStatusLabel(doc.status),
             progress: this.calculateProgress(doc.status),
 
-            // ✅ Recipient info (summary)
             recipient_name: doc.shipping_address?.recipient_name,
             destination: this.formatDestination(
                 doc.shipping_address?.district,
                 doc.shipping_address?.province
             ),
 
-            // ✅ Key dates for sorting
             created_at: doc.created_at,
             delivered_at: doc.timeline?.delivered_at || null,
         };
     }
 
-    /**
-     * ✅ Convert to Detail DTO (full information)
-     * 
-     * Dùng cho: GET /shipments/:id (full shipment detail)
-     * Include: everything for customer/admin view
-     */
     static toDetailDTO(shipment) {
         if (!shipment) {
             return null;
         }
 
-        // Start with full response
         const responseDTO = this.toResponseDTO(shipment);
 
         const doc = shipment.toObject ? shipment.toObject() : shipment;
@@ -161,7 +115,6 @@ class ShipmentMapper {
         return {
             ...responseDTO,
 
-            // ✅ Full address for detail view
             shipping_address: {
                 recipient_name: doc.shipping_address?.recipient_name,
                 phone: doc.shipping_address?.phone,
@@ -171,16 +124,13 @@ class ShipmentMapper {
                 province: doc.shipping_address?.province,
                 postal_code: doc.shipping_address?.postal_code,
                 country: doc.shipping_address?.country || 'Vietnam',
-                // ✅ Formatted address for display
                 formatted_address: this.formatFullAddress(
                     doc.shipping_address
                 ),
             },
 
-            // ✅ Full timeline with labels
             timeline: this.transformTimelineDetail(doc.timeline),
 
-            // ✅ Detailed failure info (if failed)
             failure: doc.status === 'failed'
                 ? {
                     reason: doc.failure_reason,
@@ -198,7 +148,6 @@ class ShipmentMapper {
                 }
                 : null,
 
-            // ✅ Actions available (for UI)
             actions: {
                 can_retry: this.canBeRetried(doc),
                 can_cancel: this.canBeCancelled(doc),
@@ -207,12 +156,6 @@ class ShipmentMapper {
         };
     }
 
-    /**
-     * ✅ Convert for Customer View (hide sensitive data)
-     * 
-     * Dùng cho: Shipment tracking for logged-in customer
-     * Hide: internal IDs, admin notes
-     */
     static toCustomerDTO(shipment) {
         if (!shipment) {
             return null;
@@ -224,12 +167,10 @@ class ShipmentMapper {
             id: detailDTO.id,
             order_id: detailDTO.order_id,
 
-            // ✅ Carrier & tracking
             carrier: detailDTO.carrier,
             tracking_code: detailDTO.tracking_code,
             tracking_url: detailDTO.tracking_url,
 
-            // ✅ Recipient info
             shipping_address: {
                 recipient_name: detailDTO.shipping_address.recipient_name,
                 phone: detailDTO.shipping_address.phone,
@@ -239,12 +180,10 @@ class ShipmentMapper {
                 province: detailDTO.shipping_address.province,
             },
 
-            // ✅ Status & progress
             status: detailDTO.status,
             status_label: detailDTO.status_label,
             progress: detailDTO.progress,
 
-            // ✅ Timeline (customer-visible milestones)
             timeline: {
                 created_at: detailDTO.timeline.created_at,
                 picked_up_at: detailDTO.timeline.picked_up_at,
@@ -254,25 +193,16 @@ class ShipmentMapper {
                 failed_at: detailDTO.timeline.failed_at,
             },
 
-            // ✅ Estimated delivery
             estimated_delivery: this.estimateDeliveryDate(
                 detailDTO.timeline.created_at
             ),
 
-            // ✅ Failure info (if applicable)
             failure: detailDTO.failure,
 
-            // ✅ Actions available
             actions: detailDTO.actions,
         };
     }
 
-    /**
-     * ✅ Convert for Admin Dashboard (full transparency)
-     * 
-     * Dùng cho: Admin panel, shipment management, analytics
-     * Include: all info for operations
-     */
     static toAdminDTO(shipment) {
         if (!shipment) {
             return null;
@@ -284,30 +214,20 @@ class ShipmentMapper {
         return {
             ...detailDTO,
 
-            // ✅ User reference
             user_id: doc.user_id?.toString(),
 
-            // ✅ Retry management
             retry_count: doc.retry_count || 0,
             max_retries: doc.max_retries || 3,
             last_retry_at: doc.last_retry_at,
 
-            // ✅ Soft delete info
             is_deleted: doc.is_deleted || false,
             deleted_at: doc.deleted_at || null,
 
-            // ✅ Timestamps
             created_at: doc.created_at,
             updated_at: doc.updated_at,
         };
     }
 
-    /**
-     * ✅ Convert for Tracking Page (public, minimal)
-     * 
-     * Dùng cho: Public order tracking page (no auth required)
-     * Include: status + timeline + tracking URL only
-     */
     static toTrackingDTO(shipment) {
         if (!shipment) {
             return null;
@@ -318,12 +238,10 @@ class ShipmentMapper {
         return {
             order_id: doc.order_id?.toString(),
 
-            // ✅ Current status
             status: doc.status,
             status_label: this.getStatusLabel(doc.status),
             progress: this.calculateProgress(doc.status),
 
-            // ✅ Carrier tracking
             carrier: doc.carrier,
             tracking_code: doc.tracking_code,
             tracking_url: this.buildTrackingUrl(
@@ -331,31 +249,21 @@ class ShipmentMapper {
                 doc.tracking_code
             ),
 
-            // ✅ Timeline milestones
             timeline: this.buildTrackingTimeline(doc.timeline),
 
-            // ✅ Recipient location (summary only)
             destination: this.formatDestination(
                 doc.shipping_address?.district,
                 doc.shipping_address?.province
             ),
 
-            // ✅ Estimated delivery
             estimated_delivery: this.estimateDeliveryDate(
                 doc.timeline?.created_at
             ),
 
-            // ✅ Last update
             last_update: doc.updated_at,
         };
     }
 
-    /**
-     * ✅ Convert for Email Notification (human-readable)
-     * 
-     * Dùng cho: Order shipped/delivered email template
-     * Include: summary + tracking info in friendly format
-     */
     static toEmailDTO(shipment) {
         if (!shipment) {
             return null;
@@ -366,7 +274,6 @@ class ShipmentMapper {
         return {
             order_id: doc.order_id?.toString(),
 
-            // ✅ Shipping notification
             carrier: this.getCarrierLabel(doc.carrier),
             tracking_code: doc.tracking_code,
             tracking_url: this.buildTrackingUrl(
@@ -374,28 +281,24 @@ class ShipmentMapper {
                 doc.tracking_code
             ),
 
-            // ✅ Recipient info
             recipient_name: doc.shipping_address?.recipient_name,
             recipient_phone: doc.shipping_address?.phone,
             delivery_address: this.formatFullAddress(
                 doc.shipping_address
             ),
 
-            // ✅ Status message
             status: doc.status,
             status_message: this.getEmailStatusMessage(
                 doc.status,
                 doc.carrier
             ),
 
-            // ✅ Dates
             shipped_date: this.formatDate(doc.timeline?.created_at),
             estimated_delivery: this.estimateDeliveryDateText(
                 doc.timeline?.created_at,
                 doc.carrier
             ),
 
-            // ✅ Call to action
             cta_text: 'Track Your Package',
             cta_url: this.buildTrackingUrl(
                 doc.carrier,
@@ -404,12 +307,6 @@ class ShipmentMapper {
         };
     }
 
-    /**
-     * ✅ Convert for Analytics/Report
-     * 
-     * Dùng cho: Export, reports, analytics dashboards
-     * Include: flattened structure for tabular format
-     */
     static toAnalyticsDTO(shipment) {
         if (!shipment) {
             return null;
@@ -454,9 +351,6 @@ class ShipmentMapper {
 
     // =========== TIMELINE HELPERS ===========
 
-    /**
-     * ✅ Transform timeline for detail view (with labels)
-     */
     static transformTimelineDetail(timeline) {
         if (!timeline) {
             return null;
@@ -528,9 +422,6 @@ class ShipmentMapper {
         };
     }
 
-    /**
-     * ✅ Build tracking timeline (for public tracking page)
-     */
     static buildTrackingTimeline(timeline) {
         if (!timeline) {
             return [];
@@ -581,9 +472,6 @@ class ShipmentMapper {
 
     // =========== STATUS HELPERS ===========
 
-    /**
-     * ✅ Get status label (human-readable)
-     */
     static getStatusLabel(status) {
         const labels = {
             pending: 'Pending',
@@ -599,9 +487,6 @@ class ShipmentMapper {
         return labels[status] || status;
     }
 
-    /**
-     * ✅ Get status label in Vietnamese
-     */
     static getStatusLabelVi(status) {
         const labels = {
             pending: 'Đang chờ',
@@ -617,9 +502,6 @@ class ShipmentMapper {
         return labels[status] || status;
     }
 
-    /**
-     * ✅ Get failure reason label
-     */
     static getFailureReasonLabel(reason) {
         const labels = {
             address_incorrect: 'Address Incorrect/Invalid',
@@ -635,9 +517,6 @@ class ShipmentMapper {
         return labels[reason] || reason;
     }
 
-    /**
-     * ✅ Get failure reason label in Vietnamese
-     */
     static getFailureReasonLabelVi(reason) {
         const labels = {
             address_incorrect: 'Địa chỉ sai/không tồn tại',
@@ -653,9 +532,6 @@ class ShipmentMapper {
         return labels[reason] || reason;
     }
 
-    /**
-     * ✅ Calculate progress (0-100%) based on status
-     */
     static calculateProgress(status) {
         const progressMap = {
             pending: 10,
@@ -671,9 +547,6 @@ class ShipmentMapper {
         return progressMap[status] || 0;
     }
 
-    /**
-     * ✅ Get email status message
-     */
     static getEmailStatusMessage(status, carrier) {
         const carrierName = this.getCarrierLabel(carrier);
 
@@ -693,9 +566,6 @@ class ShipmentMapper {
 
     // =========== CARRIER HELPERS ===========
 
-    /**
-     * ✅ Get carrier label
-     */
     static getCarrierLabel(carrier) {
         const labels = {
             GHN: 'Giao Hàng Nhanh',
@@ -709,9 +579,6 @@ class ShipmentMapper {
         return labels[carrier] || carrier;
     }
 
-    /**
-     * ✅ Build tracking URL based on carrier
-     */
     static buildTrackingUrl(carrier, trackingCode) {
         if (!trackingCode) {
             return null;
@@ -728,9 +595,6 @@ class ShipmentMapper {
         return trackers[carrier] || null;
     }
 
-    /**
-     * ✅ Get estimated delivery days by carrier
-     */
     static getEstimatedDeliveryDays(carrier) {
         const days = {
             GHN: 3,
@@ -746,17 +610,11 @@ class ShipmentMapper {
 
     // =========== ADDRESS HELPERS ===========
 
-    /**
-     * ✅ Format address for display (one-liner)
-     */
     static formatDestination(district, province) {
         const parts = [district, province].filter(Boolean);
         return parts.join(', ');
     }
 
-    /**
-     * ✅ Format full address for display
-     */
     static formatFullAddress(address) {
         if (!address) {
             return '';
@@ -775,9 +633,6 @@ class ShipmentMapper {
 
     // =========== DATE HELPERS ===========
 
-    /**
-     * ✅ Format date for display
-     */
     static formatDate(date) {
         if (!date) {
             return null;
@@ -792,9 +647,6 @@ class ShipmentMapper {
         });
     }
 
-    /**
-     * ✅ Format date to ISO string
-     */
     static formatDateISO(date) {
         if (!date) {
             return null;
@@ -803,9 +655,6 @@ class ShipmentMapper {
         return new Date(date).toISOString();
     }
 
-    /**
-     * ✅ Estimate delivery date
-     */
     static estimateDeliveryDate(createdDate) {
         if (!createdDate) {
             return null;
@@ -817,9 +666,6 @@ class ShipmentMapper {
         return date.toLocaleDateString('vi-VN');
     }
 
-    /**
-     * ✅ Estimate delivery date (text with range)
-     */
     static estimateDeliveryDateText(createdDate, carrier = null) {
         if (!createdDate) {
             return 'Soon';
@@ -840,9 +686,6 @@ class ShipmentMapper {
 
     // =========== RETRY HELPERS ===========
 
-    /**
-     * ✅ Check if shipment can be retried
-     */
     static canBeRetried(shipment) {
         return (
             shipment.status === 'failed' &&
@@ -850,9 +693,6 @@ class ShipmentMapper {
         );
     }
 
-    /**
-     * ✅ Check if shipment can be cancelled
-     */
     static canBeCancelled(shipment) {
         return [
             'pending',
@@ -862,9 +702,6 @@ class ShipmentMapper {
         ].includes(shipment.status);
     }
 
-    /**
-     * ✅ Get next retry time (48 hours after last retry)
-     */
     static getNextRetryTime(lastRetryAt) {
         if (!lastRetryAt) {
             return new Date(); // Can retry immediately
@@ -876,9 +713,6 @@ class ShipmentMapper {
         return nextRetryTime;
     }
 
-    /**
-     * ✅ Get time remaining for next retry (human-readable)
-     */
     static getTimeUntilNextRetry(lastRetryAt) {
         if (!lastRetryAt) {
             return 'Available now';
@@ -899,9 +733,6 @@ class ShipmentMapper {
 
     // =========== VALIDATION HELPERS ===========
 
-    /**
-     * ✅ Validate shipment DTO before response
-     */
     static validateDTO(shipment) {
         const errors = [];
 

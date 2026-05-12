@@ -1,4 +1,5 @@
 const express = require('express');
+
 const {
     getCategoryTree,
     getAllCategories,
@@ -14,29 +15,79 @@ const {
     hardDeleteCategory,
     restoreCategory,
 } = require('./category.controller');
-const { createCategorySchema, updateCategorySchema } = require('./category.validator');
+
+const validate = require("../../middlewares/validate.middleware");
+
 const { authorize } = require('../../middlewares/authorize.middleware');
-const validate = require("../../middlewares/validate.middleware")
 const { authenticate } = require('../../middlewares/auth.middleware');
+
+const {
+    createCategoryBodySchema,
+    updateCategoryBodySchema,
+    categoryIdParamSchema,
+    slugParamSchema,
+    getCategoryTreeQuerySchema,
+    getCategoryDescendantsQuerySchema,
+    getAllCategoriesQuerySchema
+} = require('./category.validator');
 
 const router = express.Router();
 
-// ===== PUBLIC ROUTES =====
-router.get('/tree', getCategoryTree);
-router.get('/all', getAllCategories);
-router.get('/slug/:slug', getCategoryBySlug);
-router.get('/:categoryId/breadcrumb', getCategoryBreadcrumb);
-router.get('/:categoryId/ancestors', getCategoryAncestors);
-router.get('/:categoryId/children', getCategoryChildren);
-router.get('/:categoryId/descendants', getCategoryDescendants);
-router.get('/:categoryId', getCategoryById);
+// ===== PUBLIC ROUTES (specific -> generic) =====
+router.get(
+    '/tree',
+    validate({ query: getCategoryTreeQuerySchema }),
+    getCategoryTree
+);
 
-// ===== ADMIN ROUTES (CREATE/UPDATE/DELETE) =====
+router.get(
+    '/all',
+    validate({ query: getAllCategoriesQuerySchema }),
+    getAllCategories
+);
+
+router.get(
+    '/slug/:slug',
+    validate({ params: slugParamSchema }),
+    getCategoryBySlug
+);
+
+router.get(
+    '/:categoryId/breadcrumb',
+    validate({ params: categoryIdParamSchema }),
+    getCategoryBreadcrumb
+);
+
+router.get(
+    '/:categoryId/ancestors',
+    validate({ params: categoryIdParamSchema }),
+    getCategoryAncestors
+);
+
+router.get(
+    '/:categoryId/children',
+    validate({ params: categoryIdParamSchema }),
+    getCategoryChildren
+);
+
+router.get(
+    '/:categoryId/descendants',
+    validate({ params: categoryIdParamSchema, query: getCategoryDescendantsQuerySchema }),
+    getCategoryDescendants
+);
+
+router.get(
+    '/:categoryId',
+    validate({ params: categoryIdParamSchema }),
+    getCategoryById
+);
+
+// ===== ADMIN ROUTES =====
 router.post(
     '/',
     authenticate,
     authorize(['ADMIN', 'MANAGER']),
-    validate(createCategorySchema),
+    validate({ body: createCategoryBodySchema }),
     createCategory
 );
 
@@ -44,7 +95,7 @@ router.patch(
     '/:categoryId',
     authenticate,
     authorize(['ADMIN', 'MANAGER']),
-    validate(updateCategorySchema),
+    validate({ params: categoryIdParamSchema, body: updateCategoryBodySchema }),
     updateCategory
 );
 
@@ -53,6 +104,7 @@ router.delete(
     '/:categoryId',
     authenticate,
     authorize(['ADMIN', 'MANAGER']),
+    validate({ params: categoryIdParamSchema }),
     deleteCategory
 );
 
@@ -61,6 +113,7 @@ router.delete(
     '/:categoryId/hard',
     authenticate,
     authorize(['ADMIN']),
+    validate({ params: categoryIdParamSchema }),
     hardDeleteCategory
 );
 
@@ -69,6 +122,7 @@ router.patch(
     '/:categoryId/restore',
     authenticate,
     authorize(['ADMIN']),
+    validate({ params: categoryIdParamSchema }),
     restoreCategory
 );
 

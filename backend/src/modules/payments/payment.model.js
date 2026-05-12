@@ -1,57 +1,25 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 
-/**
- * ============================================
- * PAYMENT SCHEMA
- * ============================================
- * 
- * Represents: Payment transaction for order
- * 
- * Key Points:
- * - order_id: reference to order snapshot
- * - user_id: quick lookup without join
- * - provider: payment gateway (vnpay, stripe, paypal)
- * - provider_data: nested structure for multi-provider support
- * - status: state machine (pending → paid/failed)
- * - verification_status: webhook signature verification state
- * - Idempotency: vnp_txn_ref + idempotency_key unique indexes
- * 
- * Critical:
- * ✅ Amount locked to order (prevent tampering)
- * ✅ State transitions guarded (pending → paid ONLY)
- * ✅ Webhook verification mandatory (INVALID_SIGNATURE → failed)
- * ✅ TTL only on expires_at (pending payments only)
- * ✅ Financial records are IMMUTABLE after payment success
- * ✅ Raw webhook data for audit trail
- */
-
 const providerDataSchema = new mongoose.Schema(
     {
-        // ===== VNPAY-SPECIFIC =====
         vnp_txn_ref: {
             type: String,
             sparse: true,
-            // VNPay transaction reference (unique)
         },
 
         vnp_transaction_no: String,
-        // VNPay internal transaction number
 
         vnp_response_code: String,
-        // '00' = success, other codes = errors
 
         vnp_bank_code: String,
-        // Bank used for payment (VCB, TCB, etc.)
 
         vnp_pay_date: Date,
-        // When VNPay processed the payment
 
         // ===== STRIPE-SPECIFIC (Future) =====
         stripe_pi_id: {
             type: String,
             sparse: true,
-            // Stripe Payment Intent ID
         },
 
         stripe_client_secret: String,
@@ -97,12 +65,10 @@ const paymentSchema = new mongoose.Schema(
         },
 
         // ===== FINANCIAL DATA (IMMUTABLE after creation) =====
-        // ✅ Amount locked to order value (prevent tampering)
         amount: {
             type: Number,
             required: [true, 'Amount is required'],
             min: [0, 'Amount cannot be negative'],
-            // Integer only: VND in đồng, USD in cents
         },
 
         currency: {
@@ -115,7 +81,6 @@ const paymentSchema = new mongoose.Schema(
         },
 
         // ===== PAYMENT STATUS (State Machine) =====
-        // ✅ Enforce: pending → paid/failed ONLY (no backwards transition)
         status: {
             type: String,
             enum: {
@@ -127,14 +92,12 @@ const paymentSchema = new mongoose.Schema(
         },
 
         // ===== PROVIDER-SPECIFIC DATA =====
-        // ✅ Nested structure for scalability (add new providers without schema bloat)
         provider_data: {
             type: providerDataSchema,
             required: [true, 'Provider data is required'],
         },
 
         // ===== IDEMPOTENCY & DEDUPLICATION =====
-        // ✅ Prevent duplicate webhook processing
         idempotency_key: {
             type: String,
             required: [true, 'Idempotency key is required'],
@@ -145,8 +108,6 @@ const paymentSchema = new mongoose.Schema(
         },
 
         // ===== WEBHOOK VERIFICATION =====
-        // ✅ Explicit verification state (pending/verified/failed)
-        // ✅ Separate from payment status (both must be checked)
         verification_status: {
             type: String,
             enum: {
@@ -157,26 +118,18 @@ const paymentSchema = new mongoose.Schema(
         },
 
         webhook_verified_at: Date,
-        // When webhook signature was verified
 
         // ===== FAILURE TRACKING =====
         failure_reason: {
             type: String,
-            // Examples: 'INSUFFICIENT_FUNDS', 'CARD_DECLINED', 'INVALID_SIGNATURE',
-            // 'AMOUNT_MISMATCH', 'WEBHOOK_TIMEOUT', 'STATE_CONFLICT'
         },
 
         failure_code: String,
-        // Provider error code (e.g., VNPay: '01', '02')
 
         failure_message: String,
-        // User-facing error message
 
         // ===== PAYMENT WINDOW & RETRY =====
         expires_at: Date,
-        // Payment window expiration (e.g., 30 min from creation)
-        // ✅ TTL index will auto-delete expired PENDING payments
-        // ✅ After payment succeeds: expires_at is UNSET (won't be auto-deleted)
 
         retry_count: {
             type: Number,
@@ -185,19 +138,14 @@ const paymentSchema = new mongoose.Schema(
         },
 
         last_retry_at: Date,
-        // Last time payment was retried
 
         // ===== RAW WEBHOOK DATA (Audit Trail) =====
-        // ✅ Store provider responses for debugging & dispute resolution
         raw_ipn: mongoose.Schema.Types.Mixed,
-        // Raw IPN (Instant Payment Notification) from webhook
 
         raw_return: mongoose.Schema.Types.Mixed,
-        // Raw return data from payment gateway redirect
 
         // ===== COMPLETION TIMESTAMP =====
         paid_at: Date,
-        // When payment was successfully marked as PAID
 
         // ===== SOFT DELETE =====
         is_deleted: {
@@ -218,7 +166,6 @@ const paymentSchema = new mongoose.Schema(
 
 // ===== INDEXES (Production Optimized) =====
 
-// ✅ Deduplication: VNPay transaction reference (unique per provider)
 paymentSchema.index(
     { 'provider_data.vnp_txn_ref': 1 },
     {
@@ -228,7 +175,6 @@ paymentSchema.index(
     }
 );
 
-// ✅ Deduplication: Stripe Payment Intent (unique per provider)
 paymentSchema.index(
     { 'provider_data.stripe_pi_id': 1 },
     {
@@ -238,7 +184,6 @@ paymentSchema.index(
     }
 );
 
-// ✅ Deduplication: Idempotency key (unique across all providers)
 paymentSchema.index(
     { idempotency_key: 1 },
     {
@@ -248,7 +193,6 @@ paymentSchema.index(
     }
 );
 
-// ✅ Lookups: User payment history
 paymentSchema.index(
     { user_id: 1, created_at: -1 },
     {
@@ -256,7 +200,6 @@ paymentSchema.index(
     }
 );
 
-// ✅ Lookups: Order payment
 paymentSchema.index(
     { order_id: 1, status: 1 },
     {
@@ -264,7 +207,6 @@ paymentSchema.index(
     }
 );
 
-// ✅ Status filtering
 paymentSchema.index(
     { status: 1, provider: 1 },
     {
@@ -272,7 +214,6 @@ paymentSchema.index(
     }
 );
 
-// ✅ Verification state
 paymentSchema.index(
     { verification_status: 1 },
     {
@@ -283,9 +224,6 @@ paymentSchema.index(
     }
 );
 
-// ✅ TTL Index: Auto-delete EXPIRED PENDING payments
-// CRITICAL: Only applies to documents where expires_at exists
-// When payment succeeds: expires_at is UNSET → won't be deleted
 paymentSchema.index(
     { expires_at: 1 },
     {
@@ -295,7 +233,6 @@ paymentSchema.index(
     }
 );
 
-// ✅ Soft delete queries
 paymentSchema.index(
     { is_deleted: 1, created_at: -1 },
     {

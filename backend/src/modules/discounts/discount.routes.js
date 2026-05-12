@@ -3,172 +3,139 @@ const validate = require('../../middlewares/validate.middleware');
 const { authenticate } = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/authorize.middleware');
 const DiscountController = require('./discount.controller');
+
 const {
-    createDiscountSchema,
-    updateDiscountSchema,
-    validateDiscountSchema,
-    bulkCreateSchema,
+    // params
+    IdParamSchema,
+    UserIdParamSchema,
+
+    // body
+    createDiscountBodySchema,
+    updateDiscountBodySchema,
+    validateDiscountBodySchema,
+    bulkCreateBodySchema,
+    duplicateDiscountBodySchema,
+
+    // query
     listDiscountsQuerySchema,
-    getDiscountParamSchema,
-    updateDiscountParamSchema,
-    deleteDiscountParamSchema,
+    nearExpiryQuerySchema,
 } = require('./discount.validator');
 
 const router = express.Router();
 
-/**
- * PUBLIC ROUTES (No authentication required)
- */
+// ===== PUBLIC =====
 
-/**
- * POST /api/v1/discounts/validate
- * Validate discount code and calculate applicable discount for checkout
- */
-router.post('/validate', validate(validateDiscountSchema), DiscountController.validateDiscount);
+router.post(
+    '/validate',
+    validate({ body: validateDiscountBodySchema }),
+    DiscountController.validateDiscount
+);
 
-/**
- * POST /api/v1/discounts/applicable
- * Get list of applicable discounts for a given cart
- */
-router.post('/applicable', DiscountController.getApplicableDiscounts);
+router.post(
+    '/applicable',
+    validate({ body: validateDiscountBodySchema }),
+    DiscountController.getApplicableDiscounts
+);
 
-/**
- * ADMIN ROUTES (Require authentication + ADMIN authorization)
- * All routes below require both auth and admin role
- */
+// ===== ADMIN =====
 
-/**
- * POST /api/v1/discounts
- * Create new discount campaign
- */
 router.post(
     '/',
     authenticate,
     authorize(['ADMIN']),
-    validate(createDiscountSchema),
+    validate({ body: createDiscountBodySchema }),
     DiscountController.createDiscount
 );
 
-/**
- * GET /api/v1/discounts
- * List all discounts with filters and pagination
- */
 router.get(
     '/',
     authenticate,
     authorize(['ADMIN']),
-    validate(listDiscountsQuerySchema),
+    validate({ query: listDiscountsQuerySchema }),
     DiscountController.listDiscounts
 );
 
-/**
- * POST /api/v1/discounts/bulk/import
- * Bulk import discounts from CSV/array
- * IMPORTANT: Must come AFTER specific routes like /validate, /applicable, /{discountId}
- */
 router.post(
     '/bulk/import',
     authenticate,
     authorize(['ADMIN']),
-    validate(bulkCreateSchema),
+    validate({ body: bulkCreateBodySchema }),
     DiscountController.bulkImport
 );
 
-/**
- * GET /api/v1/discounts/near-expiry
- * Get discounts that are expiring soon (for admin dashboard alerts)
- * IMPORTANT: Must come BEFORE /{discountId} dynamic routes
- */
 router.get(
     '/near-expiry',
     authenticate,
     authorize(['ADMIN']),
+    validate({ query: nearExpiryQuerySchema }),
     DiscountController.getNearExpiryDiscounts
 );
 
-/**
- * GET /api/v1/discounts/user/:userId
- * Get applicable discounts for a specific user (for admin/support)
- * IMPORTANT: Must come BEFORE /{discountId} dynamic routes
- */
 router.get(
     '/user/:userId',
     authenticate,
     authorize(['ADMIN']),
+    validate({
+        params: UserIdParamSchema,
+        query: listDiscountsQuerySchema.pick({ page: true, limit: true }),
+    }),
     DiscountController.getDiscountsForUser
 );
 
-/**
- * GET /api/v1/discounts/:discountId
- * Get single discount detail
- */
-router.get(
-    '/:discountId',
-    authenticate,
-    authorize(['ADMIN']),
-    validate(getDiscountParamSchema),
-    DiscountController.getDiscount
-);
+// ===== PARAM ROUTES (specific first) =====
 
-/**
- * PATCH /api/v1/discounts/:discountId
- * Update discount
- */
-router.patch(
-    '/:discountId',
-    authenticate,
-    authorize(['ADMIN']),
-    validate(updateDiscountParamSchema),
-    validate(updateDiscountSchema),
-    DiscountController.updateDiscount
-);
-
-/**
- * DELETE /api/v1/discounts/:discountId
- * Soft delete discount
- */
-router.delete(
-    '/:discountId',
-    authenticate,
-    authorize(['ADMIN']),
-    validate(deleteDiscountParamSchema),
-    DiscountController.deleteDiscount
-);
-
-/**
- * POST /api/v1/discounts/:discountId/revoke
- * Mark discount as inactive (without deleting)
- */
 router.post(
     '/:discountId/revoke',
     authenticate,
     authorize(['ADMIN']),
-    validate(getDiscountParamSchema),
+    validate({ params: IdParamSchema }),
     DiscountController.revokeDiscount
 );
 
-/**
- * POST /api/v1/discounts/:discountId/duplicate
- * Clone discount with new code
- */
 router.post(
     '/:discountId/duplicate',
     authenticate,
     authorize(['ADMIN']),
-    validate(getDiscountParamSchema),
+    validate({
+        params: IdParamSchema,
+        body: duplicateDiscountBodySchema,
+    }),
     DiscountController.duplicateDiscount
 );
 
-/**
- * GET /api/v1/discounts/:discountId/stats
- * Get discount usage statistics
- */
 router.get(
     '/:discountId/stats',
     authenticate,
     authorize(['ADMIN']),
-    validate(getDiscountParamSchema),
+    validate({ params: IdParamSchema }),
     DiscountController.getStatistics
+);
+
+router.patch(
+    '/:discountId',
+    authenticate,
+    authorize(['ADMIN']),
+    validate({
+        params: IdParamSchema,
+        body: updateDiscountBodySchema,
+    }),
+    DiscountController.updateDiscount
+);
+
+router.delete(
+    '/:discountId',
+    authenticate,
+    authorize(['ADMIN']),
+    validate({ params: IdParamSchema }),
+    DiscountController.deleteDiscount
+);
+
+router.get(
+    '/:discountId',
+    authenticate,
+    authorize(['ADMIN']),
+    validate({ params: IdParamSchema }),
+    DiscountController.getDiscount
 );
 
 module.exports = router;

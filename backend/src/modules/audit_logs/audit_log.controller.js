@@ -1,39 +1,15 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
-const { AuditLogService, DOMAIN_MODELS, DOMAIN_ACTION_MAP } = require('./audit_log.service');
-const { validateObjectId } = require('../../utils/validator.util');
-const AppError = require('../../utils/appError.util');
-const { AUDIT_LEVELS, AUDIT_ACTIONS } = require('../../constants/audit');
-
-const ALLOWED_DOMAINS = DOMAIN_MODELS.map(d => d.name);
+const { AuditLogService } = require('./audit_log.service');
 
 const getAllLogs = asyncHandler(async (req, res) => {
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const limitRaw = parseInt(req.query.limit, 10) || 20;
-    const limit = Math.min(Math.max(limitRaw, 1), 100);
-    const actor_id = req.query.actor_id?.trim() || undefined;
-    const level = req.query.level?.trim() || undefined;
-    const domain = req.query.domain?.trim() || undefined;
-    const action = req.query.action?.trim() || undefined;
-
-    if (actor_id && !validateObjectId(actor_id)) {
-        throw new AppError('Invalid actor_id', 400, 'INVALID_ID');
-    }
-
-    if (level && !AUDIT_LEVELS.includes(level)) {
-        throw new AppError('Invalid level', 400, 'INVALID_LEVEL');
-    }
-
-    if (domain && !ALLOWED_DOMAINS.includes(domain)) {
-        throw new AppError('Invalid domain', 400, 'INVALID_DOMAIN');
-    }
-
-    if (action && !Object.values(AUDIT_ACTIONS).includes(action)) {
-        throw new AppError('Invalid action', 400, 'INVALID_ACTION');
-    }
-
-    if (domain && action && !DOMAIN_ACTION_MAP[domain]?.includes(action)) {
-        throw new AppError('Action not valid for this domain', 400, 'INVALID_ACTION_FOR_DOMAIN');
-    }
+    const {
+        page = 1,
+        limit = 20,
+        actor_id,
+        level,
+        domain,
+        action
+    } = req.query;
 
     const filters = {
         domain,
@@ -54,9 +30,9 @@ const getAllLogs = asyncHandler(async (req, res) => {
 });
 
 const getLogById = asyncHandler(async (req, res) => {
-    validateObjectId(req.params.id);
+    const { id } = req.params;
 
-    const log = await AuditLogService.getLogById(req.params.id);
+    const log = await AuditLogService.getLogById(id);
 
     return res.status(200).json({
         success: true,

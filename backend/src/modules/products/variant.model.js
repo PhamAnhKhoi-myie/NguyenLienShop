@@ -1,28 +1,4 @@
 const mongoose = require('mongoose');
-
-/**
- * ============================================
- * VARIANT SCHEMA
- * ============================================
- * 
- * Represents: Kích thước + Loại vải combination
- * (1 Product có nhiều Variants)
- * 
- * Key Points:
- * - SKU: unique + format rule (enforce ở service)
- * - size + fabric_type: combination unique per product
- * - stock: tính theo cái (NOT pack)
- *   - available: có thể bán ngay
- *   - reserved: đã giữ (pending orders)
- * - min_price/max_price: cached từ variant_units
- * - Soft delete: giống product
- * 
- * Stock Logic:
- * - available = total_quantity - reserved
- * - Không update available trực tiếp
- * - Chỉ update reserved (order), sold (complete)
- */
-
 const stockSchema = new mongoose.Schema(
     {
         available: {
@@ -156,8 +132,6 @@ const variantSchema = new mongoose.Schema(
 );
 
 // ===== INDEXES (Production Optimized) =====
-
-// ✅ FIX #6: Compound index for product variants
 variantSchema.index(
     { product_id: 1, status: 1, is_deleted: 1 },
     {
@@ -168,8 +142,6 @@ variantSchema.index(
     }
 );
 
-// ✅ FIX #5: Unique constraint (size + fabric per product)
-// Prevent duplicate variants
 variantSchema.index(
     { product_id: 1, size: 1, fabric_type: 1 },
     {
@@ -180,7 +152,6 @@ variantSchema.index(
     }
 );
 
-// SKU lookup
 variantSchema.index(
     { sku: 1 },
     {
@@ -188,7 +159,6 @@ variantSchema.index(
     }
 );
 
-// Stock queries
 variantSchema.index(
     { 'stock.available': 1 },
     {
@@ -201,9 +171,6 @@ variantSchema.index(
 
 // ===== MIDDLEWARE =====
 
-/**
- * ✅ Pre-find: Auto-exclude soft-deleted
- */
 const excludeDeleted = function (next) {
     const options = this.getOptions?.() || {};
 
@@ -219,9 +186,6 @@ variantSchema.pre('findOne', excludeDeleted);
 variantSchema.pre('findOneAndUpdate', excludeDeleted);
 variantSchema.pre('countDocuments', excludeDeleted);
 
-/**
- * ✅ Pre-aggregate: Auto-exclude soft-deleted
- */
 variantSchema.pre('aggregate', function (next) {
     const pipeline = this.pipeline();
 
@@ -238,9 +202,6 @@ variantSchema.pre('aggregate', function (next) {
     next();
 });
 
-/**
- * ✅ Pre-save: Update timestamp
- */
 variantSchema.pre('save', function (next) {
     this.updated_at = new Date();
     next();
@@ -248,12 +209,6 @@ variantSchema.pre('save', function (next) {
 
 // ===== STATIC METHODS =====
 
-/**
- * ✅ Update price cache từ variant_units
- * 
- * Tương tự Product.updatePriceCache
- * Called từ VariantUnit service sau mỗi change
- */
 variantSchema.statics.updatePriceCache = async function (variantId) {
     const VariantUnit = mongoose.model('VariantUnit');
 
@@ -302,14 +257,6 @@ variantSchema.statics.updatePriceCache = async function (variantId) {
     });
 };
 
-/**
- * ✅ Check available stock
- * 
- * qty_packs = số pack user muốn mua
- * pack_size = số cái / pack
- * 
- * Return: true nếu có đủ stock
- */
 variantSchema.statics.hasStock = async function (
     variantId,
     qtyPacks,
@@ -320,13 +267,6 @@ variantSchema.statics.hasStock = async function (
     return variant.stock.available >= totalItems;
 };
 
-/**
- * ✅ Reserve stock (khi add to cart)
- * 
- * Logic:
- * - available -= qtyItems
- * - reserved += qtyItems
- */
 variantSchema.statics.reserveStock = async function (variantId, qtyItems) {
     const variant = await this.findById(variantId, 'stock');
 
@@ -348,13 +288,6 @@ variantSchema.statics.reserveStock = async function (variantId, qtyItems) {
     );
 };
 
-/**
- * ✅ Complete sale (khi order confirmed)
- * 
- * Logic:
- * - reserved -= qtyItems
- * - sold += qtyItems
- */
 variantSchema.statics.completeSale = async function (variantId, qtyItems) {
     return await this.findByIdAndUpdate(
         variantId,
@@ -368,9 +301,6 @@ variantSchema.statics.completeSale = async function (variantId, qtyItems) {
     );
 };
 
-/**
- * ✅ Release reserved stock (khi cancel order)
- */
 variantSchema.statics.releaseReservedStock = async function (
     variantId,
     qtyItems

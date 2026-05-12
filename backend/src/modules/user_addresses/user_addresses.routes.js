@@ -1,51 +1,77 @@
-// filepath: c:\MyEffort\NguyenLien\backend\src\modules\user_addresses\user_addresses.routes.js
 const express = require('express');
-const { createAddress, getUserAddressesByAdmin, setDefaultAddress, updateAddress, deleteAddress, getMyAddresses } = require('./user_addresses.controller');
-const { ZodError } = require("zod");
-const { createUserAddressSchema, updateUserAddressSchema } = require("../user_addresses/user_addresses.validator");
+
+const {
+    createAddress,
+    getUserAddressesByAdmin,
+    setDefaultAddress,
+    updateAddress,
+    deleteAddress,
+    getMyAddresses
+} = require('./user_addresses.controller');
+
+const validate = require("../../middlewares/validate.middleware");
+
 const { authenticate } = require('../../middlewares/auth.middleware');
-const validate = require("../../middlewares/validate.middleware")
+
 const {
     authorize
 } = require("../../middlewares/authorize.middleware");
 
-const router = express.Router();
+const {
+    createUserAddressBodySchema,
+    updateUserAddressBodySchema,
+    userIdParamSchema,
+    addressIdParamSchema
+} = require("./user_addresses.validator");
 
+const router = express.Router();
 
 // ===== CREATE ADDRESS =====
 router.post(
     '/',
     authenticate,
-    validate(createUserAddressSchema),
+    validate({ body: createUserAddressBodySchema }),
     createAddress
 );
 
+// ===== ADMIN =====
 router.get(
     '/user/:userId',
     authenticate,
     authorize(["ADMIN"]),
+    validate({ params: userIdParamSchema }),
     getUserAddressesByAdmin
 );
 
-// GET addresses của chính mình
-router.get('/', authenticate, getMyAddresses);
+// ===== OWN ADDRESSES =====
+router.get(
+    '/',
+    authenticate,
+    getMyAddresses
+);
 
-// SET DEFAULT
+// ===== SET DEFAULT =====
 router.patch(
     '/:addressId/set-default',
     authenticate,
+    validate({ params: addressIdParamSchema }),
     setDefaultAddress
 );
 
-// UPDATE
+// ===== UPDATE =====
 router.patch(
     '/:addressId',
     authenticate,
-    validate(updateUserAddressSchema),
+    validate({ params: addressIdParamSchema, body: updateUserAddressBodySchema }),
     updateAddress
 );
 
-// DELETE
-router.delete('/:addressId', authenticate, deleteAddress);
+// ===== DELETE =====
+router.delete(
+    '/:addressId',
+    authenticate,
+    validate({ params: addressIdParamSchema }),
+    deleteAddress
+);
 
 module.exports = router;

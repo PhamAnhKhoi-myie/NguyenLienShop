@@ -203,7 +203,6 @@ productSchema.index(
     }
 );
 
-// Search & ranking
 productSchema.index(
     { name: 'text', short_description: 'text', search_keywords: 'text' },
     {
@@ -215,7 +214,6 @@ productSchema.index(
     }
 );
 
-// Price range queries
 productSchema.index(
     { min_price: 1, max_price: 1 },
     {
@@ -225,7 +223,6 @@ productSchema.index(
     }
 );
 
-// Popular products
 productSchema.index(
     { sold_count: -1, rating_avg: -1 },
     {
@@ -237,7 +234,6 @@ productSchema.index(
 );
 
 // ===== MIDDLEWARE =====
-
 productSchema.pre('validate', function (next) {
     if (!this.slug) {
         this.slug = slugify(this.name, { lower: true, strict: true });

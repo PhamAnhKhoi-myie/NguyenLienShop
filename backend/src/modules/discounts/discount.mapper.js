@@ -1,22 +1,4 @@
-/**
- * Discount DTO Mapper
- * Transform between MongoDB documents and API responses
- *
- * ✅ Hide: internal fields (_id, __v, is_deleted, deleted_at)
- * ✅ Expose: id, code, value, applicable_targets, user_eligibility
- * ✅ Include: timestamps (created_at, updated_at), usage info
- * ✅ Nest: applicable_targets, user_eligibility objects
- * ✅ Format: prices, status labels in human-readable format
- */
-
 class DiscountMapper {
-    /**
-     * ✅ Convert Mongoose document → API Response DTO (basic)
-     *
-     * Dùng cho: Discount listing, create/update returns
-     * Include: discount summary + targets + usage info
-     * Hide: internal fields, created_by/updated_by (for public)
-     */
     static toResponseDTO(discount) {
         if (!discount) {
             return null;
@@ -78,12 +60,6 @@ class DiscountMapper {
         };
     }
 
-    /**
-     * ✅ Convert to Detail DTO (full information for admin edit page)
-     *
-     * Dùng cho: GET /admin/discounts/:id (edit form)
-     * Include: full discount info + audit trail
-     */
     static toDetailDTO(discount) {
         if (!discount) {
             return null;
@@ -163,13 +139,6 @@ class DiscountMapper {
         };
     }
 
-    /**
-     * ✅ Convert to Admin List DTO (lightweight for table view)
-     *
-     * Dùng cho: GET /admin/discounts (list page)
-     * Include: minimal info for table rows
-     * Calculate: usage percentage, time remaining
-     */
     static toAdminListDTO(discount) {
         if (!discount) {
             return null;
@@ -217,13 +186,6 @@ class DiscountMapper {
         };
     }
 
-    /**
-     * ✅ Convert to Customer View DTO (minimal for checkout)
-     *
-     * Dùng cho: POST /carts/validate-discount (checkout page)
-     * Include: discount info needed for apply
-     * Hide: admin details (usage limit display, targets detail)
-     */
     static toCustomerDTO(discount) {
         if (!discount) {
             return null;
@@ -256,12 +218,6 @@ class DiscountMapper {
         };
     }
 
-    /**
-     * ✅ Convert to Validation Response DTO (result of validateAndApply)
-     *
-     * Dùng cho: POST /discounts/validate response (discount applied result)
-     * Include: discount info + calculated discount amount
-     */
     static toValidationResponseDTO(validationResult) {
         if (!validationResult) {
             return null;
@@ -301,11 +257,6 @@ class DiscountMapper {
         };
     }
 
-    /**
-     * ✅ Convert array of discounts → array of DTOs
-     *
-     * Dùng cho: List endpoints with custom mapper
-     */
     static toResponseDTOList(discounts, mapperFn = null) {
         if (!Array.isArray(discounts)) {
             return [];
@@ -315,11 +266,6 @@ class DiscountMapper {
         return discounts.map(mapper);
     }
 
-    /**
-     * ✅ Convert array → admin list DTOs
-     *
-     * Dùng cho: Admin GET /discounts (list with pagination)
-     */
     static toAdminListDTOList(discounts) {
         if (!Array.isArray(discounts)) {
             return [];
@@ -327,12 +273,6 @@ class DiscountMapper {
         return discounts.map((d) => this.toAdminListDTO(d));
     }
 
-    /**
-     * ✅ Convert to Export DTO (CSV/Report)
-     *
-     * Dùng cho: Export, reports, analytics
-     * Include: flattened structure for tabular format
-     */
     static toExportDTO(discount) {
         if (!discount) {
             return null;
@@ -363,9 +303,6 @@ class DiscountMapper {
 
     // ===== HELPERS =====
 
-    /**
-     * ✅ Helper: Transform applicable_targets object
-     */
     static transformApplicableTargets(targets) {
         if (!targets) {
             return { type: 'all' };
@@ -376,7 +313,6 @@ class DiscountMapper {
             type_label: this.getApplicableTargetTypeLabel(targets.type),
         };
 
-        // Only include IDs if type matches
         if (targets.type === 'specific_products') {
             result.product_ids = targets.product_ids || [];
         } else if (targets.type === 'specific_categories') {
@@ -388,9 +324,6 @@ class DiscountMapper {
         return result;
     }
 
-    /**
-     * ✅ Helper: Transform user_eligibility object
-     */
     static transformUserEligibility(eligibility) {
         if (!eligibility) {
             return { type: 'all' };
@@ -401,7 +334,6 @@ class DiscountMapper {
             type_label: this.getUserEligibilityTypeLabel(eligibility.type),
         };
 
-        // Only include IDs if type matches
         if (eligibility.type === 'specific_users') {
             result.user_ids = eligibility.user_ids || [];
         }
@@ -413,9 +345,6 @@ class DiscountMapper {
         return result;
     }
 
-    /**
-     * ✅ Helper: Get type label (human-readable)
-     */
     static getTypeLabel(type) {
         const labels = {
             percent: 'Percentage',
@@ -424,9 +353,6 @@ class DiscountMapper {
         return labels[type] || type;
     }
 
-    /**
-     * ✅ Helper: Get application_strategy label
-     */
     static getApplicationStrategyLabel(strategy) {
         const labels = {
             apply_all: 'Apply to All Items',
@@ -437,9 +363,6 @@ class DiscountMapper {
         return labels[strategy] || strategy;
     }
 
-    /**
-     * ✅ Helper: Get applicable_targets type label
-     */
     static getApplicableTargetTypeLabel(type) {
         const labels = {
             all: 'All Products',
@@ -450,9 +373,6 @@ class DiscountMapper {
         return labels[type] || type;
     }
 
-    /**
-     * ✅ Helper: Get user_eligibility type label
-     */
     static getUserEligibilityTypeLabel(type) {
         const labels = {
             all: 'All Users',
@@ -463,9 +383,6 @@ class DiscountMapper {
         return labels[type] || type;
     }
 
-    /**
-     * ✅ Helper: Get status label
-     */
     static getStatusLabel(status) {
         const labels = {
             active: 'Active',
@@ -476,13 +393,6 @@ class DiscountMapper {
         return labels[status] || status;
     }
 
-    /**
-     * ✅ Helper: Format discount value for display
-     *
-     * Examples:
-     * - type: 'percent', value: 50 → "50% off"
-     * - type: 'fixed', value: 200000 → "200,000 ₫"
-     */
     static formatDiscountValue(type, value) {
         if (type === 'percent') {
             return `${value}% off`;
@@ -492,11 +402,6 @@ class DiscountMapper {
         return value;
     }
 
-    /**
-     * ✅ Helper: Format price for display (VND)
-     *
-     * Example: 180000 → "180,000 ₫"
-     */
     static formatPrice(price) {
         if (!price && price !== 0) {
             return '0 ₫';
@@ -510,9 +415,6 @@ class DiscountMapper {
         }).format(price);
     }
 
-    /**
-     * ✅ Helper: Check if discount is currently active
-     */
     static isDiscountActive(discount) {
         const now = new Date();
 
@@ -525,11 +427,6 @@ class DiscountMapper {
         );
     }
 
-    /**
-     * ✅ Helper: Check if discount is valid for use
-     *
-     * Similar to isDiscountActive but doesn't check status
-     */
     static isDiscountValid(discount) {
         const now = new Date();
 
@@ -540,14 +437,6 @@ class DiscountMapper {
         );
     }
 
-    /**
-     * ✅ Helper: Get time remaining (human-readable)
-     *
-     * Examples:
-     * - "5 days remaining"
-     * - "2 hours remaining"
-     * - "Expired"
-     */
     static getTimeRemaining(expiryDate) {
         if (!expiryDate) {
             return 'No expiry';
@@ -576,9 +465,6 @@ class DiscountMapper {
         return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} remaining`;
     }
 
-    /**
-     * ✅ Helper: Get days until expiry (for admin)
-     */
     static getDaysUntilExpiry(expiryDate) {
         if (!expiryDate) {
             return null;
@@ -595,11 +481,6 @@ class DiscountMapper {
         return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     }
 
-    /**
-     * ✅ Helper: Calculate usage percentage
-     *
-     * Returns: 0-100
-     */
     static calculateUsagePercentage(usageCount, usageLimit) {
         if (!usageLimit || usageLimit === 0) {
             return 0;
@@ -608,9 +489,6 @@ class DiscountMapper {
         return Math.min(100, Math.round((usageCount / usageLimit) * 100));
     }
 
-    /**
-     * ✅ Helper: Count total targets
-     */
     static countTargets(targets) {
         if (!targets) {
             return 0;
@@ -624,28 +502,17 @@ class DiscountMapper {
         return count;
     }
 
-    /**
-     * ✅ Helper: Get customer-facing warning message
-     *
-     * Examples:
-     * - "Expires in 1 day"
-     * - "Already expired"
-     * - "Not started yet"
-     */
     static getCustomerWarning(discount) {
         const now = new Date();
 
-        // Not started yet
         if (discount.started_at > now) {
             return `Available from ${new Date(discount.started_at).toLocaleDateString()}`;
         }
 
-        // Expired
         if (discount.expiry_date <= now) {
             return 'This discount has expired';
         }
 
-        // Usage limit reached
         if (discount.usage_count >= discount.usage_limit) {
             return 'This discount has reached its usage limit';
         }
@@ -665,11 +532,6 @@ class DiscountMapper {
         return null;
     }
 
-    /**
-     * ✅ Helper: Validate discount DTO before response
-     *
-     * Returns: { isValid: boolean, errors: [] }
-     */
     static validateDTO(discount) {
         const errors = [];
 
@@ -703,13 +565,9 @@ class DiscountMapper {
         };
     }
 
-    /**
-     * ✅ Helper: Get safe response object (hide internal data)
-     */
     static toSafeResponse(discount) {
         const obj = discount.toObject ? discount.toObject() : discount;
 
-        // Redact internal fields
         delete obj.__v;
         delete obj.raw_data; // If any raw webhook data exists
 

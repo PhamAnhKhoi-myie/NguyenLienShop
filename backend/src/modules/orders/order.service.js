@@ -13,41 +13,9 @@ const User = require('../users/user.model');
  * ============================================
  * ORDER SERVICE
  * ============================================
- * 
- * ✅ Static class pattern (consistent with other services)
- * ✅ Business logic layer: validation, stock checks, pricing
- * ✅ Delegates to model for DB operations
- * ✅ Returns DTOs via mapper (never raw MongoDB docs)
- * ✅ Uses asyncHandler in controller (no try/catch here)
- * 
- * CRITICAL RULES:
- * - Order is immutable snapshot (no price updates after creation)
- * - Stock deduction happens ATOMICALLY at order creation
- * - Payment failure MUST rollback stock (or inventory is lost)
- * - Status transitions are locked (only certain flows allowed)
  */
 
 class OrderService {
-    /**
-     * ✅ CREATE ORDER: From checkout cart + payment method
-     * 
-     * CRITICAL: This is where stock deduction happens (ATOMIC)
-     * 
-     * Flow:
-     * 1. Validate user + cart exists
-     * 2. Get checkout snapshot from CartService
-     * 3. Generate order code
-     * 4. Build order items (with snapshots)
-     * 5. ✅ ATOMIC: Deduct stock for ALL items (or rollback all)
-     * 6. Create order document with status PENDING
-     * 7. Delete cart (or mark CHECKED_OUT)
-     * 8. Return order DTO
-     * 
-     * @param {String} userId - From JWT token
-     * @param {String} cartId - User's cart
-     * @param {Object} shippingData - { address_snapshot, customer_notes }
-     * @returns {Object} Created order DTO
-     */
     static async createOrderFromCart(userId, cartId, shippingData) {
         if (!userId || !cartId) {
             throw new AppError(
@@ -61,7 +29,6 @@ class OrderService {
         session.startTransaction();
 
         try {
-            // ✅ 1. Validate user cart + get snapshot
             const cart = await Cart.findOne(
                 {
                     _id: cartId,
@@ -88,7 +55,6 @@ class OrderService {
                 );
             }
 
-            // ✅ 2. Validate address snapshot
             if (!shippingData.address_snapshot) {
                 throw new AppError(
                     'Shipping address is required',
@@ -97,10 +63,8 @@ class OrderService {
                 );
             }
 
-            // ✅ 3. Generate order code
             const orderCode = await Order.generateOrderCode();
 
-            // ✅ 4. Build order items with snapshots
             const orderItems = cart.items.map((cartItem) => ({
                 _id: new mongoose.Types.ObjectId(),
                 product_id: cartItem.product_id,
@@ -126,7 +90,6 @@ class OrderService {
                 review_status: 'pending',
             }));
 
-            // ✅ 5. Calculate pricing
             const subtotal = orderItems.reduce(
                 (sum, item) => sum + item.line_total,
                 0
@@ -141,7 +104,6 @@ class OrderService {
 
             const totalAmount = subtotal - discountAmount + shippingFee;
 
-            // ✅ 6. CRITICAL: Deduct stock ATOMICALLY for all items
             // If ANY item fails, entire transaction rolls back
             for (const item of orderItems) {
                 const qtyItems = item.quantity_ordered * item.pack_size;
@@ -170,7 +132,6 @@ class OrderService {
                 }
             }
 
-            // ✅ 7. Create order document
             const order = new Order({
                 order_code: orderCode,
                 user_id: userId,
@@ -254,15 +215,6 @@ class OrderService {
         }
     }
 
-    /**
-     * ✅ READ: Get order by ID
-     * 
-     * ⚠️ Customer can only see their own order
-     * Admin can see all orders (enforce in controller)
-     * 
-     * @param {String} orderId - Order MongoDB ID
-     * @returns {Object} Order detail DTO
-     */
     static async getOrderById(orderId) {
         const order = await Order.findById(orderId);
         if (!order) {
@@ -272,15 +224,6 @@ class OrderService {
         return OrderMapper.toDetailDTO(order);
     }
 
-    /**
-     * ✅ READ: Get order by code (public tracking)
-     * 
-     * Format: ORD-YYYYMMDD-XXXXX
-     * Used for public tracking page (no auth required)
-     * 
-     * @param {String} orderCode
-     * @returns {Object} Tracking DTO (minimal info)
-     */
     static async getOrderByCode(orderCode) {
         const order = await Order.findOne({ order_code: orderCode });
         if (!order) {
@@ -290,15 +233,6 @@ class OrderService {
         return OrderMapper.toTrackingDTO(order);
     }
 
-    /**
-     * ✅ READ: Get user's order history (paginated)
-     * 
-     * @param {String} userId
-     * @param {Number} page - Default 1
-     * @param {Number} limit - Default 20, max 100
-     * @param {Object} filters - { status, payment_status, date_from, date_to }
-     * @returns {Object} { data: [...], pagination: {...} }
-     */
     static async getUserOrders(
         userId,
         page = 1,
@@ -351,22 +285,6 @@ class OrderService {
         };
     }
 
-    /**
-     * ✅ UPDATE: Confirm payment (webhook from payment provider)
-     * 
-     * Flow:
-     * 1. Verify order exists + status is PENDING
-     * 2. Update payment status → PAID
-     * 3. Update order status → PAID
-     * 4. Add status history
-     * 
-     * ⚠️ Called from payment webhook handler
-     * Must verify webhook signature before calling
-     * 
-     * @param {String} orderId
-     * @param {Object} paymentData - { paid_at, payment_method, ... }
-     * @returns {Object} Updated order DTO
-     */
     static async confirmPayment(orderId, paymentData = {}) {
         const order = await Order.findById(orderId);
         if (!order) {
@@ -393,24 +311,6 @@ class OrderService {
         return OrderMapper.toResponseDTO(order);
     }
 
-    /**
-     * ✅ UPDATE: Payment failed (webhook from payment provider)
-     * 
-     * CRITICAL: Rollback stock (reverse the checkout deduction)
-     * 
-     * Flow:
-     * 1. Verify order exists + status is PENDING
-     * 2. ATOMIC: Restore stock for all items
-     * 3. Update payment status → FAILED
-     * 4. Update order status → FAILED
-     * 5. Add status history
-     * 
-     * ⚠️ If stock restoration fails, order is in FAILED state
-     * Manual intervention required (admin panel)
-     * 
-     * @param {String} orderId
-     * @returns {Object} Updated order DTO
-     */
     static async failPayment(orderId) {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -480,16 +380,6 @@ class OrderService {
         }
     }
 
-    /**
-     * ✅ UPDATE: Start processing (admin action)
-     * 
-     * Transition: PAID → PROCESSING
-     * Used when order is sent to warehouse for fulfillment
-     * 
-     * @param {String} orderId
-     * @param {String} adminUserId - Admin who triggered this
-     * @returns {Object} Updated order DTO
-     */
     static async startProcessing(orderId, adminUserId) {
         const order = await Order.findById(orderId);
         if (!order) {
@@ -515,19 +405,6 @@ class OrderService {
         return OrderMapper.toResponseDTO(order);
     }
 
-    /**
-     * ✅ UPDATE: Fulfill items (warehouse action)
-     * 
-     * Mark items as fulfilled (quantity_fulfilled tracking)
-     * When ALL items fulfilled, can trigger shipment
-     * 
-     * ATOMIC: Move from reserved → sold
-     * 
-     * @param {String} orderId
-     * @param {String} itemId - Item ID within order
-     * @param {Number} quantityFulfilled - Number of packs to mark as fulfilled
-     * @returns {Object} Updated order DTO
-     */
     static async fulfillItems(
         orderId,
         itemId,
@@ -615,16 +492,6 @@ class OrderService {
         }
     }
 
-    /**
-     * ✅ UPDATE: Record shipment (warehouse/fulfillment action)
-     * 
-     * Transition: PROCESSING → SHIPPED
-     * Record carrier + tracking code
-     * 
-     * @param {String} orderId
-     * @param {Object} shipmentData - { carrier, tracking_code }
-     * @returns {Object} Updated order DTO
-     */
     static async recordShipment(orderId, shipmentData) {
         const order = await Order.findById(orderId);
         if (!order) {
@@ -649,7 +516,6 @@ class OrderService {
             );
         }
 
-        // ✅ Update shipment + status
         order.shipment = {
             carrier,
             tracking_code,
@@ -667,15 +533,6 @@ class OrderService {
         return OrderMapper.toResponseDTO(order);
     }
 
-    /**
-     * ✅ UPDATE: Confirm delivery (system/tracking action)
-     * 
-     * Transition: SHIPPED → DELIVERED
-     * Usually triggered by tracking system or manual confirmation
-     * 
-     * @param {String} orderId
-     * @returns {Object} Updated order DTO
-     */
     static async confirmDelivery(orderId) {
         const order = await Order.findById(orderId);
         if (!order) {
@@ -703,18 +560,6 @@ class OrderService {
         return OrderMapper.toDetailDTO(order);
     }
 
-    /**
-     * ✅ UPDATE: Cancel order (customer/admin action)
-     * 
-     * Can cancel before shipment: PENDING → PROCESSING
-     * If payment taken: MUST refund (call PaymentService.refund)
-     * If stock reserved: MUST restore (ATOMIC)
-     * 
-     * @param {String} orderId
-     * @param {String} reason - Cancellation reason
-     * @param {String} cancelledBy - User ID (optional, null = system)
-     * @returns {Object} Updated order DTO
-     */
     static async cancelOrder(orderId, reason, cancelledBy = null) {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -787,18 +632,6 @@ class OrderService {
         }
     }
 
-    /**
-     * ✅ UPDATE: Update order status (admin action)
-     * 
-     * Generic status update with validation
-     * Admin can force transitions (with caution)
-     * 
-     * @param {String} orderId
-     * @param {String} toStatus - New status
-     * @param {String} adminUserId - Admin who made this change
-     * @param {String} note - Reason for change
-     * @returns {Object} Updated order DTO
-     */
     static async updateOrderStatus(
         orderId,
         toStatus,
@@ -810,7 +643,6 @@ class OrderService {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
         }
 
-        // ✅ Validate status enum
         const validStatuses = [
             'PENDING',
             'PAID',
@@ -839,13 +671,6 @@ class OrderService {
         return OrderMapper.toDetailDTO(order);
     }
 
-    /**
-     * ✅ UPDATE: Admin notes (admin action)
-     * 
-     * @param {String} orderId
-     * @param {String} notes - Admin notes
-     * @returns {Object} Updated order DTO
-     */
     static async updateAdminNotes(orderId, notes) {
         const order = await Order.findByIdAndUpdate(
             orderId,
@@ -860,15 +685,6 @@ class OrderService {
         return OrderMapper.toDetailDTO(order);
     }
 
-    /**
-     * ✅ REVIEW: Write review for order item
-     * 
-     * @param {String} orderId
-     * @param {String} itemId - Item ID within order
-     * @param {Number} rating - 1-5 stars
-     * @param {String} comment - Optional review comment
-     * @returns {Object} Updated order item
-     */
     static async writeReview(orderId, itemId, rating, comment = '') {
         const order = await Order.findById(orderId);
         if (!order) {
@@ -912,14 +728,6 @@ class OrderService {
         return OrderMapper.toDetailDTO(order);
     }
 
-    /**
-     * ✅ ADMIN: Get all orders (with filters)
-     * 
-     * @param {Number} page
-     * @param {Number} limit
-     * @param {Object} filters - { status, payment_status, user_id, date_from, date_to }
-     * @returns {Object} { data: [...], pagination: {...} }
-     */
     static async getAllOrders(page = 1, limit = 20, filters = {}) {
         const skip = (page - 1) * limit;
         const query = {};
@@ -972,11 +780,6 @@ class OrderService {
         };
     }
 
-    /**
-     * ✅ ADMIN: Get order statistics
-     * 
-     * @returns {Object} Stats (total orders, revenue, status breakdown, etc)
-     */
     static async getOrderStats() {
         const stats = await Order.aggregate([
             {
@@ -1008,15 +811,6 @@ class OrderService {
         return stats[0];
     }
 
-    /**
-     * ✅ READ: Get the most recent order for a specific user
-     * 
-     * Used by Chatbot/AI to provide quick status updates
-     * Pattern #8: Returns mapped DTO
-     * 
-     * @param {String} userId 
-     * @returns {Object|null} Latest order DTO or null
-     */
     static async getLatestOrderByUser(userId) {
         if (!userId) return null;
 

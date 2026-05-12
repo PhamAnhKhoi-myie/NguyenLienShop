@@ -7,16 +7,6 @@ const VariantMapper = require('./variant.mapper');
 const AppError = require('../../utils/appError.util');
 
 class VariantService {
-    /**
-     * CREATE: Tạo variant mới
-     * 
-     * ✅ FIX #4: SKU generation & validation
-     * Format: {productSlug}-{size}-{fabric}
-     * 
-     * @param {String} productId
-     * @param {Object} data - { size, fabric_type, stock, ... }
-     * @returns {Object} Variant DTO
-     */
     static async createVariant(productId, data) {
         const { size, fabric_type, stock, ...rest } = data;
 
@@ -64,12 +54,6 @@ class VariantService {
         return VariantMapper.toResponseDTO(variant);
     }
 
-    /**
-     * READ: Get variant by ID
-     * 
-     * @param {String} variantId
-     * @returns {Object} Variant DTO with units
-     */
     static async getVariantById(variantId) {
         const variant = await Variant.findOne({
             _id: variantId,
@@ -91,12 +75,6 @@ class VariantService {
         return VariantMapper.toDetailDTO(variant, units);
     }
 
-    /**
-     * READ: Get all variants for a product
-     * 
-     * @param {String} productId
-     * @returns {Array} Variant DTOs with units
-     */
     static async getVariantsByProduct(productId) {
         const variants = await Variant.aggregate([
             {
@@ -127,15 +105,6 @@ class VariantService {
         );
     }
 
-    /**
-     * UPDATE: Update variant info
-     * 
-     * ✅ WARNING: Do NOT update prices here (handled by variant_unit service)
-     * 
-     * @param {String} variantId
-     * @param {Object} updateData - { size, fabric_type, stock, status, ... }
-     * @returns {Object} Updated variant DTO
-     */
     static async updateVariant(variantId, updateData) {
         if (!updateData || Object.keys(updateData).length === 0) {
             throw new AppError(
@@ -178,12 +147,6 @@ class VariantService {
         }
     }
 
-    /**
-     * DELETE: Soft-delete variant
-     * 
-     * @param {String} variantId
-     * @returns {Object} Deletion confirmation
-     */
     static async deleteVariant(variantId) {
         const session = await mongoose.startSession();
 
@@ -223,15 +186,6 @@ class VariantService {
         };
     }
 
-    /**
-     * STOCK: Check available stock
-     * 
-     * ✅ FIX #2: Stock checked theo cái, NOT pack
-     * 
-     * @param {String} variantId
-     * @param {Number} qtyItems - Số cái cần check
-     * @returns {Boolean} True if stock available
-     */
     static async hasStock(variantId, qtyItems) {
         const variant = await Variant.findById(variantId, 'stock');
 
@@ -242,13 +196,6 @@ class VariantService {
         return variant.stock.available >= qtyItems;
     }
 
-    /**
-     * STOCK: Reserve stock (add to cart)
-     * 
-     * @param {String} variantId
-     * @param {Number} qtyItems - Số cái
-     * @returns {Object} Updated stock
-     */
     static async reserveStock(variantId, qty_items) {
         if (qty_items <= 0) {
             throw new AppError('Quantity must be > 0', 400);
@@ -276,13 +223,6 @@ class VariantService {
         return variant;
     }
 
-    /**
-     * STOCK: Complete sale (order confirmed)
-     * 
-     * @param {String} variantId
-     * @param {Number} qtyItems
-     * @returns {Object} Updated stock
-     */
     static async completeSale(variantId, qty_items) {
         if (qty_items <= 0) {
             throw new AppError('Quantity must be > 0', 400);
@@ -307,13 +247,6 @@ class VariantService {
         return variant;
     }
 
-    /**
-     * STOCK: Release reserved stock (cancel order)
-     * 
-     * @param {String} variantId
-     * @param {Number} qtyItems
-     * @returns {Object} Updated stock
-     */
     static async releaseReservedStock(variantId, qty_items) {
         if (qty_items <= 0) {
             throw new AppError('Quantity must be > 0', 400);
@@ -338,11 +271,6 @@ class VariantService {
         return variant;
     }
 
-    /**
-     * INTERNAL: Update price cache (called từ variant_unit service)
-     * 
-     * ✅ FIX #3: When units change, recalc variant + product prices
-     */
     static async recalculatePriceCache(variantId) {
         const variant = await Variant.findById(variantId);
         if (!variant) return;
@@ -359,17 +287,6 @@ class VariantService {
         }
     }
 
-    /**
-     * HELPER: Generate SKU
-     * 
-     * Format: {productSlug}-{size}-{fabric}
-     * Example: TUBAO-NA-20x25-NOTDYET
-     * 
-     * @param {String} productSlug
-     * @param {String} size
-     * @param {String} fabricType
-     * @returns {String} Generated SKU
-     */
     static generateSKU(productSlug, size, fabricType) {
         const slugify = (str) =>
             str
@@ -379,15 +296,6 @@ class VariantService {
         return `${slugify(productSlug)}-${slugify(size)}-${slugify(fabricType)}`;
     }
 
-    /**
-     * GET max order qty for variant (based on stock + pack size)
-     * 
-     * ✅ Dùng này để limit UI max input
-     * 
-     * @param {String} variantId
-     * @param {Number} packSize
-     * @returns {Number} Max quantity of packs user can order
-     */
     static async getMaxOrderQty(variantId) {
         const variant = await Variant.findById(variantId, 'stock');
         if (!variant) return 0;

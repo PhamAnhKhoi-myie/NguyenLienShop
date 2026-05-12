@@ -1,23 +1,17 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
-const AppError = require('../../utils/appError.util');
 const { assertAuthenticated } = require('../../utils/auth.util');
 const CategoryService = require('./category.service');
-const {
-    createCategorySchema,
-    updateCategorySchema,
-    getCategoryTreeSchema,
-} = require('./category.validator');
-const { validateObjectId } = require('../../utils/validator.util');
 const { buildAuditMetadata } = require('../../utils/audit.util');
 
 // ===== PUBLIC ENDPOINTS =====
 
-/**
- * GET /api/v1/categories/tree
- * Get category tree (hierarchical structure)
- */
 const getCategoryTree = asyncHandler(async (req, res) => {
-    const filters = getCategoryTreeSchema.parse(req.query);
+    const { include_inactive = false } = req.query;
+
+    const filters = {
+        include_inactive,
+    };
+
     const tree = await CategoryService.getCategoryTree(filters);
 
     res.status(200).json({
@@ -26,15 +20,14 @@ const getCategoryTree = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * GET /api/v1/categories/all
- * Get all categories (flat list)
- */
 const getAllCategories = asyncHandler(async (req, res) => {
+    const { status, parent_id } = req.query;
+
     const filters = {
-        status: req.query.status,
-        parent_id: req.query.parent_id,
+        status,
+        parent_id,
     };
+
     const categories = await CategoryService.getAllCategories(filters);
 
     res.status(200).json({
@@ -43,12 +36,10 @@ const getAllCategories = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * GET /api/v1/categories/slug/:slug
- * Get category by slug
- */
 const getCategoryBySlug = asyncHandler(async (req, res) => {
-    const category = await CategoryService.getCategoryBySlug(req.params.slug);
+    const { slug } = req.params;
+
+    const category = await CategoryService.getCategoryBySlug(slug);
 
     res.status(200).json({
         success: true,
@@ -56,13 +47,10 @@ const getCategoryBySlug = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * GET /api/v1/categories/:categoryId
- * Get category by ID
- */
 const getCategoryById = asyncHandler(async (req, res) => {
-    validateObjectId(req.params.categoryId);
-    const category = await CategoryService.getCategoryById(req.params.categoryId);
+    const { categoryId } = req.params;
+
+    const category = await CategoryService.getCategoryById(categoryId);
 
     res.status(200).json({
         success: true,
@@ -70,13 +58,10 @@ const getCategoryById = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * GET /api/v1/categories/:categoryId/breadcrumb
- * Get breadcrumb path to category
- */
 const getCategoryBreadcrumb = asyncHandler(async (req, res) => {
-    validateObjectId(req.params.categoryId);
-    const breadcrumb = await CategoryService.getCategoryBreadcrumb(req.params.categoryId);
+    const { categoryId } = req.params;
+
+    const breadcrumb = await CategoryService.getCategoryBreadcrumb(categoryId);
 
     res.status(200).json({
         success: true,
@@ -84,13 +69,10 @@ const getCategoryBreadcrumb = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * GET /api/v1/categories/:categoryId/ancestors
- * Get all parent categories
- */
 const getCategoryAncestors = asyncHandler(async (req, res) => {
-    validateObjectId(req.params.categoryId);
-    const ancestors = await CategoryService.getCategoryAncestors(req.params.categoryId);
+    const { categoryId } = req.params;
+
+    const ancestors = await CategoryService.getCategoryAncestors(categoryId);
 
     res.status(200).json({
         success: true,
@@ -98,15 +80,10 @@ const getCategoryAncestors = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * GET /api/v1/categories/:categoryId/children
- * Get direct child categories
- */
 const getCategoryChildren = asyncHandler(async (req, res) => {
-    const categoryId = req.params.categoryId || null;
-    if (categoryId) validateObjectId(categoryId);
+    const { categoryId } = req.params;
 
-    const children = await CategoryService.getCategoryChildren(categoryId);
+    const children = await CategoryService.getCategoryChildren(categoryId || null);
 
     res.status(200).json({
         success: true,
@@ -114,17 +91,13 @@ const getCategoryChildren = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * GET /api/v1/categories/:categoryId/descendants
- * Get all descendant categories
- */
 const getCategoryDescendants = asyncHandler(async (req, res) => {
-    validateObjectId(req.params.categoryId);
-    const includeInactive = req.query.include_inactive === 'true';
+    const { categoryId } = req.params;
+    const { include_inactive = false } = req.query;
 
     const descendants = await CategoryService.getCategoryDescendants(
-        req.params.categoryId,
-        includeInactive
+        categoryId,
+        include_inactive
     );
 
     res.status(200).json({
@@ -135,12 +108,7 @@ const getCategoryDescendants = asyncHandler(async (req, res) => {
 
 // ===== ADMIN ENDPOINTS =====
 
-/**
- * POST /api/v1/categories
- * Create new category (admin only)
- */
 const createCategory = asyncHandler(async (req, res) => {
-
     const user = assertAuthenticated(req.user);
 
     const metadata = {
@@ -159,14 +127,9 @@ const createCategory = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * PATCH /api/v1/categories/:categoryId
- * Update category (admin only)
- */
 const updateCategory = asyncHandler(async (req, res) => {
-
     const user = assertAuthenticated(req.user);
-    validateObjectId(req.params.categoryId);
+    const { categoryId } = req.params;
 
     const metadata = {
         ...buildAuditMetadata(req),
@@ -174,7 +137,7 @@ const updateCategory = asyncHandler(async (req, res) => {
     };
 
     const category = await CategoryService.updateCategory(
-        req.params.categoryId,
+        categoryId,
         req.body,
         metadata
     );
@@ -185,14 +148,9 @@ const updateCategory = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * DELETE /api/v1/categories/:categoryId
- * Soft delete category (admin only)
- */
 const deleteCategory = asyncHandler(async (req, res) => {
-
     const user = assertAuthenticated(req.user);
-    validateObjectId(req.params.categoryId);
+    const { categoryId } = req.params;
 
     const metadata = {
         ...buildAuditMetadata(req),
@@ -200,7 +158,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
     };
 
     const result = await CategoryService.deleteCategory(
-        req.params.categoryId,
+        categoryId,
         metadata
     );
 
@@ -210,14 +168,9 @@ const deleteCategory = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * DELETE /api/v1/categories/:categoryId/hard
- * Hard delete category permanently (admin only)
- */
 const hardDeleteCategory = asyncHandler(async (req, res) => {
-
     const user = assertAuthenticated(req.user);
-    validateObjectId(req.params.categoryId);
+    const { categoryId } = req.params;
 
     const metadata = {
         ...buildAuditMetadata(req),
@@ -225,7 +178,7 @@ const hardDeleteCategory = asyncHandler(async (req, res) => {
     };
 
     const result = await CategoryService.hardDeleteCategory(
-        req.params.categoryId,
+        categoryId,
         metadata
     );
 
@@ -235,14 +188,9 @@ const hardDeleteCategory = asyncHandler(async (req, res) => {
     });
 });
 
-/**
- * PATCH /api/v1/categories/:categoryId/restore
- * Restore soft-deleted category (admin only)
- */
 const restoreCategory = asyncHandler(async (req, res) => {
-
     const user = assertAuthenticated(req.user);
-    validateObjectId(req.params.categoryId);
+    const { categoryId } = req.params;
 
     const metadata = {
         ...buildAuditMetadata(req),
@@ -250,7 +198,7 @@ const restoreCategory = asyncHandler(async (req, res) => {
     };
 
     const category = await CategoryService.restoreCategory(
-        req.params.categoryId,
+        categoryId,
         metadata
     );
 

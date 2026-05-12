@@ -33,22 +33,18 @@ const orderSchema = new mongoose.Schema(
             {
                 _id: mongoose.Schema.Types.ObjectId,
 
-                // ✅ References (for lookup/reorder/review)
                 product_id: mongoose.Schema.Types.ObjectId,
                 variant_id: mongoose.Schema.Types.ObjectId,
                 unit_id: mongoose.Schema.Types.ObjectId,
 
-                // ✅ Snapshot data (IMMUTABLE - frozen at order time)
                 product_name: { type: String, required: true },
                 product_image: String,
                 variant_label: { type: String, required: true },
                 sku: { type: String, required: true },
 
-                // unit_id = reference; pack_size = snapshot (not redundant)
                 unit_label: { type: String, required: true }, // "Gói 100 cái"
                 pack_size: { type: Number, required: true },   // 100 items per pack
 
-                // ✅ Quantity tracking
                 quantity_ordered: {
                     type: Number,
                     required: true,
@@ -60,7 +56,6 @@ const orderSchema = new mongoose.Schema(
                     // Number of PACKS fulfilled
                 },
 
-                // ✅ Pricing snapshot (IMMUTABLE)
                 unit_price: {
                     type: Number,
                     required: true
@@ -72,7 +67,6 @@ const orderSchema = new mongoose.Schema(
                     // quantity_ordered × unit_price (snapshot)
                 },
 
-                // ✅ Review tracking
                 review_status: {
                     type: String,
                     enum: ['pending', 'reviewed'],
@@ -183,16 +177,11 @@ orderSchema.index({ is_deleted: 1, created_at: -1 });  // Soft-delete queries
 
 // ===== METHODS =====
 
-/**
- * Generate unique order code
- * Format: ORD-YYYYMMDD-XXXXX (5 random alphanumeric)
- */
 orderSchema.statics.generateOrderCode = async function () {
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const random = Math.random().toString(36).substring(2, 7).toUpperCase();
     const code = `ORD-${date}-${random}`;
 
-    // Ensure uniqueness
     const existing = await this.findOne({ order_code: code });
     if (existing) {
         return this.generateOrderCode(); // Recursive retry
@@ -201,9 +190,6 @@ orderSchema.statics.generateOrderCode = async function () {
     return code;
 };
 
-/**
- * Add status transition with audit trail
- */
 orderSchema.methods.addStatusTransition = function (
     toStatus,
     changedBy = null,
@@ -220,47 +206,28 @@ orderSchema.methods.addStatusTransition = function (
     this.status = toStatus;
 };
 
-/**
- * Calculate total items ordered
- * Useful for display: "120 items" = 3 packs × 40
- */
 orderSchema.methods.getTotalItemsOrdered = function () {
     return this.items.reduce((sum, item) => {
         return sum + (item.quantity_ordered * item.pack_size);
     }, 0);
 };
 
-/**
- * Calculate total items fulfilled
- * (No need to store in DB - derived field)
- */
 orderSchema.methods.getTotalItemsFulfilled = function () {
     return this.items.reduce((sum, item) => {
         return sum + (item.quantity_fulfilled * item.pack_size);
     }, 0);
 };
 
-/**
- * Check if order can be fulfilled
- * (status must be PAID or PROCESSING)
- */
 orderSchema.methods.canBeFulfilled = function () {
     return ['PAID', 'PROCESSING'].includes(this.status);
 };
 
-/**
- * Check if order can be canceled
- * (before shipping)
- */
 orderSchema.methods.canBeCanceled = function () {
     return ['PENDING', 'PAID', 'PROCESSING'].includes(this.status);
 };
 
 // ===== MIDDLEWARE =====
 
-/**
- * Soft delete: set is_deleted + deleted_at
- */
 orderSchema.pre('updateOne', function (next) {
     if (this.getUpdate().$set && this.getUpdate().$set.is_deleted === true) {
         this.getUpdate().$set.deleted_at = new Date();
@@ -268,9 +235,6 @@ orderSchema.pre('updateOne', function (next) {
     next();
 });
 
-/**
- * Always exclude soft-deleted orders in queries
- */
 orderSchema.pre(/^find/, function (next) {
     if (this.getOptions().includeDeleted !== true) {
         this.where({ is_deleted: false });

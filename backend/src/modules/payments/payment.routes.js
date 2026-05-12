@@ -2,95 +2,118 @@ const express = require('express');
 const validate = require('../../middlewares/validate.middleware');
 const { authenticate } = require('../../middlewares/auth.middleware');
 const PaymentController = require('./payment.controller');
+
 const {
-    createPaymentSchema,
-    cancelPaymentSchema,
+    // params
+    IdParamSchema,
+
+    // body
+    createPaymentBodySchema,
+    cancelPaymentBodySchema,
+    vnpayWebhookBodySchema,
+    stripeWebhookBodySchema,
+    paypalWebhookBodySchema,
+
+    // query
+    listPaymentsQuerySchema,
 } = require('./payment.validator');
 
 const router = express.Router();
 
-// ===== PUBLIC ENDPOINTS (No Auth) =====
+// ===== PUBLIC =====
 
-// GET /api/v1/payments/vnpay-return
-router.get('/vnpay-return', PaymentController.handleVNPayReturn);
+router.get(
+    '/vnpay-return',
+    PaymentController.handleVNPayReturn
+);
 
-// POST /api/v1/payments/webhook/vnpay
-router.post('/webhook/vnpay', PaymentController.handleVNPayWebhook);
+router.post(
+    '/webhook/vnpay',
+    validate({ body: vnpayWebhookBodySchema }),
+    PaymentController.handleVNPayWebhook
+);
 
-// POST /api/v1/payments/webhook/stripe
-router.post('/webhook/stripe', PaymentController.handleStripeWebhook);
+router.post(
+    '/webhook/stripe',
+    validate({ body: stripeWebhookBodySchema }),
+    PaymentController.handleStripeWebhook
+);
 
-// POST /api/v1/payments/webhook/paypal
-router.post('/webhook/paypal', PaymentController.handlePayPalWebhook);
+router.post(
+    '/webhook/paypal',
+    validate({ body: paypalWebhookBodySchema }),
+    PaymentController.handlePayPalWebhook
+);
 
-// ===== ADMIN ENDPOINTS =====
-// ⚠️ Đặt TRƯỚC /:paymentId để tránh conflict route
+// ===== ADMIN =====
 
-// GET /api/v1/payments/admin/stats
 router.get(
     '/admin/stats',
     authenticate,
     PaymentController.getPaymentStats
 );
 
-// GET /api/v1/payments/admin
 router.get(
     '/admin',
     authenticate,
+    validate({ query: listPaymentsQuerySchema }),
     PaymentController.adminListPayments
 );
 
-// POST /api/v1/payments/admin/:paymentId/verify
 router.post(
     '/admin/:payment_id/verify',
     authenticate,
+    validate({ params: IdParamSchema }),
     PaymentController.adminVerifyPayment
 );
 
-// DELETE /api/v1/payments/admin/:paymentId
 router.delete(
     '/admin/:payment_id',
     authenticate,
+    validate({ params: IdParamSchema }),
     PaymentController.adminDeletePayment
 );
 
-// ===== CUSTOMER ENDPOINTS (Authenticated) =====
+// ===== CUSTOMER =====
 
-// POST /api/v1/payments
 router.post(
     '/',
     authenticate,
-    validate(createPaymentSchema),
+    validate({ body: createPaymentBodySchema }),
     PaymentController.createPayment
 );
 
-// GET /api/v1/payments
 router.get(
     '/',
     authenticate,
+    validate({ query: listPaymentsQuerySchema }),
     PaymentController.listPayments
 );
 
-// GET /api/v1/payments/:payment_id
-router.get(
-    '/:payment_id',
-    authenticate,
-    PaymentController.getPayment
-);
+// ===== PARAM ROUTES (specific first) =====
 
-// POST /api/v1/payments/:payment_id/retry
 router.post(
     '/:payment_id/retry',
     authenticate,
+    validate({ params: IdParamSchema }),
     PaymentController.retryPayment
 );
 
-// POST /api/v1/payments/:payment_id/cancel
 router.post(
     '/:payment_id/cancel',
     authenticate,
-    validate(cancelPaymentSchema),
+    validate({
+        params: IdParamSchema,
+        body: cancelPaymentBodySchema,
+    }),
     PaymentController.cancelPayment
+);
+
+router.get(
+    '/:payment_id',
+    authenticate,
+    validate({ params: IdParamSchema }),
+    PaymentController.getPayment
 );
 
 module.exports = router;

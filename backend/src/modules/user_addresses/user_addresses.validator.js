@@ -1,18 +1,36 @@
-// filepath: c:\MyEffort\NguyenLien\backend\src\modules\user_addresses\user_addresses.validator.js
 const { z } = require('zod');
 
-const createUserAddressSchema = z.object({
-    receiver_name: z.string().min(1, 'Receiver name is required'),
-    phone: z.string().regex(/^(0|\+84)[0-9]{9}$/, 'Invalid Vietnamese phone number'),
-    address_line_1: z.string().min(1, 'Address line 1 is required'),
+// ===== BASE =====
+const objectIdSchema = z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId');
+
+// ===== PARAMS =====
+const idParamSchema = z.object({
+    id: objectIdSchema,
+});
+
+const userIdParamSchema = z.object({
+    userId: objectIdSchema,
+});
+
+const addressIdParamSchema = z.object({
+    addressId: objectIdSchema,
+});
+
+// ===== BODY =====
+const createUserAddressBodySchema = z.object({
+    receiver_name: z.string().min(1),
+    phone: z.string().regex(/^(0|\+84)[0-9]{9}$/),
+    address_line_1: z.string().min(1),
     address_line_2: z.string().optional(),
-    city: z.string().min(1, 'City is required'),
-    district: z.string().min(1, 'District is required'),
-    ward: z.string().min(1, 'Ward is required'),
+    city: z.string().min(1),
+    district: z.string().min(1),
+    ward: z.string().min(1),
     is_default: z.boolean().default(false),
 });
 
-const updateUserAddressSchema = z.object({
+const updateUserAddressBodySchema = z.object({
     receiver_name: z.string().min(1).optional(),
     phone: z.string().regex(/^(0|\+84)[0-9]{9}$/).optional(),
     address_line_1: z.string().min(1).optional(),
@@ -23,5 +41,11 @@ const updateUserAddressSchema = z.object({
     is_default: z.boolean().optional(),
 });
 
-
-module.exports = { createUserAddressSchema, updateUserAddressSchema };
+module.exports = {
+    objectIdSchema,
+    idParamSchema,
+    userIdParamSchema,
+    addressIdParamSchema,
+    createUserAddressBodySchema,
+    updateUserAddressBodySchema,
+};

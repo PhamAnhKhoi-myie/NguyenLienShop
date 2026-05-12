@@ -1,0 +1,69 @@
+const { z } = require('zod');
+const { AUDIT_LEVELS, AUDIT_ACTIONS } = require('../../constants/audit');
+const { DOMAIN_MODELS, DOMAIN_ACTION_MAP } = require('./audit_log.service');
+
+// base schemas
+const objectIdSchema = z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId');
+
+const idParamSchema = z.object({
+    id: objectIdSchema,
+});
+
+// constants
+const ALLOWED_DOMAINS = DOMAIN_MODELS.map(d => d.name);
+const ALLOWED_ACTIONS = Object.values(AUDIT_ACTIONS);
+
+// query schemas
+const baseQuerySchema = {
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    actor_id: objectIdSchema.optional(),
+    level: z.enum(AUDIT_LEVELS).optional(),
+    domain: z.enum(ALLOWED_DOMAINS).optional(),
+    action: z.enum(ALLOWED_ACTIONS).optional(),
+};
+
+const getAllLogsQuerySchema = z
+    .object(baseQuerySchema)
+    .refine(
+        (data) => {
+            if (data.domain && data.action) {
+                return DOMAIN_ACTION_MAP[data.domain]?.includes(data.action);
+            }
+            return true;
+        },
+        {
+            message: 'INVALID_ACTION_FOR_DOMAIN',
+            path: ['action'],
+        }
+    );
+
+const getLogsByDomainQuerySchema = z
+    .object({
+        ...baseQuerySchema,
+        domain: z.undefined().optional(), // domain sẽ được inject ở controller
+    })
+    .refine(
+        (data) => {
+            if (data.action) {
+                // vì domain cố định theo route, check theo tất cả domain hợp lệ
+                return ALLOWED_DOMAINS.some(domain =>
+                    DOMAIN_ACTION_MAP[domain]?.includes(data.action)
+                );
+            }
+            return true;
+        },
+        {
+            message: 'INVALID_ACTION',
+            path: ['action'],
+        }
+    );
+
+module.exports = {
+    objectIdSchema,
+    idParamSchema,
+    getAllLogsQuerySchema,
+    getLogsByDomainQuerySchema,
+};

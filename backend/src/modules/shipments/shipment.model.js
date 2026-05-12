@@ -83,7 +83,6 @@ const timelineSchema = new mongoose.Schema(
     { _id: false }
 );
 
-// ✅ Timeline validation
 timelineSchema.pre('validate', function (next) {
     const created = this.created_at || new Date();
 

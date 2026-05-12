@@ -1,19 +1,5 @@
-/**
- * Order DTO Mapper
- * Transform between MongoDB documents and API responses
- * 
- * ✅ Hide: internal fields (_id, __v, is_deleted, deleted_at)
- * ✅ Expose: id, order_code, status, pricing, items with snapshots
- * ✅ Nest: items, payment, shipment details
- */
-
 class OrderMapper {
-    /**
-     * ✅ Convert Mongoose document → API Response DTO (basic)
-     * 
-     * Dùng cho: Order listing, create/update returns
-     * Include: order summary + items + pricing
-     */
+
     static toResponseDTO(order) {
         if (!order) {
             return null;
@@ -26,7 +12,6 @@ class OrderMapper {
             order_code: doc.order_code,
             user_id: doc.user_id?.toString(),
 
-            // ✅ Address snapshot
             address_snapshot: {
                 street: doc.address_snapshot?.street,
                 district: doc.address_snapshot?.district,
@@ -37,10 +22,8 @@ class OrderMapper {
                 recipient_name: doc.address_snapshot?.recipient_name,
             },
 
-            // ✅ Order items (with snapshots)
             items: this.transformItems(doc.items || []),
 
-            // ✅ Pricing breakdown
             pricing: {
                 subtotal: doc.pricing?.subtotal || 0,
                 shipping_fee: doc.pricing?.shipping_fee || 0,
@@ -49,7 +32,6 @@ class OrderMapper {
                 currency: doc.currency || 'VND',
             },
 
-            // ✅ Discount snapshot
             discount: doc.discount
                 ? {
                     code: doc.discount.code,
@@ -60,14 +42,12 @@ class OrderMapper {
                 }
                 : null,
 
-            // ✅ Payment snapshot
             payment: {
                 method: doc.payment?.method,
                 status: doc.payment?.status,
                 paid_at: doc.payment?.paid_at,
             },
 
-            // ✅ Shipment snapshot
             shipment: doc.shipment
                 ? {
                     carrier: doc.shipment.carrier,
@@ -77,21 +57,14 @@ class OrderMapper {
                 }
                 : null,
 
-            // ✅ Status & lifecycle
             status: doc.status,
             status_history: this.transformStatusHistory(doc.status_history || []),
 
-            // ✅ Timestamps
             created_at: doc.created_at,
             updated_at: doc.updated_at,
         };
     }
 
-    /**
-     * ✅ Convert array of documents → array of DTOs
-     * 
-     * Dùng cho: Order listing endpoints
-     */
     static toResponseDTOList(orders) {
         if (!Array.isArray(orders)) {
             return [];
@@ -99,13 +72,6 @@ class OrderMapper {
         return orders.map((order) => this.toResponseDTO(order));
     }
 
-    /**
-     * ✅ Convert to List Item DTO (lightweight for listing)
-     * 
-     * Dùng cho: Order history listing, dashboard
-     * Include: minimal info for cards
-     * Hide: full items, status_history
-     */
     static toListDTO(order) {
         if (!order) {
             return null;
@@ -117,35 +83,24 @@ class OrderMapper {
             id: doc._id?.toString(),
             order_code: doc.order_code,
 
-            // ✅ Summary info
             item_count: doc.items?.length || 0,
             total_items: this.calculateTotalItems(doc.items || []),
             total_amount: doc.pricing?.total_amount || 0,
 
-            // ✅ Status for filtering
             status: doc.status,
 
-            // ✅ Payment status
             payment_status: doc.payment?.status,
 
-            // ✅ Key dates
             created_at: doc.created_at,
             delivered_at: doc.shipment?.delivered_at || null,
         };
     }
 
-    /**
-     * ✅ Convert to Detail DTO (full information)
-     * 
-     * Dùng cho: GET /orders/:id (full order detail)
-     * Include: everything for customer/admin view
-     */
     static toDetailDTO(order) {
         if (!order) {
             return null;
         }
 
-        // Start with full response
         const responseDTO = this.toResponseDTO(order);
 
         const doc = order.toObject ? order.toObject() : order;
@@ -153,15 +108,12 @@ class OrderMapper {
         return {
             ...responseDTO,
 
-            // ✅ Additional detail info
             customer_notes: doc.customer_notes || null,
 
-            // ✅ Full status history for detail view
             status_history: this.transformStatusHistoryDetail(
                 doc.status_history || []
             ),
 
-            // ✅ Fulfillment tracking
             fulfillment: {
                 total_ordered: this.calculateTotalItems(doc.items || []),
                 total_fulfilled: this.calculateTotalItemsFulfilled(doc.items || []),
@@ -177,12 +129,6 @@ class OrderMapper {
         };
     }
 
-    /**
-     * ✅ Convert for Customer View (hide sensitive data)
-     * 
-     * Dùng cho: Order history for logged-in customer
-     * Hide: admin notes, internal IDs
-     */
     static toCustomerDTO(order) {
         if (!order) {
             return null;
@@ -194,20 +140,17 @@ class OrderMapper {
             id: detailDTO.id,
             order_code: detailDTO.order_code,
 
-            // ✅ Keep customer-facing info
             address_snapshot: detailDTO.address_snapshot,
             items: detailDTO.items,
             pricing: detailDTO.pricing,
             discount: detailDTO.discount,
 
-            // ✅ Payment & shipment (customer-visible)
             payment: {
                 method: detailDTO.payment.method,
                 status: detailDTO.payment.status,
             },
             shipment: detailDTO.shipment,
 
-            // ✅ Status & tracking
             status: detailDTO.status,
             fulfillment: detailDTO.fulfillment,
 
@@ -216,12 +159,6 @@ class OrderMapper {
         };
     }
 
-    /**
-     * ✅ Convert for Admin Dashboard (full transparency)
-     * 
-     * Dùng cho: Admin panel, analytics
-     * Include: all info including internal tracking
-     */
     static toAdminDTO(order) {
         if (!order) {
             return null;
@@ -232,15 +169,12 @@ class OrderMapper {
         return {
             ...detailDTO,
 
-            // ✅ Admin-only fields
             customer_notes: order.notes || null,
             admin_notes: order.admin_notes || null,
 
-            // ✅ Full external references
             payment_id: detailDTO.payment_id,
             shipment_id: detailDTO.shipment_id,
 
-            // ✅ Detailed payment info
             payment: {
                 method: order.payment?.method,
                 status: order.payment?.status,
@@ -248,21 +182,13 @@ class OrderMapper {
                 refunded_at: order.payment?.refunded_at,
             },
 
-            // ✅ Full expiry tracking
             payment_expires_at: detailDTO.payment_expires_at,
 
-            // ✅ Soft delete info
             is_deleted: order.is_deleted || false,
             deleted_at: order.deleted_at || null,
         };
     }
 
-    /**
-     * ✅ Convert to Confirmation Email DTO
-     * 
-     * Dùng cho: Order confirmation email template
-     * Include: summary + customer-friendly formatting
-     */
     static toEmailDTO(order) {
         if (!order) {
             return null;
@@ -274,15 +200,12 @@ class OrderMapper {
             order_code: doc.order_code,
             order_date: this.formatDate(doc.created_at),
 
-            // ✅ Customer info
             recipient_name: doc.address_snapshot?.recipient_name,
             phone: doc.address_snapshot?.phone,
             address: this.formatAddress(doc.address_snapshot),
 
-            // ✅ Items for email
             items: this.transformItemsForEmail(doc.items || []),
 
-            // ✅ Pricing summary
             pricing: {
                 subtotal: this.formatPrice(doc.pricing?.subtotal || 0),
                 shipping_fee: this.formatPrice(doc.pricing?.shipping_fee || 0),
@@ -294,19 +217,12 @@ class OrderMapper {
                 ),
             },
 
-            // ✅ Payment info
             payment_method: doc.payment?.method,
 
-            // ✅ Expected delivery
             expected_delivery: this.calculateExpectedDelivery(doc.created_at),
         };
     }
 
-    /**
-     * ✅ Convert to Tracking DTO (minimal for tracking page)
-     * 
-     * Dùng cho: Public order tracking page
-     */
     static toTrackingDTO(order) {
         if (!order) {
             return null;
@@ -317,14 +233,11 @@ class OrderMapper {
         return {
             order_code: doc.order_code,
 
-            // ✅ Current status
             status: doc.status,
             status_label: this.getStatusLabel(doc.status),
 
-            // ✅ Timeline
             timeline: this.buildStatusTimeline(doc.status_history || []),
 
-            // ✅ Shipment tracking
             shipment: doc.shipment
                 ? {
                     carrier: doc.shipment.carrier,
@@ -336,7 +249,6 @@ class OrderMapper {
                 }
                 : null,
 
-            // ✅ Estimated delivery
             estimated_delivery: this.estimateDeliveryDate(
                 doc.shipment?.shipped_at
             ),
@@ -345,9 +257,6 @@ class OrderMapper {
 
     // =========== HELPERS ===========
 
-    /**
-     * ✅ Transform order items array
-     */
     static transformItems(items) {
         if (!Array.isArray(items) || items.length === 0) {
             return [];
@@ -356,35 +265,27 @@ class OrderMapper {
         return items.map((item) => ({
             id: item._id?.toString(),
 
-            // ✅ Product snapshot
             product_name: item.product_name,
             product_image: item.product_image,
             variant_label: item.variant_label,
             sku: item.sku,
 
-            // ✅ Unit snapshot
             unit_label: item.unit_label,
             pack_size: item.pack_size,
 
-            // ✅ Quantity tracking
             quantity_ordered: item.quantity_ordered,
             quantity_fulfilled: item.quantity_fulfilled || 0,
             total_items_ordered: item.quantity_ordered * item.pack_size,
             total_items_fulfilled: (item.quantity_fulfilled || 0) *
                 item.pack_size,
 
-            // ✅ Pricing snapshot
             unit_price: item.unit_price,
             line_total: item.line_total,
 
-            // ✅ Review status
             review_status: item.review_status || 'pending',
         }));
     }
 
-    /**
-     * ✅ Transform items for email (human-readable)
-     */
     static transformItemsForEmail(items) {
         if (!Array.isArray(items) || items.length === 0) {
             return [];
@@ -400,9 +301,6 @@ class OrderMapper {
         }));
     }
 
-    /**
-     * ✅ Transform status history
-     */
     static transformStatusHistory(history) {
         if (!Array.isArray(history) || history.length === 0) {
             return [];
@@ -419,9 +317,6 @@ class OrderMapper {
         }));
     }
 
-    /**
-     * ✅ Transform status history (with user details for admin)
-     */
     static transformStatusHistoryDetail(history) {
         if (!Array.isArray(history) || history.length === 0) {
             return [];
@@ -440,9 +335,6 @@ class OrderMapper {
         }));
     }
 
-    /**
-     * ✅ Build status timeline for tracking
-     */
     static buildStatusTimeline(history) {
         const statusOrder = {
             PENDING: 1,
@@ -454,7 +346,6 @@ class OrderMapper {
 
         const timeline = [];
 
-        // Get unique status transitions
         const statuses = new Map();
 
         history.forEach((record) => {
@@ -463,7 +354,6 @@ class OrderMapper {
             }
         });
 
-        // Sort by order and format
         Array.from(statuses.values())
             .sort((a, b) => statusOrder[a.to] - statusOrder[b.to])
             .forEach((record) => {
@@ -479,9 +369,6 @@ class OrderMapper {
         return timeline;
     }
 
-    /**
-     * ✅ Calculate total items (packs × pack_size)
-     */
     static calculateTotalItems(items) {
         if (!Array.isArray(items)) {
             return 0;
@@ -493,9 +380,6 @@ class OrderMapper {
         );
     }
 
-    /**
-     * ✅ Calculate total fulfilled items
-     */
     static calculateTotalItemsFulfilled(items) {
         if (!Array.isArray(items)) {
             return 0;
@@ -508,9 +392,6 @@ class OrderMapper {
         );
     }
 
-    /**
-     * ✅ Calculate pending items (not yet fulfilled)
-     */
     static calculatePendingItems(items) {
         if (!Array.isArray(items)) {
             return 0;
@@ -525,9 +406,6 @@ class OrderMapper {
         );
     }
 
-    /**
-     * ✅ Get status label (human-readable)
-     */
     static getStatusLabel(status) {
         const labels = {
             PENDING: 'Đang chờ thanh toán',
@@ -542,9 +420,6 @@ class OrderMapper {
         return labels[status] || status;
     }
 
-    /**
-     * ✅ Format address for display
-     */
     static formatAddress(address) {
         if (!address) {
             return '';
@@ -560,9 +435,6 @@ class OrderMapper {
         return parts.join(', ');
     }
 
-    /**
-     * ✅ Format price for display (VND)
-     */
     static formatPrice(price) {
         return new Intl.NumberFormat('vi-VN', {
             style: 'currency',
@@ -570,9 +442,6 @@ class OrderMapper {
         }).format(price);
     }
 
-    /**
-     * ✅ Format date for display
-     */
     static formatDate(date) {
         if (!date) {
             return null;
@@ -587,9 +456,6 @@ class OrderMapper {
         });
     }
 
-    /**
-     * ✅ Calculate expected delivery date (5-7 days)
-     */
     static calculateExpectedDelivery(orderDate) {
         if (!orderDate) {
             return null;
@@ -612,9 +478,6 @@ class OrderMapper {
         };
     }
 
-    /**
-     * ✅ Estimate delivery date from shipment date
-     */
     static estimateDeliveryDate(shippedDate) {
         if (!shippedDate) {
             return null;
@@ -626,9 +489,6 @@ class OrderMapper {
         return date.toLocaleDateString('vi-VN');
     }
 
-    /**
-     * ✅ Build tracking URL based on carrier
-     */
     static buildTrackingUrl(carrier, trackingCode) {
         if (!trackingCode) {
             return null;

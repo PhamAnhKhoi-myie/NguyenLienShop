@@ -1,20 +1,4 @@
-/**
- * Product DTO Mapper
- * Transform between MongoDB documents and API responses
- * 
- * ✅ Hide internal fields (_id, __v, is_deleted, deleted_at)
- * ✅ Expose: id, min_price, max_price, min_price_per_unit, etc.
- * ✅ Nested: images array with is_primary, sort_order
- */
-
 class ProductMapper {
-    /**
-     * ✅ Convert Mongoose document → API Response DTO (basic)
-     * 
-     * Dùng cho: Product listing, simple returns
-     * Include: basic info + pricing
-     * Hide: internal fields
-     */
     static toResponseDTO(product) {
         if (!product) {
             return null;
@@ -29,7 +13,6 @@ class ProductMapper {
             category_id: doc.category_id?.toString(),
             brand: doc.brand || null,
 
-            // ✅ FIX #3: Include both cached prices
             min_price: doc.min_price || 0,
             max_price: doc.max_price || 0,
             min_price_per_unit: doc.min_price_per_unit || 0,
@@ -38,30 +21,21 @@ class ProductMapper {
             description: doc.description || null,
             short_description: doc.short_description || null,
 
-            // ✅ Images: transform array
             images: this.transformImages(doc.images || []),
 
             search_keywords: doc.search_keywords || [],
 
-            // ✅ Analytics
             rating_avg: doc.rating_avg || 0,
             rating_count: doc.rating_count || 0,
             sold_count: doc.sold_count || 0,
 
-            // ✅ Status
             status: doc.status,
 
-            // Timestamps
             created_at: doc.created_at,
             updated_at: doc.updated_at,
         };
     }
 
-    /**
-     * ✅ Convert array of documents → array of DTOs
-     * 
-     * Dùng cho: Listing endpoints
-     */
     static toResponseDTOList(products) {
         if (!Array.isArray(products)) {
             return [];
@@ -69,12 +43,6 @@ class ProductMapper {
         return products.map((product) => this.toResponseDTO(product));
     }
 
-    /**
-     * ✅ Convert Mongoose document → Detail DTO (with variants + units)
-     * 
-     * Dùng cho: GET /products/:id (full detail)
-     * Include: product info + all variants + all units per variant
-     */
     static toDetailDTO(product, variants = []) {
         if (!product) {
             return null;
@@ -85,20 +53,12 @@ class ProductMapper {
         return {
             ...responseDTO,
 
-            // ✅ Include nested variants with units
             variants: variants.map((variant) =>
                 this.transformVariantDetail(variant)
             ),
         };
     }
 
-    /**
-     * ✅ Convert to List Item DTO (lightweight for listing)
-     * 
-     * Dùng cho: Product listings, search results, category pages
-     * Include: minimal info for cards
-     * Hide: description, search_keywords
-     */
     static toListDTO(product) {
         if (!product) {
             return null;
@@ -113,14 +73,11 @@ class ProductMapper {
             category_id: doc.category_id?.toString(),
             brand: doc.brand || null,
 
-            // ✅ Pricing for card display
             min_price: doc.min_price || 0,
             max_price: doc.max_price || 0,
 
-            // ✅ Primary image only
             image: this.getPrimaryImage(doc.images || []),
 
-            // ✅ Rating display
             rating_avg: doc.rating_avg || 0,
             rating_count: doc.rating_count || 0,
             sold_count: doc.sold_count || 0,
@@ -130,12 +87,6 @@ class ProductMapper {
         };
     }
 
-    /**
-     * ✅ Convert for Shopping Cart item
-     * 
-     * Dùng cho: Add to cart response
-     * Include: product + variant + unit info for cart display
-     */
     static toCartItemDTO(product, variant, unit) {
         if (!product) {
             return null;
@@ -148,7 +99,6 @@ class ProductMapper {
             name: doc.name,
             slug: doc.slug,
 
-            // ✅ Variant info
             variant: {
                 id: variant?._id?.toString(),
                 sku: variant?.sku,
@@ -156,7 +106,6 @@ class ProductMapper {
                 fabric_type: variant?.fabric_type,
             },
 
-            // ✅ Unit info
             unit: {
                 id: unit?._id?.toString(),
                 display_name: unit?.display_name,
@@ -164,20 +113,12 @@ class ProductMapper {
                 currency: unit?.currency,
             },
 
-            // ✅ Image for cart
             image: this.getPrimaryImage(doc.images || []),
 
-            // ✅ Price info (current tier)
             price: unit?.price_tiers?.[0]?.unit_price || 0,
         };
     }
 
-    /**
-     * ✅ Convert for Order Item (snapshot)
-     * 
-     * Dùng cho: Order confirmation, history
-     * Include: product + variant info at time of order
-     */
     static toOrderItemDTO(product, variant, unit, orderQty) {
         if (!product) {
             return null;
@@ -205,12 +146,6 @@ class ProductMapper {
         };
     }
 
-    /**
-     * ✅ Helper: Transform images array
-     * - Include all images with metadata
-     * - Sort by sort_order
-     * - Mark primary
-     */
     static transformImages(images) {
         if (!Array.isArray(images) || images.length === 0) {
             return [];
@@ -226,11 +161,6 @@ class ProductMapper {
             }));
     }
 
-    /**
-     * ✅ Helper: Get primary image (first one or marked as primary)
-     * 
-     * Return: single image object or null
-     */
     static getPrimaryImage(images) {
         if (!Array.isArray(images) || images.length === 0) {
             return null;
@@ -240,11 +170,6 @@ class ProductMapper {
         return primary || images[0];
     }
 
-    /**
-     * ✅ Helper: Transform variant detail (nested in product detail)
-     * 
-     * Include: variant info + nested units
-     */
     static transformVariantDetail(variant) {
         if (!variant) {
             return null;
@@ -260,13 +185,11 @@ class ProductMapper {
             size: doc.size,
             fabric_type: doc.fabric_type,
 
-            // ✅ Pricing
             min_price: doc.min_price || 0,
             max_price: doc.max_price || 0,
             min_price_per_unit: doc.min_price_per_unit || 0,
             max_price_per_unit: doc.max_price_per_unit || 0,
 
-            // ✅ Stock
             stock: {
                 available: doc.stock?.available || 0,
                 reserved: doc.stock?.reserved || 0,
@@ -275,7 +198,6 @@ class ProductMapper {
 
             status: doc.status,
 
-            // ✅ Nested units
             units: Array.isArray(doc.units)
                 ? doc.units.map((unit) =>
                     this.transformUnitDetail(unit)
@@ -287,9 +209,6 @@ class ProductMapper {
         };
     }
 
-    /**
-     * ✅ Helper: Transform unit detail (nested in variant)
-     */
     static transformUnitDetail(unit) {
         if (!unit) {
             return null;
@@ -303,14 +222,12 @@ class ProductMapper {
             display_name: doc.display_name,
             pack_size: doc.pack_size,
 
-            // ✅ Price tiers
             price_tiers: (doc.price_tiers || []).map((tier) => ({
                 min_qty: tier.min_qty,
                 max_qty: tier.max_qty,
                 unit_price: tier.unit_price,
             })),
 
-            // ✅ Order rules
             min_order_qty: doc.min_order_qty || 1,
             max_order_qty: doc.max_order_qty || null,
             qty_step: doc.qty_step || 1,

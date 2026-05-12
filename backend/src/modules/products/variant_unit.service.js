@@ -6,16 +6,6 @@ const VariantUnitMapper = require('./variant_unit.mapper');
 const AppError = require('../../utils/appError.util');
 
 class VariantUnitService {
-    /**
-     * CREATE: Tạo variant unit (pack size + tiers)
-     * 
-     * ✅ FIX #1: Validate price tiers (critical)
-     * ✅ FIX #5: Enforce unique(variant_id, pack_size)
-     * 
-     * @param {String} variantId
-     * @param {Object} data - { unit_type, display_name, pack_size, price_tiers, ... }
-     * @returns {Object} VariantUnit DTO
-     */
     static async createVariantUnit(variantId, data) {
         const { pack_size, price_tiers, is_default, ...rest } = data;
 
@@ -84,12 +74,6 @@ class VariantUnitService {
         return VariantUnitMapper.toResponseDTO(unit);
     }
 
-    /**
-     * READ: Get variant unit by ID
-     * 
-     * @param {String} unitId
-     * @returns {Object} VariantUnit DTO
-     */
     static async getVariantUnitById(unitId) {
         const unit = await VariantUnit.findById(unitId);
         if (!unit) {
@@ -103,12 +87,6 @@ class VariantUnitService {
         return VariantUnitMapper.toResponseDTO(unit);
     }
 
-    /**
-     * READ: Get all units for a variant
-     * 
-     * @param {String} variantId
-     * @returns {Array} VariantUnit DTOs
-     */
     static async getVariantUnitsByVariant(variantId) {
         const units = await VariantUnit.find({
             variant_id: variantId,
@@ -117,12 +95,6 @@ class VariantUnitService {
         return units.map(VariantUnitMapper.toResponseDTO);
     }
 
-    /**
-     * READ: Get default unit for variant
-     * 
-     * @param {String} variantId
-     * @returns {Object} Default VariantUnit DTO or null
-     */
     static async getDefaultVariantUnit(variantId) {
         const unit = await VariantUnit.getDefault(variantId);
         if (!unit) return null;
@@ -130,16 +102,6 @@ class VariantUnitService {
         return VariantUnitMapper.toResponseDTO(unit);
     }
 
-    /**
-     * UPDATE: Update variant unit (price tiers, display_name, etc)
-     * 
-     * ✅ FIX #1: Re-validate price tiers if changed
-     * ✅ FIX #3: Recalc prices if tiers changed
-     * 
-     * @param {String} unitId
-     * @param {Object} updateData - { price_tiers, is_default, ... }
-     * @returns {Object} Updated VariantUnit DTO
-     */
     static async updateVariantUnit(unitId, updateData) {
         if (!updateData || Object.keys(updateData).length === 0) {
             throw new AppError(
@@ -203,15 +165,6 @@ class VariantUnitService {
         }
     }
 
-    /**
-     * DELETE: Delete variant unit
-     * 
-     * ⚠️ WARNING: Hard delete (NOT soft delete)
-     * Variant units are not soft-deleted for audit purposes
-     * 
-     * @param {String} unitId
-     * @returns {Object} Deletion confirmation
-     */
     static async deleteVariantUnit(unitId) {
         const unit = await VariantUnit.findById(unitId);
         if (!unit) {
@@ -259,22 +212,6 @@ class VariantUnitService {
         };
     }
 
-    /**
-     * CALCULATE: Get price by quantity
-     * 
-     * ✅ FIX #1: Get price tier dựa trên qty
-     * 
-     * @param {String} unitId
-     * @param {Number} qtyPacks - Số pack user muốn mua
-     * @returns {Object} Price calculation
-     *   {
-     *     qty_packs: 3,
-     *     unit_price: 180000,
-     *     total_price: 540000,
-     *     total_items: 300,
-     *     price_per_unit: 1800
-     *   }
-     */
     static async calculatePrice(unitId, qtyPacks) {
         if (!qtyPacks || qtyPacks < 1) {
             throw new AppError(
@@ -325,15 +262,6 @@ class VariantUnitService {
         };
     }
 
-    /**
-     * VALIDATE: Validate price tiers (called từ CreateVariantUnit)
-     * 
-     * ✅ FIX #1: Public method để reuse
-     * 
-     * @param {Array} priceTiers
-     * @returns {Object} { valid: true, sorted: [...] }
-     * @throws {AppError} If invalid
-     */
     static validatePriceTiers(priceTiers) {
         try {
             return VariantUnit.validatePriceTiers(priceTiers);
@@ -342,14 +270,6 @@ class VariantUnitService {
         }
     }
 
-    /**
-     * GET: Maximum orderable quantity for variant unit
-     * 
-     * ✅ Dùng để limit UI max input
-     * 
-     * @param {String} unitId
-     * @returns {Number} Max packs can order
-     */
     static async getMaxOrderableQuantity(unitId) {
         const unit = await VariantUnit.findById(
             unitId,
@@ -366,17 +286,6 @@ class VariantUnitService {
         return unit.max_order_qty || 999; // Default unlimited
     }
 
-    /**
-     * GET: Price tier summary (for frontend display)
-     * 
-     * @param {String} unitId
-     * @returns {Array} Simplified price tiers
-     *   [
-     *     { min_qty: 1, max_qty: 10, price: 180000, price_per_unit: 1800 },
-     *     { min_qty: 11, max_qty: 50, price: 170000, price_per_unit: 1700 },
-     *     ...
-     *   ]
-     */
     static async getPriceTierSummary(unitId) {
         const unit = await VariantUnit.findById(
             unitId,
