@@ -34,7 +34,11 @@ class ProductService {
     }
 
     static async getProductById(productId) {
-        const product = await Product.findById(productId).lean();
+        const product = await Product.findOne({
+            _id: productId,
+            is_deleted: false
+        }).lean();
+
         if (!product) {
             throw new AppError(
                 'Product not found',
@@ -49,15 +53,12 @@ class ProductService {
             { includeDeleted: false }
         ).lean();
 
-        // 1. Lấy tất cả variantIds
         const variantIds = variants.map(v => v._id);
 
-        // 2. Lấy tất cả units 1 lần
         const allUnits = await VariantUnit.find({
             variant_id: { $in: variantIds }
         }).lean();
 
-        // 3. Group units theo variant_id
         const unitsMap = {};
 
         for (const unit of allUnits) {
@@ -68,7 +69,6 @@ class ProductService {
             unitsMap[key].push(unit);
         }
 
-        // 4. Gắn units vào variant
         const variantsWithUnits = variants.map((variant) => {
             return {
                 ...variant,

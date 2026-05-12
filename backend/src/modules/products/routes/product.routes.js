@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const validate = require('../../../middlewares/validate.middleware');
 const productController = require('../product.controller');
+const { z } = require('zod');
+
 const {
     createProductSchema,
     updateProductSchema,
@@ -11,8 +13,14 @@ const {
     productIdParamSchema,
     categoryIdParamSchema
 } = require('../product.validator');
+
 const { authenticate } = require('../../../middlewares/auth.middleware');
 const { authorize } = require('../../../middlewares/authorize.middleware');
+
+// ===== SLUG PARAM SCHEMA =====
+const slugParamSchema = z.object({
+    slug: z.string().min(1).max(200)
+});
 
 // ===== PUBLIC =====
 
@@ -39,6 +47,7 @@ router.get(
 
 router.get(
     '/slug/:slug',
+    validate({ params: slugParamSchema }),
     productController.getProductBySlug
 );
 

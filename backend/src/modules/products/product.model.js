@@ -339,7 +339,7 @@ productSchema.statics.updatePriceCache = async function (productId) {
 productSchema.statics.softDelete = async function (productId, session) {
     const Variant = mongoose.model('Variant');
 
-    await this.findByIdAndUpdate(
+    const productResult = await this.findByIdAndUpdate(
         productId,
         {
             is_deleted: true,
@@ -348,7 +348,11 @@ productSchema.statics.softDelete = async function (productId, session) {
         { session, includeDeleted: true }
     );
 
-    await Variant.updateMany(
+    if (!productResult) {
+        throw new Error('Failed to soft delete product');
+    }
+
+    const variantResult = await Variant.updateMany(
         { product_id: productId },
         {
             is_deleted: true,
@@ -356,6 +360,10 @@ productSchema.statics.softDelete = async function (productId, session) {
         },
         { session }
     );
+
+    if (!variantResult || variantResult.acknowledged !== true) {
+        throw new Error('Failed to soft delete variants');
+    }
 };
 
 // ===== RESPONSE SANITIZATION =====

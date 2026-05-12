@@ -24,7 +24,7 @@ router.get(
 );
 
 router.get(
-    '/default/:variantId',
+    '/default',
     validate({ params: variantIdParamSchema }),
     variantUnitController.getDefaultVariantUnit
 );

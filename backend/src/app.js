@@ -39,8 +39,6 @@ app.use(
 app.use(cookieParser());
 app.use(morgan("dev"));
 
-// ✅ Stripe webhook requires raw body for signature verification
-// Must be registered BEFORE express.json() to avoid body being parsed
 app.use(
     "/api/v1/payments/webhook/stripe",
     express.raw({ type: "application/json" })

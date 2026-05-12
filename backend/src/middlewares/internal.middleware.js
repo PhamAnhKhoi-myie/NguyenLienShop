@@ -16,27 +16,16 @@ const requireInternal = (req, res, next) => {
         );
     }
 
-    // ⚠️ optional (không phải security thật)
-    if (req.headers['user-agent']?.includes('Mozilla')) {
-        throw new AppError(
-            'Forbidden - Browser access denied',
-            403,
-            'FORBIDDEN_INTERNAL'
-        );
-    }
-
     next();
 };
 
 const requireInternalOrAdmin = (req, res, next) => {
     const internalKey = req.headers['x-internal-key'];
 
-    // ✅ internal call
     if (internalKey === process.env.INTERNAL_API_KEY) {
         return next();
     }
 
-    // ✅ admin call (phải có authenticate trước đó)
     if (req.user && req.user.roles?.includes('ADMIN')) {
         return next();
     }

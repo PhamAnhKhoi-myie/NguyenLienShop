@@ -1,6 +1,5 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
-const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const VariantService = require('./variant.service');
 
 // ===== PUBLIC =====
@@ -65,9 +64,6 @@ const getMaxOrderQty = asyncHandler(async (req, res) => {
 // ===== ADMIN =====
 
 const createVariant = asyncHandler(async (req, res) => {
-    const user = assertAuthenticated(req.user);
-    assertRole(user, ['MANAGER', 'ADMIN']);
-
     const { productId } = req.params;
 
     const variant = await VariantService.createVariant(
@@ -82,9 +78,6 @@ const createVariant = asyncHandler(async (req, res) => {
 });
 
 const updateVariant = asyncHandler(async (req, res) => {
-    const user = assertAuthenticated(req.user);
-    assertRole(user, ['MANAGER', 'ADMIN']);
-
     const { variantId } = req.params;
 
     const forbiddenFields = ['size', 'fabric_type', 'sku'];
@@ -107,9 +100,6 @@ const updateVariant = asyncHandler(async (req, res) => {
 });
 
 const deleteVariant = asyncHandler(async (req, res) => {
-    const user = assertAuthenticated(req.user);
-    assertRole(user, ['MANAGER', 'ADMIN']);
-
     const { variantId } = req.params;
 
     const result = await VariantService.deleteVariant(variantId);

@@ -25,6 +25,21 @@ router.get(
     variantController.getVariantsByProduct
 );
 
+// ===== ADMIN =====
+
+router.post(
+    '/',
+    authenticate,
+    authorize(['ADMIN', 'MANAGER']),
+    validate({
+        params: productIdParamSchema,
+        body: createVariantSchema
+    }),
+    variantController.createVariant
+);
+
+// ===== VARIANT-LEVEL (NO productId dependency) =====
+
 router.get(
     '/:variantId/stock',
     validate({ params: variantIdParamSchema }),
@@ -44,19 +59,6 @@ router.get(
     '/:variantId',
     validate({ params: variantIdParamSchema }),
     variantController.getVariantById
-);
-
-// ===== ADMIN =====
-
-router.post(
-    '/',
-    authenticate,
-    authorize(['ADMIN', 'MANAGER']),
-    validate({
-        params: productIdParamSchema,
-        body: createVariantSchema
-    }),
-    variantController.createVariant
 );
 
 router.patch(

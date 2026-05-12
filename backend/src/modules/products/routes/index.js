@@ -9,7 +9,6 @@ const variantUnitRoutes = require('./variant_unit.routes');
 router.use('/products', productRoutes);
 
 // ===== VARIANTS =====
-router.use('/variants', variantRoutes);
 router.use('/products/:productId/variants', variantRoutes);
 
 // ===== VARIANT UNITS =====
