@@ -4,12 +4,6 @@ const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
 
 class BannerService {
-    /**
-     * Get active banners by location (public endpoint)
-     * ✅ Only return currently active banners (start_at ≤ now < end_at)
-     * ✅ Sorted by sort_order
-     * ✅ Exclude audit fields from public response
-     */
     static async getActiveByLocation(location) {
         const now = new Date();
 
@@ -20,21 +14,15 @@ class BannerService {
             end_at: { $gt: now }
         })
             .sort({ sort_order: 1 })
-            .select('-created_by -updated_by') // Don't expose audit fields to public
+            .select('-created_by -updated_by')
             .exec();
 
         return BannerMapper.toDTOList(banners);
     }
 
-    /**
-     * Get all banners (admin only)
-     * ✅ Return all non-deleted banners (active + scheduled)
-     * ✅ Optional location filter
-     */
     static async getAll(filters = {}) {
         const query = { is_deleted: false };
 
-        // Optional: filter by location
         if (filters.location) {
             query.location = filters.location;
         }
@@ -46,16 +34,7 @@ class BannerService {
         return BannerMapper.toDTOList(banners);
     }
 
-    /**
-     * Create new banner
-     * ✅ Validation already done by middleware
-     * ✅ Check duplicate sort_order in location (unique constraint)
-     * ✅ Audit trail (created_by)
-     * ✅ Structured logging
-     */
     static async createBanner(data, userId) {
-        // Check for duplicate sort_order + location combination
-        // (This is also enforced by partial unique index in model)
         const existing = await Banner.findOne({
             location: data.location,
             sort_order: data.sort_order,
@@ -88,13 +67,6 @@ class BannerService {
         return BannerMapper.toDTO(banner);
     }
 
-    /**
-     * Update banner
-     * ✅ Check ownership (banner exists)
-     * ✅ Prevent duplicate sort_order if location/sort changed
-     * ✅ Audit trail (updated_by)
-     * ✅ Structured logging
-     */
     static async updateBanner(bannerId, data, userId) {
         const banner = await Banner.findById(bannerId);
 
@@ -106,7 +78,6 @@ class BannerService {
             );
         }
 
-        // Check for sort_order conflict if location or sort_order changed
         if (
             (data.location && data.location !== banner.location) ||
             (data.sort_order !== undefined && data.sort_order !== banner.sort_order)
@@ -127,7 +98,6 @@ class BannerService {
             }
         }
 
-        // Update fields and audit trail
         Object.assign(banner, data, { updated_by: userId });
 
         await banner.save();
@@ -142,12 +112,6 @@ class BannerService {
         return BannerMapper.toDTO(banner);
     }
 
-    /**
-     * Soft delete banner
-     * ✅ Set is_deleted = true, deleted_at = now
-     * ✅ Audit trail (updated_by)
-     * ✅ Structured logging
-     */
     static async deleteBanner(bannerId, userId) {
         const result = await Banner.updateOne(
             { _id: bannerId },
@@ -173,16 +137,11 @@ class BannerService {
         });
     }
 
-    /**
-     * Get deleted banners (admin recovery)
-     * ✅ Bypass auto-filter middleware with includeDeleted option
-     * ✅ Sorted by deleted_at (newest first)
-     */
     static async getDeletedBanners() {
         const banners = await Banner.find(
             { is_deleted: true },
             null,
-            { includeDeleted: true } // Bypass the pre-find middleware
+            { includeDeleted: true }
         )
             .sort({ deleted_at: -1 })
             .exec();
@@ -190,12 +149,6 @@ class BannerService {
         return BannerMapper.toDTOList(banners);
     }
 
-    /**
-     * Restore deleted banner
-     * ✅ Set is_deleted = false, deleted_at = null
-     * ✅ Audit trail (updated_by)
-     * ✅ Structured logging
-     */
     static async restoreBanner(bannerId, userId) {
         const result = await Banner.updateOne(
             { _id: bannerId },

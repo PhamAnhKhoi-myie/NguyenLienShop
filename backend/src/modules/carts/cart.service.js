@@ -3,7 +3,6 @@ const Cart = require('./cart.model');
 const CartMapper = require('./cart.mapper');
 const AppError = require('../../utils/appError.util');
 
-// Import dependencies
 const Product = require('../products/product.model');
 const Variant = require('../products/variant.model');
 const VariantUnit = require('../products/variant_unit.model');
@@ -13,32 +12,9 @@ const VariantUnitService = require('../products/variant_unit.service');
  * ============================================
  * CART SERVICE
  * ============================================
- * 
- * ✅ Static class pattern (consistent with Product/User services)
- * ✅ Business logic layer: validation, stock checks, pricing calculations
- * ✅ Delegates to model for DB operations (atomic updates)
- * ✅ Returns DTOs via mapper (never raw MongoDB docs)
- * ✅ Uses asyncHandler in controller (no try/catch here)
- * 
- * CRITICAL:
- * - Always use atomic operators ($push, $inc) to prevent race conditions
- * - Never read → modify in app → save pattern
- * - Snapshot price at add time (price_at_added immutable)
- * - Calculate totals at response time (no stored line_total)
  */
 
 class CartService {
-    /**
-     * ✅ GET/CREATE: Get or create cart for user
-     * 
-     * Called on:
-     * - GET /carts (fetch user cart)
-     * - POST /carts/items (ensure cart exists)
-     * 
-     * @param {String} userId - From JWT token
-     * @param {Object} options - { extend: true/false }
-     * @returns {Object} Cart DTO
-     */
     static async getUserCart(userId, options = {}) {
         if (!userId) {
             throw new AppError(
@@ -48,28 +24,15 @@ class CartService {
             );
         }
 
-        // ✅ Get or create cart
         let cart = await Cart.getOrCreateUserCart(userId);
 
-        // ✅ Optionally extend expiry (on access)
         if (options.extend) {
-            cart = await Cart.extendExpiry(cart._id, 7); // 7 more days
+            cart = await Cart.extendExpiry(cart._id, 7);
         }
 
         return CartMapper.toResponseDTO(cart);
     }
 
-    /**
-     * ✅ GET/CREATE: Get or create cart for guest (session)
-     * 
-     * Called on:
-     * - POST /carts/guest (create session cart)
-     * - GET /carts?session_key=... (fetch guest cart)
-     * 
-     * @param {String} sessionKey - UUID v4 (client-generated)
-     * @param {Object} options - { extend: true/false }
-     * @returns {Object} Cart DTO
-     */
     static async getGuestCart(sessionKey, options = {}) {
         if (!sessionKey) {
             throw new AppError(
@@ -79,10 +42,8 @@ class CartService {
             );
         }
 
-        // ✅ Get or create cart
         let cart = await Cart.getOrCreateGuestCart(sessionKey);
 
-        // ✅ Optionally extend expiry
         if (options.extend) {
             cart = await Cart.extendExpiry(cart._id, 7);
         }
@@ -90,23 +51,6 @@ class CartService {
         return CartMapper.toResponseDTO(cart);
     }
 
-    /**
-     * ✅ ADD ITEM: Add item to cart (or update quantity if exists)
-     * 
-     * CRITICAL: Uses atomic $push/$inc to prevent race conditions
-     * 
-     * Flow:
-     * 1. Validate product/variant/unit exist
-     * 2. Verify stock available
-     * 3. Snapshot product info + price
-     * 4. Call Cart.addItemAtomic() (atomic update)
-     * 5. Return updated cart
-     * 
-     * @param {String} userId - User ID or session key (one of)
-     * @param {String} userType - 'user' | 'guest'
-     * @param {Object} itemData - { product_id, variant_id, unit_id, sku, quantity, ... }
-     * @returns {Object} Updated cart DTO
-     */
     static async addItemToCart(userId, userType, itemData) {
         const {
             product_id,
@@ -116,7 +60,6 @@ class CartService {
             ...rest
         } = itemData;
 
-        // ✅ FIX #1: Validate all required IDs
         if (!product_id || !variant_id || !unit_id) {
             throw new AppError(
                 'Product ID, variant ID, and unit ID are required',
@@ -133,7 +76,6 @@ class CartService {
             );
         }
 
-        // ✅ FIX #2: Fetch and validate product/variant/unit exist
         const product = await Product.findById(product_id);
         if (!product) {
             throw new AppError(
@@ -161,7 +103,6 @@ class CartService {
             );
         }
 
-        // ✅ FIX #3: Check product status
         if (product.status !== 'ACTIVE') {
             throw new AppError(
                 'Product is not available for purchase',
@@ -178,8 +119,6 @@ class CartService {
             );
         }
 
-        // ✅ FIX #4: Check stock availability
-        // quantity = number of packs
         const itemsNeeded = quantity * unit.pack_size;
         if (variant.stock.available < itemsNeeded) {
             throw new AppError(
@@ -251,16 +190,6 @@ class CartService {
         return CartMapper.toResponseDTO(updatedCart);
     }
 
-    /**
-     * ✅ UPDATE ITEM: Update item quantity only
-     * 
-     * ⚠️ Cannot update price (snapshot is immutable)
-     * 
-     * @param {String} cartId
-     * @param {String} itemId
-     * @param {Number} newQuantity
-     * @returns {Object} Updated cart DTO
-     */
     static async updateItemQuantity(cartId, itemId, newQuantity) {
         if (newQuantity < 1 || newQuantity > 999) {
             throw new AppError(
@@ -270,7 +199,6 @@ class CartService {
             );
         }
 
-        // ✅ Get current item to verify it exists
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -285,7 +213,6 @@ class CartService {
             );
         }
 
-        // ✅ Verify stock for new quantity
         const variant = await Variant.findById(item.variant_id);
         const itemsNeeded = newQuantity * item.pack_size;
         if (variant.stock.available < itemsNeeded) {
@@ -296,7 +223,6 @@ class CartService {
             );
         }
 
-        // ✅ Atomic update
         const updatedCart = await Cart.updateItemQuantityAtomic(
             cartId,
             itemId,
@@ -306,13 +232,6 @@ class CartService {
         return CartMapper.toResponseDTO(updatedCart);
     }
 
-    /**
-     * ✅ REMOVE ITEM: Remove item from cart
-     * 
-     * @param {String} cartId
-     * @param {String} itemId
-     * @returns {Object} Updated cart DTO
-     */
     static async removeItemFromCart(cartId, itemId) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
@@ -328,29 +247,11 @@ class CartService {
             );
         }
 
-        // ✅ Atomic remove
         const updatedCart = await Cart.removeItemAtomic(cartId, itemId);
 
         return CartMapper.toResponseDTO(updatedCart);
     }
 
-    /**
-     * ✅ APPLY DISCOUNT: Apply promo code to cart
-     * 
-     * Flow:
-     * 1. Validate promo code format
-     * 2. Fetch promo code from DB
-     * 3. Verify: not expired, min_purchase met, not already applied
-     * 4. Calculate discount_amount
-     * 5. Update cart.discount
-     * 
-     * ⚠️ NOTE: PromoCode model not yet implemented
-     * For now, assume promo validation done in separate service
-     * 
-     * @param {String} cartId
-     * @param {String} code - Promo code
-     * @returns {Object} Updated cart DTO
-     */
     static async applyDiscount(cartId, code) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
@@ -365,16 +266,6 @@ class CartService {
             );
         }
 
-        // ✅ TODO: Fetch PromoCode from DB
-        // const promo = await PromoCode.findOne({ code: code.toUpperCase() });
-        // if (!promo) {
-        //     throw new AppError('Invalid promo code', 400, 'INVALID_PROMO');
-        // }
-        // if (new Date() > promo.expires_at) {
-        //     throw new AppError('Promo code expired', 400, 'PROMO_EXPIRED');
-        // }
-
-        // Temporary mock for demonstration
         const promo = {
             code: code.toUpperCase(),
             type: 'PERCENT',
@@ -430,12 +321,6 @@ class CartService {
         return CartMapper.toResponseDTO(updatedCart);
     }
 
-    /**
-     * ✅ REMOVE DISCOUNT: Remove applied discount from cart
-     * 
-     * @param {String} cartId
-     * @returns {Object} Updated cart DTO
-     */
     static async removeDiscount(cartId) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
@@ -450,7 +335,6 @@ class CartService {
             );
         }
 
-        // ✅ Remove discount
         const updatedCart = await Cart.findByIdAndUpdate(
             cartId,
             {
@@ -463,22 +347,6 @@ class CartService {
         return CartMapper.toResponseDTO(updatedCart);
     }
 
-    /**
-     * ✅ MERGE CART: Merge guest cart to user cart (on login)
-     * 
-     * Flow:
-     * 1. Fetch guest cart (by session_key)
-     * 2. Fetch or create user cart
-     * 3. Merge items (upsert by SKU)
-     * 4. Inherit discount if user cart empty
-     * 5. Delete guest cart (or mark ABANDONED)
-     * 
-     * CRITICAL: Use MongoDB transaction for atomicity
-     * 
-     * @param {String} sessionKey - UUID (guest cart identifier)
-     * @param {String} userId - User ID (after login)
-     * @returns {Object} Merged cart DTO
-     */
     static async mergeGuestCartToUser(sessionKey, userId) {
         if (!sessionKey || !userId) {
             throw new AppError(
@@ -492,21 +360,18 @@ class CartService {
         session.startTransaction();
 
         try {
-            // ✅ 1. Fetch guest cart
             const guestCart = await Cart.findOne(
                 { session_key: sessionKey, status: 'ACTIVE' },
                 null,
                 { session }
             );
 
-            // If no guest cart or empty, just return user cart
             if (!guestCart || guestCart.items.length === 0) {
                 const userCart = await Cart.getOrCreateUserCart(userId);
                 await session.commitTransaction();
                 return CartMapper.toResponseDTO(userCart);
             }
 
-            // ✅ 2. Get or create user cart
             let userCart = await Cart.findOne(
                 { user_id: userId, status: 'ACTIVE' },
                 null,
@@ -525,32 +390,26 @@ class CartService {
                 await userCart.save({ session });
             }
 
-            // ✅ 3. Merge items (upsert by SKU)
             for (const guestItem of guestCart.items) {
                 const existingIndex = userCart.items.findIndex(
                     (i) => i.sku === guestItem.sku
                 );
 
                 if (existingIndex !== -1) {
-                    // Update existing item quantity
                     userCart.items[existingIndex].quantity +=
                         guestItem.quantity;
                 } else {
-                    // Add new item
                     userCart.items.push(guestItem);
                 }
             }
 
-            // ✅ 4. Inherit guest discount if user cart has none
             if (!userCart.discount && guestCart.discount) {
                 userCart.discount = guestCart.discount;
             }
 
-            // ✅ 5. Save merged user cart
             userCart.updated_at = new Date();
             await userCart.save({ session });
 
-            // ✅ 6. Mark guest cart as abandoned (or delete)
             await Cart.updateOne(
                 { _id: guestCart._id },
                 { status: 'ABANDONED' },
@@ -567,20 +426,12 @@ class CartService {
         }
     }
 
-    /**
-     * ✅ CLEAR CART: Remove all items from cart
-     * 
-     * @param {String} cartId
-     * @param {Object} options - { keep_discount: false }
-     * @returns {Object} Cleared cart DTO
-     */
     static async clearCart(cartId, options = {}) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
         }
 
-        // ✅ Clear items, optionally keep discount
         const updateData = {
             items: [],
             updated_at: new Date(),
@@ -599,14 +450,6 @@ class CartService {
         return CartMapper.toResponseDTO(clearedCart);
     }
 
-    /**
-     * ✅ ABANDON CART: Explicitly mark cart as abandoned
-     * 
-     * Called when user clears cart or navigates away
-     * 
-     * @param {String} cartId
-     * @returns {Object} Abandoned cart info
-     */
     static async abandonCart(cartId) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
@@ -622,26 +465,12 @@ class CartService {
         return CartMapper.toAbandonedDTO(abandonedCart);
     }
 
-    /**
-     * ✅ CHECKOUT: Validate cart + create order snapshot
-     * 
-     * Flow:
-     * 1. Validate cart not empty
-     * 2. Validate all items have stock
-     * 3. Verify no expired discounts
-     * 4. Create order snapshot
-     * 5. Lock cart (mark CHECKED_OUT)
-     * 
-     * @param {String} cartId
-     * @returns {Object} Checkout snapshot (for order creation)
-     */
     static async checkoutCart(cartId) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
         }
 
-        // ✅ Validate not empty
         if (cart.items.length === 0) {
             throw new AppError(
                 'Cannot checkout empty cart',
@@ -650,7 +479,6 @@ class CartService {
             );
         }
 
-        // ✅ Validate all items have stock (re-check before checkout)
         for (const item of cart.items) {
             const variant = await Variant.findById(item.variant_id);
             if (!variant) {
@@ -671,7 +499,6 @@ class CartService {
             }
         }
 
-        // ✅ Validate discount not expired
         if (cart.discount && cart.discount.expires_at) {
             if (new Date() > new Date(cart.discount.expires_at)) {
                 throw new AppError(
@@ -682,10 +509,8 @@ class CartService {
             }
         }
 
-        // ✅ Create snapshot for order
         const snapshot = CartMapper.toOrderSnapshotDTO(cart);
 
-        // ✅ Mark cart as checked out
         await Cart.findByIdAndUpdate(cartId, {
             status: 'CHECKED_OUT',
             checked_out_at: new Date(),
@@ -698,13 +523,6 @@ class CartService {
         };
     }
 
-    /**
-     * ✅ GET ABANDONED CARTS: For admin/recovery emails
-     * 
-     * @param {Number} daysAgo - Abandoned for > N days
-     * @param {Number} limit
-     * @returns {Array} Abandoned carts
-     */
     static async getAbandonedCarts(daysAgo = 7, limit = 100) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
@@ -719,14 +537,6 @@ class CartService {
         return carts.map(CartMapper.toAbandonedDTO);
     }
 
-    /**
-     * ✅ VALIDATE CART: For checkout validation
-     * 
-     * Returns detailed validation errors
-     * 
-     * @param {String} cartId
-     * @returns {Object} { isValid, errors, totals }
-     */
     static async validateCart(cartId) {
         const cart = await Cart.findById(cartId);
         if (!cart) {

@@ -1,21 +1,18 @@
 const { z } = require('zod');
 
-// ✅ Working hours schema (array of day schedules)
 const workingHourSchema = z.object({
     day: z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']),
     open: z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:mm'),
     close: z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:mm')
 });
 
-// ✅ Social links schema (all optional, but must be valid URLs if provided)
 const socialLinksSchema = z.object({
     facebook: z.string().url('Invalid Facebook URL').nullable().optional(),
-    zalo: z.string().optional(),  // Zalo doesn't need URL format
+    zalo: z.string().optional(),
     instagram: z.string().url('Invalid Instagram URL').nullable().optional(),
     shoppe: z.string().url('Invalid Shoppe URL').nullable().optional()
 }).strict();
 
-// ✅ Create shop info schema (all fields required)
 const createShopInfoSchema = z.object({
     shop_name: z.string()
         .min(1, 'Shop name is required')
@@ -51,7 +48,6 @@ const createShopInfoSchema = z.object({
     is_active: z.boolean().default(true)
 }).strict();
 
-// ✅ Update shop info schema (all fields optional)
 const updateShopInfoSchema = z.object({
     shop_name: z.string()
         .min(1, 'Shop name is required')

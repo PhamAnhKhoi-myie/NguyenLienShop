@@ -15,20 +15,16 @@ const {
 // PUBLIC ROUTES (no auth required)
 // ============================================
 
-// Get reviews for product (paginated, approved only)
 router.get('/product/:productId', ReviewController.getProductReviews);
 
-// Get reviews for variant (paginated, approved only)
 router.get('/variant/:variantId', ReviewController.getVariantReviews);
 
-// Get single review (public)
 router.get('/:reviewId', ReviewController.getOne);
 
 // ============================================
 // USER ROUTES (require authentication)
 // ============================================
 
-// Create review (with validation)
 router.post(
     '/',
     authenticate,
@@ -36,7 +32,6 @@ router.post(
     ReviewController.create
 );
 
-// Update own review (with validation)
 router.put(
     '/:reviewId',
     authenticate,
@@ -44,21 +39,18 @@ router.put(
     ReviewController.update
 );
 
-// Delete own review
 router.delete(
     '/:reviewId',
     authenticate,
     ReviewController.delete
 );
 
-// Get own reviews (paginated)
 router.get(
     '/user/my-reviews',
     authenticate,
     ReviewController.getUserReviews
 );
 
-// Mark review as helpful/unhelpful (with validation)
 router.post(
     '/:reviewId/helpful',
     authenticate,
@@ -66,7 +58,6 @@ router.post(
     ReviewController.markHelpful
 );
 
-// Flag review for moderation (with validation)
 router.post(
     '/:reviewId/flag',
     authenticate,
@@ -78,7 +69,6 @@ router.post(
 // ADMIN ROUTES (require authentication + admin role)
 // ============================================
 
-// Get pending reviews (admin moderation)
 router.get(
     '/admin/pending',
     authenticate,
@@ -86,7 +76,6 @@ router.get(
     ReviewController.getPendingReviews
 );
 
-// Get flagged reviews (admin review)
 router.get(
     '/admin/flagged',
     authenticate,
@@ -94,7 +83,6 @@ router.get(
     ReviewController.getFlaggedReviews
 );
 
-// Approve review (admin)
 router.post(
     '/:reviewId/approve',
     authenticate,
@@ -102,7 +90,6 @@ router.post(
     ReviewController.approveReview
 );
 
-// Reject review with reason (admin, with validation)
 router.post(
     '/:reviewId/reject',
     authenticate,

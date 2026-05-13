@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema(
     {
-        // Ownership & Context (MANDATORY)
         user_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
@@ -27,14 +26,12 @@ const reviewSchema = new mongoose.Schema(
             required: true
         },
 
-        // Purchase Verification (MANDATORY)
         is_verified_purchase: {
             type: Boolean,
             default: false,
             index: true
         },
 
-        // Rating
         rating: {
             overall: {
                 type: Number,
@@ -63,7 +60,6 @@ const reviewSchema = new mongoose.Schema(
             }
         },
 
-        // Content
         title: {
             type: String,
             maxlength: 200,
@@ -78,7 +74,6 @@ const reviewSchema = new mongoose.Schema(
             trim: true
         },
 
-        // Edit Tracking (IMPORTANT)
         original_content: {
             type: String,
             sparse: true
@@ -93,7 +88,6 @@ const reviewSchema = new mongoose.Schema(
             min: 0
         },
 
-        // Moderation (CRITICAL)
         is_approved: {
             type: Boolean,
             default: false,
@@ -132,7 +126,6 @@ const reviewSchema = new mongoose.Schema(
             sparse: true
         },
 
-        // Helpful Voting (NICE-TO-HAVE)
         helpful_count: {
             type: Number,
             default: 0,
@@ -156,7 +149,6 @@ const reviewSchema = new mongoose.Schema(
             }
         ],
 
-        // Soft Delete (MANDATORY)
         is_deleted: {
             type: Boolean,
             default: false,
@@ -167,7 +159,6 @@ const reviewSchema = new mongoose.Schema(
             sparse: true
         },
 
-        // Timestamps
         created_at: {
             type: Date,
             default: Date.now,
@@ -178,18 +169,15 @@ const reviewSchema = new mongoose.Schema(
             default: Date.now
         }
     },
-    { timestamps: false } // ✅ We manage timestamps manually
+    { timestamps: false }
 );
 
-// ✅ CRITICAL: Auto-exclude soft-deleted & unapproved reviews from public queries
 reviewSchema.pre(/^find/, function () {
-    // Only show approved OR user's own reviews
     if (!this.getOptions().includeUnapproved) {
         this.where({ is_deleted: false, is_approved: true });
     }
 });
 
-// ✅ CRITICAL: Prevent duplicate review from same user on same product
 reviewSchema.index(
     { user_id: 1, product_id: 1, variant_id: 1 },
     {
@@ -199,13 +187,11 @@ reviewSchema.index(
     }
 );
 
-// ✅ Indexes for queries
 reviewSchema.index({ product_id: 1, is_approved: 1, created_at: -1 });
 reviewSchema.index({ user_id: 1, created_at: -1 });
 reviewSchema.index({ is_flagged: 1, is_approved: 1 });
 reviewSchema.index({ variant_id: 1, is_approved: 1 });
 
-// ✅ Update timestamps on save
 reviewSchema.pre('save', function (next) {
     if (this.isNew) {
         this.created_at = new Date();

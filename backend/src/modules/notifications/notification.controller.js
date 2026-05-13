@@ -3,10 +3,6 @@ const NotificationService = require('./notification.service');
 const logger = require('../../utils/logger.util');
 
 class NotificationController {
-    /**
-     * Get paginated notifications for authenticated user
-     * GET /api/v1/notifications
-     */
     static getNotifications = asyncHandler(async (req, res) => {
         const { page, limit, type, priority, unread_only } = req.query;
 
@@ -36,10 +32,6 @@ class NotificationController {
         });
     });
 
-    /**
-     * Get unread notification count
-     * GET /api/v1/notifications/unread-count
-     */
     static getUnreadCount = asyncHandler(async (req, res) => {
         const count = await NotificationService.getUnreadCount(req.user.id);
 
@@ -51,10 +43,6 @@ class NotificationController {
         });
     });
 
-    /**
-     * Get single notification by ID
-     * GET /api/v1/notifications/:notificationId
-     */
     static getNotificationById = asyncHandler(async (req, res) => {
         const notification = await NotificationService.getNotificationById(
             req.params.notificationId,
@@ -73,10 +61,6 @@ class NotificationController {
         });
     });
 
-    /**
-     * Mark single notification as read
-     * PATCH /api/v1/notifications/:notificationId/read
-     */
     static markAsRead = asyncHandler(async (req, res) => {
         const notification = await NotificationService.markAsRead(
             req.params.notificationId,
@@ -89,10 +73,6 @@ class NotificationController {
         });
     });
 
-    /**
-     * Mark multiple notifications as read
-     * PATCH /api/v1/notifications/bulk/mark-read
-     */
     static markBulkAsRead = asyncHandler(async (req, res) => {
         const { notification_ids } = req.body;
 
@@ -113,10 +93,6 @@ class NotificationController {
         });
     });
 
-    /**
-     * Mark all notifications as read
-     * PATCH /api/v1/notifications/mark-all-read
-     */
     static markAllAsRead = asyncHandler(async (req, res) => {
         const result = await NotificationService.markAllAsRead(req.user.id);
 
@@ -132,10 +108,6 @@ class NotificationController {
         });
     });
 
-    /**
-     * Delete single notification
-     * DELETE /api/v1/notifications/:notificationId
-     */
     static deleteNotification = asyncHandler(async (req, res) => {
         await NotificationService.deleteNotification(
             req.params.notificationId,
@@ -154,10 +126,6 @@ class NotificationController {
         });
     });
 
-    /**
-     * Delete all notifications for user
-     * DELETE /api/v1/notifications
-     */
     static deleteAllNotifications = asyncHandler(async (req, res) => {
         const result = await NotificationService.deleteAllNotifications(
             req.user.id

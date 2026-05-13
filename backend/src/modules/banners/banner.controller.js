@@ -2,12 +2,6 @@ const asyncHandler = require('../../utils/asyncHandler.util');
 const BannerService = require('./banner.service');
 
 class BannerController {
-    /**
-     * GET /api/v1/banners/location/:location
-     * Public endpoint: Get active banners for a location
-     * ✅ asyncHandler wraps all functions
-     * ✅ No authentication required
-     */
     static getByLocation = asyncHandler(async (req, res) => {
         const { location } = req.params;
 
@@ -19,12 +13,6 @@ class BannerController {
         });
     });
 
-    /**
-     * GET /api/v1/banners/:id
-     * Public endpoint: Get single banner
-     * ✅ No authentication required
-     * ✅ Returns banner regardless of active status
-     */
     static getOne = asyncHandler(async (req, res) => {
         const { id } = req.params;
 
@@ -36,12 +24,6 @@ class BannerController {
         });
     });
 
-    /**
-     * GET /api/v1/banners
-     * Admin only: Get all banners (active + scheduled)
-     * ✅ Authentication + authorization required
-     * ✅ Optional location filter via query
-     */
     static getAll = asyncHandler(async (req, res) => {
         const { location } = req.query;
 
@@ -53,17 +35,10 @@ class BannerController {
         });
     });
 
-    /**
-     * POST /api/v1/banners
-     * Admin only: Create banner
-     * ✅ Validation done by middleware
-     * ✅ User ID from JWT (audit trail)
-     * ✅ Returns 201 Created
-     */
     static create = asyncHandler(async (req, res) => {
         const banner = await BannerService.createBanner(
             req.body,
-            req.user.id // From JWT authentication
+            req.user.id
         );
 
         res.status(201).json({
@@ -72,12 +47,6 @@ class BannerController {
         });
     });
 
-    /**
-     * PUT /api/v1/banners/:id
-     * Admin only: Update banner
-     * ✅ Validation done by middleware
-     * ✅ User ID from JWT (audit trail)
-     */
     static update = asyncHandler(async (req, res) => {
         const banner = await BannerService.updateBanner(
             req.params.id,
@@ -91,11 +60,6 @@ class BannerController {
         });
     });
 
-    /**
-     * DELETE /api/v1/banners/:id
-     * Admin only: Soft delete banner
-     * ✅ User ID from JWT for audit trail
-     */
     static delete = asyncHandler(async (req, res) => {
         await BannerService.deleteBanner(req.params.id, req.user.id);
 
@@ -105,11 +69,6 @@ class BannerController {
         });
     });
 
-    /**
-     * GET /api/v1/banners/deleted
-     * Admin only: Get deleted banners (for recovery)
-     * ✅ Shows audit trail with deleted_at timestamp
-     */
     static getDeleted = asyncHandler(async (req, res) => {
         const banners = await BannerService.getDeletedBanners();
 
@@ -119,12 +78,6 @@ class BannerController {
         });
     });
 
-    /**
-     * POST /api/v1/banners/:id/restore
-     * Admin only: Restore deleted banner
-     * ✅ User ID from JWT for audit trail
-     * ✅ Returns restored banner data
-     */
     static restore = asyncHandler(async (req, res) => {
         const banner = await BannerService.restoreBanner(
             req.params.id,

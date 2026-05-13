@@ -30,7 +30,6 @@ const notificationSchema = new mongoose.Schema(
             maxlength: 1000
         },
 
-        // Structured data (replaces free-form data)
         data: {
             ref_type: {
                 type: String,
@@ -51,27 +50,23 @@ const notificationSchema = new mongoose.Schema(
             index: true
         },
 
-        // Replaces is_read (single source of truth)
         read_at: {
             type: Date,
             default: null,
             index: true
         },
 
-        // Delivery tracking
         delivered_at: {
             type: Date,
             default: Date.now,
             index: true
         },
 
-        // Soft delete
         deleted_at: {
             type: Date,
             default: null
         },
 
-        // TTL expiration
         expire_at: {
             type: Date,
             default: null
@@ -89,37 +84,31 @@ const notificationSchema = new mongoose.Schema(
     }
 );
 
-// ✅ Auto-exclude deleted notifications from all finds
 notificationSchema.pre(/^find/, function () {
     if (this.getOptions()._recursed) return;
     this.where({ deleted_at: null });
 });
 
-// ✅ Compound index for critical queries
 notificationSchema.index(
     { user_id: 1, created_at: -1 },
     { name: 'idx_user_created' }
 );
 
-// ✅ Unread filter (user_id + read_at status)
 notificationSchema.index(
     { user_id: 1, read_at: 1, created_at: -1 },
     { name: 'idx_user_unread' }
 );
 
-// ✅ Type filtering (user + type + newest)
 notificationSchema.index(
     { user_id: 1, type: 1, created_at: -1 },
     { name: 'idx_user_type' }
 );
 
-// ✅ TTL index for auto-cleanup (expires after 0 seconds past expire_at)
 notificationSchema.index(
     { expire_at: 1 },
     { expireAfterSeconds: 0, sparse: true, name: 'idx_ttl_expire' }
 );
 
-// ✅ Partial index for soft delete optimization
 notificationSchema.index(
     { user_id: 1, deleted_at: 1 },
     { name: 'idx_user_deleted', sparse: true }

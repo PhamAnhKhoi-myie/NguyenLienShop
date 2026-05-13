@@ -3,11 +3,6 @@ const asyncHandler = require('../../utils/asyncHandler.util');
 const logger = require('../../utils/logger.util');
 
 class ShopInfoController {
-    /**
-     * Get shop information (PUBLIC)
-     * ✅ No authentication required
-     * ✅ Returns full shop info DTO
-     */
     static getShopInfo = asyncHandler(async (req, res) => {
         const shopInfo = await ShopInfoService.getShopInfo();
 
@@ -17,11 +12,6 @@ class ShopInfoController {
         });
     });
 
-    /**
-     * Get contact information only (PUBLIC)
-     * ✅ Lighter DTO for contact forms
-     * ✅ No authentication required
-     */
     static getContactInfo = asyncHandler(async (req, res) => {
         const contactInfo = await ShopInfoService.getContactInfo();
 
@@ -31,11 +21,6 @@ class ShopInfoController {
         });
     });
 
-    /**
-     * Get working hours (PUBLIC)
-     * ✅ Used for storefront widget
-     * ✅ No authentication required
-     */
     static getWorkingHours = asyncHandler(async (req, res) => {
         const hours = await ShopInfoService.getWorkingHours();
 
@@ -45,11 +30,6 @@ class ShopInfoController {
         });
     });
 
-    /**
-     * Get social media links (PUBLIC)
-     * ✅ Used for footer embeds
-     * ✅ No authentication required
-     */
     static getSocialLinks = asyncHandler(async (req, res) => {
         const socialLinks = await ShopInfoService.getSocialLinks();
 
@@ -59,11 +39,6 @@ class ShopInfoController {
         });
     });
 
-    /**
-     * Check if shop is currently open (PUBLIC)
-     * ✅ Real-time status check
-     * ✅ Returns { is_open: boolean }
-     */
     static isShopOpen = asyncHandler(async (req, res) => {
         const isOpen = await ShopInfoService.isShopOpen();
 
@@ -75,11 +50,6 @@ class ShopInfoController {
         });
     });
 
-    /**
-     * Get next opening time (PUBLIC)
-     * ✅ Shows "We open at..." message
-     * ✅ Returns { date, time, day } or null
-     */
     static getNextOpeningTime = asyncHandler(async (req, res) => {
         const nextOpening = await ShopInfoService.getNextOpeningTime();
 
@@ -89,12 +59,6 @@ class ShopInfoController {
         });
     });
 
-    /**
-     * Create shop information (ADMIN ONLY)
-     * ✅ Called once during setup
-     * ✅ Prevents duplicate creation
-     * ✅ Requires authentication
-     */
     static createShopInfo = asyncHandler(async (req, res) => {
         const shopInfo = await ShopInfoService.createShopInfo(req.body);
 
@@ -111,12 +75,6 @@ class ShopInfoController {
         });
     });
 
-    /**
-     * Update shop information (ADMIN ONLY)
-     * ✅ Partial updates allowed
-     * ✅ All fields optional
-     * ✅ Requires authentication
-     */
     static updateShopInfo = asyncHandler(async (req, res) => {
         const shopInfo = await ShopInfoService.updateShopInfo(req.body);
 
@@ -133,11 +91,6 @@ class ShopInfoController {
         });
     });
 
-    /**
-     * Toggle shop status (ADMIN ONLY)
-     * ✅ Activate/deactivate shop temporarily
-     * ✅ Useful for maintenance mode
-     */
     static toggleShopStatus = asyncHandler(async (req, res) => {
         const { is_active } = req.body;
 

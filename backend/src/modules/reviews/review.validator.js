@@ -1,6 +1,5 @@
 const { z } = require('zod');
 
-// ✅ Create review schema
 const createReviewSchema = z.object({
     product_id: z
         .string()
@@ -35,7 +34,6 @@ const createReviewSchema = z.object({
         .max(5000, 'Review content must be at most 5000 characters')
 });
 
-// ✅ Update review schema
 const updateReviewSchema = z.object({
     rating: z
         .number()
@@ -57,12 +55,10 @@ const updateReviewSchema = z.object({
         .optional()
 });
 
-// ✅ Mark helpful schema
 const markHelpfulSchema = z.object({
     helpful: z.boolean('Helpful must be true or false')
 });
 
-// ✅ Reject review schema (admin)
 const rejectReviewSchema = z.object({
     reason: z
         .string()
@@ -70,7 +66,6 @@ const rejectReviewSchema = z.object({
         .max(500, 'Reason must be at most 500 characters')
 });
 
-// ✅ Flag review schema
 const flagReviewSchema = z.object({
     reason: z.enum(
         ['spam', 'inappropriate', 'fake', 'duplicate', 'other'],

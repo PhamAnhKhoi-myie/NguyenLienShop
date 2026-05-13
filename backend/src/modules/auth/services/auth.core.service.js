@@ -177,7 +177,6 @@ class AuthCoreService {
     async forgotPassword(email) {
         const user = await User.findOne({ email });
 
-        // Không leak thông tin email tồn tại hay không
         if (!user) {
             return { message: 'Nếu email tồn tại, chúng tôi đã gửi mã xác nhận' };
         }
@@ -185,7 +184,6 @@ class AuthCoreService {
         const FIFTEEN_MIN = 15 * 60 * 1000;
         const ONE_MIN = 60 * 1000;
 
-        // Rate limit 5 lần / 15 phút
         const count = await PasswordReset.countDocuments({
             email,
             createdAt: { $gte: new Date(Date.now() - FIFTEEN_MIN) }
@@ -199,7 +197,6 @@ class AuthCoreService {
             );
         }
 
-        // Rate limit 1 lần / 60s
         const latest = await PasswordReset.findOne({ email }).sort({ createdAt: -1 });
 
         if (latest && Date.now() - latest.createdAt < ONE_MIN) {
@@ -210,7 +207,6 @@ class AuthCoreService {
             );
         }
 
-        // Tạo OTP
         const otp = crypto.randomInt(100000, 999999).toString();
 
         const otp_hash = crypto

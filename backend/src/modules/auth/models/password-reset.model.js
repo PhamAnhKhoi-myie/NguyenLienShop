@@ -7,14 +7,11 @@ const passwordResetSchema = new mongoose.Schema({
     attempt_count: { type: Number, default: 0 },
 }, { timestamps: true });
 
-// TTL index (auto delete sau expire)
-// TTL
 passwordResetSchema.index(
     { expires_at: 1 },
     { expireAfterSeconds: 0 }
 );
 
-// Query optimization
 passwordResetSchema.index(
     { email: 1, expires_at: 1 }
 );

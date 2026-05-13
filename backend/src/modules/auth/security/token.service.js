@@ -5,10 +5,6 @@ const AppError = require("../../../utils/appError.util");
 const hashToken = (rawToken) =>
     crypto.createHash("sha256").update(rawToken).digest("hex");
 
-/**
- * Create refresh token record
- * @param {Object} data - { user_id, jti, token_hash, user_agent, ip_address, is_revoked }
- */
 const createRefreshToken = async (data) => {
     const tokenData = {
         user_id: data.user_id,
@@ -27,11 +23,6 @@ const createRefreshToken = async (data) => {
     }
 };
 
-/**
- * Find token by JTI
- * @param {String} jti
- * @returns {Object} Token document (with user_id for ownership check)
- */
 const findByJti = async (jti) => {
     if (!jti) {
         throw new AppError("JTI is required", 400, "JTI_REQUIRED");
@@ -39,12 +30,6 @@ const findByJti = async (jti) => {
     return RefreshToken.findOne({ jti });
 };
 
-/**
- * Revoke token by JTI
- * @param {String} jti
- * @param {String} reason - 'manual' | 'rotated' | 'reuse_detected' | 'logout_all_devices' | 'password_changed'
- * @param {String} replacedByJti - (optional) JTI of replacement token
- */
 const revokeByJti = async (jti, reason = "manual", replacedByJti = null) => {
     if (!jti) {
         throw new AppError("JTI is required", 400, "JTI_REQUIRED");
@@ -67,17 +52,11 @@ const revokeByJti = async (jti, reason = "manual", replacedByJti = null) => {
     return updated;
 };
 
-/**
- * Revoke all tokens for a user
- * @param {String} userId
- * @param {String} reason - 'logout_all_devices' | 'password_changed' | 'reuse_detected' | 'security'
- */
 const revokeAllByUser = async (userId, reason = "security") => {
     if (!userId) {
         throw new AppError("User ID required", 400, "VALIDATION_ERROR");
     }
 
-    // ✅ FIX #4: Return update result (count of revoked tokens)
     const result = await RefreshToken.updateMany(
         { user_id: userId, is_revoked: false },
         {
@@ -98,12 +77,6 @@ const revokeAllByUser = async (userId, reason = "security") => {
     return result;
 };
 
-/**
- * ✅ NEW: Verify token version match (security check)
- * @param {String} userId
- * @param {Number} tokenVersion - from JWT payload
- * @returns {Boolean}
- */
 const verifyTokenVersion = async (userId, tokenVersion) => {
     const user = await require("../../users/user.model").findById(userId).select("+token_version");
     if (!user) {

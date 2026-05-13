@@ -1,10 +1,6 @@
 const { z } = require('zod');
 const mongoose = require('mongoose');
 
-/**
- * ===== BASE =====
- */
-
 const objectIdSchema = z.string().refine(
     (val) => mongoose.Types.ObjectId.isValid(val),
     { message: 'Invalid MongoDB ObjectId' }
@@ -20,10 +16,6 @@ const SessionParamSchema = z.object({
     sessionKey: z.string().uuid(),
 });
 
-/**
- * ===== COMMON =====
- */
-
 const sessionKeySchema = z.string().uuid().optional().nullable();
 
 const skuSchema = z.string().min(3).max(50).regex(/^[A-Z0-9\-]+$/).toUpperCase();
@@ -33,10 +25,6 @@ const promoCodeSchema = z.string().min(3).max(20).regex(/^[A-Z0-9\-]+$/).toUpper
 const priceSchema = z.number().int().min(0).max(999999999);
 
 const quantitySchema = z.number().int().min(1).max(999);
-
-/**
- * ===== BODY =====
- */
 
 const addToCartItemBodySchema = z.object({
     product_id: objectIdSchema,
@@ -78,36 +66,24 @@ const createGuestCartBodySchema = z.object({
     session_key: z.string().uuid(),
 });
 
-/**
- * ===== QUERY =====
- */
-
 const getCartQuerySchema = z.object({
     include_items: z.string().transform(v => v === 'true').default('true'),
     format: z.enum(['summary', 'detail', 'checkout']).default('summary'),
 });
 
-/**
- * ===== EXPORT =====
- */
-
 module.exports = {
-    // params
     ItemIdParamSchema,
     SessionParamSchema,
 
-    // body
     addToCartItemBodySchema,
     updateCartItemBodySchema,
     applyDiscountBodySchema,
     mergeCartBodySchema,
     createGuestCartBodySchema,
 
-    // query
     getCartQuerySchema,
     clearCartQuerySchema,
 
-    // base
     objectIdSchema,
     objectIdOptionalSchema,
     sessionKeySchema,

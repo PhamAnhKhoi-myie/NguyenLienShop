@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 const bannerSchema = new mongoose.Schema(
     {
-        // Content
         image: {
             url: {
                 type: String,
@@ -17,10 +16,9 @@ const bannerSchema = new mongoose.Schema(
                 default: '',
                 maxlength: 200
             },
-            public_id: String // Cloudinary/S3 ID for deletion
+            public_id: String
         },
 
-        // Link destination
         link: {
             type: String,
             required: true,
@@ -30,7 +28,6 @@ const bannerSchema = new mongoose.Schema(
             }
         },
 
-        // Display configuration
         location: {
             type: String,
             enum: [
@@ -51,7 +48,6 @@ const bannerSchema = new mongoose.Schema(
             max: 999
         },
 
-        // Scheduling
         start_at: {
             type: Date,
             required: true
@@ -68,7 +64,6 @@ const bannerSchema = new mongoose.Schema(
             }
         },
 
-        // Soft delete
         is_deleted: {
             type: Boolean,
             default: false,
@@ -77,7 +72,6 @@ const bannerSchema = new mongoose.Schema(
 
         deleted_at: Date,
 
-        // Audit trail
         created_by: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User'
@@ -96,15 +90,12 @@ const bannerSchema = new mongoose.Schema(
     }
 );
 
-// ✅ CRITICAL: Auto-exclude deleted documents
 bannerSchema.pre(/^find/, function () {
-    // Allow bypass with includeDeleted option
     if (this.getOptions().includeDeleted !== true) {
         this.where({ is_deleted: false });
     }
 });
 
-// ✅ Indexes for performance
 bannerSchema.index(
     { location: 1, sort_order: 1, is_deleted: 1 },
     { name: 'idx_location_sort_active' }
@@ -115,7 +106,6 @@ bannerSchema.index(
     { name: 'idx_scheduling_active' }
 );
 
-// ✅ Partial unique index for location + sort_order (allow reuse if deleted)
 bannerSchema.index(
     { location: 1, sort_order: 1 },
     {

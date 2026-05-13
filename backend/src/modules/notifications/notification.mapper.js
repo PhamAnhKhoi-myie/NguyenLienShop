@@ -1,9 +1,4 @@
 class NotificationMapper {
-    /**
-     * Transform single document to DTO
-     * @param {Object} doc - MongoDB document
-     * @returns {Object|null} DTO or null
-     */
     static toDTO(doc) {
         if (!doc) return null;
 
@@ -15,7 +10,6 @@ class NotificationMapper {
             title: doc.title,
             message: doc.message,
 
-            // Structured data mapping
             data: doc.data
                 ? {
                     ref_type: doc.data.ref_type || null,
@@ -26,7 +20,6 @@ class NotificationMapper {
 
             priority: doc.priority,
 
-            // Status
             is_read: doc.read_at ? true : false,
             read_at: doc.read_at ? doc.read_at.toISOString() : null,
 
@@ -40,25 +33,12 @@ class NotificationMapper {
         };
     }
 
-    /**
-     * Transform list of documents
-     * @param {Array} docs - MongoDB documents
-     * @returns {Array} DTOs (empty array if no docs)
-     */
     static toDTOList(docs) {
         if (!docs || docs.length === 0) return [];
 
         return docs.map((doc) => this.toDTO(doc));
     }
 
-    /**
-     * List response with pagination
-     * @param {Array} docs - Documents
-     * @param {Number} page - Current page
-     * @param {Number} limit - Items per page
-     * @param {Number} total - Total count
-     * @returns {Object} Paginated response
-     */
     static toPaginatedResponse(docs, page, limit, total) {
         return {
             data: this.toDTOList(docs),

@@ -6,18 +6,15 @@ const { authorize } = require('../../middlewares/authorize.middleware');
 const CartController = require('./cart.controller');
 
 const {
-    // params
     ItemIdParamSchema,
     SessionParamSchema,
 
-    // body
     addToCartItemBodySchema,
     updateCartItemBodySchema,
     applyDiscountBodySchema,
     mergeCartBodySchema,
     createGuestCartBodySchema,
 
-    // query
     getCartQuerySchema,
     clearCartQuerySchema,
 } = require('./cart.validator');

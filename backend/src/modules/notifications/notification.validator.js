@@ -1,11 +1,9 @@
 const { z } = require('zod');
 
-// ✅ ObjectId validator (reusable)
 const objectIdString = z
     .string()
     .regex(/^[0-9a-f]{24}$/i, { message: 'Invalid ObjectId format' });
 
-// ✅ Create notification (admin/system use)
 const createNotificationSchema = z.object({
     user_id: objectIdString,
 
@@ -46,7 +44,6 @@ const createNotificationSchema = z.object({
         .optional()
 });
 
-// ✅ Get notifications (with filters)
 const getNotificationsSchema = z.object({
     page: z
         .string()
@@ -76,12 +73,10 @@ const getNotificationsSchema = z.object({
         .default('false')
 });
 
-// ✅ Mark as read (single)
 const markAsReadSchema = z.object({
     notification_id: objectIdString
 });
 
-// ✅ Bulk mark as read
 const markBulkAsReadSchema = z.object({
     notification_ids: z
         .array(objectIdString)
@@ -89,7 +84,6 @@ const markBulkAsReadSchema = z.object({
         .max(100, 'Max 100 at once')
 });
 
-// ✅ Delete notification (single)
 const deleteNotificationSchema = z.object({
     notification_id: objectIdString
 });

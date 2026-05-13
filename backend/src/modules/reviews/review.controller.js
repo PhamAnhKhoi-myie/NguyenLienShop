@@ -3,7 +3,6 @@ const ReviewMapper = require('./review.mapper');
 const asyncHandler = require('../../utils/asyncHandler.util');
 
 class ReviewController {
-    // ✅ PUBLIC - Get reviews for product
     static getProductReviews = asyncHandler(async (req, res) => {
         const { productId } = req.params;
         const { page = 1, limit = 10 } = req.query;
@@ -21,7 +20,6 @@ class ReviewController {
         });
     });
 
-    // ✅ PUBLIC - Get single review
     static getOne = asyncHandler(async (req, res) => {
         const { reviewId } = req.params;
         const currentUserId = req.user?.id || null;
@@ -34,7 +32,6 @@ class ReviewController {
         });
     });
 
-    // ✅ USER - Create review
     static create = asyncHandler(async (req, res) => {
         const { product_id, variant_id, order_id, rating, title, content } =
             req.body;
@@ -53,7 +50,6 @@ class ReviewController {
         });
     });
 
-    // ✅ USER - Update own review
     static update = asyncHandler(async (req, res) => {
         const { reviewId } = req.params;
         const { rating, title, content } = req.body;
@@ -70,7 +66,6 @@ class ReviewController {
         });
     });
 
-    // ✅ USER - Delete own review
     static delete = asyncHandler(async (req, res) => {
         const { reviewId } = req.params;
 
@@ -82,7 +77,6 @@ class ReviewController {
         });
     });
 
-    // ✅ USER - Mark review as helpful/unhelpful
     static markHelpful = asyncHandler(async (req, res) => {
         const { reviewId } = req.params;
         const { helpful } = req.body;
@@ -95,7 +89,6 @@ class ReviewController {
         });
     });
 
-    // ✅ USER - Get own reviews
     static getUserReviews = asyncHandler(async (req, res) => {
         const { page = 1, limit = 10 } = req.query;
 
@@ -112,7 +105,6 @@ class ReviewController {
         });
     });
 
-    // ✅ PUBLIC - Get reviews for variant
     static getVariantReviews = asyncHandler(async (req, res) => {
         const { variantId } = req.params;
         const { page = 1, limit = 10 } = req.query;
@@ -130,7 +122,6 @@ class ReviewController {
         });
     });
 
-    // ✅ USER - Flag review
     static flagReview = asyncHandler(async (req, res) => {
         const { reviewId } = req.params;
         const { reason } = req.body;
@@ -148,7 +139,6 @@ class ReviewController {
         });
     });
 
-    // ✅ ADMIN - Get pending reviews
     static getPendingReviews = asyncHandler(async (req, res) => {
         const { page = 1, limit = 20 } = req.query;
 
@@ -164,7 +154,6 @@ class ReviewController {
         });
     });
 
-    // ✅ ADMIN - Get flagged reviews
     static getFlaggedReviews = asyncHandler(async (req, res) => {
         const { page = 1, limit = 20 } = req.query;
 
@@ -180,7 +169,6 @@ class ReviewController {
         });
     });
 
-    // ✅ ADMIN - Approve review
     static approveReview = asyncHandler(async (req, res) => {
         const { reviewId } = req.params;
 
@@ -193,7 +181,6 @@ class ReviewController {
         });
     });
 
-    // ✅ ADMIN - Reject review
     static rejectReview = asyncHandler(async (req, res) => {
         const { reviewId } = req.params;
         const { reason } = req.body;

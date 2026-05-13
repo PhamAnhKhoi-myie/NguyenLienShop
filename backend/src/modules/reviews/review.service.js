@@ -5,9 +5,7 @@ const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
 
 class ReviewService {
-    // ✅ CREATE - with duplicate prevention & verification
     static async createReview(userId, productId, variantId, orderId, data) {
-        // 1. ✅ Verify purchase (only completed orders can review)
         const order = await Order.findOne({
             _id: orderId,
             user_id: userId,
@@ -22,7 +20,6 @@ class ReviewService {
             );
         }
 
-        // 2. ✅ Check for duplicate review (before DB to catch early)
         const existing = await Review.findOne(
             {
                 user_id: userId,
@@ -42,7 +39,6 @@ class ReviewService {
             );
         }
 
-        // 3. ✅ Create review (initially NOT approved)
         const review = await Review.create({
             user_id: userId,
             product_id: productId,
@@ -56,7 +52,7 @@ class ReviewService {
             title: data.title || null,
             content: data.content,
 
-            is_approved: false, // ← Requires moderation
+            is_approved: false,
             created_at: new Date(),
             updated_at: new Date()
         });
@@ -73,13 +69,11 @@ class ReviewService {
         return ReviewMapper.toDTO(review, userId);
     }
 
-    // ✅ READ - public (only approved reviews, auto-excluded deleted)
     static async getProductReviews(productId, page = 1, limit = 10) {
         const skip = (page - 1) * limit;
 
         const reviews = await Review.find({
             product_id: productId
-            // ✅ Soft-deleted & unapproved auto-excluded by pre-hook
         })
             .sort({ helpful_count: -1, created_at: -1 })
             .skip(skip)
@@ -100,7 +94,6 @@ class ReviewService {
         };
     }
 
-    // ✅ READ - single review
     static async getReviewById(reviewId, currentUserId = null) {
         const review = await Review.findById(reviewId);
 
@@ -111,7 +104,6 @@ class ReviewService {
         return ReviewMapper.toPublicDTO(review, currentUserId);
     }
 
-    // ✅ UPDATE - user can edit own review
     static async updateReview(reviewId, userId, data) {
         const review = await Review.findOne(
             {
@@ -127,12 +119,10 @@ class ReviewService {
             throw new AppError('Review not found', 404, 'REVIEW_NOT_FOUND');
         }
 
-        // ✅ Keep original for audit
         if (!review.original_content) {
             review.original_content = review.content;
         }
 
-        // ✅ Update content
         if (data.content) {
             review.content = data.content;
         }
@@ -143,11 +133,9 @@ class ReviewService {
             review.rating.overall = data.rating;
         }
 
-        // ✅ Track edit
         review.edited_at = new Date();
         review.edit_count = (review.edit_count || 0) + 1;
 
-        // ✅ Reset approval on edit (prevent abuse)
         review.is_approved = false;
         review.approved_at = null;
 
@@ -164,7 +152,6 @@ class ReviewService {
         return ReviewMapper.toDTO(review, userId);
     }
 
-    // ✅ DELETE - soft delete
     static async deleteReview(reviewId, userId) {
         const review = await Review.findOne(
             {
@@ -193,7 +180,6 @@ class ReviewService {
         return { success: true };
     }
 
-    // ✅ HELPFUL VOTING - toggle helpful/unhelpful (fixed logic)
     static async markHelpful(reviewId, userId, isHelpful) {
         const review = await Review.findById(reviewId);
 
@@ -201,12 +187,10 @@ class ReviewService {
             throw new AppError('Review not found', 404, 'REVIEW_NOT_FOUND');
         }
 
-        // ✅ Check current vote status
         const alreadyHelpful = review.helpful_by?.some(id => id.equals(userId));
         const alreadyUnhelpful = review.unhelpful_by?.some(id => id.equals(userId));
 
         if (isHelpful) {
-            // Remove from unhelpful if was there
             if (alreadyUnhelpful) {
                 await Review.updateOne(
                     { _id: reviewId },
@@ -217,7 +201,6 @@ class ReviewService {
                 );
             }
 
-            // Add to helpful (skip if already there)
             if (!alreadyHelpful) {
                 await Review.updateOne(
                     { _id: reviewId },
@@ -228,7 +211,6 @@ class ReviewService {
                 );
             }
         } else {
-            // Opposite logic
             if (alreadyHelpful) {
                 await Review.updateOne(
                     { _id: reviewId },
@@ -260,7 +242,6 @@ class ReviewService {
         return { success: true };
     }
 
-    // ✅ MODERATION - admin approve
     static async approveReview(reviewId, adminId) {
         const review = await Review.findById(reviewId, null, {
             includeUnapproved: true
@@ -286,7 +267,6 @@ class ReviewService {
         return ReviewMapper.toAdminDTO(review);
     }
 
-    // ✅ MODERATION - admin reject
     static async rejectReview(reviewId, reason, adminId) {
         const review = await Review.findById(reviewId, null, {
             includeUnapproved: true
@@ -312,7 +292,6 @@ class ReviewService {
         return ReviewMapper.toAdminDTO(review);
     }
 
-    // ✅ MODERATION - flag for review
     static async flagReview(reviewId, flagReason, userId) {
         const review = await Review.findById(reviewId);
 
@@ -336,7 +315,6 @@ class ReviewService {
         return ReviewMapper.toDTO(review, userId);
     }
 
-    // ✅ ADMIN - get pending reviews
     static async getPendingReviews(page = 1, limit = 20) {
         const skip = (page - 1) * limit;
 
@@ -365,7 +343,6 @@ class ReviewService {
         };
     }
 
-    // ✅ ADMIN - get flagged reviews
     static async getFlaggedReviews(page = 1, limit = 20) {
         const skip = (page - 1) * limit;
 
@@ -394,7 +371,6 @@ class ReviewService {
         };
     }
 
-    // ✅ USER - get own reviews
     static async getUserReviews(userId, page = 1, limit = 10) {
         const skip = (page - 1) * limit;
 
@@ -429,13 +405,11 @@ class ReviewService {
         };
     }
 
-    // ✅ Get reviews for variant
     static async getVariantReviews(variantId, page = 1, limit = 10) {
         const skip = (page - 1) * limit;
 
         const reviews = await Review.find({
             variant_id: variantId
-            // ✅ Auto-excluded by pre-hook
         })
             .sort({ helpful_count: -1, created_at: -1 })
             .skip(skip)

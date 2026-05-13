@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 const announcementSchema = new mongoose.Schema(
     {
-        // Content (MANDATORY)
         title: {
             type: String,
             required: true,
@@ -19,7 +18,6 @@ const announcementSchema = new mongoose.Schema(
             maxlength: 5000
         },
 
-        // Visibility & Priority
         priority: {
             type: Number,
             default: 0,
@@ -28,7 +26,6 @@ const announcementSchema = new mongoose.Schema(
             index: true
         },
 
-        // Targeting (for role-based announcements)
         target: {
             type: String,
             enum: ['all', 'user', 'admin', 'guest'],
@@ -36,20 +33,17 @@ const announcementSchema = new mongoose.Schema(
             index: true
         },
 
-        // Type for UI styling
         type: {
             type: String,
             enum: ['info', 'warning', 'promotion', 'system', 'urgent'],
             default: 'info'
         },
 
-        // Can user dismiss this announcement?
         is_dismissible: {
             type: Boolean,
             default: true
         },
 
-        // Scheduling (CRITICAL - source of truth for is_active)
         start_at: {
             type: Date,
             required: true,
@@ -68,7 +62,6 @@ const announcementSchema = new mongoose.Schema(
             }
         },
 
-        // Audit Trail (MANDATORY)
         created_by: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
@@ -80,7 +73,6 @@ const announcementSchema = new mongoose.Schema(
             ref: 'User'
         },
 
-        // Soft Delete (MANDATORY)
         is_deleted: {
             type: Boolean,
             default: false,
@@ -100,14 +92,12 @@ const announcementSchema = new mongoose.Schema(
     }
 );
 
-// ✅ CRITICAL: Auto-exclude soft-deleted announcements from public queries
 announcementSchema.pre(/^find/, function () {
     if (this.getOptions().includeDeleted !== true) {
         this.where({ is_deleted: false });
     }
 });
 
-// ✅ Performance indexes
 announcementSchema.index(
     { is_deleted: 1, start_at: 1, end_at: 1 },
     { name: 'idx_active_scheduling' }

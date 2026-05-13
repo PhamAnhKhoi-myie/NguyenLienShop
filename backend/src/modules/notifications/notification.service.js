@@ -10,11 +10,6 @@ const ERROR_CODES = {
 };
 
 class NotificationService {
-    /**
-     * Create notification (system/admin only)
-     * @param {Object} data - Notification payload
-     * @returns {Object} DTO
-     */
     static async createNotification(data) {
         try {
             const notification = new Notification({
@@ -54,12 +49,6 @@ class NotificationService {
         }
     }
 
-    /**
-     * Get paginated notifications for user
-     * @param {String} userId - User ID
-     * @param {Object} filters - Filter options
-     * @returns {Object} { data, pagination }
-     */
     static async getNotifications(userId, filters = {}) {
         const {
             page = 1,
@@ -72,14 +61,12 @@ class NotificationService {
         const skip = (page - 1) * limit;
 
         try {
-            // ✅ Build query (ownership check)
             const query = { user_id: userId };
 
             if (type) query.type = type;
             if (priority) query.priority = priority;
             if (unread_only) query.read_at = null;
 
-            // ✅ Fetch notifications (latest first)
             const [notifications, total] = await Promise.all([
                 Notification.find(query)
                     .sort({ created_at: -1 })
@@ -120,11 +107,6 @@ class NotificationService {
         }
     }
 
-    /**
-     * Get unread count for user
-     * @param {String} userId - User ID
-     * @returns {Number} Unread count
-     */
     static async getUnreadCount(userId) {
         try {
             const count = await Notification.countDocuments({
@@ -148,15 +130,8 @@ class NotificationService {
         }
     }
 
-    /**
-     * Mark single notification as read
-     * @param {String} notificationId - Notification ID
-     * @param {String} userId - User ID (ownership check)
-     * @returns {Object} DTO
-     */
     static async markAsRead(notificationId, userId) {
         try {
-            // ✅ Ownership check
             const notification = await Notification.findOne({
                 _id: notificationId,
                 user_id: userId
@@ -170,12 +145,10 @@ class NotificationService {
                 );
             }
 
-            // ✅ Already read → return as-is
             if (notification.read_at) {
                 return NotificationMapper.toDTO(notification);
             }
 
-            // ✅ Mark as read
             notification.read_at = new Date();
             const updated = await notification.save();
 
@@ -204,15 +177,8 @@ class NotificationService {
         }
     }
 
-    /**
-     * Mark multiple notifications as read
-     * @param {Array} notificationIds - Notification IDs
-     * @param {String} userId - User ID (ownership check)
-     * @returns {Object} { marked_count }
-     */
     static async markBulkAsRead(notificationIds, userId) {
         try {
-            // ✅ Bulk atomic update with ownership check
             const result = await Notification.updateMany(
                 {
                     _id: { $in: notificationIds },
@@ -249,11 +215,6 @@ class NotificationService {
         }
     }
 
-    /**
-     * Mark all user notifications as read
-     * @param {String} userId - User ID
-     * @returns {Object} { marked_count }
-     */
     static async markAllAsRead(userId) {
         try {
             const result = await Notification.updateMany(
@@ -290,15 +251,8 @@ class NotificationService {
         }
     }
 
-    /**
-     * Delete notification (soft delete)
-     * @param {String} notificationId - Notification ID
-     * @param {String} userId - User ID (ownership check)
-     * @returns {void}
-     */
     static async deleteNotification(notificationId, userId) {
         try {
-            // ✅ Soft delete with ownership check
             const result = await Notification.updateOne(
                 {
                     _id: notificationId,
@@ -340,11 +294,6 @@ class NotificationService {
         }
     }
 
-    /**
-     * Delete all user notifications (soft delete)
-     * @param {String} userId - User ID
-     * @returns {Object} { deleted_count }
-     */
     static async deleteAllNotifications(userId) {
         try {
             const result = await Notification.updateMany(
@@ -376,15 +325,8 @@ class NotificationService {
         }
     }
 
-    /**
-     * Get single notification
-     * @param {String} notificationId - Notification ID
-     * @param {String} userId - User ID (ownership check)
-     * @returns {Object} DTO
-     */
     static async getNotificationById(notificationId, userId) {
         try {
-            // ✅ Ownership check
             const notification = await Notification.findOne({
                 _id: notificationId,
                 user_id: userId

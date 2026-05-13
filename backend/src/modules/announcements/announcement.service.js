@@ -4,12 +4,6 @@ const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
 
 class AnnouncementService {
-    /**
-     * Get active announcements (public endpoint)
-     * ✅ Only return currently active announcements (start_at ≤ now < end_at)
-     * ✅ Sorted by priority (highest first), then by start_at
-     * ✅ Optional target filter
-     */
     static async getActive(target = null) {
         const now = new Date();
 
@@ -19,7 +13,6 @@ class AnnouncementService {
             end_at: { $gt: now }
         };
 
-        // Optional target filter (for role-based announcements)
         if (target) {
             query.$or = [{ target: 'all' }, { target }];
         } else {
@@ -33,11 +26,6 @@ class AnnouncementService {
         return AnnouncementMapper.toDTOList(announcements);
     }
 
-    /**
-     * Get all announcements (admin only)
-     * ✅ Return active + scheduled announcements
-     * ✅ Optional filters by target, type, status
-     */
     static async getAll(filters = {}) {
         const query = { is_deleted: false };
 
@@ -49,7 +37,6 @@ class AnnouncementService {
             query.type = filters.type;
         }
 
-        // Optional: only active (not scheduled)
         if (filters.activeOnly) {
             const now = new Date();
             query.start_at = { $lte: now };
@@ -63,10 +50,6 @@ class AnnouncementService {
         return AnnouncementMapper.toDTOList(announcements);
     }
 
-    /**
-     * Get single announcement by ID
-     * ✅ Safe for public
-     */
     static async getAnnouncementById(announcementId) {
         const announcement = await Announcement.findById(announcementId);
 
@@ -81,12 +64,6 @@ class AnnouncementService {
         return AnnouncementMapper.toDTO(announcement);
     }
 
-    /**
-     * Create announcement
-     * ✅ Validation already done by middleware
-     * ✅ Audit trail (created_by)
-     * ✅ Structured logging
-     */
     static async createAnnouncement(data, userId) {
         const announcement = new Announcement({
             ...data,
@@ -107,12 +84,6 @@ class AnnouncementService {
         return AnnouncementMapper.toDTO(announcement);
     }
 
-    /**
-     * Update announcement
-     * ✅ Check ownership (document exists)
-     * ✅ Audit trail (updated_by)
-     * ✅ Structured logging
-     */
     static async updateAnnouncement(announcementId, data, userId) {
         const announcement = await Announcement.findById(announcementId);
 
@@ -124,7 +95,6 @@ class AnnouncementService {
             );
         }
 
-        // Update fields and audit trail
         Object.assign(announcement, data, { updated_by: userId });
 
         await announcement.save();
@@ -139,12 +109,6 @@ class AnnouncementService {
         return AnnouncementMapper.toDTO(announcement);
     }
 
-    /**
-     * Soft delete announcement
-     * ✅ Set is_deleted = true, deleted_at = now
-     * ✅ Audit trail (updated_by)
-     * ✅ Structured logging
-     */
     static async deleteAnnouncement(announcementId, userId) {
         const result = await Announcement.updateOne(
             { _id: announcementId },
@@ -170,12 +134,6 @@ class AnnouncementService {
         });
     }
 
-    /**
-     * Restore deleted announcement
-     * ✅ Set is_deleted = false, deleted_at = null
-     * ✅ Audit trail (updated_by)
-     * ✅ Structured logging
-     */
     static async restoreAnnouncement(announcementId, userId) {
         const result = await Announcement.updateOne(
             { _id: announcementId },
@@ -204,11 +162,6 @@ class AnnouncementService {
         return AnnouncementMapper.toDTO(announcement);
     }
 
-    /**
-     * Get deleted announcements (admin recovery)
-     * ✅ Bypass auto-filter with includeDeleted option
-     * ✅ Sorted by deleted_at (newest first)
-     */
     static async getDeletedAnnouncements() {
         const announcements = await Announcement.find(
             { is_deleted: true },
@@ -221,10 +174,6 @@ class AnnouncementService {
         return AnnouncementMapper.toDTOList(announcements);
     }
 
-    /**
-     * Get scheduled announcements (not started yet)
-     * ✅ For admin preview
-     */
     static async getScheduledAnnouncements() {
         const now = new Date();
 
@@ -238,10 +187,6 @@ class AnnouncementService {
         return AnnouncementMapper.toDTOList(announcements);
     }
 
-    /**
-     * Get expired announcements
-     * ✅ For audit/archive
-     */
     static async getExpiredAnnouncements() {
         const now = new Date();
 
