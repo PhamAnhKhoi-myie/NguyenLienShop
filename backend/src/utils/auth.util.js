@@ -1,13 +1,5 @@
 const AppError = require('./appError.util');
 
-/**
- * Assert that user is authenticated
- * Throws AppError if not authenticated
- * 
- * @param {Object} user - User object from req.user
- * @returns {Object} Validated user object
- * @throws {AppError} If user is not authenticated
- */
 const assertAuthenticated = (user) => {
     if (!user) {
         throw new AppError(
@@ -19,15 +11,6 @@ const assertAuthenticated = (user) => {
     return user;
 };
 
-/**
- * Assert that user has required role
- * Throws AppError if user doesn't have role
- * 
- * @param {Object} user - User object from req.user
- * @param {Array<string>} allowedRoles - Required roles (e.g., ['ADMIN'])
- * @returns {Object} Validated user object
- * @throws {AppError} If user doesn't have required role
- */
 const assertRole = (user, allowedRoles = []) => {
     assertAuthenticated(user);
 

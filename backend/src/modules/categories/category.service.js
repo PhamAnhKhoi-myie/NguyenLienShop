@@ -348,12 +348,11 @@ class CategoryService {
         session.startTransaction();
 
         try {
-            // ✅ Tìm soft-deleted categories
             const category = await Category.findOne(
                 { _id: categoryId },
                 null,
                 { session }
-            ).setOptions({ _recursed: true });
+            ).setOptions({ includeDeleted: true });
 
             if (!category) {
                 throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');

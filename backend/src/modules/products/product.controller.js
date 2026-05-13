@@ -55,7 +55,12 @@ const getProductsByCategory = asyncHandler(async (req, res) => {
 });
 
 const getProductBySlug = asyncHandler(async (req, res) => {
-    const product = await ProductService.getProductBySlug(req.params.slug);
+    const includeUnits = req.query.include_units === 'true';
+
+    const product = await ProductService.getProductBySlug(
+        req.params.slug,
+        { includeUnits }
+    );
 
     res.status(200).json({
         success: true,
@@ -80,9 +85,6 @@ const getProductById = asyncHandler(async (req, res) => {
 // ===== ADMIN ENDPOINTS =====
 
 const createProduct = asyncHandler(async (req, res) => {
-    const user = assertAuthenticated(req.user);
-    assertRole(user, ['MANAGER', 'ADMIN']);
-
     const product = await ProductService.createProduct(req.body);
 
     res.status(201).json({
@@ -92,9 +94,6 @@ const createProduct = asyncHandler(async (req, res) => {
 });
 
 const updateProduct = asyncHandler(async (req, res) => {
-    const user = assertAuthenticated(req.user);
-    assertRole(user, ['MANAGER', 'ADMIN']);
-
     const { productId } = req.params;
 
     const product = await ProductService.updateProduct(
@@ -109,9 +108,6 @@ const updateProduct = asyncHandler(async (req, res) => {
 });
 
 const deleteProduct = asyncHandler(async (req, res) => {
-    const user = assertAuthenticated(req.user);
-    assertRole(user, ['MANAGER', 'ADMIN']);
-
     const { productId } = req.params;
 
     const result = await ProductService.deleteProduct(productId);

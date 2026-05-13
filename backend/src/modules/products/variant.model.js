@@ -31,14 +31,11 @@ const variantSchema = new mongoose.Schema(
         },
 
         // ===== IDENTITY =====
-        // ✅ FIX #4: SKU must be unique (format: {product}-{size}-{fabric})
-        // Enforce format ở service layer
         sku: {
             type: String,
             required: [true, 'SKU is required'],
             uppercase: true,
             trim: true,
-            // Regex: TUBAO-NA-20x25-NOTDYET (example)
             match: [
                 /^[A-Z0-9\-]+$/,
                 'SKU must contain only uppercase letters, numbers, and hyphens',
@@ -46,27 +43,19 @@ const variantSchema = new mongoose.Schema(
         },
 
         // ===== ATTRIBUTES =====
-        // ✅ FIX #2: Flatten attributes (not nested object)
-        // This allows better indexing
         size: {
             type: String,
             required: [true, 'Size is required'],
             trim: true,
-            // Enum ở validator layer (hoặc hardcode size list)
-            // Example: "20x25", "25x30"
         },
 
         fabric_type: {
             type: String,
             required: [true, 'Fabric type is required'],
             trim: true,
-            // Enum ở validator layer
-            // Example: "Vải Không Dệt", "Lưới Mùng"
         },
 
         // ===== PRICING (CACHED) =====
-        // ✅ FIX #3: Price cached từ variant_units
-        // Updated via service layer
         min_price: {
             type: Number,
             default: 0,
@@ -79,7 +68,6 @@ const variantSchema = new mongoose.Schema(
             min: [0, 'Max price cannot be negative'],
         },
 
-        // ✅ Price per unit (for comparison)
         min_price_per_unit: {
             type: Number,
             default: 0,
@@ -93,8 +81,6 @@ const variantSchema = new mongoose.Schema(
         },
 
         // ===== STOCK =====
-        // ✅ FIX #2: Stock tính theo cái (NOT pack)
-        // available = total - reserved
         stock: {
             type: stockSchema,
             default: () => ({}),
@@ -203,7 +189,6 @@ variantSchema.pre('aggregate', function (next) {
 });
 
 variantSchema.pre('save', function (next) {
-    this.updated_at = new Date();
     next();
 });
 
@@ -213,7 +198,7 @@ variantSchema.statics.updatePriceCache = async function (variantId) {
     const VariantUnit = mongoose.model('VariantUnit');
 
     const units = await VariantUnit.find(
-        { variant_id: variantId, is_deleted: false },
+        { variant_id: variantId },
         'pack_size price_tiers'
     );
 
@@ -227,7 +212,6 @@ variantSchema.statics.updatePriceCache = async function (variantId) {
         return;
     }
 
-    // Calculate min/max prices từ tất cả units
     let minPrice = Infinity;
     let maxPrice = 0;
     let minPricePerUnit = Infinity;
@@ -236,12 +220,10 @@ variantSchema.statics.updatePriceCache = async function (variantId) {
     units.forEach((unit) => {
         if (unit.price_tiers.length === 0) return;
 
-        // Tier prices
         const tierPrices = unit.price_tiers.map((t) => t.unit_price);
         minPrice = Math.min(minPrice, ...tierPrices);
         maxPrice = Math.max(maxPrice, ...tierPrices);
 
-        // Per-unit prices (chia pack_size)
         const perUnitPrices = tierPrices.map((p) => p / unit.pack_size);
         minPricePerUnit = Math.min(minPricePerUnit, ...perUnitPrices);
         maxPricePerUnit = Math.max(maxPricePerUnit, ...perUnitPrices);

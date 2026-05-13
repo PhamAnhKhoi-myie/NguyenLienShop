@@ -10,23 +10,19 @@ class VariantUnitMapper {
             id: doc._id?.toString(),
             variant_id: doc.variant_id?.toString(),
 
-            // ✅ Unit definition
             unit_type: doc.unit_type,
             display_name: doc.display_name,
             pack_size: doc.pack_size,
 
-            // ✅ FIX #1: Price tiers (critical)
             price_tiers: this.transformPriceTiers(
                 doc.price_tiers || [],
                 doc.pack_size
             ),
 
-            // ✅ Order rules
             min_order_qty: doc.min_order_qty || 1,
             max_order_qty: doc.max_order_qty || null,
             qty_step: doc.qty_step || 1,
 
-            // ✅ Visibility
             is_default: doc.is_default || false,
             currency: doc.currency || 'VND',
 
@@ -60,7 +56,6 @@ class VariantUnitMapper {
             display_name: doc.display_name,
             pack_size: doc.pack_size,
 
-            // ✅ Price range (for card display)
             price_range: {
                 min: minPrice,
                 max: maxPrice,
@@ -85,17 +80,17 @@ class VariantUnitMapper {
             display_name: doc.display_name,
             pack_size: doc.pack_size,
 
-            // ✅ Full tier details for calculation
-            price_tiers: this.transformPriceTiers(priceTiers),
+            price_tiers: this.transformPriceTiers(
+                priceTiers,
+                doc.pack_size
+            ),
 
-            // ✅ Order constraints (enforce in UI)
             min_order_qty: doc.min_order_qty || 1,
             max_order_qty: doc.max_order_qty || null,
             qty_step: doc.qty_step || 1,
 
             currency: doc.currency || 'VND',
 
-            // ✅ Info to display
             description: this.generateUnitDescription(
                 doc.display_name,
                 doc.pack_size,
@@ -111,7 +106,6 @@ class VariantUnitMapper {
 
         const doc = unit.toObject ? unit.toObject() : unit;
 
-        // ✅ Find matching price tier for qty
         const matchingTier = this.findPriceTierForQty(
             qtyPacks,
             doc.price_tiers || []
@@ -128,13 +122,11 @@ class VariantUnitMapper {
             quantity_packs: qtyPacks,
             total_items: totalItems,
 
-            // ✅ Pricing snapshot
             unit_price: unitPrice,
             total_price: totalPrice,
             price_per_item: Math.round(totalPrice / totalItems),
             currency: doc.currency || 'VND',
 
-            // ✅ Tier info
             applied_tier: matchingTier
                 ? {
                     min_qty: matchingTier.min_qty,
@@ -152,34 +144,40 @@ class VariantUnitMapper {
         const doc = unit.toObject ? unit.toObject() : unit;
 
         const priceTiers = doc.price_tiers || [];
-        const minPrice = priceTiers.length > 0 ?
-            Math.min(...priceTiers.map(t => t.unit_price)) : 0;
-        const maxPrice = priceTiers.length > 0 ?
-            Math.max(...priceTiers.map(t => t.unit_price)) : 0;
+        const minPrice = priceTiers.length > 0
+            ? Math.min(...priceTiers.map(t => t.unit_price))
+            : 0;
+
+        const maxPrice = priceTiers.length > 0
+            ? Math.max(...priceTiers.map(t => t.unit_price))
+            : 0;
 
         return {
             id: doc._id?.toString(),
             variant_id: doc.variant_id?.toString(),
 
-            // ✅ Unit details
             unit_type: doc.unit_type,
             display_name: doc.display_name,
             pack_size: doc.pack_size,
 
-            // ✅ Price analysis
             pricing: {
                 min_price: minPrice,
                 max_price: maxPrice,
-                price_per_unit_min: Math.round(minPrice / doc.pack_size),
-                price_per_unit_max: Math.round(maxPrice / doc.pack_size),
+                price_per_unit_min: doc.pack_size
+                    ? Math.round(minPrice / doc.pack_size)
+                    : 0,
+                price_per_unit_max: doc.pack_size
+                    ? Math.round(maxPrice / doc.pack_size)
+                    : 0,
                 tier_count: priceTiers.length,
                 currency: doc.currency,
             },
 
-            // ✅ Full tier breakdown
-            price_tiers: this.transformPriceTiers(priceTiers),
+            price_tiers: this.transformPriceTiers(
+                priceTiers,
+                doc.pack_size
+            ),
 
-            // ✅ Order rules
             constraints: {
                 min_order_qty: doc.min_order_qty || 1,
                 max_order_qty: doc.max_order_qty || null,
@@ -203,7 +201,11 @@ class VariantUnitMapper {
             min_qty: tier.min_qty,
             max_qty: tier.max_qty,
             unit_price: tier.unit_price,
-            price_per_unit: Math.round(tier.unit_price / packSize), // ✅ FIX
+
+            price_per_unit: packSize
+                ? Math.round(tier.unit_price / packSize)
+                : 0,
+
             qty_range: this.formatQtyRange(tier.min_qty, tier.max_qty),
         }));
     }
@@ -219,10 +221,8 @@ class VariantUnitMapper {
             max_qty: tier.max_qty,
             unit_price: tier.unit_price,
 
-            // ✅ Per-unit price
             price_per_unit: Math.round(tier.unit_price / packSize),
 
-            // ✅ Display
             qty_range: this.formatQtyRange(tier.min_qty, tier.max_qty),
         }));
     }

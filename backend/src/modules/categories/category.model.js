@@ -116,10 +116,6 @@ categorySchema.index({ is_deleted: 1, status: 1 });
 
 // ===== MIDDLEWARE: Auto-Slug Generation =====
 
-/**
- * ✅ FIX #7: Auto-generate slug từ name
- * Chạy trước validate để check duplicate
- */
 categorySchema.pre('validate', function (next) {
     if (!this.slug && this.name) {
         this.slug = slugify(this.name, {
@@ -133,11 +129,6 @@ categorySchema.pre('validate', function (next) {
 
 // ===== MIDDLEWARE: Enforce Level & Timestamp on Save =====
 
-/**
- * ✅ Pre-save: Enforce level consistency
- * level = path.length (tính tự động, không cho client set)
- * Chỉ dùng cho direct save(), không dùng cho update operations
- */
 categorySchema.pre('save', function (next) {
     this.level = this.path.length;
     this.updated_at = Date.now();
@@ -146,12 +137,6 @@ categorySchema.pre('save', function (next) {
 
 // ===== MIDDLEWARE: Auto-Filter Soft-Deleted =====
 
-/**
- * ✅ Auto-filter soft-deleted categories
- * Middleware để tự động exclude is_deleted=true từ queries
- * 
- * ⚠️ DISCIPLINE: Luôn truyền { includeDeleted: true } nếu cần query deleted
- */
 categorySchema.pre(/^find/, function (next) {
     if (this.getOptions().includeDeleted) {
         return next();
@@ -162,10 +147,6 @@ categorySchema.pre(/^find/, function (next) {
 
 // ===== STATIC METHODS: Path Calculation =====
 
-/**
- * ✅ FIX #2: Tính toán path mới khi thay đổi parent
- * Bulletproof circular reference detection
- */
 categorySchema.statics.calculateNewPath = async function (categoryId, newParentId) {
     const categoryIdStr = categoryId.toString();
 
@@ -191,26 +172,6 @@ categorySchema.statics.calculateNewPath = async function (categoryId, newParentI
     return [];
 };
 
-/**
- * ✅ FIX #1: Update descendants path + level khi move category
- * CRITICAL: Đảm bảo cây không bị sai lệch
- * 
- * Ví dụ:
- * A (root)
- *  └ B (move to X)
- *     └ C
- *
- * oldPath(B) = [A]
- * desc.path(C) = [A, B]
- * newPath(B) = [X, A] (sau khi move)
- *
- * Tính path(C):
- * - Loại bỏ old ancestors: desc.path.slice(oldPath.length + 1)
- *   = [A, B].slice(2) = []
- * - Thêm new ancestors: [...newPath, ...descendants_part]
- *   = [X, A] + [] = [X, A]
- * - Level(C) = newPath.length + descendants_part.length = 2 + 0 = 2 ✅
- */
 categorySchema.statics.updateDescendantsPath = async function (
     categoryId,
     oldPath,
@@ -254,10 +215,6 @@ categorySchema.statics.updateDescendantsPath = async function (
 
 // ===== STATIC METHODS: Query Helpers =====
 
-/**
- * ✅ FIX #6.1: Tìm descendants + filter + sort
- * includeDeleted: nếu false → auto-exclude soft-deleted (pre hook)
- */
 categorySchema.statics.findDescendants = async function (categoryId, options = {}) {
     const { includeInactive = false, includeDeleted = false } = options;
 
@@ -274,9 +231,6 @@ categorySchema.statics.findDescendants = async function (categoryId, options = {
         .lean();
 };
 
-/**
- * ✅ FIX #6.2: Tìm ancestors với đúng thứ tự (breadcrumb root → parent)
- */
 categorySchema.statics.findAncestors = async function (categoryId, includeDeleted = false) {
     const query = { _id: categoryId };
     if (!includeDeleted) {
@@ -302,9 +256,6 @@ categorySchema.statics.findAncestors = async function (categoryId, includeDelete
         .filter(Boolean);
 };
 
-/**
- * Direct children của category
- */
 categorySchema.statics.findChildren = async function (categoryId, options = {}) {
     const { includeInactive = false, includeDeleted = false } = options;
 
@@ -321,17 +272,10 @@ categorySchema.statics.findChildren = async function (categoryId, options = {}) 
         .lean();
 };
 
-/**
- * Tất cả descendants
- */
 categorySchema.statics.findAllDescendants = async function (categoryId, options = {}) {
     return this.findDescendants(categoryId, options);
 };
 
-/**
- * ✅ Hard delete (clear descendants references)
- * Dùng khi thực sự xoá data (không soft delete)
- */
 categorySchema.statics.hardDeleteWithDescendants = async function (categoryId, session) {
     const result = await this.deleteMany(
         {
@@ -349,10 +293,6 @@ categorySchema.statics.hardDeleteWithDescendants = async function (categoryId, s
     };
 };
 
-/**
- * ✅ Soft delete (mark + timestamp)
- * An toàn hơn cho dữ liệu quan trọng
- */
 categorySchema.statics.softDelete = async function (categoryId, session) {
     const category = await this.findByIdAndUpdate(
         categoryId,
@@ -379,9 +319,6 @@ categorySchema.statics.softDelete = async function (categoryId, session) {
     return category;
 };
 
-/**
- * ✅ Restore soft-deleted category + descendants
- */
 categorySchema.statics.restore = async function (categoryId, session) {
     const category = await this.findByIdAndUpdate(
         categoryId,
@@ -389,7 +326,11 @@ categorySchema.statics.restore = async function (categoryId, session) {
             is_deleted: false,
             deleted_at: null,
         },
-        { new: true, session }
+        {
+            new: true,
+            session,
+            includeDeleted: true,
+        }
     );
 
     if (!category) {

@@ -42,8 +42,6 @@ const productSchema = new mongoose.Schema(
             required: true,
             lowercase: true,
             trim: true,
-            // ✅ FIX #5: Partial unique index (allow reuse after soft-delete)
-            // Index defined below
         },
 
         category_id: {
@@ -60,8 +58,6 @@ const productSchema = new mongoose.Schema(
         },
 
         // ===== PRICING (CACHED) =====
-        // ✅ FIX #3: min/max price cached từ variants
-        // Updated via service layer (not direct)
         min_price: {
             type: Number,
             default: 0,
@@ -75,8 +71,6 @@ const productSchema = new mongoose.Schema(
             min: [0, 'Max price cannot be negative'],
         },
 
-        // ✅ FIX #3: Price per unit (for comparison)
-        // Calculated từ variant units với số lượng tối đa
         min_price_per_unit: {
             type: Number,
             default: 0,
@@ -102,13 +96,11 @@ const productSchema = new mongoose.Schema(
             maxlength: [500, 'Short description must not exceed 500 characters'],
         },
 
-        // ✅ FIX #2: Images with primary + sort
         images: {
             type: [imageSchema],
             default: [],
             validate: {
                 validator: function (v) {
-                    // Check only 1 is_primary
                     const primaryCount = v.filter((img) => img.is_primary).length;
                     return primaryCount <= 1;
                 },
@@ -116,7 +108,6 @@ const productSchema = new mongoose.Schema(
             },
         },
 
-        // SEO
         search_keywords: {
             type: [String],
             default: [],
@@ -161,7 +152,6 @@ const productSchema = new mongoose.Schema(
         },
 
         // ===== SOFT DELETE =====
-        // ✅ FIX #1: Soft delete pattern
         is_deleted: {
             type: Boolean,
             default: false,
@@ -244,15 +234,14 @@ productSchema.pre('validate', function (next) {
 productSchema.pre('save', function (next) {
     if (this.images.length > 0) {
         const hasPrimary = this.images.some((img) => img.is_primary);
+
         if (!hasPrimary) {
             this.images[0].is_primary = true;
         }
 
-        // Sort images by sort_order
         this.images.sort((a, b) => a.sort_order - b.sort_order);
     }
 
-    this.updated_at = new Date();
     next();
 });
 
@@ -352,6 +341,11 @@ productSchema.statics.softDelete = async function (productId, session) {
         throw new Error('Failed to soft delete product');
     }
 
+    const totalVariants = await Variant.countDocuments(
+        { product_id: productId },
+        { session }
+    );
+
     const variantResult = await Variant.updateMany(
         { product_id: productId },
         {
@@ -361,8 +355,10 @@ productSchema.statics.softDelete = async function (productId, session) {
         { session }
     );
 
-    if (!variantResult || variantResult.acknowledged !== true) {
-        throw new Error('Failed to soft delete variants');
+    if (
+        variantResult?.modifiedCount !== totalVariants
+    ) {
+        throw new Error('Failed to soft delete all variants');
     }
 };
 

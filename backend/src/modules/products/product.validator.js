@@ -89,28 +89,31 @@ const updateProductSchema = z.object({
 });
 
 const getProductsSchema = z.object({
-    page: z
-        .string()
-        .transform((v) => parseInt(v, 10))
-        .refine((v) => v >= 1)
+    page: z.coerce
+        .number()
+        .int()
+        .min(1)
         .default(1),
 
-    limit: z
-        .string()
-        .transform((v) => parseInt(v, 10))
-        .refine((v) => v > 0 && v <= 100)
+    limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(100)
         .default(20),
 
     category_id: objectIdOptionalSchema,
 
-    min_price: z
-        .string()
-        .transform((v) => (v ? parseInt(v, 10) : undefined))
+    min_price: z.coerce
+        .number()
+        .int()
+        .nonnegative()
         .optional(),
 
-    max_price: z
-        .string()
-        .transform((v) => (v ? parseInt(v, 10) : undefined))
+    max_price: z.coerce
+        .number()
+        .int()
+        .nonnegative()
         .optional(),
 
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
@@ -125,18 +128,20 @@ const getProductsSchema = z.object({
 const searchProductsSchema = z.object({
     q: z.string().min(2).max(100).trim(),
 
-    limit: z
-        .string()
-        .transform((v) => parseInt(v, 10))
-        .refine((v) => v > 0 && v <= 50)
+    limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(50)
         .default(20),
 });
 
 const getProductsByCategoryQuerySchema = z.object({
-    limit: z
-        .string()
-        .transform((v) => parseInt(v, 10))
-        .refine((v) => v > 0 && v <= 100)
+    limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(100)
         .default(50),
 });
 

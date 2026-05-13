@@ -9,7 +9,6 @@ class ProductService {
     static async createProduct(data) {
         const { name, category_id, ...rest } = data;
 
-        // ✅ Check category exists
         if (category_id) {
             const Category = require('../categories/category.model');
             const category = await Category.findById(category_id);
@@ -22,105 +21,58 @@ class ProductService {
             }
         }
 
-        // ✅ Create product
-        const product = new Product({
-            name,
-            category_id,
-            ...rest,
-        });
+        try {
+            const product = new Product({
+                name,
+                category_id,
+                ...rest,
+            });
 
-        await product.save();
-        return ProductMapper.toResponseDTO(product);
+            await product.save();
+
+            return ProductMapper.toResponseDTO(product);
+
+        } catch (error) {
+            if (error.code === 11000) {
+                throw new AppError(
+                    'Slug already exists',
+                    409,
+                    'SLUG_CONFLICT'
+                );
+            }
+
+            throw error;
+        }
     }
 
-    static async getProductById(productId) {
+    static async getProductById(productId, options = {}) {
+        const { includeUnits = true } = options;
+
         const product = await Product.findOne({
             _id: productId,
             is_deleted: false
         }).lean();
 
         if (!product) {
-            throw new AppError(
-                'Product not found',
-                404,
-                'PRODUCT_NOT_FOUND'
-            );
+            throw new AppError('Product not found', 404, 'PRODUCT_NOT_FOUND');
         }
 
-        const variants = await Variant.find(
-            { product_id: productId },
-            null,
-            { includeDeleted: false }
-        ).lean();
-
-        const variantIds = variants.map(v => v._id);
-
-        const allUnits = await VariantUnit.find({
-            variant_id: { $in: variantIds }
-        }).lean();
-
-        const unitsMap = {};
-
-        for (const unit of allUnits) {
-            const key = unit.variant_id.toString();
-            if (!unitsMap[key]) {
-                unitsMap[key] = [];
-            }
-            unitsMap[key].push(unit);
-        }
-
-        const variantsWithUnits = variants.map((variant) => {
-            return {
-                ...variant,
-                units: unitsMap[variant._id.toString()] || [],
-            };
-        });
-
-        return ProductMapper.toDetailDTO(product, variantsWithUnits);
+        return this._buildProductDetail(product, includeUnits);
     }
 
-    static async getProductBySlug(slug) {
-        const product = await Product.findBySlug(slug).lean();
-        if (!product) {
-            throw new AppError(
-                'Product not found',
-                404,
-                'PRODUCT_NOT_FOUND'
-            );
-        }
+    static async getProductBySlug(slug, options = {}) {
+        const { includeUnits = true } = options;
 
-        const variants = await Variant.find(
-            { product_id: product._id },
-            null,
-            { includeDeleted: false }
-        ).lean();
-
-        // 1. Lấy tất cả variantIds
-        const variantIds = variants.map(v => v._id);
-
-        // 2. Lấy tất cả units 1 lần
-        const allUnits = await VariantUnit.find({
-            variant_id: { $in: variantIds }
+        const product = await Product.findOne({
+            slug,
+            is_deleted: false
         }).lean();
 
-        // 3. Group
-        const unitsMap = {};
-
-        for (const unit of allUnits) {
-            const key = unit.variant_id.toString();
-            if (!unitsMap[key]) {
-                unitsMap[key] = [];
-            }
-            unitsMap[key].push(unit);
+        if (!product) {
+            throw new AppError('Product not found', 404, 'PRODUCT_NOT_FOUND');
         }
 
-        // 4. Map lại
-        const variantsWithUnits = variants.map((variant) => ({
-            ...variant,
-            units: unitsMap[variant._id.toString()] || []
-        }));
-
-        return ProductMapper.toDetailDTO(product, variantsWithUnits);
+        return this._buildProductDetail(product, includeUnits);
     }
 
     static async getAllProducts(
@@ -186,7 +138,7 @@ class ProductService {
             .lean();
 
         return {
-            data: products.map(ProductMapper.toListDTO),
+            data: products.map((p) => ProductMapper.toListDTO(p)),
             pagination: {
                 current_page: page,
                 total_pages: Math.ceil(total / limit),
@@ -287,7 +239,7 @@ class ProductService {
             .sort({ sold_count: -1 })
             .lean();
 
-        return products.map(ProductMapper.toListDTO);
+        return products.map((p) => ProductMapper.toListDTO(p));
     }
 
     static async searchProducts(query, limit = 20) {
@@ -299,7 +251,42 @@ class ProductService {
             .limit(limit)
             .lean();
 
-        return products.map(ProductMapper.toListDTO);
+        return products.map((p) => ProductMapper.toListDTO(p));
+    }
+
+    static async _buildProductDetail(product, includeUnits = true) {
+        const variants = await Variant.find(
+            { product_id: product._id },
+            null,
+            { includeDeleted: false }
+        ).lean();
+
+        let unitsMap = {};
+
+        if (includeUnits && variants.length > 0) {
+            const variantIds = variants.map(v => v._id);
+
+            const allUnits = await VariantUnit.find({
+                variant_id: { $in: variantIds }
+            }).lean();
+
+            for (const unit of allUnits) {
+                const key = unit.variant_id.toString();
+                if (!unitsMap[key]) {
+                    unitsMap[key] = [];
+                }
+                unitsMap[key].push(unit);
+            }
+        }
+
+        const variantsWithUnits = variants.map((variant) => ({
+            ...variant,
+            units: includeUnits
+                ? (unitsMap[variant._id.toString()] || [])
+                : [],
+        }));
+
+        return ProductMapper.toDetailDTO(product, variantsWithUnits);
     }
 }
 
