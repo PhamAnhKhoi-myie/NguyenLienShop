@@ -8,6 +8,7 @@ const EmailService = require('./modules/emails/email.service');
 const PORT = process.env.PORT || 5000;
 
 let server;
+let emailWorker;
 
 const shutdown = async (signal) => {
     console.log(`\n${signal} received, shutting down gracefully...`);
@@ -16,6 +17,10 @@ const shutdown = async (signal) => {
         await new Promise((resolve, reject) => {
             server.close((err) => (err ? reject(err) : resolve()));
         });
+    }
+
+    if (emailWorker) {
+        clearInterval(emailWorker);
     }
 
     await mongoose.connection.close();
@@ -33,11 +38,15 @@ const startServer = async () => {
         console.log(`Server running at http://localhost:${PORT}`);
         console.log(`Swagger docs at http://localhost:${PORT}/api-docs`);
     });
-};
 
-setInterval(() => {
-    EmailService.processOneJob().catch(err => console.error('Email Worker Error:', err));
-}, 10000);
+    emailWorker = setInterval(() => {
+        if (mongoose.connection.readyState !== 1) {
+            return;
+        }
+
+        EmailService.processOneJob().catch(err => console.error('Email Worker Error:', err));
+    }, 10000);
+};
 
 startServer().catch((err) => {
     console.error("Failed to start server:", err);

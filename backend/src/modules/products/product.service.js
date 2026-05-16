@@ -114,11 +114,23 @@ class ProductService {
             }
         }
 
-        // Text search
+        const search = filters.search?.trim();
         let sortBy = { created_at: -1 };
-        if (filters.search) {
-            query.$text = { $search: filters.search };
-            sortBy = { score: { $meta: 'textScore' }, ...sortBy };
+        if (search) {
+            if (!query.status) {
+                query.status = 'ACTIVE';
+            }
+
+            if (query.status === 'ACTIVE') {
+                query.$text = { $search: search };
+                sortBy = { score: { $meta: 'textScore' }, ...sortBy };
+            } else {
+                query.$or = [
+                    { name: { $regex: search, $options: 'i' } },
+                    { short_description: { $regex: search, $options: 'i' } },
+                    { search_keywords: { $regex: search, $options: 'i' } },
+                ];
+            }
         } else if (filters.sortBy === 'popular') {
             sortBy = { sold_count: -1, rating_avg: -1 };
         } else if (filters.sortBy === 'rating') {
@@ -244,7 +256,7 @@ class ProductService {
 
     static async searchProducts(query, limit = 20) {
         const products = await Product.find(
-            { $text: { $search: query } },
+            { status: 'ACTIVE', $text: { $search: query } },
             { score: { $meta: 'textScore' } }
         )
             .sort({ score: { $meta: 'textScore' } })

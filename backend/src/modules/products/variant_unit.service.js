@@ -9,7 +9,6 @@ class VariantUnitService {
     static async createVariantUnit(variantId, data) {
         const { pack_size, price_tiers, is_default, ...rest } = data;
 
-        // ✅ Check variant exists
         const variant = await Variant.findById(variantId);
         if (!variant) {
             throw new AppError(
@@ -19,7 +18,6 @@ class VariantUnitService {
             );
         }
 
-        // ✅ FIX #5: Check pack_size unique per variant
         const existingUnit = await VariantUnit.findOne({
             variant_id: variantId,
             pack_size,
@@ -32,7 +30,6 @@ class VariantUnitService {
             );
         }
 
-        // ✅ FIX #1: Validate price tiers (critical)
         let validatedTiers;
         try {
             const validation = VariantUnit.validatePriceTiers(price_tiers);
@@ -41,17 +38,14 @@ class VariantUnitService {
             throw new AppError(error.message, 400, 'INVALID_PRICE_TIERS');
         }
 
-        // ✅ If this is first unit OR is_default=true, set as default
         let finalIsDefault = is_default;
         if (is_default) {
-            // Clear other defaults
             await VariantUnit.updateMany(
                 { variant_id: variantId },
                 { is_default: false }
             );
             finalIsDefault = true;
         } else {
-            // If first unit, auto-set as default
             const unitCount = await VariantUnit.countDocuments({
                 variant_id: variantId,
             });
@@ -68,7 +62,6 @@ class VariantUnitService {
 
         await unit.save();
 
-        // ✅ FIX #3: Update variant + product price cache
         await VariantService.recalculatePriceCache(variantId);
 
         return VariantUnitMapper.toResponseDTO(unit);
@@ -120,7 +113,6 @@ class VariantUnitService {
             );
         }
 
-        // ✅ FIX #1: If updating price tiers, validate
         if (updateData.price_tiers) {
             try {
                 const validation = VariantUnit.validatePriceTiers(
@@ -136,7 +128,6 @@ class VariantUnitService {
             }
         }
 
-        // ✅ If setting as default, clear others
         if (updateData.is_default) {
             await VariantUnit.updateMany(
                 { variant_id: unit.variant_id },
@@ -152,7 +143,6 @@ class VariantUnitService {
                 { new: true, runValidators: true }
             );
 
-            // ✅ FIX #3: Recalc if tiers changed
             if (updateData.price_tiers) {
                 await VariantService.recalculatePriceCache(
                     unit.variant_id
@@ -175,7 +165,6 @@ class VariantUnitService {
             );
         }
 
-        // ✅ Check: cannot delete last unit (need at least 1)
         const unitCount = await VariantUnit.countDocuments({
             variant_id: unit.variant_id,
         });
@@ -190,10 +179,8 @@ class VariantUnitService {
 
         await VariantUnit.findByIdAndDelete(unitId);
 
-        // ✅ FIX #3: Recalc prices
         await VariantService.recalculatePriceCache(unit.variant_id);
 
-        // ✅ If deleted unit was default, set next as default
         if (unit.is_default) {
             const nextUnit = await VariantUnit.findOne({
                 variant_id: unit.variant_id,
@@ -230,7 +217,6 @@ class VariantUnitService {
             );
         }
 
-        // ✅ Check order qty constraints
         if (qtyPacks < unit.min_order_qty) {
             throw new AppError(
                 `Minimum order quantity is ${unit.min_order_qty} packs`,
@@ -247,7 +233,6 @@ class VariantUnitService {
             );
         }
 
-        // ✅ FIX #1: Get price từ tier
         const calculation = VariantUnit.calculatePrice(
             qtyPacks,
             unit.price_tiers,

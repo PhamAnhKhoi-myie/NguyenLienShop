@@ -110,25 +110,126 @@ class DiscountService {
         };
     }
 
+    static async validateForCart(code, cartSubtotal, userId, cartItems = []) {
+        const discount = await Discount.findByCode(code);
+
+        if (!discount) {
+            throw new AppError('Invalid discount code', 404, 'DISCOUNT_NOT_FOUND');
+        }
+
+        if (discount.status !== 'active') {
+            throw new AppError(
+                'Discount is not active',
+                400,
+                'DISCOUNT_INACTIVE'
+            );
+        }
+
+        const now = new Date();
+        if (discount.started_at > now) {
+            throw new AppError(
+                'This discount is not yet available',
+                400,
+                'DISCOUNT_NOT_STARTED'
+            );
+        }
+
+        if (discount.expiry_date <= now) {
+            throw new AppError(
+                'This discount has expired',
+                400,
+                'DISCOUNT_EXPIRED'
+            );
+        }
+
+        if (discount.usage_count >= discount.usage_limit) {
+            throw new AppError(
+                'Discount usage limit exceeded',
+                400,
+                'DISCOUNT_LIMIT_EXCEEDED'
+            );
+        }
+
+        if (userId) {
+            const userUsageCount = await DiscountUsageLog.countDocuments({
+                discount_id: discount._id,
+                user_id: userId,
+            });
+
+            if (userUsageCount >= discount.usage_per_user_limit) {
+                throw new AppError(
+                    `You've reached max uses for this discount (${discount.usage_per_user_limit})`,
+                    400,
+                    'USER_DISCOUNT_LIMIT_EXCEEDED'
+                );
+            }
+        }
+
+        if (cartSubtotal < discount.min_order_value) {
+            throw new AppError(
+                `Minimum order value ${discount.min_order_value.toLocaleString('vi-VN')} required`,
+                400,
+                'MIN_ORDER_VALUE_NOT_MET'
+            );
+        }
+
+        const applicableItems = this.filterApplicableItems(
+            cartItems,
+            discount.applicable_targets
+        );
+
+        if (applicableItems.length === 0) {
+            throw new AppError(
+                'No items in cart match this discount',
+                400,
+                'NO_APPLICABLE_ITEMS'
+            );
+        }
+
+        const discountAmount = this.calculateDiscount(
+            applicableItems,
+            discount,
+            cartSubtotal
+        );
+
+        return {
+            discount_id: discount._id,
+            code: discount.code,
+            type: discount.type,
+            original_value: discount.value,
+            discount_amount: discountAmount,
+            applicable_item_ids: applicableItems.map((item) => item._id),
+            final_total: cartSubtotal - discountAmount,
+            min_order_value: discount.min_order_value,
+            max_discount_amount: discount.max_discount_amount || null,
+            application_strategy: discount.application_strategy,
+            applicable_targets: discount.applicable_targets,
+            expires_at: discount.expiry_date,
+        };
+    }
+
     static filterApplicableItems(cartItems, applicableTargets = {}) {
         const { type = 'all', product_ids = [], category_ids = [], variant_ids = [] } =
             applicableTargets || {};
+        const productIds = product_ids.map((id) => id.toString());
+        const categoryIds = category_ids.map((id) => id.toString());
+        const variantIds = variant_ids.map((id) => id.toString());
 
         if (type === 'all') {
             return cartItems;
         }
 
         return cartItems.filter((item) => {
-            if (type === 'specific_variants' && variant_ids.length > 0) {
-                return variant_ids.includes(item.variant_id.toString());
+            if (type === 'specific_variants' && variantIds.length > 0) {
+                return variantIds.includes(item.variant_id.toString());
             }
 
-            if (type === 'specific_products' && product_ids.length > 0) {
-                return product_ids.includes(item.product_id.toString());
+            if (type === 'specific_products' && productIds.length > 0) {
+                return productIds.includes(item.product_id.toString());
             }
 
-            if (type === 'specific_categories' && category_ids.length > 0) {
-                return category_ids.includes(item.category_id?.toString());
+            if (type === 'specific_categories' && categoryIds.length > 0) {
+                return categoryIds.includes(item.category_id?.toString());
             }
 
             return false;

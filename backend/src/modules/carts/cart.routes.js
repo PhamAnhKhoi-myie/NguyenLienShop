@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const validate = require('../../middlewares/validate.middleware');
-const { authenticate } = require('../../middlewares/auth.middleware');
+const {
+    authenticate,
+    optionalAuthenticate,
+} = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/authorize.middleware');
 const CartController = require('./cart.controller');
 
@@ -28,6 +31,14 @@ router.post(
 );
 
 router.get(
+    '/guest',
+    validate({
+        query: getCartQuerySchema,
+    }),
+    CartController.getGuestCart
+);
+
+router.get(
     '/guest/:sessionKey',
     validate({
         params: SessionParamSchema,
@@ -47,6 +58,7 @@ router.get(
 
 router.post(
     '/items',
+    optionalAuthenticate,
     validate({ body: addToCartItemBodySchema }),
     CartController.addItem
 );

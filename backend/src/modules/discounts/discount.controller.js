@@ -23,7 +23,10 @@ class DiscountController {
     });
 
     static createDiscount = asyncHandler(async (req, res) => {
-        const discount = await DiscountService.createDiscount(req.body);
+        const discount = await DiscountService.createDiscount(
+            req.body,
+            req.user.userId
+        );
 
         const responseData = DiscountMapper.toDetailDTO(discount);
 

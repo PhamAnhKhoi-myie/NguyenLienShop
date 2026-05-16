@@ -68,6 +68,7 @@ class CartMapper {
 
             discount: doc.discount
                 ? {
+                    discount_id: doc.discount.discount_id?.toString?.() || null,
                     code: doc.discount.code,
                     type: doc.discount.type,
                     value: doc.discount.value,
@@ -140,6 +141,7 @@ class CartMapper {
                 product_id: item.product_id?.toString(),
                 variant_id: item.variant_id?.toString(),
                 unit_id: item.unit_id?.toString(),
+                category_id: item.category_id?.toString(),
 
                 sku: item.sku,
                 variant_label: item.variant_label,
@@ -160,6 +162,7 @@ class CartMapper {
 
             discount: doc.discount
                 ? {
+                    discount_id: doc.discount.discount_id?.toString?.() || null,
                     code: doc.discount.code,
                     type: doc.discount.type,
                     value: doc.discount.value,
@@ -197,6 +200,7 @@ class CartMapper {
 
             discount: doc.discount
                 ? {
+                    discount_id: doc.discount.discount_id?.toString?.() || null,
                     code: doc.discount.code,
                     type: doc.discount.type,
                     value: doc.discount.value,
@@ -249,6 +253,7 @@ class CartMapper {
             product_id: item.product_id?.toString(),
             variant_id: item.variant_id?.toString(),
             unit_id: item.unit_id?.toString(),
+            category_id: item.category_id?.toString(),
 
             sku: item.sku,
             variant_label: item.variant_label,
@@ -277,6 +282,7 @@ class CartMapper {
             product_id: item.product_id?.toString(),
             variant_id: item.variant_id?.toString(),
             unit_id: item.unit_id?.toString(),
+            category_id: item.category_id?.toString(),
 
             sku: item.sku,
             variant_label: item.variant_label,
@@ -304,6 +310,7 @@ class CartMapper {
         }
 
         return {
+            discount_id: discount.discount_id?.toString?.() || null,
             code: discount.code,
             type: discount.type,
             value: discount.value,

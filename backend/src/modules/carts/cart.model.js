@@ -20,6 +20,11 @@ const cartItemSchema = new mongoose.Schema(
             required: [true, 'Unit is required'],
         },
 
+        category_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Category',
+        },
+
         // ===== PRODUCT INFO (DENORMALIZED) =====
         sku: {
             type: String,
@@ -82,6 +87,11 @@ const cartItemSchema = new mongoose.Schema(
 
 const discountSchema = new mongoose.Schema(
     {
+        discount_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Discount',
+        },
+
         code: {
             type: String,
             required: true,
@@ -262,7 +272,14 @@ cartSchema.index(
 
 // ===== MIDDLEWARE: Auto-Filter Active & Non-Expired =====
 const excludeExpired = function (next) {
-    if (!this.getOptions().includeExpired) {
+    const options = this.getOptions?.() || {};
+    const filter = this.getFilter?.() || {};
+    const hasStatusFilter =
+        Object.prototype.hasOwnProperty.call(filter, 'status') ||
+        Object.prototype.hasOwnProperty.call(filter, '$and') ||
+        Object.prototype.hasOwnProperty.call(filter, '$or');
+
+    if (!options.includeExpired && !hasStatusFilter) {
         this.where({ status: 'ACTIVE' });
     }
     next();
@@ -357,10 +374,20 @@ cartSchema.statics.getOrCreateGuestCart = async function (sessionKey) {
 };
 
 cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
+    const unitObjectId =
+        itemData.unit_id instanceof mongoose.Types.ObjectId
+            ? itemData.unit_id
+            : new mongoose.Types.ObjectId(itemData.unit_id);
+    const maxQuantity =
+        typeof itemData.max_quantity === 'number'
+            ? itemData.max_quantity
+            : 999;
+
     const validatedItem = {
         product_id: itemData.product_id,
         variant_id: itemData.variant_id,
-        unit_id: itemData.unit_id,
+        unit_id: unitObjectId,
+        category_id: itemData.category_id,
         sku: itemData.sku,
         variant_label: itemData.variant_label,
         product_name: itemData.product_name,
@@ -377,32 +404,76 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
         throw new Error('Cart not found');
     }
 
+    if (itemData.quantity > maxQuantity) {
+        return null;
+    }
+
     const existingItemIndex = cart.items.findIndex(
-        (i) => i.sku === itemData.sku
+        (i) => i.unit_id?.toString() === unitObjectId.toString()
     );
 
     if (existingItemIndex !== -1) {
-        return await this.findByIdAndUpdate(
-            cartId,
+        return await this.findOneAndUpdate(
+            {
+                _id: cartId,
+                items: {
+                    $elemMatch: {
+                        unit_id: unitObjectId,
+                        quantity: {
+                            $lte: maxQuantity - itemData.quantity,
+                        },
+                    },
+                },
+            },
             {
                 $inc: { 'items.$[item].quantity': itemData.quantity },
                 updated_at: new Date(),
             },
             {
-                arrayFilters: [{ 'item.sku': itemData.sku }],
+                arrayFilters: [{ 'item.unit_id': unitObjectId }],
                 new: true,
                 includeExpired: true,
             }
         );
     }
 
-    return await this.findByIdAndUpdate(
-        cartId,
+    const pushedCart = await this.findOneAndUpdate(
+        {
+            _id: cartId,
+            'items.unit_id': { $ne: unitObjectId },
+        },
         {
             $push: { items: validatedItem },
             updated_at: new Date(),
         },
         { new: true, includeExpired: true }
+    );
+
+    if (pushedCart) {
+        return pushedCart;
+    }
+
+    return await this.findOneAndUpdate(
+        {
+            _id: cartId,
+            items: {
+                $elemMatch: {
+                    unit_id: unitObjectId,
+                    quantity: {
+                        $lte: maxQuantity - itemData.quantity,
+                    },
+                },
+            },
+        },
+        {
+            $inc: { 'items.$[item].quantity': itemData.quantity },
+            updated_at: new Date(),
+        },
+        {
+            arrayFilters: [{ 'item.unit_id': unitObjectId }],
+            new: true,
+            includeExpired: true,
+        }
     );
 };
 
@@ -476,7 +547,7 @@ cartSchema.statics.mergeGuestToUser = async function (
 
     for (const guestItem of guestCart.items) {
         const existingIndex = userCart.items.findIndex(
-            (i) => i.sku === guestItem.sku
+            (i) => i.unit_id?.toString() === guestItem.unit_id?.toString()
         );
 
         if (existingIndex !== -1) {

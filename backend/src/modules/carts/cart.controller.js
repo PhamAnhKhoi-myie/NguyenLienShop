@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto');
 const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
 const { assertAuthenticated } = require('../../utils/auth.util');
@@ -6,10 +7,59 @@ const CartMapper = require('./cart.mapper');
 
 // ===== PUBLIC =====
 
-const createGuestCart = asyncHandler(async (req, res) => {
-    const { session_key } = req.body;
+const GUEST_CART_COOKIE_NAME = 'guest_cart_session';
+const UUID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-    const cart = await CartService.getGuestCart(session_key, {
+const getGuestCartCookieOptions = () => ({
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/api/v1/carts',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
+const getGuestSessionKey = (req) =>
+    req.params?.sessionKey ||
+    req.get('x-cart-session-key') ||
+    req.cookies?.[GUEST_CART_COOKIE_NAME] ||
+    req.query?.session_key ||
+    req.body?.session_key;
+
+const resolveGuestSessionKey = (req, res, options = {}) => {
+    const sessionKey = getGuestSessionKey(req) || (
+        options.create ? randomUUID() : null
+    );
+
+    if (!sessionKey) {
+        throw new AppError(
+            'Guest cart session required',
+            400,
+            'MISSING_SESSION_KEY'
+        );
+    }
+
+    if (!UUID_PATTERN.test(sessionKey)) {
+        throw new AppError(
+            'Invalid guest cart session',
+            400,
+            'INVALID_SESSION_KEY'
+        );
+    }
+
+    res.cookie(
+        GUEST_CART_COOKIE_NAME,
+        sessionKey,
+        getGuestCartCookieOptions()
+    );
+
+    return sessionKey;
+};
+
+const createGuestCart = asyncHandler(async (req, res) => {
+    const sessionKey = resolveGuestSessionKey(req, res, { create: true });
+
+    const cart = await CartService.getGuestCart(sessionKey, {
         extend: false,
     });
 
@@ -20,8 +70,8 @@ const createGuestCart = asyncHandler(async (req, res) => {
 });
 
 const getGuestCart = asyncHandler(async (req, res) => {
-    const { sessionKey } = req.params;
     const { include_items, format } = req.query;
+    const sessionKey = resolveGuestSessionKey(req, res, { create: true });
 
     const cart = await CartService.getGuestCart(sessionKey, {
         extend: true,
@@ -68,20 +118,14 @@ const addItem = asyncHandler(async (req, res) => {
 
     let userId, userType;
     const user = req.user;
-    const sessionKey = req.query.session_key;
 
     if (user && user.userId) {
         userId = user.userId;
         userType = 'user';
-    } else if (sessionKey) {
+    } else {
+        const sessionKey = resolveGuestSessionKey(req, res, { create: true });
         userId = sessionKey;
         userType = 'guest';
-    } else {
-        throw new AppError(
-            'Authentication or session_key required',
-            401,
-            'UNAUTHORIZED'
-        );
     }
 
     const cart = await CartService.addItemToCart(
@@ -109,7 +153,8 @@ const updateItem = asyncHandler(async (req, res) => {
     const cart = await CartService.updateItemQuantity(
         userCart.id,
         itemId,
-        quantity
+        quantity,
+        user.userId
     );
 
     res.status(200).json({
@@ -129,7 +174,8 @@ const removeItem = asyncHandler(async (req, res) => {
 
     const cart = await CartService.removeItemFromCart(
         userCart.id,
-        itemId
+        itemId,
+        user.userId
     );
 
     res.status(200).json({
@@ -147,7 +193,11 @@ const applyDiscount = asyncHandler(async (req, res) => {
         extend: false,
     });
 
-    const cart = await CartService.applyDiscount(userCart.id, code);
+    const cart = await CartService.applyDiscount(
+        userCart.id,
+        code,
+        user.userId
+    );
 
     res.status(200).json({
         success: true,
@@ -174,10 +224,10 @@ const removeDiscount = asyncHandler(async (req, res) => {
 
 const mergeCart = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    const { session_key } = req.body;
+    const sessionKey = resolveGuestSessionKey(req, res);
 
     const mergedCart = await CartService.mergeGuestCartToUser(
-        session_key,
+        sessionKey,
         user.userId
     );
 
@@ -196,9 +246,11 @@ const clearCart = asyncHandler(async (req, res) => {
         extend: false,
     });
 
-    const cart = await CartService.clearCart(userCart.id, {
-        keep_discount,
-    });
+    const cart = await CartService.clearCart(
+        userCart.id,
+        { keep_discount },
+        user.userId
+    );
 
     res.status(200).json({
         success: true,
@@ -230,7 +282,10 @@ const checkoutCart = asyncHandler(async (req, res) => {
         extend: false,
     });
 
-    const snapshot = await CartService.checkoutCart(userCart.id);
+    const snapshot = await CartService.checkoutCart(
+        userCart.id,
+        user.userId
+    );
 
     res.status(200).json({
         success: true,

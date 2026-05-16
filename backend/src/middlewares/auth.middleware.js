@@ -14,17 +14,7 @@ const extractBearerToken = (authHeader) => {
     return { token: parts[1] };
 };
 
-const authenticate = asyncHandler(async (req, res, next) => {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-        throw new AppError(
-            "Authorization header required",
-            401,
-            "BEARER_REQUIRED"
-        );
-    }
-
+const resolveAuthenticatedUser = async (authHeader) => {
     const parsed = extractBearerToken(authHeader);
 
     if (parsed.error === "BEARER_REQUIRED") {
@@ -73,19 +63,19 @@ const authenticate = asyncHandler(async (req, res, next) => {
             );
         }
 
-        req.user = {
-            id: dbUser._id.toString(),
+        const userId = dbUser._id.toString();
+
+        return {
+            userId,
+            id: userId,
             roles: dbUser.roles,
         };
 
-        next();
     } catch (error) {
-        // Nếu đã là AppError → giữ nguyên
         if (error instanceof AppError) {
             throw error;
         }
 
-        // JWT errors
         if (error.name === "TokenExpiredError") {
             throw new AppError(
                 "Access token has expired",
@@ -113,10 +103,37 @@ const authenticate = asyncHandler(async (req, res, next) => {
             "AUTH_ERROR"
         );
     }
+};
+
+const authenticate = asyncHandler(async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+        throw new AppError(
+            "Authorization header required",
+            401,
+            "BEARER_REQUIRED"
+        );
+    }
+
+    req.user = await resolveAuthenticatedUser(authHeader);
+    next();
+});
+
+const optionalAuthenticate = asyncHandler(async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+        return next();
+    }
+
+    req.user = await resolveAuthenticatedUser(authHeader);
+    return next();
 });
 
 
 module.exports = {
     authenticate,
+    optionalAuthenticate,
     extractBearerToken
 };

@@ -1,3 +1,4 @@
+// Swagger đã cũ và có thể sai với nhiều api. cân nhắc trước khi dùng
 /**
  * OpenAPI 3 — định nghĩa tĩnh (static spec). app.js: swaggerUi.setup(swaggerSpec).
  */

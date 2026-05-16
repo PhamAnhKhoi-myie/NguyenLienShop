@@ -164,7 +164,9 @@ const calculatePriceSchema = z.object({
     qty_packs: z.number().int().positive().max(1000000),
 });
 
-const validatePriceTiersSchema = z.array(priceTierSchema).min(1);
+const validatePriceTiersSchema = z.object({
+    price_tiers: z.array(priceTierSchema).min(1),
+});
 
 /**
  * EXPORT

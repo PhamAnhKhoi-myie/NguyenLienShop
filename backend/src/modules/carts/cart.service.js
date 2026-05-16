@@ -7,6 +7,7 @@ const Product = require('../products/product.model');
 const Variant = require('../products/variant.model');
 const VariantUnit = require('../products/variant_unit.model');
 const VariantUnitService = require('../products/variant_unit.service');
+const DiscountService = require('../discounts/discount.service');
 
 /**
  * ============================================
@@ -15,6 +16,93 @@ const VariantUnitService = require('../products/variant_unit.service');
  */
 
 class CartService {
+    static toDiscountItems(items = []) {
+        return items.map((item) => ({
+            _id: item._id,
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            unit_id: item.unit_id,
+            category_id: item.category_id,
+            sku: item.sku,
+            quantity: item.quantity,
+            pack_size: item.pack_size,
+            price_at_added: item.price_at_added,
+            line_total: item.price_at_added * item.quantity,
+        }));
+    }
+
+    static toCartDiscountSnapshot(validation, itemCount) {
+        const type = validation.type === 'percent' ? 'PERCENT' : 'FIXED';
+        const applicableCount = validation.applicable_item_ids?.length || 0;
+
+        return {
+            discount_id: validation.discount_id,
+            code: validation.code,
+            type,
+            value: validation.original_value,
+            discount_amount: Math.round(validation.discount_amount),
+            min_purchase: validation.min_order_value || 0,
+            max_discount:
+                validation.max_discount_amount ||
+                validation.original_value ||
+                validation.discount_amount,
+            apply_scope: applicableCount === itemCount ? 'CART' : 'ITEM',
+            applied_at: new Date(),
+            expires_at: validation.expires_at,
+        };
+    }
+
+    static async refreshAppliedDiscount(cart, userId, options = {}) {
+        if (!cart?.discount) {
+            return cart;
+        }
+
+        if (!cart.items || cart.items.length === 0) {
+            return await Cart.findByIdAndUpdate(
+                cart._id,
+                { discount: null, updated_at: new Date() },
+                { new: true }
+            );
+        }
+
+        const totals = CartMapper.calculateCartTotals(cart.items, null);
+
+        try {
+            const validation = await DiscountService.validateForCart(
+                cart.discount.code,
+                totals.subtotal,
+                userId,
+                this.toDiscountItems(cart.items)
+            );
+
+            return await Cart.findByIdAndUpdate(
+                cart._id,
+                {
+                    discount: this.toCartDiscountSnapshot(
+                        validation,
+                        cart.items.length
+                    ),
+                    updated_at: new Date(),
+                },
+                { new: true }
+            );
+        } catch (error) {
+            if (!(error instanceof AppError)) {
+                throw error;
+            }
+
+            if (options.throwOnInvalid) {
+                throw error;
+            }
+
+            return await Cart.findByIdAndUpdate(
+                cart._id,
+                { discount: null, updated_at: new Date() },
+                { new: true }
+            );
+        }
+    }
+
     static async getUserCart(userId, options = {}) {
         if (!userId) {
             throw new AppError(
@@ -56,8 +144,7 @@ class CartService {
             product_id,
             variant_id,
             unit_id,
-            quantity,
-            ...rest
+            quantity
         } = itemData;
 
         if (!product_id || !variant_id || !unit_id) {
@@ -119,33 +206,6 @@ class CartService {
             );
         }
 
-        const itemsNeeded = quantity * unit.pack_size;
-        if (variant.stock.available < itemsNeeded) {
-            throw new AppError(
-                `Only ${Math.floor(variant.stock.available / unit.pack_size)} packs available`,
-                400,
-                'INSUFFICIENT_STOCK'
-            );
-        }
-
-        // ✅ FIX #5: Check order quantity constraints
-        if (quantity < unit.min_order_qty) {
-            throw new AppError(
-                `Minimum order quantity is ${unit.min_order_qty} packs`,
-                400,
-                'MIN_ORDER_NOT_MET'
-            );
-        }
-
-        if (unit.max_order_qty && quantity > unit.max_order_qty) {
-            throw new AppError(
-                `Maximum order quantity is ${unit.max_order_qty} packs`,
-                400,
-                'MAX_ORDER_EXCEEDED'
-            );
-        }
-
-        // ✅ FIX #6: Get cart
         let cart;
         if (userType === 'user') {
             cart = await Cart.getOrCreateUserCart(userId);
@@ -155,42 +215,98 @@ class CartService {
             throw new AppError('Invalid user type', 400, 'INVALID_USER_TYPE');
         }
 
-        // ✅ FIX #7: Calculate price from unit's price tiers
-        // Get price for this quantity
+        const existingItem = cart.items.find(
+            (item) => item.unit_id?.toString() === unit_id
+        );
+        const existingQuantity = existingItem?.quantity || 0;
+        const totalQuantity = existingQuantity + quantity;
+
+        if (totalQuantity > 999) {
+            throw new AppError(
+                'Total quantity cannot exceed 999',
+                400,
+                'INVALID_QUANTITY'
+            );
+        }
+
+        const availablePacks = Math.floor(
+            variant.stock.available / unit.pack_size
+        );
+
+        const itemsNeeded = totalQuantity * unit.pack_size;
+        if (variant.stock.available < itemsNeeded) {
+            throw new AppError(
+                `Only ${availablePacks} packs available`,
+                400,
+                'INSUFFICIENT_STOCK'
+            );
+        }
+
+        if (totalQuantity < unit.min_order_qty) {
+            throw new AppError(
+                `Minimum order quantity is ${unit.min_order_qty} packs`,
+                400,
+                'MIN_ORDER_NOT_MET'
+            );
+        }
+
+        if (unit.max_order_qty && totalQuantity > unit.max_order_qty) {
+            throw new AppError(
+                `Maximum order quantity is ${unit.max_order_qty} packs`,
+                400,
+                'MAX_ORDER_EXCEEDED'
+            );
+        }
+
         const priceCalculation = VariantUnit.calculatePrice(
             quantity,
             unit.price_tiers,
             unit.pack_size
         );
 
-        // ✅ FIX #8: Prepare item data for snapshot
+        const maxQuantity = Math.min(
+            999,
+            availablePacks,
+            unit.max_order_qty || 999
+        );
+
         const cartItemData = {
             product_id,
             variant_id,
             unit_id,
+            category_id: product.category_id,
 
-            // Denormalized snapshot
             sku: variant.sku,
-            variant_label: rest.variant_label || `${variant.size} - ${variant.fabric_type}`,
+            variant_label: `${variant.size} - ${variant.fabric_type}`,
             product_name: product.name,
             product_image: product.images?.[0]?.url || null,
-            display_name: rest.display_name || unit.display_name,
+            display_name: unit.display_name,
             pack_size: unit.pack_size,
 
-            // Price snapshot at add time
             price_at_added: priceCalculation.unit_price,
 
-            // Quantity
             quantity,
+            max_quantity: maxQuantity,
         };
 
-        // ✅ FIX #9: Use atomic update to prevent race conditions
         const updatedCart = await Cart.addItemAtomic(cart._id, cartItemData);
+        if (!updatedCart) {
+            throw new AppError(
+                'Cart quantity changed. Please refresh cart and try again',
+                409,
+                'CART_QUANTITY_CONFLICT'
+            );
+        }
 
-        return CartMapper.toResponseDTO(updatedCart);
+        const discountAdjustedCart = await this.refreshAppliedDiscount(
+            updatedCart,
+            userType === 'user' ? userId : null
+        );
+
+        return CartMapper.toResponseDTO(discountAdjustedCart);
     }
 
-    static async updateItemQuantity(cartId, itemId, newQuantity) {
+    static async updateItemQuantity(cartId, itemId, newQuantity, userId) {
         if (newQuantity < 1 || newQuantity > 999) {
             throw new AppError(
                 'Quantity must be between 1 and 999',
@@ -213,11 +329,76 @@ class CartService {
             );
         }
 
+        const product = await Product.findById(item.product_id);
+        if (!product || product.status !== 'ACTIVE') {
+            throw new AppError(
+                'Product is not available for purchase',
+                400,
+                'PRODUCT_UNAVAILABLE'
+            );
+        }
+
         const variant = await Variant.findById(item.variant_id);
-        const itemsNeeded = newQuantity * item.pack_size;
+        if (
+            !variant ||
+            variant.product_id.toString() !== item.product_id.toString()
+        ) {
+            throw new AppError(
+                'Variant is no longer available',
+                400,
+                'VARIANT_UNAVAILABLE'
+            );
+        }
+
+        if (variant.status !== 'ACTIVE') {
+            throw new AppError(
+                'Variant is not available',
+                400,
+                'VARIANT_UNAVAILABLE'
+            );
+        }
+
+        const unit = await VariantUnit.findById(item.unit_id);
+        if (!unit || unit.variant_id.toString() !== item.variant_id.toString()) {
+            throw new AppError(
+                'Unit is no longer available',
+                400,
+                'UNIT_UNAVAILABLE'
+            );
+        }
+
+        if (newQuantity < unit.min_order_qty) {
+            throw new AppError(
+                `Minimum order quantity is ${unit.min_order_qty} packs`,
+                400,
+                'MIN_ORDER_NOT_MET'
+            );
+        }
+
+        if (unit.max_order_qty && newQuantity > unit.max_order_qty) {
+            throw new AppError(
+                `Maximum order quantity is ${unit.max_order_qty} packs`,
+                400,
+                'MAX_ORDER_EXCEEDED'
+            );
+        }
+
+        const qtyStep = unit.qty_step || 1;
+        if (
+            qtyStep > 1 &&
+            (newQuantity - unit.min_order_qty) % qtyStep !== 0
+        ) {
+            throw new AppError(
+                `Quantity must increase by ${qtyStep} packs`,
+                400,
+                'QTY_STEP_INVALID'
+            );
+        }
+
+        const itemsNeeded = newQuantity * unit.pack_size;
         if (variant.stock.available < itemsNeeded) {
             throw new AppError(
-                `Only ${Math.floor(variant.stock.available / item.pack_size)} packs available`,
+                `Only ${Math.floor(variant.stock.available / unit.pack_size)} packs available`,
                 400,
                 'INSUFFICIENT_STOCK'
             );
@@ -229,10 +410,15 @@ class CartService {
             newQuantity
         );
 
-        return CartMapper.toResponseDTO(updatedCart);
+        const discountAdjustedCart = await this.refreshAppliedDiscount(
+            updatedCart,
+            userId
+        );
+
+        return CartMapper.toResponseDTO(discountAdjustedCart);
     }
 
-    static async removeItemFromCart(cartId, itemId) {
+    static async removeItemFromCart(cartId, itemId, userId) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -249,10 +435,15 @@ class CartService {
 
         const updatedCart = await Cart.removeItemAtomic(cartId, itemId);
 
-        return CartMapper.toResponseDTO(updatedCart);
+        const discountAdjustedCart = await this.refreshAppliedDiscount(
+            updatedCart,
+            userId
+        );
+
+        return CartMapper.toResponseDTO(discountAdjustedCart);
     }
 
-    static async applyDiscount(cartId, code) {
+    static async applyDiscount(cartId, code, userId) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -266,59 +457,28 @@ class CartService {
             );
         }
 
-        const promo = {
-            code: code.toUpperCase(),
-            type: 'PERCENT',
-            value: 10,
-            min_purchase: 500000,
-            max_discount: 100000,
-            apply_scope: 'CART',
-            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        };
-
-        // ✅ Calculate subtotal
         const totals = CartMapper.calculateCartTotals(cart.items, null);
-        const subtotal = totals.subtotal;
+        const validation = await DiscountService.validateForCart(
+            code,
+            totals.subtotal,
+            userId,
+            this.toDiscountItems(cart.items)
+        );
 
-        // ✅ Verify minimum purchase
-        if (subtotal < promo.min_purchase) {
-            throw new AppError(
-                `Minimum purchase ${promo.min_purchase} VND required`,
-                400,
-                'MIN_PURCHASE_NOT_MET'
-            );
-        }
-
-        // ✅ Calculate discount amount
-        let discountAmount =
-            promo.type === 'PERCENT'
-                ? (subtotal * promo.value) / 100
-                : promo.value;
-
-        // Cap by max_discount
-        discountAmount = Math.min(discountAmount, promo.max_discount);
-
-        // ✅ Update cart with discount
         const updatedCart = await Cart.findByIdAndUpdate(
             cartId,
             {
-                discount: {
-                    code: promo.code,
-                    type: promo.type,
-                    value: promo.value,
-                    discount_amount: Math.round(discountAmount),
-                    min_purchase: promo.min_purchase,
-                    max_discount: promo.max_discount,
-                    apply_scope: promo.apply_scope,
-                    applied_at: new Date(),
-                    expires_at: promo.expires_at,
-                },
+                discount: this.toCartDiscountSnapshot(
+                    validation,
+                    cart.items.length
+                ),
                 updated_at: new Date(),
             },
             { new: true }
         );
 
         return CartMapper.toResponseDTO(updatedCart);
+
     }
 
     static async removeDiscount(cartId) {
@@ -392,7 +552,9 @@ class CartService {
 
             for (const guestItem of guestCart.items) {
                 const existingIndex = userCart.items.findIndex(
-                    (i) => i.sku === guestItem.sku
+                    (i) =>
+                        i.unit_id?.toString() ===
+                        guestItem.unit_id?.toString()
                 );
 
                 if (existingIndex !== -1) {
@@ -417,7 +579,13 @@ class CartService {
             );
 
             await session.commitTransaction();
-            return CartMapper.toResponseDTO(userCart);
+
+            const discountAdjustedCart = await this.refreshAppliedDiscount(
+                userCart,
+                userId
+            );
+
+            return CartMapper.toResponseDTO(discountAdjustedCart);
         } catch (error) {
             await session.abortTransaction();
             throw error;
@@ -426,7 +594,7 @@ class CartService {
         }
     }
 
-    static async clearCart(cartId, options = {}) {
+    static async clearCart(cartId, options = {}, userId) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -447,6 +615,15 @@ class CartService {
             { new: true }
         );
 
+        if (options.keep_discount) {
+            const discountAdjustedCart = await this.refreshAppliedDiscount(
+                clearedCart,
+                userId
+            );
+
+            return CartMapper.toResponseDTO(discountAdjustedCart);
+        }
+
         return CartMapper.toResponseDTO(clearedCart);
     }
 
@@ -465,8 +642,8 @@ class CartService {
         return CartMapper.toAbandonedDTO(abandonedCart);
     }
 
-    static async checkoutCart(cartId) {
-        const cart = await Cart.findById(cartId);
+    static async checkoutCart(cartId, userId) {
+        let cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
         }
@@ -478,6 +655,12 @@ class CartService {
                 'EMPTY_CART'
             );
         }
+
+        cart = await this.refreshAppliedDiscount(
+            cart,
+            userId,
+            { throwOnInvalid: true }
+        );
 
         for (const item of cart.items) {
             const variant = await Variant.findById(item.variant_id);

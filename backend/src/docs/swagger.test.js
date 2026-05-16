@@ -1,5 +1,5 @@
+// test đã cũ và có thể sai với nhiều api. cân nhắc trước khi dùng
 // chạy npx jest src/docs/swagger.test.js
-
 
 const swaggerSpec = require("./swagger");
 

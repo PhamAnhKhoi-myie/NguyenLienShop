@@ -30,18 +30,8 @@ const addToCartItemBodySchema = z.object({
     product_id: objectIdSchema,
     variant_id: objectIdSchema,
     unit_id: objectIdSchema,
-
-    sku: skuSchema,
-
-    variant_label: z.string().min(1).max(100).trim(),
-    product_name: z.string().min(1).max(200).trim(),
-    product_image: z.string().url().optional().nullable(),
-    display_name: z.string().min(1).max(50).trim(),
-
-    pack_size: z.number().int().min(1).max(10000),
-    price_at_added: priceSchema,
     quantity: quantitySchema,
-});
+}).strict();
 
 const updateCartItemBodySchema = z.object({
     quantity: quantitySchema,
@@ -53,18 +43,15 @@ const applyDiscountBodySchema = z.object({
 
 const mergeCartBodySchema = z.object({
     session_key: sessionKeySchema,
-}).refine(
-    (d) => d.session_key,
-    { message: 'Session key is required', path: ['session_key'] }
-);
+}).strict();
 
 const clearCartQuerySchema = z.object({
     keep_discount: z.string().transform(v => v === 'true').default('false'),
 });
 
 const createGuestCartBodySchema = z.object({
-    session_key: z.string().uuid(),
-});
+    session_key: z.string().uuid().optional(),
+}).strict();
 
 const getCartQuerySchema = z.object({
     include_items: z.string().transform(v => v === 'true').default('true'),
