@@ -72,7 +72,6 @@ class OrderService {
                 variant_id: cartItem.variant_id,
                 unit_id: cartItem.unit_id,
 
-                // Snapshots (immutable at order time)
                 product_name: cartItem.product_name,
                 product_image: cartItem.product_image,
                 variant_label: cartItem.variant_label,
@@ -80,11 +79,9 @@ class OrderService {
                 unit_label: cartItem.display_name,
                 pack_size: cartItem.pack_size,
 
-                // Quantity tracking
                 quantity_ordered: cartItem.quantity,
                 quantity_fulfilled: 0,
 
-                // Pricing snapshots (immutable)
                 unit_price: cartItem.price_at_added,
                 line_total: cartItem.quantity * cartItem.price_at_added,
 
@@ -105,14 +102,13 @@ class OrderService {
 
             const totalAmount = subtotal - discountAmount + shippingFee;
 
-            // If ANY item fails, entire transaction rolls back
             for (const item of orderItems) {
                 const qtyItems = item.quantity_ordered * item.pack_size;
 
                 const result = await Variant.updateOne(
                     {
                         _id: item.variant_id,
-                        'stock.available': { $gte: qtyItems }, // ← MANDATORY condition
+                        'stock.available': { $gte: qtyItems },
                     },
                     {
                         $inc: {
@@ -123,7 +119,6 @@ class OrderService {
                     { session }
                 );
 
-                // If stock update failed, throw error (transaction will rollback)
                 if (result.modifiedCount === 0) {
                     throw new AppError(
                         `Insufficient stock for ${item.product_name}`,
@@ -165,11 +160,10 @@ class OrderService {
                 },
 
                 status: 'PENDING',
-                payment_expires_at: new Date(Date.now() + 15 * 60000), // 15 min
+                payment_expires_at: new Date(Date.now() + 15 * 60000),
                 customer_notes: shippingData.customer_notes || null,
             });
 
-            // Add initial status history
             order.status_history.push({
                 from: null,
                 to: 'PENDING',
@@ -218,15 +212,12 @@ class OrderService {
                 }], { session });
             }
 
-            // ✅ 8. Delete/mark cart as checked out
             await Cart.deleteOne({ _id: cartId }, { session });
 
-            // Commit transaction (all atomic operations succeeded)
             await session.commitTransaction();
 
             return OrderMapper.toResponseDTO(order);
         } catch (error) {
-            // Automatic rollback on any error
             await session.abortTransaction();
             throw error;
         } finally {
@@ -241,6 +232,23 @@ class OrderService {
         }
 
         return OrderMapper.toDetailDTO(order);
+    }
+
+    static async getAdminOrderById(orderId) {
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            throw new AppError('Invalid order ID', 400, 'INVALID_ORDER_ID');
+        }
+
+        const order = await Order.findById(orderId)
+            .populate('user_id', 'full_name email phone')
+            .populate('discount.discount_id', 'code name type value')
+            .lean();
+
+        if (!order) {
+            throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
+        }
+
+        return OrderMapper.toAdminDTO(order);
     }
 
     static async getOrderByCode(orderCode) {
@@ -261,7 +269,6 @@ class OrderService {
         const skip = (page - 1) * limit;
         const query = { user_id: userId };
 
-        // Filter by status
         if (filters.status) {
             if (Array.isArray(filters.status)) {
                 query.status = { $in: filters.status };
@@ -270,12 +277,10 @@ class OrderService {
             }
         }
 
-        // Filter by payment status
         if (filters.payment_status) {
             query['payment.status'] = filters.payment_status;
         }
 
-        // Filter by date range
         if (filters.date_from || filters.date_to) {
             query.created_at = {};
             if (filters.date_from) {
@@ -286,7 +291,6 @@ class OrderService {
             }
         }
 
-        // Execute query
         const total = await Order.countDocuments(query);
         const orders = await Order.find(query)
             .sort({ created_at: -1 })
@@ -294,12 +298,12 @@ class OrderService {
             .limit(limit);
 
         return {
-            data: orders.map(OrderMapper.toListDTO),
+            data: orders.map((order) => OrderMapper.toListDTO(order)),
             pagination: {
                 page,
                 limit,
                 total,
-                totalPages: Math.ceil(total / limit),
+                pages: Math.ceil(total / limit),
             },
         };
     }
@@ -318,11 +322,9 @@ class OrderService {
             );
         }
 
-        // ✅ Update payment
         order.payment.status = 'PAID';
         order.payment.paid_at = paymentData.paid_at || new Date();
 
-        // ✅ Transition status
         order.addStatusTransition('PAID', null, 'Payment confirmed');
 
         await order.save();
@@ -352,19 +354,18 @@ class OrderService {
                 );
             }
 
-            // ✅ CRITICAL: Restore stock for all items
             for (const item of order.items) {
                 const qtyItems = item.quantity_ordered * item.pack_size;
 
                 const result = await Variant.updateOne(
                     {
                         _id: item.variant_id,
-                        'stock.reserved': { $gte: qtyItems }, // ← Must have reserved
+                        'stock.reserved': { $gte: qtyItems },
                     },
                     {
                         $inc: {
-                            'stock.available': +qtyItems, // Restore
-                            'stock.reserved': -qtyItems, // Release
+                            'stock.available': +qtyItems,
+                            'stock.reserved': -qtyItems,
                         },
                     },
                     { session }
@@ -379,7 +380,6 @@ class OrderService {
                 }
             }
 
-            // ✅ Update payment + status
             order.payment.status = 'FAILED';
             order.addStatusTransition(
                 'FAILED',
@@ -459,7 +459,6 @@ class OrderService {
                 );
             }
 
-            // ✅ Validate fulfillment amount
             if (
                 item.quantity_fulfilled + quantityFulfilled >
                 item.quantity_ordered
@@ -471,13 +470,12 @@ class OrderService {
                 );
             }
 
-            // ✅ ATOMIC: Move inventory from reserved → sold
             const qtyItems = quantityFulfilled * item.pack_size;
 
             const result = await Variant.updateOne(
                 {
                     _id: item.variant_id,
-                    'stock.reserved': { $gte: qtyItems }, // ← Must have reserved
+                    'stock.reserved': { $gte: qtyItems },
                 },
                 {
                     $inc: {
@@ -496,7 +494,6 @@ class OrderService {
                 );
             }
 
-            // ✅ Update item fulfillment
             item.quantity_fulfilled += quantityFulfilled;
 
             await order.save({ session });
@@ -566,7 +563,6 @@ class OrderService {
             );
         }
 
-        // ✅ Update shipment + status
         if (!order.shipment) {
             order.shipment = {};
         }
@@ -593,7 +589,6 @@ class OrderService {
                 );
             }
 
-            // ✅ Check if order can be cancelled
             if (!order.canBeCanceled()) {
                 throw new AppError(
                     'Cannot cancel orders already shipped or completed',
@@ -602,7 +597,6 @@ class OrderService {
                 );
             }
 
-            // ✅ Restore stock for all items (if status is PENDING or PAID)
             if (order.status === 'PENDING' || order.status === 'PAID') {
                 for (const item of order.items) {
                     const qtyItems =
@@ -632,15 +626,10 @@ class OrderService {
                 }
             }
 
-            // ✅ Update status
             order.addStatusTransition('CANCELED', cancelledBy, reason);
 
             await order.save({ session });
             await session.commitTransaction();
-
-            // ✅ If payment taken, refund
-            // (This should be called separately in controller)
-            // await PaymentService.refund(orderId);
 
             return OrderMapper.toDetailDTO(order);
         } catch (error) {
@@ -680,9 +669,6 @@ class OrderService {
             );
         }
 
-        // ⚠️ Optional: Validate allowed transitions (can be strict or permissive)
-        // For now, allow any transition (admin responsibility)
-
         order.addStatusTransition(toStatus, adminUserId, note);
 
         await order.save();
@@ -710,7 +696,6 @@ class OrderService {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
         }
 
-        // ✅ Can only review delivered orders
         if (order.status !== 'DELIVERED') {
             throw new AppError(
                 'Can only review delivered orders',
@@ -728,21 +713,9 @@ class OrderService {
             );
         }
 
-        // ✅ Mark as reviewed
         item.review_status = 'reviewed';
 
         await order.save();
-
-        // ✅ TODO: Create Review document + update product rating
-        // await ReviewService.createReview({
-        //     order_id: orderId,
-        //     item_id: itemId,
-        //     product_id: item.product_id,
-        //     variant_id: item.variant_id,
-        //     user_id: order.user_id,
-        //     rating,
-        //     comment,
-        // });
 
         return OrderMapper.toDetailDTO(order);
     }
@@ -789,12 +762,12 @@ class OrderService {
             .limit(limit);
 
         return {
-            data: orders.map(OrderMapper.toAdminDTO),
+            data: orders.map((order) => OrderMapper.toAdminDTO(order)),
             pagination: {
                 page,
                 limit,
                 total,
-                totalPages: Math.ceil(total / limit),
+                pages: Math.ceil(total / limit),
             },
         };
     }
@@ -838,7 +811,6 @@ class OrderService {
 
         if (!order) return null;
 
-        // ✅ Mapping to DTO before returning
         return OrderMapper.toListDTO(order);
     }
 

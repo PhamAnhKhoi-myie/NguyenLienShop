@@ -9,72 +9,77 @@ const categoryRoutes = require("../modules/categories/category.routes");
 const productModuleRoutes = require("../modules/products/routes");
 const discountRoutes = require("../modules/discounts/discount.routes");
 const cartRoutes = require("../modules/carts/cart.routes");
-const shipmentRoutes = require('../modules/shipments/shipment.routes');
-const reviewRoutes = require('../modules/reviews/review.routes');
-const bannerRoutes = require('../modules/banners/banner.routes');
-const announcementRoutes = require('../modules/announcements/announcement.routes');
-const shopInfoRoutes = require('../modules/shop_info/shop_info.routes');
-const notificationRoutes = require('../modules/notifications/notification.routes');
-const chatRoutes = require('../modules/chats/chat.routes');
-const paymentRoutes = require('../modules/payments/payment.routes');
+const orderRoutes = require("../modules/orders/order.routes");
+const shipmentRoutes = require("../modules/shipments/shipment.routes");
+const reviewRoutes = require("../modules/reviews/review.routes");
+const bannerRoutes = require("../modules/banners/banner.routes");
+const announcementRoutes = require("../modules/announcements/announcement.routes");
+const shopInfoRoutes = require("../modules/shop_info/shop_info.routes");
+const notificationRoutes = require("../modules/notifications/notification.routes");
+const chatRoutes = require("../modules/chats/chat.routes");
+const paymentRoutes = require("../modules/payments/payment.routes");
 const auditLogRoutes = require("../modules/audit_logs/audit_log.routes");
 
 // ============================================================================
 // ===== MOUNT ALL ROUTES =====
 // ============================================================================
 
-// ✅ Auth routes (no prefix)
+// Auth routes
 router.use("/auth", authRoutes);
 
-// ✅ User routes
+// User routes
 router.use("/users", userRoutes);
 
-// ✅ User address routes
+// User address routes
 router.use("/user-addresses", userAddressRoutes);
 
-// ✅ Category routes
+// Category routes
 router.use("/categories", categoryRoutes);
 
-// ✅ Mount cart routes at /carts prefix
+// Cart routes
 router.use("/carts", cartRoutes);
 
-// ✅ Mount discount routes at /discounts prefix
+// Discount routes
 router.use("/discounts", discountRoutes);
 
-// Mount at /api/v1/shipments
-router.use('/shipments', shipmentRoutes);
+// Order routes
+router.use("/orders", orderRoutes);
 
-// Mount review routes
-router.use('/reviews', reviewRoutes);
+// Shipment routes
+router.use("/shipments", shipmentRoutes);
+
+// Review routes
+router.use("/reviews", reviewRoutes);
 
 // Banner routes
-router.use('/banners', bannerRoutes);
+router.use("/banners", bannerRoutes);
 
 // Announcement routes
-router.use('/announcements', announcementRoutes);
+router.use("/announcements", announcementRoutes);
 
 // Shop information routes
-router.use('/shop-info', shopInfoRoutes);
+router.use("/shop-info", shopInfoRoutes);
 
 // Notification routes
 router.use("/notifications", notificationRoutes);
 
-router.use('/payments', paymentRoutes);
+// Payment routes
+router.use("/payments", paymentRoutes);
 
-router.use('/chats', chatRoutes);
+// Chat routes
+router.use("/chats", chatRoutes);
 
+// Audit log routes
 router.use("/audit-logs", auditLogRoutes);
 
-
-// ✅ Product module routes (contains: products, variants, variant-units)
+// Product module routes
 // Routes structure:
-// - /products (GET all, POST create, etc.)
-// - /products/:productId/variants (GET variants, POST create variant)
-// - /variants/:variantId (GET, PATCH, DELETE variant)
-// - /variant-units/:unitId (GET, PATCH, DELETE unit)
-// - /variants/:variantId/units (GET units, POST create unit)
+// - /products
+// - /products/:productId/variants
+// - /variants/:variantId
+// - /variant-units/:unitId
+// - /variants/:variantId/units
 router.use("/", productModuleRoutes);
-
 
 // ============================================================================
 // ===== 404 HANDLER =====

@@ -1,7 +1,9 @@
 const express = require('express');
-const validate = require('../../../middlewares/validate.middleware');
-const authenticate = require('../../../middlewares/auth.middleware');
-const OrderController = require('../order.controller');
+
+const validate = require('../../middlewares/validate.middleware');
+const { authenticate } = require('../../middlewares/auth.middleware');
+
+const OrderController = require('./order.controller');
 
 const {
     // params
@@ -19,7 +21,7 @@ const {
 
     // query
     getOrdersQuerySchema,
-} = require('../order.validator');
+} = require('./order.validator');
 
 const router = express.Router();
 
@@ -35,21 +37,21 @@ router.get(
 
 router.post(
     '/',
-    authenticate(),
+    authenticate,
     validate({ body: createOrderBodySchema }),
     OrderController.createOrder
 );
 
 router.get(
     '/',
-    authenticate(),
+    authenticate,
     validate({ query: getOrdersQuerySchema }),
     OrderController.getOrders
 );
 
 router.post(
     '/:order_id/cancel',
-    authenticate(),
+    authenticate,
     validate({
         params: IdParamSchema,
         body: cancelOrderBodySchema,
@@ -59,7 +61,7 @@ router.post(
 
 router.post(
     '/:order_id/review',
-    authenticate(),
+    authenticate,
     validate({
         params: IdParamSchema,
         body: writeReviewBodySchema,
@@ -71,20 +73,20 @@ router.post(
 
 router.get(
     '/admin/orders/stats',
-    authenticate(),
+    authenticate,
     OrderController.getOrderStats
 );
 
 router.get(
     '/admin/orders',
-    authenticate(),
+    authenticate,
     validate({ query: getOrdersQuerySchema }),
     OrderController.getAllOrders
 );
 
 router.patch(
     '/admin/orders/:order_id/status',
-    authenticate(),
+    authenticate,
     validate({
         params: IdParamSchema,
         body: updateOrderStatusBodySchema,
@@ -94,7 +96,7 @@ router.patch(
 
 router.patch(
     '/admin/orders/:order_id',
-    authenticate(),
+    authenticate,
     validate({
         params: IdParamSchema,
         body: adminUpdateOrderBodySchema,
@@ -104,7 +106,7 @@ router.patch(
 
 router.post(
     '/admin/orders/:order_id/fulfill',
-    authenticate(),
+    authenticate,
     validate({
         params: IdParamSchema,
         body: fulfillItemsBodySchema,
@@ -114,7 +116,7 @@ router.post(
 
 router.post(
     '/admin/orders/:order_id/shipment',
-    authenticate(),
+    authenticate,
     validate({
         params: IdParamSchema,
         body: recordShipmentBodySchema,
@@ -124,7 +126,7 @@ router.post(
 
 router.post(
     '/admin/orders/:order_id/deliver',
-    authenticate(),
+    authenticate,
     validate({
         params: IdParamSchema,
     }),
@@ -133,7 +135,7 @@ router.post(
 
 router.get(
     '/admin/orders/:order_id',
-    authenticate(),
+    authenticate,
     validate({ params: IdParamSchema }),
     OrderController.getAdminOrderDetail
 );
@@ -142,7 +144,7 @@ router.get(
 
 router.get(
     '/:order_id',
-    authenticate(),
+    authenticate,
     validate({ params: IdParamSchema }),
     OrderController.getOrderDetail
 );

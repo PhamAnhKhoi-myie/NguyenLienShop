@@ -2,7 +2,6 @@ const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
 const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const OrderService = require('./order.service');
-const OrderMapper = require('./order.mapper');
 
 // ===== PUBLIC ENDPOINTS =====
 
@@ -300,13 +299,11 @@ const getAdminOrderDetail = asyncHandler(async (req, res) => {
 
     const { order_id } = req.params;
 
-    const order = await OrderService.getOrderById(order_id);
-
-    const adminDTO = OrderMapper.toAdminDTO(order);
+    const order = await OrderService.getAdminOrderById(order_id);
 
     res.status(200).json({
         success: true,
-        data: adminDTO,
+        data: order,
     });
 });
 

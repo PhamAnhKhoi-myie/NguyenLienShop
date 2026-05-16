@@ -138,31 +138,30 @@ const statusHistoryRecordSchema = z.object({
  * Body schemas
  */
 const createOrderBodySchema = z.object({
+    cart_id: objectIdSchema,
+
     address_snapshot: addressSnapshotSchema,
-    items: z.array(orderItemSchema).min(1),
-    pricing: pricingSchema,
-    discount: discountSchema.optional().nullable(),
-    payment: z.object({
-        method: z.enum(['COD', 'VNPAY', 'MOMO', 'CARD']),
-    }),
-    customer_notes: z.string().max(500).optional(),
-    currency: z.enum(['VND', 'USD', 'EUR']).default('VND'),
-})
-    .refine(
-        (order) =>
-            order.items.every(
-                (item) =>
-                    Math.abs(item.line_total - item.quantity_ordered * item.unit_price) < 1
-            ),
-        { message: 'Item line total calculation is incorrect', path: ['items'] }
-    )
-    .refine(
-        (order) => {
-            const subtotal = order.items.reduce((s, i) => s + i.line_total, 0);
-            return Math.abs(subtotal - order.pricing.subtotal) < 1;
-        },
-        { message: 'Subtotal calculation is incorrect', path: ['pricing'] }
-    );
+
+    shipping_fee: z
+        .number({
+            invalid_type_error: 'shipping_fee must be a number',
+        })
+        .min(0, 'shipping_fee cannot be negative')
+        .default(0),
+
+    payment_method: z
+        .enum(['COD', 'VNPAY', 'MOMO', 'CARD'])
+        .default('COD'),
+
+    customer_notes: z
+        .string()
+        .max(500, 'customer_notes cannot exceed 500 characters')
+        .optional(),
+
+    currency: z
+        .enum(['VND', 'USD', 'EUR'])
+        .default('VND'),
+});
 
 const cancelOrderBodySchema = z.object({
     reason: z.string().min(1).max(500).trim(),
