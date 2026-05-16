@@ -109,6 +109,16 @@ const discountSchema = new mongoose.Schema(
             min: [0, 'Value cannot be negative'],
             // If type === 'percent': value = 50 (for 50%)
             // If type === 'fixed': value = 200000 (for 200k VND)
+            validate: {
+                validator: function (value) {
+                    if (this.type === 'percent') {
+                        return value <= 100;
+                    }
+
+                    return true;
+                },
+                message: 'Percent discount value must be <= 100',
+            },
         },
 
         // ===== MAX DISCOUNT AMOUNT (MANDATORY for percent) =====
@@ -520,12 +530,18 @@ discountSchema.statics.findDiscountsForUser = async function (
         is_deleted: false,
         started_at: { $lte: now },
         expiry_date: { $gt: now },
+        $and: [
+            {
+                $or: [
+                    { 'user_eligibility.type': 'all' },
+                    {
+                        'user_eligibility.type': 'specific_users',
+                        'user_eligibility.user_ids': userId,
+                    },
+                ],
+            },
+        ],
     };
-
-    query.$or = [
-        { 'user_eligibility.type': 'all' },
-        { 'user_eligibility.type': 'specific_users', 'user_eligibility.user_ids': userId },
-    ];
 
     const targetOrConditions = [{ 'applicable_targets.type': 'all' }];
 
@@ -550,9 +566,9 @@ discountSchema.statics.findDiscountsForUser = async function (
         });
     }
 
-    if (targetOrConditions.length > 1) {
-        query.applicableTargets = { $or: targetOrConditions };
-    }
+    query.$and.push({
+        $or: targetOrConditions,
+    });
 
     return await this.find(query).lean();
 };

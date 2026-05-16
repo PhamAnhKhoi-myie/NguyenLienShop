@@ -3,6 +3,8 @@ const Discount = require('./discount.model');
 const DiscountUsageLog = require('./discount.usage-log.model');
 const DiscountMapper = require('./discount.mapper');
 const AppError = require('../../utils/appError.util');
+const User = require('../users/user.model');
+const Order = require('../orders/order.model');
 
 /**
  * ============================================
@@ -11,104 +13,270 @@ const AppError = require('../../utils/appError.util');
  */
 
 class DiscountService {
-    static async validateAndApply(code, cartSubtotal, userId, cartItems = []) {
-        const discount = await Discount.findByCode(code);
+    static getTierRank(tier) {
+        const ranks = {
+            bronze: 1,
+            silver: 2,
+            gold: 3,
+            platinum: 4,
+        };
 
-        if (!discount) {
-            throw new AppError('Invalid discount code', 404, 'DISCOUNT_NOT_FOUND');
-        }
+        return ranks[String(tier || '').toLowerCase()] || 0;
+    }
 
-        if (discount.status !== 'active') {
-            throw new AppError(
-                'Discount is not active',
-                400,
-                'DISCOUNT_INACTIVE'
-            );
-        }
+    static getUserTier(user) {
+        return user?.tier || user?.customer_tier || user?.profile?.tier || null;
+    }
 
-        const now = new Date();
-        if (discount.started_at > now) {
-            throw new AppError(
-                'This discount is not yet available',
-                400,
-                'DISCOUNT_NOT_STARTED'
-            );
-        }
-
-        if (discount.expiry_date <= now) {
-            throw new AppError(
-                'This discount has expired',
-                400,
-                'DISCOUNT_EXPIRED'
-            );
-        }
-
-        const updateResult = await Discount.updateOne(
-            {
-                _id: discount._id,
-                usage_count: { $lt: discount.usage_limit }, // ← Condition is MANDATORY
-            },
-            { $inc: { usage_count: 1 } }
-        );
-
-        if (updateResult.modifiedCount === 0) {
-            throw new AppError(
-                'Discount usage limit exceeded',
-                400,
-                'DISCOUNT_LIMIT_EXCEEDED'
-            );
-        }
-
-        const userUsageCount = await DiscountUsageLog.countDocuments({
-            discount_id: discount._id,
-            user_id: userId,
-        });
-
-        if (userUsageCount >= discount.usage_per_user_limit) {
-            throw new AppError(
-                `You've reached max uses for this discount (${discount.usage_per_user_limit})`,
-                400,
-                'USER_DISCOUNT_LIMIT_EXCEEDED'
-            );
-        }
-
-        if (cartSubtotal < discount.min_order_value) {
-            throw new AppError(
-                `Minimum order value ${discount.min_order_value.toLocaleString('vi-VN')} required`,
-                400,
-                'MIN_ORDER_VALUE_NOT_MET'
-            );
-        }
-
-        const applicableItems = this.filterApplicableItems(
-            cartItems,
-            discount.applicable_targets
-        );
-
-        if (applicableItems.length === 0) {
-            throw new AppError(
-                'No items in cart match this discount',
-                400,
-                'NO_APPLICABLE_ITEMS'
-            );
-        }
-
-        const discountAmount = this.calculateDiscount(
-            applicableItems,
-            discount,
-            cartSubtotal
-        );
+    static getCartItemTargetFilters(cartItems = []) {
+        const unique = (values) => [
+            ...new Set(
+                values
+                    .filter(Boolean)
+                    .map((value) => value.toString())
+            ),
+        ];
 
         return {
-            discount_id: discount._id,
-            code: discount.code,
-            type: discount.type,
-            original_value: discount.value,
-            discount_amount: discountAmount,
-            applicable_item_ids: applicableItems.map((item) => item._id),
-            final_total: cartSubtotal - discountAmount,
+            product_ids: unique(cartItems.map((item) => item.product_id)),
+            variant_ids: unique(cartItems.map((item) => item.variant_id)),
+            category_ids: unique(cartItems.map((item) => item.category_id)),
         };
     }
+
+    static async getUserEligibilityContext(userId, session = null, excludeOrderId = null) {
+        if (!userId) {
+            return {
+                user: null,
+                completedOrderCount: 0,
+            };
+        }
+
+        const orderFilter = {
+            user_id: userId,
+            status: { $nin: ['CANCELED', 'FAILED'] },
+            is_deleted: false,
+        };
+
+        if (excludeOrderId) {
+            orderFilter._id = { $ne: excludeOrderId };
+        }
+
+        const userQuery = User.findById(userId).lean();
+        const orderQuery = Order.countDocuments(orderFilter);
+
+        if (session) {
+            userQuery.session(session);
+            orderQuery.session(session);
+        }
+
+        const [user, completedOrderCount] = await Promise.all([
+            userQuery,
+            orderQuery,
+        ]);
+
+        return {
+            user,
+            completedOrderCount,
+        };
+    }
+
+    static assertUserEligible(discount, userId, context = {}) {
+        const eligibility = discount.user_eligibility || {};
+        const type = eligibility.type || 'all';
+
+        if (type === 'all') {
+            return;
+        }
+
+        if (!userId) {
+            throw new AppError(
+                'Authentication is required for this discount',
+                401,
+                'DISCOUNT_AUTH_REQUIRED'
+            );
+        }
+
+        if (type === 'specific_users') {
+            const allowedUserIds = (eligibility.user_ids || []).map((id) =>
+                id.toString()
+            );
+
+            if (!allowedUserIds.includes(userId.toString())) {
+                throw new AppError(
+                    'You are not eligible for this discount',
+                    403,
+                    'DISCOUNT_USER_NOT_ELIGIBLE'
+                );
+            }
+
+            return;
+        }
+
+        if (type === 'first_time_only') {
+            if ((context.completedOrderCount || 0) > 0) {
+                throw new AppError(
+                    'This discount is only available for first-time customers',
+                    403,
+                    'DISCOUNT_FIRST_TIME_ONLY'
+                );
+            }
+
+            return;
+        }
+
+        if (type === 'vip_users') {
+            const user = context.user;
+            const userRoles = (user?.roles || []).map((role) =>
+                String(role).toUpperCase()
+            );
+            const userTier = this.getUserTier(user);
+
+            if (eligibility.min_user_tier) {
+                const userTierRank = this.getTierRank(userTier);
+                const requiredTierRank = this.getTierRank(eligibility.min_user_tier);
+
+                if (userTierRank < requiredTierRank) {
+                    throw new AppError(
+                        'Your account tier is not eligible for this discount',
+                        403,
+                        'DISCOUNT_TIER_NOT_ELIGIBLE'
+                    );
+                }
+
+                return;
+            }
+
+            if (!userRoles.includes('VIP')) {
+                throw new AppError(
+                    'This discount is only available for VIP users',
+                    403,
+                    'DISCOUNT_VIP_ONLY'
+                );
+            }
+        }
+    }
+
+    // static async validateAndApply(code, cartSubtotal, userId, cartItems = []) {
+    //     const discount = await Discount.findByCode(code);
+
+    //     if (!discount) {
+    //         throw new AppError('Invalid discount code', 404, 'DISCOUNT_NOT_FOUND');
+    //     }
+
+    //     if (discount.status !== 'active') {
+    //         throw new AppError(
+    //             'Discount is not active',
+    //             400,
+    //             'DISCOUNT_INACTIVE'
+    //         );
+    //     }
+
+    //     const now = new Date();
+
+    //     if (discount.started_at > now) {
+    //         throw new AppError(
+    //             'This discount is not yet available',
+    //             400,
+    //             'DISCOUNT_NOT_STARTED'
+    //         );
+    //     }
+
+    //     if (discount.expiry_date <= now) {
+    //         throw new AppError(
+    //             'This discount has expired',
+    //             400,
+    //             'DISCOUNT_EXPIRED'
+    //         );
+    //     }
+
+    //     if (discount.usage_count >= discount.usage_limit) {
+    //         throw new AppError(
+    //             'Discount usage limit exceeded',
+    //             400,
+    //             'DISCOUNT_LIMIT_EXCEEDED'
+    //         );
+    //     }
+
+    //     const eligibilityType = discount.user_eligibility?.type || 'all';
+
+    //     if (eligibilityType !== 'all') {
+    //         const eligibilityContext = await this.getUserEligibilityContext(userId);
+    //         this.assertUserEligible(discount, userId, eligibilityContext);
+    //     }
+
+    //     if (userId) {
+    //         const userUsageCount = await DiscountUsageLog.countDocuments({
+    //             discount_id: discount._id,
+    //             user_id: userId,
+    //         });
+
+    //         if (userUsageCount >= discount.usage_per_user_limit) {
+    //             throw new AppError(
+    //                 `You've reached max uses for this discount (${discount.usage_per_user_limit})`,
+    //                 400,
+    //                 'USER_DISCOUNT_LIMIT_EXCEEDED'
+    //             );
+    //         }
+    //     }
+
+    //     if (cartSubtotal < discount.min_order_value) {
+    //         throw new AppError(
+    //             `Minimum order value ${discount.min_order_value.toLocaleString('vi-VN')} required`,
+    //             400,
+    //             'MIN_ORDER_VALUE_NOT_MET'
+    //         );
+    //     }
+
+    //     const applicableItems = this.filterApplicableItems(
+    //         cartItems,
+    //         discount.applicable_targets
+    //     );
+
+    //     if (applicableItems.length === 0) {
+    //         throw new AppError(
+    //             'No items in cart match this discount',
+    //             400,
+    //             'NO_APPLICABLE_ITEMS'
+    //         );
+    //     }
+
+    //     const discountAmount = this.calculateDiscount(
+    //         applicableItems,
+    //         discount,
+    //         cartSubtotal
+    //     );
+
+    //     const updateResult = await Discount.updateOne(
+    //         {
+    //             _id: discount._id,
+    //             status: 'active',
+    //             is_deleted: false,
+    //             started_at: { $lte: now },
+    //             expiry_date: { $gt: now },
+    //             usage_count: { $lt: discount.usage_limit },
+    //         },
+    //         { $inc: { usage_count: 1 } }
+    //     );
+
+    //     if (updateResult.modifiedCount === 0) {
+    //         throw new AppError(
+    //             'Discount usage limit exceeded',
+    //             400,
+    //             'DISCOUNT_LIMIT_EXCEEDED'
+    //         );
+    //     }
+
+    //     return {
+    //         discount_id: discount._id,
+    //         code: discount.code,
+    //         type: discount.type,
+    //         original_value: discount.value,
+    //         discount_amount: discountAmount,
+    //         applicable_item_ids: applicableItems.map((item) => item._id),
+    //         final_total: cartSubtotal - discountAmount,
+    //     };
+    // }
 
     static async validateForCart(code, cartSubtotal, userId, cartItems = []) {
         const discount = await Discount.findByCode(code);
@@ -148,6 +316,12 @@ class DiscountService {
                 400,
                 'DISCOUNT_LIMIT_EXCEEDED'
             );
+        }
+
+        const eligibilityType = discount.user_eligibility?.type || 'all';
+        if (eligibilityType !== 'all') {
+            const eligibilityContext = await this.getUserEligibilityContext(userId);
+            this.assertUserEligible(discount, userId, eligibilityContext);
         }
 
         if (userId) {
@@ -284,17 +458,142 @@ class DiscountService {
         return Math.max(0, Math.round(discountAmount)); // Ensure positive, round to VND
     }
 
-    static async recordUsage(discountId, userId, orderId) {
-        try {
-            await DiscountUsageLog.create({
-                discount_id: discountId,
-                user_id: userId,
-                order_id: orderId,
-                used_at: new Date(),
-            });
-        } catch (error) {
-            console.error('Failed to record discount usage:', error);
+    static async redeemForOrder(discountSnapshot, redemptionData = {}, options = {}) {
+        if (!discountSnapshot) {
+            return null;
         }
+
+        const {
+            userId,
+            orderId,
+            discountAmount = 0,
+            orderTotal,
+            sessionKey,
+            ipAddress,
+            metadata,
+        } = redemptionData;
+
+        const query = {
+            is_deleted: false,
+        };
+
+        if (discountSnapshot.discount_id) {
+            query._id = discountSnapshot.discount_id;
+        } else if (discountSnapshot.code) {
+            query.code = discountSnapshot.code.toUpperCase().trim();
+        } else {
+            throw new AppError('Discount reference missing', 400, 'DISCOUNT_REFERENCE_MISSING');
+        }
+
+        const discount = await Discount.findOne(query).session(options.session || null);
+
+        if (!discount) {
+            throw new AppError('Discount not found', 404, 'DISCOUNT_NOT_FOUND');
+        }
+
+        const now = new Date();
+
+        if (discount.status !== 'active') {
+            throw new AppError('Discount is not active', 400, 'DISCOUNT_INACTIVE');
+        }
+
+        if (discount.started_at > now) {
+            throw new AppError(
+                'This discount is not yet available',
+                400,
+                'DISCOUNT_NOT_STARTED'
+            );
+        }
+
+        if (discount.expiry_date <= now) {
+            throw new AppError(
+                'This discount has expired',
+                400,
+                'DISCOUNT_EXPIRED'
+            );
+        }
+
+        const eligibilityType = discount.user_eligibility?.type || 'all';
+        if (eligibilityType !== 'all') {
+            const eligibilityContext = await this.getUserEligibilityContext(
+                userId,
+                options.session || null,
+                orderId
+            );
+            this.assertUserEligible(discount, userId, eligibilityContext);
+        }
+
+        if (userId) {
+            const userUsageCount = await DiscountUsageLog.countDocuments({
+                discount_id: discount._id,
+                user_id: userId,
+            }).session(options.session || null);
+
+            if (userUsageCount >= discount.usage_per_user_limit) {
+                throw new AppError(
+                    `You've reached max uses for this discount (${discount.usage_per_user_limit})`,
+                    400,
+                    'USER_DISCOUNT_LIMIT_EXCEEDED'
+                );
+            }
+        }
+
+        const updateResult = await Discount.updateOne(
+            {
+                _id: discount._id,
+                status: 'active',
+                is_deleted: false,
+                started_at: { $lte: now },
+                expiry_date: { $gt: now },
+                usage_count: { $lt: discount.usage_limit },
+            },
+            { $inc: { usage_count: 1 } },
+            { session: options.session || null }
+        );
+
+        if (updateResult.modifiedCount === 0) {
+            throw new AppError(
+                'Discount usage limit exceeded',
+                400,
+                'DISCOUNT_LIMIT_EXCEEDED'
+            );
+        }
+
+        const usageLog = await DiscountUsageLog.logUsage(
+            {
+                discountId: discount._id,
+                userId,
+                orderId,
+                discountCode: discount.code,
+                discountAmount,
+                orderTotal,
+                sessionKey,
+                ipAddress,
+                metadata,
+            },
+            options
+        );
+
+        return usageLog;
+    }
+
+    static async recordUsage(discountId, userId, orderId, data = {}, options = {}) {
+        return await this.redeemForOrder(
+            {
+                discount_id: discountId,
+                code: data.discountCode,
+            },
+            {
+                userId,
+                orderId,
+                discountAmount: data.discountAmount,
+                orderTotal: data.orderTotal,
+                sessionKey: data.sessionKey,
+                ipAddress: data.ipAddress,
+                metadata: data.metadata,
+            },
+            options
+        );
     }
 
     static async createDiscount(data, createdBy) {
@@ -307,7 +606,7 @@ class DiscountService {
 
         const discount = await Discount.create(normalizedData);
 
-        return DiscountMapper.toResponseDTO(discount);
+        return DiscountMapper.toDetailDTO(discount);
     }
 
     static async getDiscountById(discountId) {
@@ -369,6 +668,93 @@ class DiscountService {
     }
 
     static async updateDiscount(discountId, data, updatedBy) {
+        const existingDiscount = await Discount.findById(discountId);
+
+        if (!existingDiscount) {
+            throw new AppError('Discount not found', 404, 'DISCOUNT_NOT_FOUND');
+        }
+
+        const nextStartedAt = data.started_at
+            ? new Date(data.started_at)
+            : existingDiscount.started_at;
+
+        const nextExpiryDate = data.expiry_date
+            ? new Date(data.expiry_date)
+            : existingDiscount.expiry_date;
+
+        if (nextStartedAt >= nextExpiryDate) {
+            throw new AppError(
+                'Expiry date must be after start date',
+                400,
+                'INVALID_DISCOUNT_DATE_RANGE'
+            );
+        }
+
+        const nextUsageLimit =
+            data.usage_limit !== undefined
+                ? data.usage_limit
+                : existingDiscount.usage_limit;
+
+        const nextUsagePerUserLimit =
+            data.usage_per_user_limit !== undefined
+                ? data.usage_per_user_limit
+                : existingDiscount.usage_per_user_limit;
+
+        if (nextUsageLimit < nextUsagePerUserLimit) {
+            throw new AppError(
+                'Usage limit must be >= usage per user limit',
+                400,
+                'INVALID_USAGE_LIMIT'
+            );
+        }
+
+        if (nextUsageLimit < existingDiscount.usage_count) {
+            throw new AppError(
+                'Usage limit cannot be less than current usage count',
+                400,
+                'USAGE_LIMIT_BELOW_CURRENT_USAGE'
+            );
+        }
+
+        const nextType = data.type || existingDiscount.type;
+        const nextValue =
+            data.value !== undefined
+                ? data.value
+                : existingDiscount.value;
+
+        const nextMaxDiscountAmount =
+            data.max_discount_amount !== undefined
+                ? data.max_discount_amount
+                : existingDiscount.max_discount_amount;
+
+        if (nextType === 'percent' && !nextMaxDiscountAmount) {
+            throw new AppError(
+                'max_discount_amount is mandatory for percent discounts',
+                400,
+                'MAX_DISCOUNT_AMOUNT_REQUIRED'
+            );
+        }
+
+        if (nextType === 'percent' && nextValue > 100) {
+            throw new AppError(
+                'Percent discount value must be <= 100',
+                400,
+                'INVALID_PERCENT_VALUE'
+            );
+        }
+
+        if (
+            nextType === 'fixed' &&
+            nextMaxDiscountAmount &&
+            nextMaxDiscountAmount < nextValue
+        ) {
+            throw new AppError(
+                'max_discount_amount should not be less than value for fixed discounts',
+                400,
+                'INVALID_MAX_DISCOUNT_AMOUNT'
+            );
+        }
+
         const updateData = {
             ...data,
             updated_by: updatedBy,
@@ -384,10 +770,6 @@ class DiscountService {
             updateData,
             { new: true, runValidators: true }
         );
-
-        if (!discount) {
-            throw new AppError('Discount not found', 404, 'DISCOUNT_NOT_FOUND');
-        }
 
         return DiscountMapper.toDetailDTO(discount);
     }
@@ -440,19 +822,107 @@ class DiscountService {
     }
 
     static async getApplicableDiscounts(filters = {}, now = new Date()) {
-        const discounts = await Discount.findApplicableDiscounts(filters, now);
+        const cartItems = filters.cartItems || [];
+        const cartSubtotal = filters.cartSubtotal || 0;
+        const targetFilters = {
+            ...filters,
+            ...this.getCartItemTargetFilters(cartItems),
+        };
+        const discounts = await Discount.findApplicableDiscounts(targetFilters, now);
+        const eligibilityContext = filters.userId
+            ? await this.getUserEligibilityContext(filters.userId)
+            : null;
 
-        return discounts.map((d) => DiscountMapper.toResponseDTO(d));
+        return discounts
+            .filter((discount) => {
+                if (cartSubtotal < (discount.min_order_value || 0)) {
+                    return false;
+                }
+
+                const applicableItems = this.filterApplicableItems(
+                    cartItems,
+                    discount.applicable_targets
+                );
+
+                if (applicableItems.length === 0) {
+                    return false;
+                }
+
+                try {
+                    this.assertUserEligible(
+                        discount,
+                        filters.userId,
+                        eligibilityContext || {}
+                    );
+                    return true;
+                } catch (error) {
+                    if (error instanceof AppError) {
+                        return false;
+                    }
+
+                    throw error;
+                }
+            })
+            .map((d) => DiscountMapper.toResponseDTO(d));
     }
 
     static async getDiscountsForUser(userId, filters = {}, now = new Date()) {
+        const page = Math.max(parseInt(filters.page, 10) || 1, 1);
+        const limit = Math.min(Math.max(parseInt(filters.limit, 10) || 20, 1), 100);
+        const skip = (page - 1) * limit;
         const discounts = await Discount.findDiscountsForUser(userId, filters, now);
+        const paginatedDiscounts = discounts.slice(skip, skip + limit);
 
-        return discounts.map((d) => DiscountMapper.toResponseDTO(d));
+        return {
+            data: paginatedDiscounts.map((d) => DiscountMapper.toAdminListDTO(d)),
+            pagination: {
+                page,
+                limit,
+                total: discounts.length,
+                totalPages: Math.ceil(discounts.length / limit),
+            },
+        };
     }
 
     static async countNearExpiryDiscounts(daysFromNow = 7, now = new Date()) {
         return await Discount.countNearExpiry(daysFromNow, now);
+    }
+
+    static async getNearExpiryDiscounts(daysFromNow = 7, page = 1, limit = 20, now = new Date()) {
+        const normalizedDays = Math.max(parseInt(daysFromNow, 10) || 7, 1);
+        const normalizedPage = Math.max(parseInt(page, 10) || 1, 1);
+        const normalizedLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+        const skip = (normalizedPage - 1) * normalizedLimit;
+        const expiryThreshold = new Date(now);
+        expiryThreshold.setDate(expiryThreshold.getDate() + normalizedDays);
+
+        const query = {
+            status: 'active',
+            is_deleted: false,
+            expiry_date: {
+                $lte: expiryThreshold,
+                $gt: now,
+            },
+        };
+
+        const [discounts, total] = await Promise.all([
+            Discount.find(query)
+                .sort({ expiry_date: 1 })
+                .skip(skip)
+                .limit(normalizedLimit)
+                .lean(),
+            Discount.countDocuments(query),
+        ]);
+
+        return {
+            data: discounts.map((d) => DiscountMapper.toAdminListDTO(d)),
+            pagination: {
+                page: normalizedPage,
+                limit: normalizedLimit,
+                total,
+                totalPages: Math.ceil(total / normalizedLimit),
+            },
+        };
     }
 
     static async getUsageStats(discountId) {
@@ -532,7 +1002,7 @@ class DiscountService {
 
         const created = await Discount.create(newDiscount);
 
-        return DiscountMapper.toResponseDTO(created);
+        return DiscountMapper.toDetailDTO(created);
     }
 }
 

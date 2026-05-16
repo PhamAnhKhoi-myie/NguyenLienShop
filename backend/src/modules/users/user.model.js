@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema(
 
         roles: {
             type: [String],
-            enum: ['CUSTOMER', 'MANAGER', 'ADMIN'],
+            enum: ['CUSTOMER', 'VIP', 'MANAGER', 'ADMIN'],
             default: ['CUSTOMER'],
             validate: {
                 validator: function (v) {
@@ -43,6 +43,12 @@ const userSchema = new mongoose.Schema(
                 },
                 message: 'User must have at least one role',
             },
+        },
+
+        tier: {
+            type: String,
+            enum: ['bronze', 'silver', 'gold', 'platinum'],
+            default: 'bronze',
         },
 
         status: {
@@ -158,7 +164,6 @@ userSchema.pre('save', function (next) {
     }
     if (this.profile?.phone_number) {
         this.profile.phone_number = this.profile.phone_number.trim();
-        //Guard against empty string
         if (this.profile.phone_number === '') {
             this.profile.phone_number = null;
         }

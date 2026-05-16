@@ -103,6 +103,10 @@ const createDiscountBodySchema = z
         { message: 'max_discount_amount is mandatory for percent discounts', path: ['max_discount_amount'] }
     )
     .refine(
+        (d) => d.type !== 'percent' || d.value <= 100,
+        { message: 'Percent discount value must be <= 100', path: ['value'] }
+    )
+    .refine(
         (d) => d.started_at < d.expiry_date,
         { message: 'Expiry date must be after start date', path: ['expiry_date'] }
     )
@@ -144,6 +148,10 @@ const updateDiscountBodySchema = z
         { message: 'max_discount_amount is required when changing type to percent', path: ['max_discount_amount'] }
     )
     .refine(
+        (d) => d.type !== 'percent' || d.value === undefined || d.value <= 100,
+        { message: 'Percent discount value must be <= 100', path: ['value'] }
+    )
+    .refine(
         (d) => !(d.started_at && d.expiry_date) || d.started_at < d.expiry_date,
         { message: 'Expiry date must be after start date', path: ['expiry_date'] }
     )
@@ -154,43 +162,57 @@ const updateDiscountBodySchema = z
         { message: 'Usage limit must be >= usage per user limit', path: ['usage_limit'] }
     );
 
+const discountCartItemSchema = z.object({
+    _id: z.string(),
+    product_id: objectIdSchema,
+    variant_id: objectIdSchema,
+    unit_id: objectIdSchema,
+    category_id: objectIdSchema.optional(),
+    sku: z.string(),
+    quantity: z.number().min(1),
+    pack_size: z.number().min(1),
+    price_at_added: z.number().min(0),
+    line_total: z.number().min(0),
+});
+
 const validateDiscountBodySchema = z.object({
     code: z.string().min(1).transform((v) => v.toUpperCase().trim()),
     cartSubtotal: z.number().positive(),
-    cartItems: z.array(
-        z.object({
-            _id: z.string(),
-            product_id: objectIdSchema,
-            variant_id: objectIdSchema,
-            unit_id: objectIdSchema,
-            category_id: objectIdSchema.optional(),
-            sku: z.string(),
-            quantity: z.number().min(1),
-            pack_size: z.number().min(1),
-            price_at_added: z.number().min(0),
-            line_total: z.number().min(0),
-        })
-    ).optional().default([]),
+    cartItems: z.array(discountCartItemSchema).optional().default([]),
 });
 
+const applicableDiscountsBodySchema = z.object({
+    cartSubtotal: z.number().min(0).default(0),
+    cartItems: z.array(discountCartItemSchema).min(1),
+});
+
+const bulkDiscountSchema = z
+    .object({
+        code: codeSchema,
+        type: typeSchema,
+        value: z.number().min(0),
+        max_discount_amount: z.number().min(0).optional().nullable(),
+        application_strategy: applicationStrategySchema.optional(),
+        min_order_value: z.number().min(0).optional(),
+        usage_limit: z.number().min(1).int(),
+        usage_per_user_limit: z.number().min(1).int(),
+        is_stackable: z.boolean().optional(),
+        stack_priority: z.number().int().optional(),
+        started_at: z.coerce.date().optional(),
+        expiry_date: z.coerce.date().optional(),
+        status: statusSchema.optional(),
+    })
+    .refine(
+        (d) => d.type !== 'percent' || d.value <= 100,
+        { message: 'Percent discount value must be <= 100', path: ['value'] }
+    )
+    .refine(
+        (d) => d.type !== 'percent' || !!d.max_discount_amount,
+        { message: 'max_discount_amount is mandatory for percent discounts', path: ['max_discount_amount'] }
+    );
+
 const bulkCreateBodySchema = z.object({
-    discounts: z.array(
-        z.object({
-            code: codeSchema,
-            type: typeSchema,
-            value: z.number().min(0),
-            max_discount_amount: z.number().min(0).optional().nullable(),
-            application_strategy: applicationStrategySchema.optional(),
-            min_order_value: z.number().min(0).optional(),
-            usage_limit: z.number().min(1).int(),
-            usage_per_user_limit: z.number().min(1).int(),
-            is_stackable: z.boolean().optional(),
-            stack_priority: z.number().int().optional(),
-            started_at: z.coerce.date().optional(),
-            expiry_date: z.coerce.date().optional(),
-            status: statusSchema.optional(),
-        })
-    ).min(1),
+    discounts: z.array(bulkDiscountSchema).min(1),
 });
 
 const duplicateDiscountBodySchema = z.object({
@@ -216,9 +238,18 @@ const listDiscountsQuerySchema = z.object({
     ]).default('-created_at'),
 });
 
-const nearExpiryQuerySchema = z.object({
-    daysUntilExpiry: z.coerce.number().int().min(1).default(7),
-});
+const nearExpiryQuerySchema = z
+    .object({
+        daysUntilExpiry: z.coerce.number().int().min(1).optional(),
+        days: z.coerce.number().int().min(1).optional(),
+        page: z.coerce.number().int().min(1).default(1),
+        limit: z.coerce.number().int().min(1).max(100).default(20),
+    })
+    .transform((q) => ({
+        daysUntilExpiry: q.daysUntilExpiry || q.days || 7,
+        page: q.page,
+        limit: q.limit,
+    }));
 
 /**
  * ===== EXPORT =====
@@ -233,6 +264,7 @@ module.exports = {
     createDiscountBodySchema,
     updateDiscountBodySchema,
     validateDiscountBodySchema,
+    applicableDiscountsBodySchema,
     bulkCreateBodySchema,
     duplicateDiscountBodySchema,
 

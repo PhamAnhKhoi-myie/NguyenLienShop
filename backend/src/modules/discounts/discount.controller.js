@@ -1,5 +1,5 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
-const { AppError } = require('../../utils/appError.util');
+const AppError = require('../../utils/appError.util');
 const DiscountService = require('./discount.service');
 const DiscountMapper = require('./discount.mapper');
 
@@ -7,11 +7,11 @@ class DiscountController {
     static validateDiscount = asyncHandler(async (req, res) => {
         const { code, cartSubtotal, cartItems } = req.body;
 
-        const validationResult = await DiscountService.validateAndApply(
+        const validationResult = await DiscountService.validateForCart(
             code,
             cartSubtotal,
-            cartItems,
-            req.user?.userId
+            req.user?.userId,
+            cartItems
         );
 
         const responseData = DiscountMapper.toValidationResponseDTO(validationResult);
@@ -28,29 +28,29 @@ class DiscountController {
             req.user.userId
         );
 
-        const responseData = DiscountMapper.toDetailDTO(discount);
-
         res.status(201).json({
             success: true,
-            data: responseData
+            data: discount
         });
     });
 
     static listDiscounts = asyncHandler(async (req, res) => {
-        const { page, limit, status, type, search, sortBy, minDiscount, maxDiscount } = req.query;
+        const { page, limit, status, type, search, sortBy } = req.query;
 
-        const result = await DiscountService.listDiscounts({
-            page: parseInt(page, 10),
-            limit: Math.min(parseInt(limit, 10), 100),
-            filter: { status, type, search, minDiscount, maxDiscount },
-            sortBy
-        });
-
-        const responseData = DiscountMapper.toAdminListDTOList(result.discounts);
+        const result = await DiscountService.listDiscounts(
+            page,
+            limit,
+            {
+                status,
+                type,
+                search,
+                sortBy,
+            }
+        );
 
         res.status(200).json({
             success: true,
-            data: responseData,
+            data: result.data,
             pagination: result.pagination
         });
     });
@@ -60,24 +60,24 @@ class DiscountController {
 
         const discount = await DiscountService.getDiscountById(discountId);
 
-        const responseData = DiscountMapper.toDetailDTO(discount);
-
         res.status(200).json({
             success: true,
-            data: responseData
+            data: discount
         });
     });
 
     static updateDiscount = asyncHandler(async (req, res) => {
         const { discountId } = req.params;
 
-        const discount = await DiscountService.updateDiscount(discountId, req.body);
-
-        const responseData = DiscountMapper.toDetailDTO(discount);
+        const discount = await DiscountService.updateDiscount(
+            discountId,
+            req.body,
+            req.user.userId
+        );
 
         res.status(200).json({
             success: true,
-            data: responseData
+            data: discount
         });
     });
 
@@ -95,10 +95,14 @@ class DiscountController {
     static revokeDiscount = asyncHandler(async (req, res) => {
         const { discountId } = req.params;
 
-        await DiscountService.revokeDiscount(discountId);
+        const discount = await DiscountService.revokeDiscount(
+            discountId,
+            req.user.userId
+        );
 
         res.status(200).json({
             success: true,
+            data: discount,
             message: 'Discount revoked successfully'
         });
     });
@@ -110,15 +114,14 @@ class DiscountController {
             throw new AppError('Discounts array is required', 400, 'INVALID_REQUEST');
         }
 
-        const result = await DiscountService.bulkCreateDiscounts(discounts);
+        const result = await DiscountService.bulkCreateDiscounts(
+            discounts,
+            req.user.userId
+        );
 
         const responseData = {
-            created: DiscountMapper.toResponseDTOList(result.created),
-            errors: result.errors.map(err => ({
-                code: err.code,
-                message: err.message,
-                row: err.row
-            }))
+            created: result.created,
+            failed: result.failed,
         };
 
         res.status(207).json({
@@ -148,13 +151,15 @@ class DiscountController {
         const { discountId } = req.params;
         const { newCode } = req.body;
 
-        const clonedDiscount = await DiscountService.duplicateDiscount(discountId, newCode);
-
-        const responseData = DiscountMapper.toDetailDTO(clonedDiscount);
+        const clonedDiscount = await DiscountService.duplicateDiscount(
+            discountId,
+            { code: newCode },
+            req.user.userId
+        );
 
         res.status(201).json({
             success: true,
-            data: responseData
+            data: clonedDiscount
         });
     });
 
@@ -170,15 +175,18 @@ class DiscountController {
     });
 
     static getNearExpiryDiscounts = asyncHandler(async (req, res) => {
-        const { daysUntilExpiry } = req.query;
+        const { daysUntilExpiry, page, limit } = req.query;
 
-        const discounts = await DiscountService.countNearExpiryDiscounts(daysUntilExpiry);
-
-        const responseData = DiscountMapper.toAdminListDTOList(discounts);
+        const result = await DiscountService.getNearExpiryDiscounts(
+            daysUntilExpiry,
+            page,
+            limit
+        );
 
         res.status(200).json({
             success: true,
-            data: responseData
+            data: result.data,
+            pagination: result.pagination
         });
     });
 
@@ -187,15 +195,13 @@ class DiscountController {
         const { page, limit } = req.query;
 
         const result = await DiscountService.getDiscountsForUser(userId, {
-            page: parseInt(page, 10),
-            limit: Math.min(parseInt(limit, 10), 100)
+            page,
+            limit,
         });
-
-        const responseData = DiscountMapper.toAdminListDTOList(result.discounts);
 
         res.status(200).json({
             success: true,
-            data: responseData,
+            data: result.data,
             pagination: result.pagination
         });
     });

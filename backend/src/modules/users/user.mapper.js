@@ -1,17 +1,8 @@
-/**
- * User DTO Mapper
- * Transform external request DTOs to internal database format
- */
 class UserMapper {
-    /**
-     * Map update request DTO to MongoDB update payload
-     * @param {Object} data - Raw request body data
-     * @returns {Object} MongoDB update payload with dot notation
-     */
+
     static toUpdatePayload(data) {
         const update = {};
 
-        // Map API field names to schema field names
         if (data.name !== undefined) {
             update["profile.full_name"] = data.name;
         }
@@ -31,11 +22,6 @@ class UserMapper {
         return update;
     }
 
-    /**
-     * Map database User document to API response
-     * @param {Object} user - MongoDB user document
-     * @returns {Object} Clean user DTO
-     */
     static toResponseDTO(user) {
         if (!user) return null;
 
@@ -50,6 +36,7 @@ class UserMapper {
                 phone_number: doc.profile?.phone_number || null,
             },
             roles: doc.roles || [],
+            tier: doc.tier || null,
             status: doc.status,
             is_email_verified: doc.is_email_verified,
             email_verified_at: doc.email_verified_at,
@@ -59,11 +46,6 @@ class UserMapper {
         };
     }
 
-    /**
-     * Map User document to paginated list response
-     * @param {Array} users - Array of MongoDB user documents
-     * @returns {Array} Array of clean user DTOs
-     */
     static toResponseDTOList(users) {
         return users.map((user) => this.toResponseDTO(user));
     }

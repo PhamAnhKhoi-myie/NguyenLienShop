@@ -157,7 +157,7 @@ discountUsageLogSchema.statics.getTotalDiscountRevenue = async function (discoun
  * @param {Object} data - Usage data
  * @returns {Promise<Document>} - Created usage log
  */
-discountUsageLogSchema.statics.logUsage = async function (data) {
+discountUsageLogSchema.statics.logUsage = async function (data, options = {}) {
     const {
         discountId,
         userId,
@@ -170,7 +170,7 @@ discountUsageLogSchema.statics.logUsage = async function (data) {
         metadata,
     } = data;
 
-    return this.create({
+    const payload = {
         discount_id: discountId,
         user_id: userId || null,
         order_id: orderId || null,
@@ -180,7 +180,14 @@ discountUsageLogSchema.statics.logUsage = async function (data) {
         session_key: sessionKey,
         ip_address: ipAddress,
         metadata,
-    });
+    };
+
+    if (options.session) {
+        const [created] = await this.create([payload], { session: options.session });
+        return created;
+    }
+
+    return this.create(payload);
 };
 
 /**

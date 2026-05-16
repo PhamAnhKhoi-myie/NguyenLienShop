@@ -8,6 +8,7 @@ const Variant = require('../products/variant.model');
 const Cart = require('../carts/cart.model');
 const EmailJob = require('../emails/email.model');
 const User = require('../users/user.model');
+const DiscountService = require('../discounts/discount.service');
 
 /**
  * ============================================
@@ -151,7 +152,7 @@ class OrderService {
                 discount: cart.discount
                     ? {
                         code: cart.discount.code,
-                        type: cart.discount.type,
+                        type: cart.discount.type === 'PERCENT' ? 'percentage' : 'fixed',
                         value: cart.discount.value,
                         scope: cart.discount.apply_scope || 'ORDER',
                         applied_amount: discountAmount,
@@ -178,6 +179,24 @@ class OrderService {
             });
 
             await order.save({ session });
+
+            if (cart.discount && discountAmount > 0) {
+                await DiscountService.redeemForOrder(
+                    cart.discount,
+                    {
+                        userId,
+                        orderId: order._id,
+                        discountAmount,
+                        orderTotal: totalAmount,
+                        sessionKey: cart.session_key,
+                        metadata: {
+                            order_code: order.order_code,
+                            cart_id: cart._id,
+                        },
+                    },
+                    { session }
+                );
+            }
 
             const user = await User.findById(userId).session(session);
 

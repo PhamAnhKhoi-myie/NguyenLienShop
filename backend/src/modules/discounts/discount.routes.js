@@ -1,6 +1,9 @@
 const express = require('express');
 const validate = require('../../middlewares/validate.middleware');
-const { authenticate } = require('../../middlewares/auth.middleware');
+const {
+    authenticate,
+    optionalAuthenticate,
+} = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/authorize.middleware');
 const DiscountController = require('./discount.controller');
 
@@ -13,6 +16,7 @@ const {
     createDiscountBodySchema,
     updateDiscountBodySchema,
     validateDiscountBodySchema,
+    applicableDiscountsBodySchema,
     bulkCreateBodySchema,
     duplicateDiscountBodySchema,
 
@@ -33,7 +37,8 @@ router.post(
 
 router.post(
     '/applicable',
-    validate({ body: validateDiscountBodySchema }),
+    optionalAuthenticate,
+    validate({ body: applicableDiscountsBodySchema }),
     DiscountController.getApplicableDiscounts
 );
 

@@ -2711,6 +2711,38 @@ const swaggerSpec = {
                 required: ["code", "cartSubtotal"],
             },
 
+            ApplicableDiscountsInput: {
+                type: "object",
+                properties: {
+                    cartSubtotal: {
+                        type: "number",
+                        minimum: 0,
+                        example: 10000000,
+                    },
+                    cartItems: {
+                        type: "array",
+                        minItems: 1,
+                        items: {
+                            type: "object",
+                            properties: {
+                                _id: { type: "string" },
+                                product_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+                                variant_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+                                unit_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+                                category_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+                                sku: { type: "string" },
+                                quantity: { type: "integer", minimum: 1 },
+                                pack_size: { type: "number", minimum: 1 },
+                                price_at_added: { type: "number", minimum: 0 },
+                                line_total: { type: "number", minimum: 0 },
+                            },
+                            required: ["_id", "product_id", "variant_id", "unit_id", "sku", "quantity", "pack_size", "price_at_added", "line_total"],
+                        },
+                    },
+                },
+                required: ["cartItems"],
+            },
+
             BulkCreateDiscountInput: {
                 type: "array",
                 minItems: 1,
@@ -7592,28 +7624,7 @@ const swaggerSpec = {
                     required: true,
                     content: {
                         "application/json": {
-                            schema: {
-                                type: "object",
-                                properties: {
-                                    cartSubtotal: {
-                                        type: "number",
-                                        minimum: 0,
-                                        example: 10000000,
-                                    },
-                                    cartItems: {
-                                        type: "array",
-                                        items: {
-                                            type: "object",
-                                            properties: {
-                                                product_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                                                variant_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                                                category_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                                            },
-                                        },
-                                    },
-                                },
-                                required: ["cartSubtotal", "cartItems"],
-                            },
+                            schema: { $ref: "#/components/schemas/ApplicableDiscountsInput" },
                         },
                     },
                 },
