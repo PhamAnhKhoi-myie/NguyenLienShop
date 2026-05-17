@@ -73,9 +73,7 @@ class PaymentMapper {
             last_retry_at: doc.last_retry_at,
 
             expires_at: doc.expires_at,
-            is_expired: doc.status === 'pending' && doc.expires_at
-                ? new Date() > new Date(doc.expires_at)
-                : false,
+            is_expired: doc.status === 'pending' && this.isExpired(doc),
 
             paid_at: doc.paid_at,
             created_at: doc.created_at,
@@ -89,6 +87,7 @@ class PaymentMapper {
         }
 
         const doc = payment.toObject ? payment.toObject() : payment;
+        const isExpired = this.isExpired(doc);
 
         return {
             id: doc._id?.toString(),
@@ -105,7 +104,7 @@ class PaymentMapper {
 
             message: this.getCustomerMessage(doc.status, doc.failure_message),
 
-            can_retry: doc.status === 'failed' && !doc.is_expired,
+            can_retry: doc.status === 'failed' && !isExpired,
             can_cancel: doc.status === 'pending',
 
             created_at: doc.created_at,
@@ -156,9 +155,7 @@ class PaymentMapper {
             last_retry_at: doc.last_retry_at,
 
             expires_at: doc.expires_at,
-            is_expired: doc.expires_at
-                ? new Date() > new Date(doc.expires_at)
-                : false,
+            is_expired: this.isExpired(doc),
 
             webhook_data: {
                 raw_ipn_present: !!doc.raw_ipn,
@@ -253,7 +250,7 @@ class PaymentMapper {
             failure_code: doc.failure_code || '',
 
             retry_count: doc.retry_count || 0,
-            is_expired: doc.expires_at && new Date() > new Date(doc.expires_at),
+            is_expired: this.isExpired(doc),
 
             paid_at: doc.paid_at
                 ? new Date(doc.paid_at).toISOString()
@@ -317,6 +314,14 @@ class PaymentMapper {
             providerData.paypal_order_id ||
             null
         );
+    }
+
+    static isExpired(doc) {
+        if (!doc?.expires_at) {
+            return false;
+        }
+
+        return new Date() > new Date(doc.expires_at);
     }
 
     static filterProviderData(provider, providerData) {

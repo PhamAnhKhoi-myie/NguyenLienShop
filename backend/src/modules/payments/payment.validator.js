@@ -25,6 +25,7 @@ const OrderIdParamSchema = z.object({
  */
 
 const providerSchema = z.enum(['vnpay', 'stripe', 'paypal']).default('vnpay');
+const createPaymentProviderSchema = z.enum(['vnpay']).default('vnpay');
 
 const paymentStatusSchema = z.enum(['pending', 'paid', 'failed']);
 
@@ -44,7 +45,7 @@ const bankCodeSchema = z
 
 const createPaymentBodySchema = z.object({
     order_id: objectIdSchema,
-    provider: providerSchema,
+    provider: createPaymentProviderSchema,
 });
 
 const cancelPaymentBodySchema = z.object({
@@ -208,6 +209,7 @@ module.exports = {
     objectIdSchema,
     objectIdOptionalSchema,
     providerSchema,
+    createPaymentProviderSchema,
     paymentStatusSchema,
     currencySchema,
     bankCodeSchema,

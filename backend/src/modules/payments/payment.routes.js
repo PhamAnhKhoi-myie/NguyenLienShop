@@ -12,8 +12,6 @@ const {
     createPaymentBodySchema,
     cancelPaymentBodySchema,
     vnpayWebhookBodySchema,
-    stripeWebhookBodySchema,
-    paypalWebhookBodySchema,
 
     // query
     listPaymentsQuerySchema,
@@ -42,13 +40,11 @@ router.post(
 
 router.post(
     '/webhook/stripe',
-    validate({ body: stripeWebhookBodySchema }),
     PaymentController.handleStripeWebhook
 );
 
 router.post(
     '/webhook/paypal',
-    validate({ body: paypalWebhookBodySchema }),
     PaymentController.handlePayPalWebhook
 );
 

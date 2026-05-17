@@ -113,7 +113,18 @@ const handleStripeWebhook = asyncHandler(async (req, res) => {
 });
 
 const handlePayPalWebhook = asyncHandler(async (req, res) => {
-    const result = await PaymentService.handlePayPalWebhook(req.body);
+    const webhookHeaders = {
+        transmission_id: req.headers['paypal-transmission-id'],
+        transmission_time: req.headers['paypal-transmission-time'],
+        cert_url: req.headers['paypal-cert-url'],
+        auth_algo: req.headers['paypal-auth-algo'],
+        transmission_sig: req.headers['paypal-transmission-sig'],
+    };
+
+    const result = await PaymentService.handlePayPalWebhook(
+        req.body,
+        webhookHeaders
+    );
 
     return res.status(200).json({
         success: true,

@@ -5,6 +5,7 @@ const PaymentMapper = require('./payment.mapper');
 const AppError = require('../../utils/appError.util');
 
 const Order = require('../orders/order.model');
+const OrderService = require('../orders/order.service');
 const Variant = require('../products/variant.model');
 
 const logger = {
@@ -38,6 +39,8 @@ class PaymentService {
             );
         }
 
+        this._assertPaymentProviderEnabled(provider);
+
         const order = await Order.findOne({
             _id: orderId,
             user_id: userId,
@@ -67,6 +70,7 @@ class PaymentService {
 
         const existingPayment = await Payment.findOne({
             order_id: orderId,
+            user_id: userId,
             status: 'pending',
         });
 
@@ -107,23 +111,58 @@ class PaymentService {
             providerData.vnp_txn_ref = txnRef;
         }
 
-        const payment = await Payment.create({
-            order_id: orderId,
-            user_id: userId,
-            provider: provider,
+        let payment;
 
-            amount: lockedAmount,
-            currency: currency,
+        try {
+            payment = await Payment.create({
+                order_id: orderId,
+                user_id: userId,
+                provider: provider,
 
-            status: 'pending',
-            verification_status: 'pending',
+                amount: lockedAmount,
+                currency: currency,
 
-            idempotency_key: idempotencyKey,
+                status: 'pending',
+                verification_status: 'pending',
 
-            expires_at: thirtyMinutesFromNow,
+                idempotency_key: idempotencyKey,
 
-            provider_data: providerData,
-        });
+                expires_at: thirtyMinutesFromNow,
+
+                provider_data: providerData,
+            });
+        } catch (error) {
+            if (!this._isDuplicateKeyError(error)) {
+                throw error;
+            }
+
+            const duplicatedPayment = await Payment.findOne({
+                order_id: orderId,
+                user_id: userId,
+                status: 'pending',
+            });
+
+            if (
+                duplicatedPayment &&
+                duplicatedPayment.expires_at &&
+                new Date() < new Date(duplicatedPayment.expires_at)
+            ) {
+                return {
+                    paymentId: duplicatedPayment._id.toString(),
+                    payment: PaymentMapper.toResponseDTO(duplicatedPayment),
+                    paymentUrl: await this._generatePaymentUrl(
+                        duplicatedPayment,
+                        provider
+                    ),
+                };
+            }
+
+            throw new AppError(
+                'Payment already exists for this order',
+                409,
+                'PAYMENT_ALREADY_EXISTS'
+            );
+        }
 
         const paymentUrl = await this._generatePaymentUrl(payment, provider);
 
@@ -259,9 +298,9 @@ class PaymentService {
         };
     }
 
-    static async handleStripeWebhook(webhookEvent, signature) {
+    static async handleStripeWebhook(rawBody, signature) {
         const isSignatureValid = this._verifyStripeSignature(
-            webhookEvent,
+            rawBody,
             signature
         );
         if (!isSignatureValid) {
@@ -272,8 +311,17 @@ class PaymentService {
             );
         }
 
+        const webhookEvent = this._parseStripeWebhookBody(rawBody);
         const { type, data } = webhookEvent;
-        const { object } = data;
+        const object = data?.object;
+
+        if (!type || !object?.id) {
+            throw new AppError(
+                'Invalid Stripe webhook payload',
+                400,
+                'INVALID_WEBHOOK_PAYLOAD'
+            );
+        }
 
         const payment = await Payment.findOne({
             'provider_data.stripe_pi_id': object.id,
@@ -330,8 +378,18 @@ class PaymentService {
         };
     }
 
-    static async handlePayPalWebhook(webhookEvent) {
+    static async handlePayPalWebhook(webhookEvent, webhookHeaders = {}) {
+        await this._verifyPayPalWebhook(webhookEvent, webhookHeaders);
+
         const { event_type, resource } = webhookEvent;
+
+        if (!event_type || !resource?.id) {
+            throw new AppError(
+                'Invalid PayPal webhook payload',
+                400,
+                'INVALID_WEBHOOK_PAYLOAD'
+            );
+        }
 
         const payment = await Payment.findOne({
             'provider_data.paypal_order_id': resource.id,
@@ -416,7 +474,55 @@ class PaymentService {
                 { session }
             );
 
-            // giữ nguyên phần còn lại
+            if (result.modifiedCount === 0) {
+                const currentPayment = await Payment.findById(payment._id).session(session);
+                await session.commitTransaction();
+
+                logger.info({
+                    event: 'payment_success_idempotent',
+                    payment_id: payment._id.toString(),
+                    order_id: payment.order_id.toString(),
+                    message: 'Payment already processed (idempotent retry)'
+                });
+
+                return {
+                    status: currentPayment.status,
+                    orderId: payment.order_id.toString(),
+                    paymentId: payment._id.toString(),
+                    message: 'Payment already processed (idempotent)',
+                };
+            }
+
+            await OrderService.confirmPayment(
+                payment.order_id,
+                {
+                    paid_at: paidAt,
+                    payment_id: payment._id,
+                    note: 'Payment confirmed',
+                },
+                { session }
+            );
+
+            await session.commitTransaction();
+
+            logger.info({
+                event: 'payment_paid',
+                payment_id: payment._id.toString(),
+                order_id: payment.order_id.toString(),
+                user_id: payment.user_id.toString(),
+            });
+
+            return {
+                status: 'paid',
+                orderId: payment.order_id.toString(),
+                paymentId: payment._id.toString(),
+                transactionRef:
+                    providerData.vnp_TxnRef ||
+                    providerData.stripe_pi_id ||
+                    providerData.paypal_order_id ||
+                    null,
+                message: 'Payment confirmed',
+            };
         } catch (error) {
             await session.abortTransaction();
             throw error;
@@ -559,102 +665,181 @@ class PaymentService {
             );
         }
 
-        const payment = await Payment.findOne({
-            _id: paymentId,
-            user_id: userId,
-        });
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        if (!payment) {
-            throw new AppError(
-                'Payment not found',
-                404,
-                'PAYMENT_NOT_FOUND'
-            );
-        }
-
-        if (payment.status !== 'failed') {
-            throw new AppError(
-                'Can only retry failed payments',
-                409,
-                'INVALID_PAYMENT_STATUS'
-            );
-        }
-
-        const order = await Order.findOne({
-            _id: payment.order_id,
-            user_id: userId,
-            status: 'FAILED',
-        });
-
-        if (!order) {
-            throw new AppError(
-                'Order not found or already processed',
-                404,
-                'ORDER_NOT_FOUND'
-            );
-        }
-
-        const thirtyMinutesFromNow = new Date();
-        thirtyMinutesFromNow.setMinutes(thirtyMinutesFromNow.getMinutes() + 30);
-
-        const providerData = {
-            ...(payment.provider_data?.toObject
-                ? payment.provider_data.toObject()
-                : payment.provider_data),
-        };
-
-        if (payment.provider === 'vnpay') {
-            providerData.vnp_txn_ref = `${Date.now()}_${payment.order_id.toString()}`;
-        }
-
-        const updatedPayment = await Payment.findOneAndUpdate(
-            {
+        try {
+            const payment = await Payment.findOne({
                 _id: paymentId,
                 user_id: userId,
-                status: 'failed',
-            },
-            {
-                $set: {
-                    status: 'pending',
-                    verification_status: 'pending',
-                    expires_at: thirtyMinutesFromNow,
-                    last_retry_at: new Date(),
-                    provider_data: providerData,
-                },
-                $inc: {
-                    retry_count: 1,
-                },
-                $unset: {
-                    failure_reason: 1,
-                    failure_code: 1,
-                    failure_message: 1,
-                    webhook_verified_at: 1,
-                    paid_at: 1,
-                    raw_ipn: 1,
-                    raw_return: 1,
-                },
-            },
-            { new: true }
-        );
+            }).session(session);
 
-        if (!updatedPayment) {
-            throw new AppError(
-                'Payment not found or cannot be retried',
-                404,
-                'PAYMENT_NOT_FOUND'
+            if (!payment) {
+                throw new AppError(
+                    'Payment not found',
+                    404,
+                    'PAYMENT_NOT_FOUND'
+                );
+            }
+
+            if (payment.status !== 'failed') {
+                throw new AppError(
+                    'Can only retry failed payments',
+                    409,
+                    'INVALID_PAYMENT_STATUS'
+                );
+            }
+
+            this._assertPaymentProviderEnabled(payment.provider);
+
+            const order = await Order.findOne({
+                _id: payment.order_id,
+                user_id: userId,
+                status: 'FAILED',
+            }).session(session);
+
+            if (!order) {
+                throw new AppError(
+                    'Order not found or already processed',
+                    404,
+                    'ORDER_NOT_FOUND'
+                );
+            }
+
+            for (const item of order.items) {
+                const qtyItems = item.quantity_ordered * item.pack_size;
+
+                const stockResult = await Variant.updateOne(
+                    {
+                        _id: item.variant_id,
+                        status: 'ACTIVE',
+                        'stock.available': { $gte: qtyItems },
+                    },
+                    {
+                        $inc: {
+                            'stock.available': -qtyItems,
+                            'stock.reserved': +qtyItems,
+                        },
+                    },
+                    { session }
+                );
+
+                if (stockResult.modifiedCount === 0) {
+                    throw new AppError(
+                        `Insufficient stock for ${item.product_name}`,
+                        409,
+                        'INSUFFICIENT_STOCK'
+                    );
+                }
+            }
+
+            const now = new Date();
+            const thirtyMinutesFromNow = new Date(now);
+            thirtyMinutesFromNow.setMinutes(thirtyMinutesFromNow.getMinutes() + 30);
+
+            const providerData = {
+                ...(payment.provider_data?.toObject
+                    ? payment.provider_data.toObject()
+                    : payment.provider_data),
+            };
+
+            if (payment.provider === 'vnpay') {
+                providerData.vnp_txn_ref = `${Date.now()}_${payment.order_id.toString()}`;
+            }
+
+            const updatedPayment = await Payment.findOneAndUpdate(
+                {
+                    _id: paymentId,
+                    user_id: userId,
+                    status: 'failed',
+                },
+                {
+                    $set: {
+                        status: 'pending',
+                        verification_status: 'pending',
+                        expires_at: thirtyMinutesFromNow,
+                        last_retry_at: now,
+                        provider_data: providerData,
+                    },
+                    $inc: {
+                        retry_count: 1,
+                    },
+                    $unset: {
+                        failure_reason: 1,
+                        failure_code: 1,
+                        failure_message: 1,
+                        webhook_verified_at: 1,
+                        paid_at: 1,
+                        raw_ipn: 1,
+                        raw_return: 1,
+                    },
+                },
+                { new: true, session }
             );
+
+            if (!updatedPayment) {
+                throw new AppError(
+                    'Payment not found or cannot be retried',
+                    404,
+                    'PAYMENT_NOT_FOUND'
+                );
+            }
+
+            const orderResult = await Order.updateOne(
+                {
+                    _id: order._id,
+                    user_id: userId,
+                    status: 'FAILED',
+                },
+                {
+                    $set: {
+                        status: 'PENDING',
+                        'payment.status': 'PENDING',
+                        payment_expires_at: thirtyMinutesFromNow,
+                    },
+                    $unset: {
+                        'payment.paid_at': 1,
+                        payment_id: 1,
+                    },
+                    $push: {
+                        status_history: {
+                            from: 'FAILED',
+                            to: 'PENDING',
+                            changed_at: now,
+                            changed_by: null,
+                            note: 'Payment retry requested',
+                        },
+                    },
+                },
+                { session }
+            );
+
+            if (orderResult.modifiedCount === 0) {
+                throw new AppError(
+                    'Order not found or cannot be retried',
+                    409,
+                    'INVALID_ORDER_STATUS'
+                );
+            }
+
+            const paymentUrl = await this._generatePaymentUrl(
+                updatedPayment,
+                payment.provider
+            );
+
+            await session.commitTransaction();
+
+            return {
+                paymentId: updatedPayment._id.toString(),
+                payment: PaymentMapper.toResponseDTO(updatedPayment),
+                paymentUrl,
+            };
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
         }
-
-        const paymentUrl = await this._generatePaymentUrl(
-            updatedPayment,
-            payment.provider
-        );
-
-        return {
-            paymentId: updatedPayment._id.toString(),
-            payment: PaymentMapper.toResponseDTO(updatedPayment),
-            paymentUrl,
-        };
     }
 
     static async cancelPayment(paymentId, userId, reason = 'User cancelled') {
@@ -803,9 +988,7 @@ class PaymentService {
             query.status = status;
         }
 
-        const payment = await Payment.findOne(query);
-
-        return payment ? PaymentMapper.toDetailDTO(payment) : null;
+        return Payment.findOne(query);
     }
 
     static async getUserPayments(userId, page = 1, limit = 20, filters = {}) {
@@ -906,6 +1089,11 @@ class PaymentService {
                     totalPayments: [{ $count: 'count' }],
                     totalRevenue: [
                         {
+                            $match: {
+                                status: 'paid',
+                            },
+                        },
+                        {
                             $group: {
                                 _id: null,
                                 total: { $sum: '$amount' },
@@ -917,7 +1105,15 @@ class PaymentService {
                             $group: {
                                 _id: '$status',
                                 count: { $sum: 1 },
-                                revenue: { $sum: '$amount' },
+                                revenue: {
+                                    $sum: {
+                                        $cond: [
+                                            { $eq: ['$status', 'paid'] },
+                                            '$amount',
+                                            0,
+                                        ],
+                                    },
+                                },
                             },
                         },
                     ],
@@ -926,7 +1122,15 @@ class PaymentService {
                             $group: {
                                 _id: '$provider',
                                 count: { $sum: 1 },
-                                revenue: { $sum: '$amount' },
+                                revenue: {
+                                    $sum: {
+                                        $cond: [
+                                            { $eq: ['$status', 'paid'] },
+                                            '$amount',
+                                            0,
+                                        ],
+                                    },
+                                },
                             },
                         },
                     ],
@@ -1008,7 +1212,35 @@ class PaymentService {
         return crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
     }
 
-    static _verifyStripeSignature(webhookEvent, signature) {
+    static _parseStripeWebhookBody(rawBody) {
+        try {
+            if (Buffer.isBuffer(rawBody)) {
+                return JSON.parse(rawBody.toString('utf8'));
+            }
+
+            if (typeof rawBody === 'string') {
+                return JSON.parse(rawBody);
+            }
+
+            if (rawBody && typeof rawBody === 'object') {
+                return rawBody;
+            }
+        } catch (error) {
+            throw new AppError(
+                'Invalid Stripe webhook body',
+                400,
+                'INVALID_WEBHOOK_BODY'
+            );
+        }
+
+        throw new AppError(
+            'Invalid Stripe webhook body',
+            400,
+            'INVALID_WEBHOOK_BODY'
+        );
+    }
+
+    static _verifyStripeSignature(rawBody, signature) {
         const parts = signature.split(',');
         let timestamp = null;
         let signedHash = null;
@@ -1023,36 +1255,205 @@ class PaymentService {
             return false;
         }
 
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
-        const signedContent = `${timestamp}.${JSON.stringify(webhookEvent)}`;
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+        if (!webhookSecret) {
+            return false;
+        }
+
+        const payload = Buffer.isBuffer(rawBody)
+            ? rawBody.toString('utf8')
+            : typeof rawBody === 'string'
+                ? rawBody
+                : JSON.stringify(rawBody);
+
+        const signedContent = `${timestamp}.${payload}`;
         const computed = crypto
             .createHmac('sha256', webhookSecret)
             .update(signedContent)
             .digest('hex');
 
-        return crypto.timingSafeEqual(
-            Buffer.from(computed),
-            Buffer.from(signedHash)
+        const computedBuffer = Buffer.from(computed, 'utf8');
+        const signedBuffer = Buffer.from(signedHash, 'utf8');
+
+        if (computedBuffer.length !== signedBuffer.length) {
+            return false;
+        }
+
+        return crypto.timingSafeEqual(computedBuffer, signedBuffer);
+    }
+
+    static async _verifyPayPalWebhook(webhookEvent, webhookHeaders) {
+        const requiredHeaders = [
+            'transmission_id',
+            'transmission_time',
+            'cert_url',
+            'auth_algo',
+            'transmission_sig',
+        ];
+
+        const missingHeader = requiredHeaders.find(
+            (header) => !webhookHeaders?.[header]
         );
+
+        if (missingHeader) {
+            throw new AppError(
+                `Missing PayPal webhook header: ${missingHeader}`,
+                400,
+                'MISSING_WEBHOOK_SIGNATURE'
+            );
+        }
+
+        const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+        if (!webhookId) {
+            throw new AppError(
+                'PayPal webhook ID config is missing',
+                500,
+                'PAYPAL_WEBHOOK_ID_MISSING'
+            );
+        }
+
+        const accessToken = await this._getPayPalAccessToken();
+        const paypalApiBaseUrl = this._getPayPalApiBaseUrl();
+
+        const response = await fetch(
+            `${paypalApiBaseUrl}/v1/notifications/verify-webhook-signature`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    auth_algo: webhookHeaders.auth_algo,
+                    cert_url: webhookHeaders.cert_url,
+                    transmission_id: webhookHeaders.transmission_id,
+                    transmission_sig: webhookHeaders.transmission_sig,
+                    transmission_time: webhookHeaders.transmission_time,
+                    webhook_id: webhookId,
+                    webhook_event: webhookEvent,
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            logger.error({
+                event: 'paypal_webhook_verification_request_failed',
+                status: response.status,
+                response: errorText,
+            });
+
+            throw new AppError(
+                'PayPal webhook verification request failed',
+                502,
+                'PAYPAL_WEBHOOK_VERIFICATION_FAILED'
+            );
+        }
+
+        const result = await response.json();
+
+        if (result.verification_status !== 'SUCCESS') {
+            throw new AppError(
+                'PayPal webhook signature verification failed',
+                401,
+                'WEBHOOK_VERIFICATION_FAILED'
+            );
+        }
+
+        return true;
+    }
+
+    static async _getPayPalAccessToken() {
+        const clientId = process.env.PAYPAL_CLIENT_ID;
+        const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+
+        if (!clientId || !clientSecret) {
+            throw new AppError(
+                'PayPal API credentials are missing',
+                500,
+                'PAYPAL_CONFIG_MISSING'
+            );
+        }
+
+        const paypalApiBaseUrl = this._getPayPalApiBaseUrl();
+        const credentials = Buffer
+            .from(`${clientId}:${clientSecret}`)
+            .toString('base64');
+
+        const response = await fetch(`${paypalApiBaseUrl}/v1/oauth2/token`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Basic ${credentials}`,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'grant_type=client_credentials',
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            logger.error({
+                event: 'paypal_access_token_request_failed',
+                status: response.status,
+                response: errorText,
+            });
+
+            throw new AppError(
+                'PayPal access token request failed',
+                502,
+                'PAYPAL_AUTH_FAILED'
+            );
+        }
+
+        const result = await response.json();
+
+        if (!result.access_token) {
+            throw new AppError(
+                'PayPal access token missing in response',
+                502,
+                'PAYPAL_AUTH_FAILED'
+            );
+        }
+
+        return result.access_token;
+    }
+
+    static _getPayPalApiBaseUrl() {
+        if (process.env.PAYPAL_API_BASE_URL) {
+            return process.env.PAYPAL_API_BASE_URL.replace(/\/$/, '');
+        }
+
+        return process.env.PAYPAL_MODE === 'live'
+            ? 'https://api-m.paypal.com'
+            : 'https://api-m.sandbox.paypal.com';
+    }
+
+    static _isDuplicateKeyError(error) {
+        return error?.code === 11000;
     }
 
     static async _generatePaymentUrl(payment, provider) {
+        this._assertPaymentProviderEnabled(provider);
+
         if (provider === 'vnpay') {
             return this._generateVNPayPaymentUrl(payment);
-        }
-
-        if (provider === 'stripe') {
-            return `https://checkout.stripe.com/...`; // Mock
-        }
-
-        if (provider === 'paypal') {
-            return `https://www.sandbox.paypal.com/...`; // Mock
         }
 
         throw new AppError(
             'Unsupported payment provider',
             400,
             'UNSUPPORTED_PROVIDER'
+        );
+    }
+
+    static _assertPaymentProviderEnabled(provider) {
+        if (provider === 'vnpay') {
+            return true;
+        }
+
+        throw new AppError(
+            'Payment provider is not enabled',
+            400,
+            'PAYMENT_PROVIDER_NOT_ENABLED'
         );
     }
 

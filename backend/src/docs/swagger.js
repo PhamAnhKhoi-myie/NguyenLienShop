@@ -2317,9 +2317,9 @@ const swaggerSpec = {
                     },
                     provider: {
                         type: "string",
-                        enum: ["vnpay", "stripe", "paypal"],
+                        enum: ["vnpay"],
                         default: "vnpay",
-                        description: "Payment provider (default: vnpay)",
+                        description: "Payment provider",
                     },
                 },
                 required: ["order_id"],

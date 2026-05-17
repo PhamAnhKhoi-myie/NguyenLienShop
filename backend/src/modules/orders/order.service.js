@@ -308,8 +308,14 @@ class OrderService {
         };
     }
 
-    static async confirmPayment(orderId, paymentData = {}) {
-        const order = await Order.findById(orderId);
+    static async confirmPayment(orderId, paymentData = {}, options = {}) {
+        const query = Order.findById(orderId);
+
+        if (options.session) {
+            query.session(options.session);
+        }
+
+        const order = await query;
         if (!order) {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
         }
@@ -322,12 +328,23 @@ class OrderService {
             );
         }
 
+        const paidAt = paymentData.paid_at || new Date();
+
         order.payment.status = 'PAID';
-        order.payment.paid_at = paymentData.paid_at || new Date();
+        order.payment.paid_at = paidAt;
+        order.payment_expires_at = undefined;
 
-        order.addStatusTransition('PAID', null, 'Payment confirmed');
+        if (paymentData.payment_id) {
+            order.payment_id = paymentData.payment_id;
+        }
 
-        await order.save();
+        order.addStatusTransition(
+            'PAID',
+            paymentData.changed_by || null,
+            paymentData.note || 'Payment confirmed'
+        );
+
+        await order.save({ session: options.session });
 
         return OrderMapper.toResponseDTO(order);
     }

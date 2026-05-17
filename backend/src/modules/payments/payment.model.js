@@ -18,7 +18,6 @@ const providerDataSchema = new mongoose.Schema(
 
         vnp_pay_date: Date,
 
-        // ===== STRIPE-SPECIFIC (Future) =====
         stripe_pi_id: {
             type: String,
             sparse: true,
@@ -27,7 +26,6 @@ const providerDataSchema = new mongoose.Schema(
         stripe_client_secret: String,
         stripe_status: String,
 
-        // ===== PAYPAL-SPECIFIC (Future) =====
         paypal_order_id: {
             type: String,
             sparse: true,
@@ -40,7 +38,6 @@ const providerDataSchema = new mongoose.Schema(
 
 const paymentSchema = new mongoose.Schema(
     {
-        // ===== IDENTITY & REFERENCES =====
         order_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Order',
@@ -55,7 +52,6 @@ const paymentSchema = new mongoose.Schema(
             index: true,
         },
 
-        // ===== PROVIDER SELECTION =====
         provider: {
             type: String,
             enum: {
@@ -66,7 +62,6 @@ const paymentSchema = new mongoose.Schema(
             index: true,
         },
 
-        // ===== FINANCIAL DATA (IMMUTABLE after creation) =====
         amount: {
             type: Number,
             required: [true, 'Amount is required'],
@@ -82,7 +77,6 @@ const paymentSchema = new mongoose.Schema(
             default: 'VND',
         },
 
-        // ===== PAYMENT STATUS (State Machine) =====
         status: {
             type: String,
             enum: {
@@ -93,23 +87,16 @@ const paymentSchema = new mongoose.Schema(
             index: true,
         },
 
-        // ===== PROVIDER-SPECIFIC DATA =====
         provider_data: {
             type: providerDataSchema,
             required: [true, 'Provider data is required'],
         },
 
-        // ===== IDEMPOTENCY & DEDUPLICATION =====
         idempotency_key: {
             type: String,
             required: [true, 'Idempotency key is required'],
-            unique: true,
-            sparse: true,
-            index: true,
-            // Format: {userId}-{orderId}-{timestamp}
         },
 
-        // ===== WEBHOOK VERIFICATION =====
         verification_status: {
             type: String,
             enum: {
@@ -121,7 +108,6 @@ const paymentSchema = new mongoose.Schema(
 
         webhook_verified_at: Date,
 
-        // ===== FAILURE TRACKING =====
         failure_reason: {
             type: String,
         },
@@ -130,7 +116,6 @@ const paymentSchema = new mongoose.Schema(
 
         failure_message: String,
 
-        // ===== PAYMENT WINDOW & RETRY =====
         expires_at: Date,
 
         retry_count: {
@@ -141,15 +126,12 @@ const paymentSchema = new mongoose.Schema(
 
         last_retry_at: Date,
 
-        // ===== RAW WEBHOOK DATA (Audit Trail) =====
         raw_ipn: mongoose.Schema.Types.Mixed,
 
         raw_return: mongoose.Schema.Types.Mixed,
 
-        // ===== COMPLETION TIMESTAMP =====
         paid_at: Date,
 
-        // ===== SOFT DELETE =====
         is_deleted: {
             type: Boolean,
             default: false,
@@ -210,6 +192,18 @@ paymentSchema.index(
 );
 
 paymentSchema.index(
+    { order_id: 1 },
+    {
+        unique: true,
+        partialFilterExpression: {
+            status: 'pending',
+            is_deleted: false,
+        },
+        name: 'order_pending_payment_unique',
+    }
+);
+
+paymentSchema.index(
     { status: 1, provider: 1 },
     {
         name: 'status_provider_idx',
@@ -243,10 +237,6 @@ paymentSchema.index(
 
 // ===== MIDDLEWARE: Auto-Exclude Soft-Deleted & Queries =====
 
-/**
- * ✅ Auto-exclude soft-deleted payments
- * Consistent pattern with Order, Cart models
- */
 const excludeDeleted = function (next) {
     if (!this.getOptions().includeDeleted) {
         this.where({ is_deleted: false });
@@ -259,9 +249,6 @@ paymentSchema.pre('findOne', excludeDeleted);
 paymentSchema.pre('findOneAndUpdate', excludeDeleted);
 paymentSchema.pre('countDocuments', excludeDeleted);
 
-/**
- * ✅ Auto-exclude in aggregation pipeline
- */
 paymentSchema.pre('aggregate', function (next) {
     const pipeline = this.pipeline();
     const options = this.getOptions?.() || {};
@@ -285,11 +272,7 @@ paymentSchema.pre('aggregate', function (next) {
 
 // ===== MIDDLEWARE: Update Timestamp & Lock Immutable Fields =====
 
-/**
- * ✅ Prevent modification of financial fields after payment success
- */
 paymentSchema.pre('save', function (next) {
-    // ✅ On creation: ensure expires_at is set for pending payments
     if (this.isNew && this.status === 'pending' && !this.expires_at) {
         const thirtyMinutesFromNow = new Date();
         thirtyMinutesFromNow.setMinutes(thirtyMinutesFromNow.getMinutes() + 30);
@@ -300,10 +283,6 @@ paymentSchema.pre('save', function (next) {
     next();
 });
 
-/**
- * ✅ Prevent status regression (paid/failed → pending)
- * Better to enforce in service layer, but add safety here
- */
 paymentSchema.pre('findOneAndUpdate', function (next) {
     const update = this.getUpdate();
 
@@ -314,8 +293,6 @@ paymentSchema.pre('findOneAndUpdate', function (next) {
             'failed': ['pending', 'paid'],
         };
 
-        // Optional: Log suspicious transitions
-        // In production, enforce in service layer with conditions
     }
 
     if (update.updated_at === undefined) {
@@ -327,32 +304,18 @@ paymentSchema.pre('findOneAndUpdate', function (next) {
 
 // ===== STATIC METHODS =====
 
-/**
- * ✅ Generate idempotency key
- * Format: {userId}-{orderId}-{timestamp}
- * 
- * Ensures same request never creates duplicate payments
- */
 paymentSchema.statics.generateIdempotencyKey = function (userId, orderId) {
-    return `${userId.toString()}-${orderId.toString()}-${Date.now()}`;
+    return `${userId.toString()}-${orderId.toString()}`;
 };
 
-/**
- * ✅ Find payment by VNPay transaction reference
- * Used for webhook processing
- */
 paymentSchema.statics.findByVNPayTxnRef = function (txnRef) {
     return this.findOne(
         { 'provider_data.vnp_txn_ref': txnRef, is_deleted: false },
         null,
-        { maxTimeMS: 5000 } // Timeout for webhook responsiveness
+        { maxTimeMS: 5000 }
     );
 };
 
-/**
- * ✅ Find payment by idempotency key
- * Used for idempotent retry detection
- */
 paymentSchema.statics.findByIdempotencyKey = function (idempotencyKey) {
     return this.findOne({
         idempotency_key: idempotencyKey,
@@ -360,10 +323,6 @@ paymentSchema.statics.findByIdempotencyKey = function (idempotencyKey) {
     });
 };
 
-/**
- * ✅ Get user payment history
- * Returns paginated list of payments
- */
 paymentSchema.statics.getUserPaymentHistory = async function (
     userId,
     page = 1,
@@ -391,10 +350,6 @@ paymentSchema.statics.getUserPaymentHistory = async function (
     };
 };
 
-/**
- * ✅ Get pending payments for order
- * Order should have at most 1 pending payment
- */
 paymentSchema.statics.getPendingPaymentForOrder = function (orderId) {
     return this.findOne({
         order_id: orderId,
@@ -403,10 +358,6 @@ paymentSchema.statics.getPendingPaymentForOrder = function (orderId) {
     });
 };
 
-/**
- * ✅ Get successful payment for order
- * Should be exactly 1 per completed order
- */
 paymentSchema.statics.getSuccessfulPaymentForOrder = function (orderId) {
     return this.findOne({
         order_id: orderId,
@@ -415,10 +366,6 @@ paymentSchema.statics.getSuccessfulPaymentForOrder = function (orderId) {
     });
 };
 
-/**
- * ✅ Count failed webhook attempts (for monitoring/alerts)
- * Shows how many webhooks failed verification
- */
 paymentSchema.statics.countFailedVerifications = function (
     startDate,
     endDate
@@ -430,10 +377,6 @@ paymentSchema.statics.countFailedVerifications = function (
     });
 };
 
-/**
- * ✅ Find payments awaiting fulfillment
- * (paid but not yet reflected in order)
- */
 paymentSchema.statics.findUnreconciledPaidPayments = function () {
     return this.find({
         status: 'paid',
@@ -446,24 +389,15 @@ paymentSchema.statics.findUnreconciledPaidPayments = function () {
             select: 'status',
         })
         .where('order_id.status').ne('PAID');
-    // Returns payments that are marked PAID but order isn't
-    // Useful for monitoring data consistency
 };
 
 // ===== INSTANCE METHODS =====
 
-/**
- * ✅ Check if payment is still within payment window
- */
 paymentSchema.methods.isExpired = function () {
-    if (!this.expires_at) return false; // No expiry = not pending
+    if (!this.expires_at) return false;
     return new Date() > this.expires_at;
 };
 
-/**
- * ✅ Check if payment is refundable
- * (paid and within refund window, e.g., 30 days)
- */
 paymentSchema.methods.isRefundable = function () {
     if (this.status !== 'paid') return false;
 
@@ -473,18 +407,12 @@ paymentSchema.methods.isRefundable = function () {
     return this.paid_at >= thirtyDaysAgo;
 };
 
-/**
- * ✅ Get safe response object (redact sensitive data)
- * Remove webhook raw data from API responses
- */
 paymentSchema.methods.toSafeResponse = function () {
     const obj = this.toObject();
 
-    // Redact sensitive webhook data
     delete obj.raw_ipn;
     delete obj.raw_return;
 
-    // Redact partial payment provider secrets (if any)
     if (obj.provider_data?.stripe_client_secret) {
         obj.provider_data.stripe_client_secret = '***';
     }
@@ -494,15 +422,8 @@ paymentSchema.methods.toSafeResponse = function () {
 
 // ===== RESPONSE SANITIZATION =====
 
-/**
- * ✅ Transform response (hide internal fields)
- * Consistent with Cart, Order models
- */
 const sanitizeTransform = (_, ret) => {
     delete ret.__v;
-
-    // In JSON responses, expose most fields (financial record is less sensitive than auth)
-    // But redact raw webhook data via toSafeResponse() when needed
     return ret;
 };
 

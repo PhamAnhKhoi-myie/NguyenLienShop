@@ -2748,11 +2748,7 @@ describe("swaggerSpec", () => {
         const createInput = swaggerSpec.components.schemas.CreatePaymentInput;
         const payment = swaggerSpec.components.schemas.Payment;
 
-        expect(createInput.properties.provider.enum).toEqual([
-            "vnpay",
-            "stripe",
-            "paypal",
-        ]);
+        expect(createInput.properties.provider.enum).toEqual(["vnpay"]);
         expect(payment.properties.provider.enum).toEqual([
             "vnpay",
             "stripe",
