@@ -93,12 +93,18 @@ const cancelShipmentBodySchema = z.object({
 const updateShipmentStatusBodySchema = z.object({
     status: shipmentStatusSchema,
     notes: z.string().max(500).optional(),
-});
+}).refine(
+    (data) => data.status !== 'failed',
+    {
+        message: 'Use failure endpoint to record failure reason and notes',
+        path: ['status'],
+    }
+);
 
 const recordShipmentFailureBodySchema = z
     .object({
         failure_reason: failureReasonSchema,
-        failure_notes: z.string().max(500).optional(),
+        failure_notes: z.string().trim().min(1).max(500),
     })
     .refine(
         (data) => {
@@ -137,7 +143,7 @@ const carrierWebhookBodySchema = z
         tracking_code: trackingCodeSchema,
         status: z.string().min(1),
         carrier_details: z.record(z.any()).optional(),
-        signature: z.string().optional(),
+        signature: z.string().min(1),
         timestamp: z.coerce.number().default(() => Math.floor(Date.now() / 1000)),
     });
 

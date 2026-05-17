@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const Shipment = require('./shipment.model');
 const ShipmentMapper = require('./shipment.mapper');
 const AppError = require('../../utils/appError.util');
@@ -27,26 +28,12 @@ const logger = {
 };
 
 class ShipmentService {
-    static async createShipment(userId, orderId, shipmentData) {
-        if (!userId || !orderId) {
+    static async createShipment(orderId, adminUserId, shipmentData) {
+        if (!orderId || !adminUserId) {
             throw new AppError(
-                'User ID and order ID required',
+                'Order ID and admin user ID required',
                 400,
                 'MISSING_REQUIRED_PARAMS'
-            );
-        }
-
-        const order = await Order.findOne({
-            _id: orderId,
-            user_id: userId,
-            status: 'CONFIRMED',
-        });
-
-        if (!order) {
-            throw new AppError(
-                'Order not found or not in confirmed status',
-                404,
-                'ORDER_NOT_FOUND'
             );
         }
 
@@ -60,70 +47,95 @@ class ShipmentService {
             );
         }
 
-        const existingShipment = await Shipment.findOne({
-            tracking_code: tracking_code.toUpperCase(),
-            is_deleted: false,
-        });
-
-        if (existingShipment) {
+        if (!shipping_address) {
             throw new AppError(
-                'Tracking code already exists',
-                409,
-                'TRACKING_CODE_DUPLICATE'
+                'Shipping address is required',
+                400,
+                'MISSING_SHIPPING_ADDRESS'
             );
         }
 
-        const addressSnapshot = shipping_address || {
-            recipient_name: order.shipping_address?.recipient_name,
-            phone: order.shipping_address?.phone,
-            address: order.shipping_address?.address,
-            ward: order.shipping_address?.ward,
-            district: order.shipping_address?.district,
-            province: order.shipping_address?.province,
-            postal_code: order.shipping_address?.postal_code,
-            country: order.shipping_address?.country || 'Vietnam',
-        };
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        const shipment = await Shipment.create({
-            order_id: orderId,
-            user_id: userId,
+        try {
+            const order = await Order.findOne({
+                _id: orderId,
+                status: 'PROCESSING',
+            }).session(session);
 
-            carrier,
-            tracking_code: tracking_code.toUpperCase(),
+            if (!order) {
+                throw new AppError(
+                    'Order not found or not in processing status',
+                    404,
+                    'ORDER_NOT_FOUND'
+                );
+            }
 
-            shipping_address: addressSnapshot,
+            const existingShipment = await Shipment.findOne({
+                tracking_code: tracking_code.toUpperCase(),
+                is_deleted: false,
+            }).session(session);
 
-            status: 'pending',
-            timeline: {
-                created_at: new Date(),
-                picked_up_at: null,
-                in_transit_at: null,
-                at_destination_at: null,
-                delivered_at: null,
-                failed_at: null,
-                cancelled_at: null,
-                returned_at: null,
-            },
+            if (existingShipment) {
+                throw new AppError(
+                    'Tracking code already exists',
+                    409,
+                    'TRACKING_CODE_DUPLICATE'
+                );
+            }
 
-            retry_count: 0,
-            max_retries: 3,
-        });
+            const [shipment] = await Shipment.create([{
+                order_id: orderId,
+                user_id: order.user_id,
 
-        await Order.updateOne(
-            { _id: orderId },
-            { status: 'SHIPPING', shipped_at: new Date() }
-        );
+                carrier,
+                tracking_code: tracking_code.toUpperCase(),
 
-        logger.info({
-            event: 'shipment_created',
-            shipment_id: shipment._id.toString(),
-            order_id: orderId,
-            user_id: userId,
-            carrier: carrier,
-            tracking_code: tracking_code.toUpperCase(),
-        });
+                shipping_address,
 
-        return ShipmentMapper.toResponseDTO(shipment);
+                status: 'pending',
+                timeline: {
+                    created_at: new Date(),
+                    picked_up_at: null,
+                    in_transit_at: null,
+                    at_destination_at: null,
+                    delivered_at: null,
+                    failed_at: null,
+                    cancelled_at: null,
+                    returned_at: null,
+                },
+
+                retry_count: 0,
+                max_retries: 3,
+            }], { session });
+
+            await this._markOrderShipped(
+                orderId,
+                shipment,
+                adminUserId,
+                { session }
+            );
+
+            await session.commitTransaction();
+
+            logger.info({
+                event: 'shipment_created',
+                shipment_id: shipment._id.toString(),
+                order_id: orderId,
+                user_id: order.user_id.toString(),
+                admin_user_id: adminUserId,
+                carrier: carrier,
+                tracking_code: tracking_code.toUpperCase(),
+            });
+
+            return ShipmentMapper.toResponseDTO(shipment);
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
     }
 
     static async getShipment(shipmentId, userId = null) {
@@ -271,6 +283,14 @@ class ShipmentService {
             );
         }
 
+        if (newStatus === 'failed') {
+            throw new AppError(
+                'Use failure endpoint to record failure reason and notes',
+                400,
+                'SHIPMENT_FAILURE_DETAILS_REQUIRED'
+            );
+        }
+
         const timelineField = this._getStatusTimestampField(newStatus);
         const update = {
             $set: {
@@ -283,17 +303,32 @@ class ShipmentService {
             update.$set[`timeline.${timelineField}`] = new Date();
         }
 
-        const updatedShipment = await Shipment.findByIdAndUpdate(
-            shipmentId,
-            update,
-            { new: true }
-        );
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        if (newStatus === 'delivered') {
-            await Order.updateOne(
-                { _id: updatedShipment.order_id },
-                { status: 'COMPLETED', completed_at: new Date() }
+        let updatedShipment;
+
+        try {
+            updatedShipment = await Shipment.findByIdAndUpdate(
+                shipmentId,
+                update,
+                { new: true, runValidators: true, session }
             );
+
+            if (newStatus === 'delivered') {
+                await this._markOrderDelivered(
+                    updatedShipment.order_id,
+                    metadata.changed_by || null,
+                    { session }
+                );
+            }
+
+            await session.commitTransaction();
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
         }
 
         logger.info({
@@ -306,6 +341,80 @@ class ShipmentService {
         });
 
         return ShipmentMapper.toResponseDTO(updatedShipment);
+    }
+
+    static async updateShipmentStatusFromWebhook(
+        carrier,
+        trackingCode,
+        carrierStatus,
+        metadata = {}
+    ) {
+        const { signature, timestamp, carrier_details } = metadata;
+
+        if (
+            !this._verifyCarrierWebhookSignature(
+                carrier,
+                {
+                    tracking_code: trackingCode,
+                    status: carrierStatus,
+                    carrier_details,
+                    timestamp,
+                },
+                signature
+            )
+        ) {
+            throw new AppError(
+                'Shipment webhook signature verification failed',
+                401,
+                'WEBHOOK_VERIFICATION_FAILED'
+            );
+        }
+
+        const mappedStatus = this._mapCarrierStatus(carrierStatus);
+
+        if (!mappedStatus) {
+            throw new AppError(
+                'Unsupported carrier shipment status',
+                400,
+                'UNSUPPORTED_CARRIER_STATUS'
+            );
+        }
+
+        const shipment = await Shipment.findOne({
+            tracking_code: trackingCode.toUpperCase(),
+            carrier,
+            is_deleted: false,
+        });
+
+        if (!shipment) {
+            throw new AppError(
+                'Shipment not found',
+                404,
+                'SHIPMENT_NOT_FOUND'
+            );
+        }
+
+        if (shipment.status === mappedStatus) {
+            return ShipmentMapper.toResponseDTO(shipment);
+        }
+
+        if (mappedStatus === 'failed') {
+            return this.recordDeliveryFailure(
+                shipment._id,
+                'carrier_error',
+                `Carrier webhook reported failed status: ${carrierStatus}`
+            );
+        }
+
+        return this.updateShipmentStatus(
+            shipment._id,
+            mappedStatus,
+            {
+                carrier_details,
+                notes: `Carrier webhook: ${carrierStatus}`,
+                timestamp,
+            }
+        );
     }
 
     static async recordDeliveryFailure(shipmentId, reason, notes = '') {
@@ -327,9 +436,20 @@ class ShipmentService {
             );
         }
 
+        const failureNotes =
+            typeof notes === 'string' ? notes.trim() : '';
+
+        if (!failureNotes) {
+            throw new AppError(
+                'Failure notes are required',
+                400,
+                'MISSING_FAILURE_NOTES'
+            );
+        }
+
         shipment.status = 'failed';
         shipment.failure_reason = reason;
-        shipment.failure_notes = notes;
+        shipment.failure_notes = failureNotes;
         shipment.retry_count = (shipment.retry_count || 0) + 1;
         shipment.timeline.failed_at = new Date();
         shipment.updated_at = new Date();
@@ -414,17 +534,32 @@ class ShipmentService {
             );
         }
 
-        shipment.status = 'cancelled';
-        shipment.failure_notes = reason;
-        shipment.timeline.cancelled_at = new Date();
-        shipment.updated_at = new Date();
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        await shipment.save();
+        try {
+            shipment.$session(session);
+            shipment.status = 'cancelled';
+            shipment.failure_notes = reason;
+            shipment.timeline.cancelled_at = new Date();
+            shipment.updated_at = new Date();
 
-        await Order.updateOne(
-            { _id: shipment.order_id },
-            { status: 'CONFIRMED' }
-        );
+            await shipment.save({ session });
+
+            await this._returnOrderToProcessing(
+                shipment.order_id,
+                null,
+                reason,
+                { session }
+            );
+
+            await session.commitTransaction();
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
 
         logger.info({
             event: 'shipment_cancelled',
@@ -457,16 +592,30 @@ class ShipmentService {
             );
         }
 
-        shipment.status = 'delivered';
-        shipment.timeline.delivered_at = new Date();
-        shipment.updated_at = new Date();
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        await shipment.save();
+        try {
+            shipment.$session(session);
+            shipment.status = 'delivered';
+            shipment.timeline.delivered_at = new Date();
+            shipment.updated_at = new Date();
 
-        await Order.updateOne(
-            { _id: shipment.order_id },
-            { status: 'COMPLETED', completed_at: new Date() }
-        );
+            await shipment.save({ session });
+
+            await this._markOrderDelivered(
+                shipment.order_id,
+                null,
+                { session }
+            );
+
+            await session.commitTransaction();
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
 
         logger.info({
             event: 'shipment_delivered',
@@ -703,9 +852,309 @@ class ShipmentService {
         return ShipmentMapper.toAdminDTO(shipment);
     }
 
+    static async getAdminShipment(shipmentId) {
+        const shipment = await Shipment.findById(shipmentId);
+
+        if (!shipment) {
+            throw new AppError(
+                'Shipment not found',
+                404,
+                'SHIPMENT_NOT_FOUND'
+            );
+        }
+
+        return ShipmentMapper.toAdminDTO(shipment);
+    }
+
+    static async adminUpdateShipment(
+        shipmentId,
+        updateData = {},
+        adminUserId = null
+    ) {
+        const shipment = await Shipment.findById(shipmentId);
+
+        if (!shipment) {
+            throw new AppError(
+                'Shipment not found',
+                404,
+                'SHIPMENT_NOT_FOUND'
+            );
+        }
+
+        const nextTrackingCode = updateData.tracking_code
+            ? updateData.tracking_code.toUpperCase()
+            : null;
+        const oldTrackingCode = shipment.tracking_code;
+        const oldCarrier = shipment.carrier;
+
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            shipment.$session(session);
+
+            if (
+                nextTrackingCode &&
+                nextTrackingCode !== shipment.tracking_code
+            ) {
+                const existingShipment = await Shipment.findOne({
+                    _id: { $ne: shipment._id },
+                    tracking_code: nextTrackingCode,
+                    is_deleted: false,
+                }).session(session);
+
+                if (existingShipment) {
+                    throw new AppError(
+                        'Tracking code already exists',
+                        409,
+                        'TRACKING_CODE_DUPLICATE'
+                    );
+                }
+
+                shipment.tracking_code = nextTrackingCode;
+            }
+
+            if (updateData.carrier) {
+                shipment.carrier = updateData.carrier;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(updateData, 'admin_notes')) {
+                shipment.admin_notes = updateData.admin_notes;
+            }
+
+            shipment.updated_at = new Date();
+
+            await shipment.save({ session });
+
+            if (
+                shipment.tracking_code !== oldTrackingCode ||
+                shipment.carrier !== oldCarrier
+            ) {
+                await this._syncOrderShipmentSnapshot(
+                    shipment,
+                    oldTrackingCode,
+                    adminUserId,
+                    { session }
+                );
+            }
+
+            await session.commitTransaction();
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
+
+        logger.info({
+            event: 'shipment_admin_updated',
+            shipment_id: shipmentId,
+            order_id: shipment.order_id.toString(),
+            admin_user_id: adminUserId,
+            carrier: shipment.carrier,
+            tracking_code: shipment.tracking_code,
+        });
+
+        return ShipmentMapper.toAdminDTO(shipment);
+    }
+
+    static async _markOrderShipped(
+        orderId,
+        shipment,
+        changedBy = null,
+        options = {}
+    ) {
+        const query = Order.findById(orderId);
+
+        if (options.session) {
+            query.session(options.session);
+        }
+
+        const order = await query;
+
+        if (!order) {
+            throw new AppError(
+                'Order not found',
+                404,
+                'ORDER_NOT_FOUND'
+            );
+        }
+
+        if (order.status !== 'PROCESSING') {
+            throw new AppError(
+                'Only PROCESSING orders can be shipped',
+                409,
+                'INVALID_ORDER_STATUS'
+            );
+        }
+
+        const shippedAt = new Date();
+
+        order.shipment = {
+            carrier: shipment.carrier,
+            tracking_code: shipment.tracking_code,
+            shipped_at: shippedAt,
+        };
+        order.shipment_id = shipment._id;
+
+        order.addStatusTransition(
+            'SHIPPED',
+            changedBy,
+            `Shipped via ${shipment.carrier}`
+        );
+
+        await order.save({ session: options.session });
+
+        return order;
+    }
+
+    static async _syncOrderShipmentSnapshot(
+        shipment,
+        oldTrackingCode,
+        changedBy = null,
+        options = {}
+    ) {
+        const query = Order.findById(shipment.order_id);
+
+        if (options.session) {
+            query.session(options.session);
+        }
+
+        const order = await query;
+
+        if (!order) {
+            return null;
+        }
+
+        const matchesShipmentId =
+            order.shipment_id &&
+            order.shipment_id.toString() === shipment._id.toString();
+        const matchesTrackingCode =
+            order.shipment?.tracking_code &&
+            order.shipment.tracking_code === oldTrackingCode;
+
+        if (!matchesShipmentId && !matchesTrackingCode) {
+            return order;
+        }
+
+        order.shipment = {
+            ...(order.shipment?.toObject
+                ? order.shipment.toObject()
+                : order.shipment || {}),
+            carrier: shipment.carrier,
+            tracking_code: shipment.tracking_code,
+        };
+        order.shipment_id = shipment._id;
+
+        if (changedBy) {
+            order.status_history.push({
+                from: order.status,
+                to: order.status,
+                changed_at: new Date(),
+                changed_by: changedBy,
+                note: 'Shipment tracking details updated',
+            });
+        }
+
+        await order.save({ session: options.session });
+
+        return order;
+    }
+
+    static async _markOrderDelivered(
+        orderId,
+        changedBy = null,
+        options = {}
+    ) {
+        const query = Order.findById(orderId);
+
+        if (options.session) {
+            query.session(options.session);
+        }
+
+        const order = await query;
+
+        if (!order) {
+            throw new AppError(
+                'Order not found',
+                404,
+                'ORDER_NOT_FOUND'
+            );
+        }
+
+        if (order.status !== 'SHIPPED') {
+            throw new AppError(
+                'Only SHIPPED orders can be marked as delivered',
+                409,
+                'INVALID_ORDER_STATUS'
+            );
+        }
+
+        if (!order.shipment) {
+            order.shipment = {};
+        }
+
+        order.shipment.delivered_at = new Date();
+        order.addStatusTransition(
+            'DELIVERED',
+            changedBy,
+            'Delivery confirmed'
+        );
+
+        await order.save({ session: options.session });
+
+        return order;
+    }
+
+    static async _returnOrderToProcessing(
+        orderId,
+        changedBy = null,
+        reason = '',
+        options = {}
+    ) {
+        const query = Order.findById(orderId);
+
+        if (options.session) {
+            query.session(options.session);
+        }
+
+        const order = await query;
+
+        if (!order) {
+            throw new AppError(
+                'Order not found',
+                404,
+                'ORDER_NOT_FOUND'
+            );
+        }
+
+        if (order.status === 'PROCESSING') {
+            return order;
+        }
+
+        if (order.status !== 'SHIPPED') {
+            throw new AppError(
+                'Only SHIPPED orders can return to processing',
+                409,
+                'INVALID_ORDER_STATUS'
+            );
+        }
+
+        order.addStatusTransition(
+            'PROCESSING',
+            changedBy,
+            reason || 'Shipment cancelled'
+        );
+
+        await order.save({ session: options.session });
+
+        return order;
+    }
+
     // ===== INTERNAL HELPERS =====
 
     static _mapCarrierStatus(carrierStatus) {
+        const normalizedStatus = String(carrierStatus || '').toLowerCase();
         const mapping = {
             'ready_to_pick': 'pending',
             'picked': 'picked_up',
@@ -717,7 +1166,70 @@ class ShipmentService {
             'returned': 'returned',
         };
 
-        return mapping[carrierStatus] || 'pending';
+        return mapping[normalizedStatus] || null;
+    }
+
+    static _verifyCarrierWebhookSignature(carrier, payload, signature) {
+        if (!signature) {
+            return false;
+        }
+
+        const secret =
+            process.env[`SHIPMENT_WEBHOOK_SECRET_${carrier}`] ||
+            process.env.SHIPMENT_WEBHOOK_SECRET;
+
+        if (!secret) {
+            return false;
+        }
+
+        const timestamp = Number(payload.timestamp);
+
+        if (
+            !Number.isFinite(timestamp) ||
+            Math.abs(Math.floor(Date.now() / 1000) - timestamp) > 600
+        ) {
+            return false;
+        }
+
+        const signData = this._buildCarrierWebhookSignData(carrier, payload);
+        const expectedSignature = crypto
+            .createHmac('sha256', secret)
+            .update(signData)
+            .digest('hex');
+
+        const receivedBuffer = Buffer.from(String(signature).toLowerCase(), 'utf8');
+        const expectedBuffer = Buffer.from(expectedSignature.toLowerCase(), 'utf8');
+
+        if (receivedBuffer.length !== expectedBuffer.length) {
+            return false;
+        }
+
+        return crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
+    }
+
+    static _buildCarrierWebhookSignData(carrier, payload) {
+        return [
+            carrier,
+            String(payload.tracking_code || '').toUpperCase(),
+            String(payload.status || ''),
+            String(payload.timestamp || ''),
+            this._stableStringify(payload.carrier_details || {}),
+        ].join('.');
+    }
+
+    static _stableStringify(value) {
+        if (value === null || typeof value !== 'object') {
+            return JSON.stringify(value);
+        }
+
+        if (Array.isArray(value)) {
+            return `[${value.map((item) => this._stableStringify(item)).join(',')}]`;
+        }
+
+        return `{${Object.keys(value)
+            .sort()
+            .map((key) => `${JSON.stringify(key)}:${this._stableStringify(value[key])}`)
+            .join(',')}}`;
     }
 
     static _getStatusTimestampField(status) {

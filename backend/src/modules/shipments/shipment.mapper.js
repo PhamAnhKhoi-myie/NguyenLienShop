@@ -219,6 +219,7 @@ class ShipmentMapper {
             retry_count: doc.retry_count || 0,
             max_retries: doc.max_retries || 3,
             last_retry_at: doc.last_retry_at,
+            admin_notes: doc.admin_notes || null,
 
             is_deleted: doc.is_deleted || false,
             deleted_at: doc.deleted_at || null,

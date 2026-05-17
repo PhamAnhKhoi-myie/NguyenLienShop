@@ -3791,7 +3791,7 @@ describe("swaggerSpec", () => {
     });
 
     it("should define admin list shipments endpoint correctly", () => {
-        const route = getPath("/api/v1/admin/shipments", "get");
+        const route = getPath("/api/v1/shipments/admin", "get");
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shipments");
@@ -3809,7 +3809,7 @@ describe("swaggerSpec", () => {
     });
 
     it("should define admin shipment stats endpoint correctly", () => {
-        const route = getPath("/api/v1/admin/shipments/stats", "get");
+        const route = getPath("/api/v1/shipments/admin/stats", "get");
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shipments");
@@ -3889,8 +3889,8 @@ describe("swaggerSpec", () => {
             ["/api/v1/shipments/{shipmentId}/retry", "post"],
             ["/api/v1/shipments/{shipmentId}/cancel", "patch"],
             ["/api/v1/shipments/{shipmentId}/confirm-delivery", "post"],
-            ["/api/v1/admin/shipments", "get"],
-            ["/api/v1/admin/shipments/stats", "get"],
+            ["/api/v1/shipments/admin", "get"],
+            ["/api/v1/shipments/admin/stats", "get"],
         ];
 
         shipmentEndpoints.forEach(([path, method]) => {
@@ -3940,8 +3940,8 @@ describe("swaggerSpec", () => {
 
     it("should validate admin shipment endpoints require auth", () => {
         const adminEndpoints = [
-            ["/api/v1/admin/shipments", "get"],
-            ["/api/v1/admin/shipments/stats", "get"],
+            ["/api/v1/shipments/admin", "get"],
+            ["/api/v1/shipments/admin/stats", "get"],
         ];
 
         adminEndpoints.forEach(([path, method]) => {
@@ -4056,6 +4056,7 @@ describe("swaggerSpec", () => {
 
         expect(updateSchema.required).toContain("status");
         expect(updateSchema.properties.status.enum).toBeDefined();
+        expect(updateSchema.properties.status.enum).not.toContain("failed");
         expect(updateSchema.properties.notes).toBeDefined();
         expect(updateSchema.properties.notes.type).toBe("string");
         expect(updateSchema.properties.notes.maxLength).toBe(500);
@@ -4065,6 +4066,7 @@ describe("swaggerSpec", () => {
         const failureSchema = swaggerSpec.components.schemas.RecordShipmentFailureInput;
 
         expect(failureSchema).toBeDefined();
+        expect(failureSchema.required).toContain("failure_notes");
         // ✅ Handle both "reason" and "failure_reason" field names
         const reasonField = failureSchema.properties.reason || failureSchema.properties.failure_reason;
         expect(reasonField).toBeDefined();
@@ -4239,7 +4241,9 @@ describe("swaggerSpec", () => {
         ];
 
         expect(shipmentSchema.properties.status.enum).toEqual(validStatuses);
-        expect(updateSchema.properties.status.enum).toEqual(validStatuses);
+        expect(updateSchema.properties.status.enum).toEqual(
+            validStatuses.filter((status) => status !== "failed")
+        );
     });
 
     it("should validate get shipment endpoint security", () => {
@@ -4281,7 +4285,7 @@ describe("swaggerSpec", () => {
     });
 
     it("should validate admin shipment list has user_id filter", () => {
-        const route = getPath("/api/v1/admin/shipments", "get");
+        const route = getPath("/api/v1/shipments/admin", "get");
 
         const paramNames = route.parameters.map((p) => p.name);
         expect(paramNames).toContain("user_id");
@@ -4298,7 +4302,7 @@ describe("swaggerSpec", () => {
             "/api/v1/shipments",
             "/api/v1/shipments/{shipmentId}",
             "/api/v1/orders/{orderId}/shipments",
-            "/api/v1/admin/shipments",
+            "/api/v1/shipments/admin",
         ];
 
         shipmentEndpoints.forEach((path) => {
@@ -4330,7 +4334,7 @@ describe("swaggerSpec", () => {
     });
 
     it("should validate shipment stats response structure", () => {
-        const route = getPath("/api/v1/admin/shipments/stats", "get");
+        const route = getPath("/api/v1/shipments/admin/stats", "get");
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shipments");
@@ -4369,7 +4373,7 @@ describe("swaggerSpec", () => {
         const criticalEndpoints = [
             "/api/v1/shipments",
             "/api/v1/shipments/{shipmentId}",
-            "/api/v1/admin/shipments",
+            "/api/v1/shipments/admin",
         ];
 
         criticalEndpoints.forEach((path) => {

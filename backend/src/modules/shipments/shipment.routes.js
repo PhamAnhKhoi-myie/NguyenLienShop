@@ -38,6 +38,42 @@ router.post(
     ShipmentController.handleCarrierWebhook
 );
 
+// ===== ADMIN =====
+
+router.get(
+    '/admin/stats',
+    authenticate,
+    ShipmentController.getShipmentStats
+);
+
+router.get(
+    '/admin',
+    authenticate,
+    validate({ query: adminListShipmentsQuerySchema }),
+    ShipmentController.getAllShipments
+);
+
+router.get(
+    '/admin/:shipmentId',
+    authenticate,
+    validate({ params: shipmentIdParamSchema }),
+    ShipmentController.getAdminShipmentDetail
+);
+
+router.patch(
+    '/admin/:shipmentId',
+    authenticate,
+    validate({ params: shipmentIdParamSchema, body: adminUpdateShipmentBodySchema }),
+    ShipmentController.adminUpdateShipment
+);
+
+router.delete(
+    '/admin/:shipmentId',
+    authenticate,
+    validate({ params: shipmentIdParamSchema }),
+    ShipmentController.deleteShipment
+);
+
 // ===== CUSTOMER =====
 
 router.get(
@@ -73,42 +109,6 @@ router.patch(
     authenticate,
     validate({ params: shipmentIdParamSchema, body: cancelShipmentBodySchema }),
     ShipmentController.cancelShipment
-);
-
-// ===== ADMIN =====
-
-router.get(
-    '/admin/stats',
-    authenticate,
-    ShipmentController.getShipmentStats
-);
-
-router.get(
-    '/admin',
-    authenticate,
-    validate({ query: adminListShipmentsQuerySchema }),
-    ShipmentController.getAllShipments
-);
-
-router.get(
-    '/admin/:shipmentId',
-    authenticate,
-    validate({ params: shipmentIdParamSchema }),
-    ShipmentController.getAdminShipmentDetail
-);
-
-router.patch(
-    '/admin/:shipmentId',
-    authenticate,
-    validate({ params: shipmentIdParamSchema, body: adminUpdateShipmentBodySchema }),
-    ShipmentController.adminUpdateShipment
-);
-
-router.delete(
-    '/admin/:shipmentId',
-    authenticate,
-    validate({ params: shipmentIdParamSchema }),
-    ShipmentController.deleteShipment
 );
 
 router.post(

@@ -3207,7 +3207,7 @@ const swaggerSpec = {
                 properties: {
                     status: {
                         type: 'string',
-                        enum: ['pending', 'picked_up', 'in_transit', 'at_destination', 'delivered', 'failed', 'cancelled', 'returned'],
+                        enum: ['pending', 'picked_up', 'in_transit', 'at_destination', 'delivered', 'cancelled', 'returned'],
                     },
                     notes: { type: 'string', maxLength: 500 },
                 },
@@ -3215,7 +3215,7 @@ const swaggerSpec = {
 
             RecordShipmentFailureInput: {
                 type: 'object',
-                required: ['failure_reason'],
+                required: ['failure_reason', 'failure_notes'],
                 properties: {
                     failure_reason: {
                         type: 'string',
@@ -8014,7 +8014,7 @@ const swaggerSpec = {
                         'application/json': {
                             schema: {
                                 type: 'object',
-                                required: ['tracking_code', 'status'],
+                                required: ['tracking_code', 'status', 'signature'],
                                 properties: {
                                     tracking_code: { type: 'string' },
                                     status: { type: 'string' },
@@ -8368,7 +8368,7 @@ const swaggerSpec = {
             }
         },
 
-        "/api/v1/admin/shipments": {
+        "/api/v1/shipments/admin": {
             get: {
                 tags: ['Shipments'],
                 summary: 'List all shipments (admin only)',
@@ -8432,7 +8432,7 @@ const swaggerSpec = {
             }
         },
 
-        "/api/v1/admin/shipments/stats": {
+        "/api/v1/shipments/admin/stats": {
             get: {
                 tags: ['Shipments'],
                 summary: 'Get shipment statistics (admin only)',

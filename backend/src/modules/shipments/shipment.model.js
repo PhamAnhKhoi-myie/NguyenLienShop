@@ -218,6 +218,11 @@ const shipmentSchema = new mongoose.Schema(
             default: 3,
         },
 
+        admin_notes: {
+            type: String,
+            maxlength: [1000, 'Admin notes must not exceed 1000 characters'],
+        },
+
         // ===== SOFT DELETE =====
         is_deleted: {
             type: Boolean,

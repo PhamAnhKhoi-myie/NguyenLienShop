@@ -1,4 +1,5 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
+const AppError = require('../../utils/appError.util');
 const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const ShipmentService = require('./shipment.service');
 
@@ -24,14 +25,25 @@ const handleCarrierWebhook = asyncHandler(async (req, res) => {
         tracking_code,
         status,
         carrier_details,
+        signature,
         timestamp,
     } = req.body;
 
-    const result = await ShipmentService.updateShipmentStatus(
+    if (!signature) {
+        throw new AppError(
+            'Missing shipment webhook signature',
+            400,
+            'MISSING_WEBHOOK_SIGNATURE'
+        );
+    }
+
+    const result = await ShipmentService.updateShipmentStatusFromWebhook(
+        carrier,
         tracking_code,
         status,
         {
             carrier_details,
+            signature,
             timestamp,
         }
     );
@@ -266,10 +278,7 @@ const getAdminShipmentDetail = asyncHandler(async (req, res) => {
 
     const { shipmentId } = req.params;
 
-    const shipment = await ShipmentService.getShipment(
-        shipmentId,
-        null
-    );
+    const shipment = await ShipmentService.getAdminShipment(shipmentId);
 
     res.status(200).json({
         success: true,
@@ -283,9 +292,10 @@ const adminUpdateShipment = asyncHandler(async (req, res) => {
 
     const { shipmentId } = req.params;
 
-    const updatedShipment = await ShipmentService.getShipment(
+    const updatedShipment = await ShipmentService.adminUpdateShipment(
         shipmentId,
-        null
+        req.body,
+        user.userId
     );
 
     res.status(200).json({
