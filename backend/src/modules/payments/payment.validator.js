@@ -16,6 +16,10 @@ const IdParamSchema = z.object({
     payment_id: objectIdSchema,
 });
 
+const OrderIdParamSchema = z.object({
+    order_id: objectIdSchema,
+});
+
 /**
  * ===== COMMON =====
  */
@@ -81,7 +85,8 @@ const vnpayWebhookBodySchema = z.object({
 
     vnp_PayDate: z.string().regex(/^\d{14}$/),
 
-    vnp_ResponseCode: z.string().min(1),
+    vnp_ResponseCode: z.string().regex(/^\d{2}$/),
+    vnp_TransactionStatus: z.string().regex(/^\d{2}$/),
     vnp_TmnCode: z.string().min(1),
 
     vnp_TransactionNo: z.string().max(100).optional(),
@@ -187,6 +192,7 @@ const listPaymentsQuerySchema = z.object({
 module.exports = {
     // params
     IdParamSchema,
+    OrderIdParamSchema,
 
     // body
     createPaymentBodySchema,

@@ -12,6 +12,8 @@ const providerDataSchema = new mongoose.Schema(
 
         vnp_response_code: String,
 
+        vnp_transaction_status: String,
+
         vnp_bank_code: String,
 
         vnp_pay_date: Date,
@@ -225,11 +227,10 @@ paymentSchema.index(
 );
 
 paymentSchema.index(
-    { expires_at: 1 },
+    { status: 1, expires_at: 1 },
     {
-        expireAfterSeconds: 0,
         sparse: true,
-        name: 'expires_at_ttl',
+        name: 'pending_expires_at_idx',
     }
 );
 

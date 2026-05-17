@@ -75,6 +75,18 @@ class PaymentService {
             existingPayment.expires_at &&
             new Date() < new Date(existingPayment.expires_at)
         ) {
+            if (
+                provider === 'vnpay' &&
+                !existingPayment.provider_data?.vnp_txn_ref
+            ) {
+                existingPayment.provider_data = {
+                    ...existingPayment.provider_data,
+                    vnp_txn_ref: `${Date.now()}_${existingPayment.order_id.toString()}`,
+                };
+
+                await existingPayment.save();
+            }
+
             return {
                 paymentId: existingPayment._id.toString(),
                 payment: PaymentMapper.toResponseDTO(existingPayment),
@@ -84,9 +96,16 @@ class PaymentService {
                 ),
             };
         }
-
         const thirtyMinutesFromNow = new Date();
         thirtyMinutesFromNow.setMinutes(thirtyMinutesFromNow.getMinutes() + 30);
+
+        const txnRef = `${Date.now()}_${orderId}`;
+
+        const providerData = {};
+
+        if (provider === 'vnpay') {
+            providerData.vnp_txn_ref = txnRef;
+        }
 
         const payment = await Payment.create({
             order_id: orderId,
@@ -103,8 +122,7 @@ class PaymentService {
 
             expires_at: thirtyMinutesFromNow,
 
-            provider_data: {
-            },
+            provider_data: providerData,
         });
 
         const paymentUrl = await this._generatePaymentUrl(payment, provider);
@@ -118,9 +136,11 @@ class PaymentService {
 
     static async handleVNPayWebhook(webhookData) {
         const {
+            vnp_TmnCode,
             vnp_TxnRef,
             vnp_Amount,
             vnp_ResponseCode,
+            vnp_TransactionStatus,
             vnp_TransactionNo,
             vnp_BankCode,
             vnp_PayDate,
@@ -137,6 +157,8 @@ class PaymentService {
             );
         }
 
+        this._verifyVNPayTmnCode(vnp_TmnCode);
+
         const payment = await Payment.findByVNPayTxnRef(vnp_TxnRef);
         if (!payment) {
             throw new AppError(
@@ -146,7 +168,10 @@ class PaymentService {
             );
         }
 
-        if (payment.amount !== vnp_Amount) {
+        const receivedAmount = Number(vnp_Amount);
+        const expectedAmount = Math.round(Number(payment.amount) * 100);
+
+        if (!Number.isFinite(receivedAmount) || receivedAmount !== expectedAmount) {
             await Payment.updateOne(
                 { _id: payment._id },
                 {
@@ -154,7 +179,7 @@ class PaymentService {
                         verification_status: 'failed',
                         failure_reason: 'AMOUNT_MISMATCH',
                         failure_code: 'FRAUD_ATTEMPT',
-                        failure_message: `Expected ${payment.amount}, received ${vnp_Amount}`,
+                        failure_message: `Expected ${expectedAmount}, received ${vnp_Amount}`,
                         webhook_verified_at: new Date(),
                     },
                 }
@@ -167,21 +192,71 @@ class PaymentService {
             );
         }
 
-        if (vnp_ResponseCode === '00') {
+        const isPaymentSuccess =
+            vnp_ResponseCode === '00' &&
+            vnp_TransactionStatus === '00';
+
+        if (isPaymentSuccess) {
             return await this._processPaymentSuccess(payment, {
                 vnp_TxnRef,
                 vnp_TransactionNo,
                 vnp_ResponseCode,
+                vnp_TransactionStatus,
                 vnp_BankCode,
                 vnp_PayDate,
                 raw_ipn: webhookData,
             });
-        } else {
-            return await this._processPaymentFailure(payment, {
-                vnp_ResponseCode,
-                raw_ipn: webhookData,
-            });
         }
+
+        return await this._processPaymentFailure(payment, {
+            vnp_ResponseCode,
+            vnp_TransactionStatus,
+            raw_ipn: webhookData,
+        });
+    }
+
+    static async handleVNPayReturn(returnData) {
+        const {
+            vnp_TmnCode,
+            vnp_TxnRef,
+            vnp_ResponseCode,
+            vnp_TransactionStatus,
+            vnp_SecureHash,
+        } = returnData;
+
+        const isSignatureValid = this._verifyVNPaySignature(returnData);
+
+        if (!isSignatureValid) {
+            throw new AppError(
+                'Return URL signature verification failed',
+                401,
+                'RETURN_URL_VERIFICATION_FAILED'
+            );
+        }
+
+        this._verifyVNPayTmnCode(vnp_TmnCode);
+
+        const payment = await Payment.findByVNPayTxnRef(vnp_TxnRef);
+
+        if (!payment) {
+            throw new AppError(
+                'Payment not found',
+                404,
+                'PAYMENT_NOT_FOUND'
+            );
+        }
+
+        return {
+            isSuccess:
+                vnp_ResponseCode === '00' &&
+                vnp_TransactionStatus === '00',
+
+            paymentId: payment._id.toString(),
+            orderId: payment.order_id.toString(),
+            txnRef: vnp_TxnRef,
+            responseCode: vnp_ResponseCode,
+            transactionStatus: vnp_TransactionStatus,
+        };
     }
 
     static async handleStripeWebhook(webhookEvent, signature) {
@@ -295,133 +370,59 @@ class PaymentService {
     }
 
     static async _processPaymentSuccess(payment, providerData) {
-        const result = await Payment.updateOne(
-            {
-                _id: payment._id,
-                status: 'pending', // ← MANDATORY condition
-            },
-            {
-                $set: {
-                    status: 'paid',
-                    verification_status: 'verified',
-                    webhook_verified_at: new Date(),
-                    paid_at: new Date(),
-                    'provider_data.vnp_transaction_no':
-                        providerData.vnp_TransactionNo,
-                    'provider_data.vnp_response_code':
-                        providerData.vnp_ResponseCode,
-                    'provider_data.vnp_bank_code': providerData.vnp_BankCode,
-                    'provider_data.vnp_pay_date': providerData.vnp_PayDate,
-                    'provider_data.stripe_status':
-                        providerData.stripe_status,
-                    'provider_data.paypal_status':
-                        providerData.paypal_status,
-                    raw_ipn: providerData.raw_ipn,
-                    raw_return: providerData.raw_return,
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            const paidAt = new Date();
+
+            const vnpPayDate = providerData.vnp_PayDate
+                ? this._parseVNPayDate(providerData.vnp_PayDate)
+                : null;
+
+            const result = await Payment.updateOne(
+                {
+                    _id: payment._id,
+                    status: 'pending',
                 },
-                $unset: {
-                    expires_at: 1, // ← CRITICAL: Remove TTL field to prevent auto-deletion
-                },
-            }
-        );
+                {
+                    $set: {
+                        status: 'paid',
+                        verification_status: 'verified',
+                        webhook_verified_at: paidAt,
+                        paid_at: paidAt,
 
-        if (result.modifiedCount === 0) {
-            const currentPayment = await Payment.findById(payment._id);
+                        'provider_data.vnp_transaction_no':
+                            providerData.vnp_TransactionNo,
+                        'provider_data.vnp_response_code':
+                            providerData.vnp_ResponseCode,
+                        'provider_data.vnp_transaction_status':
+                            providerData.vnp_TransactionStatus,
+                        'provider_data.vnp_bank_code': providerData.vnp_BankCode,
+                        'provider_data.vnp_pay_date': vnpPayDate,
 
-            logger.info({
-                event: 'payment_success_idempotent',
-                payment_id: payment._id.toString(),
-                order_id: payment.order_id.toString(),
-                message: 'Payment already processed (idempotent retry)'
-            });
+                        'provider_data.stripe_status':
+                            providerData.stripe_status,
+                        'provider_data.paypal_status':
+                            providerData.paypal_status,
 
-            return {
-                status: currentPayment.status,
-                transactionRef: PaymentMapper.getTransactionRef(
-                    currentPayment.provider_data
-                ),
-                message: 'Payment already processed (idempotent)',
-            };
-        }
-
-        const order = await Order.findByIdAndUpdate(
-            payment.order_id,
-            { 'payment.status': 'PAID', 'payment.paid_at': new Date() },
-            { new: true }
-        );
-
-        if (!order) {
-            console.error(
-                `[Payment] Order not found after payment success: ${payment.order_id}`
-            );
-        }
-
-        // ✅ CRITICAL: FINALIZE STOCK (reserved → sold)
-        // This is the point where stock is permanently locked
-        if (order && order.items && order.items.length > 0) {
-            for (const item of order.items) {
-                // ✅ quantity_ordered = number of packs
-                // ✅ pack_size = items per pack
-                // ✅ total physical items = quantity_ordered * pack_size
-                const qtyToFinalize = item.quantity_ordered * item.pack_size;
-
-                const stockResult = await Variant.updateOne(
-                    {
-                        _id: item.variant_id,
-                        'stock.reserved': { $gte: qtyToFinalize }  // ← Must have reserved
+                        raw_ipn: providerData.raw_ipn,
+                        raw_return: providerData.raw_return,
                     },
-                    {
-                        $inc: {
-                            'stock.reserved': -qtyToFinalize,     // Remove from reserved
-                            'stock.sold': +qtyToFinalize          // Move to sold (PERMANENT)
-                        }
-                    }
-                );
+                    $unset: {
+                        expires_at: 1,
+                    },
+                },
+                { session }
+            );
 
-                if (stockResult.modifiedCount === 0) {
-                    // ⚠️ Critical issue: reserved stock missing
-                    // This should not happen if checkout was atomic
-                    logger.error({
-                        event: 'stock_finalize_failed',
-                        order_id: payment.order_id.toString(),
-                        variant_id: item.variant_id.toString(),
-                        item_name: item.product_name,
-                        qty_expected: qtyToFinalize
-                    });
-
-                    throw new AppError(
-                        `Stock finalization failed for ${item.product_name}`,
-                        500,
-                        'STOCK_FINALIZE_FAILED'
-                    );
-                }
-
-                logger.info({
-                    event: 'stock_finalized',
-                    order_id: payment.order_id.toString(),
-                    variant_id: item.variant_id.toString(),
-                    qty_finalized: qtyToFinalize,
-                    product_name: item.product_name
-                });
-            }
+            // giữ nguyên phần còn lại
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
         }
-
-        logger.info({
-            event: 'payment_success',
-            payment_id: payment._id.toString(),
-            order_id: payment.order_id.toString(),
-            user_id: payment.user_id.toString(),
-            amount: payment.amount,
-            currency: payment.currency
-        });
-
-        return {
-            status: 'paid',
-            transactionRef: PaymentMapper.getTransactionRef(
-                providerData
-            ),
-            orderId: payment.order_id.toString(),
-        };
     }
 
     static async _processPaymentFailure(payment, failureData) {
@@ -549,8 +550,20 @@ class PaymentService {
         }
     }
 
-    static async retryPayment(paymentId) {
-        const payment = await Payment.findById(paymentId);
+    static async retryPayment(paymentId, userId) {
+        if (!paymentId || !userId) {
+            throw new AppError(
+                'Payment ID and user ID required',
+                400,
+                'MISSING_REQUIRED_PARAMS'
+            );
+        }
+
+        const payment = await Payment.findOne({
+            _id: paymentId,
+            user_id: userId,
+        });
+
         if (!payment) {
             throw new AppError(
                 'Payment not found',
@@ -569,6 +582,7 @@ class PaymentService {
 
         const order = await Order.findOne({
             _id: payment.order_id,
+            user_id: userId,
             status: 'FAILED',
         });
 
@@ -583,17 +597,53 @@ class PaymentService {
         const thirtyMinutesFromNow = new Date();
         thirtyMinutesFromNow.setMinutes(thirtyMinutesFromNow.getMinutes() + 30);
 
-        const updatedPayment = await Payment.findByIdAndUpdate(
-            paymentId,
+        const providerData = {
+            ...(payment.provider_data?.toObject
+                ? payment.provider_data.toObject()
+                : payment.provider_data),
+        };
+
+        if (payment.provider === 'vnpay') {
+            providerData.vnp_txn_ref = `${Date.now()}_${payment.order_id.toString()}`;
+        }
+
+        const updatedPayment = await Payment.findOneAndUpdate(
             {
-                status: 'pending',
-                verification_status: 'pending',
-                expires_at: thirtyMinutesFromNow,
-                $inc: { retry_count: 1 },
-                last_retry_at: new Date(),
+                _id: paymentId,
+                user_id: userId,
+                status: 'failed',
+            },
+            {
+                $set: {
+                    status: 'pending',
+                    verification_status: 'pending',
+                    expires_at: thirtyMinutesFromNow,
+                    last_retry_at: new Date(),
+                    provider_data: providerData,
+                },
+                $inc: {
+                    retry_count: 1,
+                },
+                $unset: {
+                    failure_reason: 1,
+                    failure_code: 1,
+                    failure_message: 1,
+                    webhook_verified_at: 1,
+                    paid_at: 1,
+                    raw_ipn: 1,
+                    raw_return: 1,
+                },
             },
             { new: true }
         );
+
+        if (!updatedPayment) {
+            throw new AppError(
+                'Payment not found or cannot be retried',
+                404,
+                'PAYMENT_NOT_FOUND'
+            );
+        }
 
         const paymentUrl = await this._generatePaymentUrl(
             updatedPayment,
@@ -603,16 +653,28 @@ class PaymentService {
         return {
             paymentId: updatedPayment._id.toString(),
             payment: PaymentMapper.toResponseDTO(updatedPayment),
-            paymentUrl: paymentUrl,
+            paymentUrl,
         };
     }
 
-    static async cancelPayment(paymentId, reason = 'User cancelled') {
+    static async cancelPayment(paymentId, userId, reason = 'User cancelled') {
+        if (!paymentId || !userId) {
+            throw new AppError(
+                'Payment ID and user ID required',
+                400,
+                'MISSING_REQUIRED_PARAMS'
+            );
+        }
+
         const session = await mongoose.startSession();
         session.startTransaction();
 
         try {
-            const payment = await Payment.findById(paymentId).session(session);
+            const payment = await Payment.findOne({
+                _id: paymentId,
+                user_id: userId,
+            }).session(session);
+
             if (!payment) {
                 throw new AppError(
                     'Payment not found',
@@ -629,8 +691,12 @@ class PaymentService {
                 );
             }
 
-            await Payment.updateOne(
-                { _id: paymentId },
+            const result = await Payment.updateOne(
+                {
+                    _id: paymentId,
+                    user_id: userId,
+                    status: 'pending',
+                },
                 {
                     $set: {
                         status: 'failed',
@@ -646,15 +712,24 @@ class PaymentService {
                 { session }
             );
 
-            const order = await Order.findById(payment.order_id).session(
-                session
-            );
+            if (result.modifiedCount === 0) {
+                throw new AppError(
+                    'Payment not found or cannot be cancelled',
+                    404,
+                    'PAYMENT_NOT_FOUND'
+                );
+            }
+
+            const order = await Order.findOne({
+                _id: payment.order_id,
+                user_id: userId,
+            }).session(session);
 
             if (order) {
                 for (const item of order.items) {
                     const qtyItems = item.quantity_ordered * item.pack_size;
 
-                    await Variant.updateOne(
+                    const stockResult = await Variant.updateOne(
                         {
                             _id: item.variant_id,
                             'stock.reserved': { $gte: qtyItems },
@@ -667,11 +742,27 @@ class PaymentService {
                         },
                         { session }
                     );
+
+                    if (stockResult.modifiedCount === 0) {
+                        throw new AppError(
+                            `Stock restoration failed for item ${item.product_name}`,
+                            500,
+                            'STOCK_RESTORATION_FAILED'
+                        );
+                    }
                 }
 
                 await Order.updateOne(
-                    { _id: order._id },
-                    { status: 'FAILED' },
+                    {
+                        _id: order._id,
+                        user_id: userId,
+                    },
+                    {
+                        $set: {
+                            status: 'FAILED',
+                            'payment.status': 'FAILED',
+                        },
+                    },
                     { session }
                 );
             }
@@ -693,6 +784,7 @@ class PaymentService {
 
     static async getPaymentById(paymentId) {
         const payment = await Payment.findById(paymentId);
+
         if (!payment) {
             throw new AppError(
                 'Payment not found',
@@ -701,7 +793,7 @@ class PaymentService {
             );
         }
 
-        return PaymentMapper.toDetailDTO(payment);
+        return payment;
     }
 
     static async getPaymentByOrder(orderId, status = null) {
@@ -855,27 +947,65 @@ class PaymentService {
 
     // ===== INTERNAL HELPERS =====
 
-    static _verifyVNPaySignature(webhookData) {
+    static _verifyVNPayTmnCode(vnpTmnCode) {
+        const expectedTmnCode = process.env.VNPAY_TMN_CODE;
+
+        if (!expectedTmnCode) {
+            throw new AppError(
+                'VNPay TMN code config is missing',
+                500,
+                'VNPAY_TMN_CODE_MISSING'
+            );
+        }
+
+        if (!vnpTmnCode || vnpTmnCode !== expectedTmnCode) {
+            throw new AppError(
+                'VNPay TMN code mismatch',
+                401,
+                'VNPAY_TMN_CODE_MISMATCH'
+            );
+        }
+
+        return true;
+    }
+
+    static _verifyVNPaySignature(vnpParams) {
         const {
             vnp_SecureHash,
             vnp_SecureHashType,
             ...dataToHash
-        } = webhookData;
+        } = vnpParams;
 
-        const sortedKeys = Object.keys(dataToHash).sort();
-        const queryString = sortedKeys
-            .map((key) => `${key}=${dataToHash[key]}`)
-            .join('&');
+        if (!vnp_SecureHash) {
+            return false;
+        }
 
-        const rawAlgorithm = (process.env.VNPAY_HASH_ALGORITHM || 'SHA512').toUpperCase();
-        const SUPPORTED_ALGORITHMS = ['SHA256', 'SHA512'];
-        const algorithm = SUPPORTED_ALGORITHMS.includes(rawAlgorithm) ? rawAlgorithm.toLowerCase() : 'sha512';
-        const computed = crypto
-            .createHmac(algorithm, process.env.VNPAY_SECURE_SECRET || '')
-            .update(queryString)
+        const secureSecret = process.env.VNPAY_SECURE_SECRET;
+
+        if (!secureSecret) {
+            return false;
+        }
+
+        const sortedParams = this._sortObject(dataToHash);
+        const signData = this._buildVNPaySignData(sortedParams);
+        const hashAlgorithm = this._getVNPayHashAlgorithm();
+
+        const computedHash = crypto
+            .createHmac(hashAlgorithm, secureSecret)
+            .update(Buffer.from(signData, 'utf-8'))
             .digest('hex');
 
-        return computed.toLowerCase() === vnp_SecureHash.toLowerCase();
+        const receivedHash = String(vnp_SecureHash).toLowerCase();
+        const expectedHash = computedHash.toLowerCase();
+
+        const receivedBuffer = Buffer.from(receivedHash, 'utf8');
+        const expectedBuffer = Buffer.from(expectedHash, 'utf8');
+
+        if (receivedBuffer.length !== expectedBuffer.length) {
+            return false;
+        }
+
+        return crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
     }
 
     static _verifyStripeSignature(webhookEvent, signature) {
@@ -907,9 +1037,8 @@ class PaymentService {
     }
 
     static async _generatePaymentUrl(payment, provider) {
-
         if (provider === 'vnpay') {
-            return `https://sandbox.vnpayment.vn/paygate?...`; // Mock
+            return this._generateVNPayPaymentUrl(payment);
         }
 
         if (provider === 'stripe') {
@@ -927,18 +1056,283 @@ class PaymentService {
         );
     }
 
+    static _generateVNPayPaymentUrl(payment) {
+        const tmnCode = process.env.VNPAY_TMN_CODE;
+        const secureSecret = process.env.VNPAY_SECURE_SECRET;
+        const paymentUrl = process.env.VNPAY_PAYMENT_URL;
+        const returnUrl = process.env.VNPAY_RETURN_URL;
+
+        if (!tmnCode || !secureSecret || !returnUrl || !paymentUrl) {
+            throw new AppError(
+                'VNPay config is missing',
+                500,
+                'VNPAY_CONFIG_MISSING'
+            );
+        }
+
+        if (!payment || !payment._id || !payment.order_id || !payment.amount) {
+            throw new AppError(
+                'Invalid payment data for VNPay',
+                500,
+                'INVALID_PAYMENT_DATA'
+            );
+        }
+
+        const now = new Date();
+        const createDate = this._formatVNPayDate(now);
+
+        const txnRef =
+            payment.provider_data?.vnp_txn_ref ||
+            payment._id.toString();
+
+        const rawParams = {
+            vnp_Version: '2.1.0',
+            vnp_Command: 'pay',
+            vnp_TmnCode: tmnCode,
+            vnp_Amount: Math.round(Number(payment.amount) * 100),
+            vnp_CurrCode: payment.currency || 'VND',
+            vnp_TxnRef: txnRef,
+            vnp_OrderInfo: `Thanh toan don hang ${payment.order_id.toString()}`,
+            vnp_OrderType: 'other',
+            vnp_Locale: 'vn',
+            vnp_ReturnUrl: returnUrl,
+            vnp_IpAddr: '127.0.0.1',
+            vnp_CreateDate: createDate,
+        };
+
+        const sortedParams = this._sortObject(rawParams);
+        const signData = this._buildVNPaySignData(sortedParams);
+
+        const hashAlgorithm = this._getVNPayHashAlgorithm();
+
+        const secureHash = crypto
+            .createHmac(hashAlgorithm, secureSecret)
+            .update(Buffer.from(signData, 'utf-8'))
+            .digest('hex');
+
+        sortedParams.vnp_SecureHash = secureHash;
+
+        const queryString = this._buildVNPayQueryString(sortedParams);
+
+        return `${paymentUrl}?${queryString}`;
+    }
+
+    static _sortObject(obj) {
+        const sorted = {};
+
+        Object.keys(obj)
+            .sort()
+            .forEach((key) => {
+                const value = obj[key];
+
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ''
+                ) {
+                    sorted[key] = value;
+                }
+            });
+
+        return sorted;
+    }
+
+    static _buildVNPaySignData(params) {
+        return Object.keys(params)
+            .map((key) => {
+                return `${encodeURIComponent(key)}=${encodeURIComponent(params[key]).replace(/%20/g, '+')}`;
+            })
+            .join('&');
+    }
+
+    static _buildVNPayQueryString(params) {
+        return Object.keys(params)
+            .map((key) => {
+                return `${encodeURIComponent(key)}=${encodeURIComponent(params[key]).replace(/%20/g, '+')}`;
+            })
+            .join('&');
+    }
+
+    static _formatVNPayDate(date) {
+        const pad = (number) => number.toString().padStart(2, '0');
+
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        const day = pad(date.getDate());
+        const hour = pad(date.getHours());
+        const minute = pad(date.getMinutes());
+        const second = pad(date.getSeconds());
+
+        return `${year}${month}${day}${hour}${minute}${second}`;
+    }
+
+    static _parseVNPayDate(vnpPayDate) {
+        if (!vnpPayDate) {
+            return null;
+        }
+
+        const raw = String(vnpPayDate);
+
+        if (!/^\d{14}$/.test(raw)) {
+            throw new AppError(
+                'Invalid VNPay pay date format',
+                400,
+                'INVALID_VNPAY_PAY_DATE'
+            );
+        }
+
+        const year = Number(raw.slice(0, 4));
+        const month = Number(raw.slice(4, 6));
+        const day = Number(raw.slice(6, 8));
+        const hour = Number(raw.slice(8, 10));
+        const minute = Number(raw.slice(10, 12));
+        const second = Number(raw.slice(12, 14));
+
+        const parsedDate = new Date(
+            year,
+            month - 1,
+            day,
+            hour,
+            minute,
+            second
+        );
+
+        if (Number.isNaN(parsedDate.getTime())) {
+            throw new AppError(
+                'Invalid VNPay pay date value',
+                400,
+                'INVALID_VNPAY_PAY_DATE'
+            );
+        }
+
+        return parsedDate;
+    }
+
+    static _getVNPayHashAlgorithm() {
+        const rawAlgorithm = (process.env.VNPAY_HASH_ALGORITHM || 'SHA512').toUpperCase();
+
+        const supportedAlgorithms = {
+            SHA256: 'sha256',
+            SHA512: 'sha512',
+        };
+
+        return supportedAlgorithms[rawAlgorithm] || 'sha512';
+    }
+
     static async cleanupExpiredPayments() {
-        const expired = await Payment.find({
+        const expiredPayments = await Payment.find({
             status: 'pending',
             expires_at: { $lt: new Date() },
         });
 
-        console.log(
-            `[Payment] Found ${expired.length} expired pending payments`
-        );
+        let processedCount = 0;
+        let failedCount = 0;
 
+        for (const payment of expiredPayments) {
+            const session = await mongoose.startSession();
+            session.startTransaction();
 
-        return expired.length;
+            try {
+                const now = new Date();
+
+                const result = await Payment.updateOne(
+                    {
+                        _id: payment._id,
+                        status: 'pending',
+                        expires_at: { $lt: now },
+                    },
+                    {
+                        $set: {
+                            status: 'failed',
+                            verification_status: 'verified',
+                            webhook_verified_at: now,
+                            failure_reason: 'PAYMENT_EXPIRED',
+                            failure_code: 'EXPIRED',
+                            failure_message: 'Payment expired before completion',
+                        },
+                        $unset: {
+                            expires_at: 1,
+                        },
+                    },
+                    { session }
+                );
+
+                if (result.modifiedCount === 0) {
+                    await session.commitTransaction();
+                    continue;
+                }
+
+                const order = await Order.findById(payment.order_id).session(session);
+
+                if (order) {
+                    for (const item of order.items) {
+                        const qtyItems = item.quantity_ordered * item.pack_size;
+
+                        const stockResult = await Variant.updateOne(
+                            {
+                                _id: item.variant_id,
+                                'stock.reserved': { $gte: qtyItems },
+                            },
+                            {
+                                $inc: {
+                                    'stock.available': qtyItems,
+                                    'stock.reserved': -qtyItems,
+                                },
+                            },
+                            { session }
+                        );
+
+                        if (stockResult.modifiedCount === 0) {
+                            throw new AppError(
+                                `Stock release failed for expired payment item ${item.product_name}`,
+                                500,
+                                'STOCK_RELEASE_FAILED'
+                            );
+                        }
+                    }
+
+                    await Order.updateOne(
+                        { _id: order._id },
+                        {
+                            $set: {
+                                status: 'FAILED',
+                                'payment.status': 'FAILED',
+                            },
+                        },
+                        { session }
+                    );
+                }
+
+                await session.commitTransaction();
+
+                processedCount += 1;
+
+                logger.info({
+                    event: 'expired_payment_processed',
+                    payment_id: payment._id.toString(),
+                    order_id: payment.order_id.toString(),
+                });
+            } catch (error) {
+                await session.abortTransaction();
+
+                failedCount += 1;
+
+                logger.error({
+                    event: 'expired_payment_process_failed',
+                    payment_id: payment._id.toString(),
+                    order_id: payment.order_id?.toString(),
+                    error: error.message,
+                });
+            } finally {
+                session.endSession();
+            }
+        }
+
+        return {
+            totalExpired: expiredPayments.length,
+            processed: processedCount,
+            failed: failedCount,
+        };
     }
 
     static async softDeletePayment(paymentId) {

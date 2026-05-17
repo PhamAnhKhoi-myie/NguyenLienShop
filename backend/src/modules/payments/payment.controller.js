@@ -8,33 +8,84 @@ const PaymentMapper = require('./payment.mapper');
 
 const handleVNPayWebhook = asyncHandler(async (req, res) => {
     try {
-        const result = await PaymentService.handleVNPayWebhook(req.body);
+        const webhookData = req.method === 'GET' ? req.query : req.body;
+
+        const result = await PaymentService.handleVNPayWebhook(webhookData);
+
+        if (
+            result?.message === 'Payment already processed (idempotent)' ||
+            result?.message === 'Payment failure already processed (idempotent)'
+        ) {
+            return res.status(200).json({
+                RspCode: '02',
+                Message: 'Order already confirmed',
+            });
+        }
 
         return res.status(200).json({
-            success: true,
-            data: result,
+            RspCode: '00',
+            Message: 'Confirm Success',
         });
     } catch (error) {
-        console.error('[VNPay Webhook Error]', error.message);
+        console.error('[VNPay IPN Error]', error.message);
+
+        const errorCode = error.errorCode;
+
+        if (errorCode === 'WEBHOOK_VERIFICATION_FAILED') {
+            return res.status(200).json({
+                RspCode: '97',
+                Message: 'Checksum failed',
+            });
+        }
+
+        if (errorCode === 'PAYMENT_NOT_FOUND') {
+            return res.status(200).json({
+                RspCode: '01',
+                Message: 'Order not found',
+            });
+        }
+
+        if (errorCode === 'AMOUNT_MISMATCH_FRAUD_ATTEMPT') {
+            return res.status(200).json({
+                RspCode: '04',
+                Message: 'Invalid amount',
+            });
+        }
+
+        if (errorCode === 'INVALID_PAYMENT_STATUS') {
+            return res.status(200).json({
+                RspCode: '02',
+                Message: 'Order already confirmed',
+            });
+        }
 
         return res.status(200).json({
-            success: false,
-            code: error.errorCode || 'WEBHOOK_ERROR',
-            message: error.message,
+            RspCode: '99',
+            Message: 'Unknown error',
         });
     }
 });
 
 const handleVNPayReturn = asyncHandler(async (req, res) => {
-    const { vnp_ResponseCode, vnp_OrderInfo, vnp_TxnRef } = req.query;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-    if (vnp_ResponseCode === '00') {
+    try {
+        const result = await PaymentService.handleVNPayReturn(req.query);
+
+        if (result.isSuccess) {
+            return res.redirect(
+                `${frontendUrl}/payment/vnpay-return?status=success&order_id=${result.orderId}&payment_id=${result.paymentId}&txn_ref=${result.txnRef}`
+            );
+        }
+
         return res.redirect(
-            `/checkout/success?order=${vnp_OrderInfo || ''}&txn_ref=${vnp_TxnRef || ''}`
+            `${frontendUrl}/payment/vnpay-return?status=failed&order_id=${result.orderId}&payment_id=${result.paymentId}&txn_ref=${result.txnRef}&code=${result.responseCode || 'UNKNOWN'}`
         );
-    } else {
+    } catch (error) {
+        console.error('[VNPay Return Error]', error.message);
+
         return res.redirect(
-            `/checkout/failed?code=${vnp_ResponseCode || 'UNKNOWN'}&order=${vnp_OrderInfo || ''}`
+            `${frontendUrl}/payment/vnpay-return?status=invalid&code=${error.errorCode || 'RETURN_VERIFY_FAILED'}`
         );
     }
 });
@@ -96,8 +147,10 @@ const getPayment = asyncHandler(async (req, res) => {
 
     const payment = await PaymentService.getPaymentById(paymentId);
 
+    const paymentUserId = payment.user_id?.toString();
+
     if (
-        payment.user_id !== user.userId &&
+        paymentUserId !== user.userId &&
         !user.roles.includes('ADMIN')
     ) {
         throw new AppError(
@@ -118,6 +171,7 @@ const getPayment = asyncHandler(async (req, res) => {
 });
 
 const listPayments = asyncHandler(async (req, res) => {
+
     const user = assertAuthenticated(req.user);
 
     const { page, limit, status, provider, date_from, date_to } = req.query;
@@ -187,11 +241,14 @@ const getPaymentByOrder = asyncHandler(async (req, res) => {
 });
 
 const retryPayment = asyncHandler(async (req, res) => {
-    assertAuthenticated(req.user);
+    const user = assertAuthenticated(req.user);
 
     const { payment_id: paymentId } = req.params;
 
-    const result = await PaymentService.retryPayment(paymentId);
+    const result = await PaymentService.retryPayment(
+        paymentId,
+        user.userId
+    );
 
     return res.status(200).json({
         success: true,
@@ -200,13 +257,14 @@ const retryPayment = asyncHandler(async (req, res) => {
 });
 
 const cancelPayment = asyncHandler(async (req, res) => {
-    assertAuthenticated(req.user);
+    const user = assertAuthenticated(req.user);
 
     const { payment_id: paymentId } = req.params;
     const { reason } = req.body;
 
     const result = await PaymentService.cancelPayment(
         paymentId,
+        user.userId,
         reason || 'User cancelled'
     );
 

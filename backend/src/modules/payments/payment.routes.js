@@ -6,6 +6,7 @@ const PaymentController = require('./payment.controller');
 const {
     // params
     IdParamSchema,
+    OrderIdParamSchema,
 
     // body
     createPaymentBodySchema,
@@ -25,6 +26,12 @@ const router = express.Router();
 router.get(
     '/vnpay-return',
     PaymentController.handleVNPayReturn
+);
+
+router.get(
+    '/webhook/vnpay',
+    validate({ query: vnpayWebhookBodySchema }),
+    PaymentController.handleVNPayWebhook
 );
 
 router.post(
@@ -107,6 +114,13 @@ router.post(
         body: cancelPaymentBodySchema,
     }),
     PaymentController.cancelPayment
+);
+
+router.get(
+    '/order/:order_id',
+    authenticate,
+    validate({ params: OrderIdParamSchema }),
+    PaymentController.getPaymentByOrder
 );
 
 router.get(
