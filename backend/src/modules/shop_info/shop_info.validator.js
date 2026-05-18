@@ -1,16 +1,50 @@
 const { z } = require('zod');
+const {
+    isOptionalHttpUrl,
+    isSafeZaloLink
+} = require('./shop_info_link.util');
+const {
+    isOpeningRange,
+    isValidTime
+} = require('./shop_info_time.util');
 
-const workingHourSchema = z.object({
-    day: z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']),
-    open: z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:mm'),
-    close: z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:mm')
-});
+const workingHourSchema = z
+    .object({
+        day: z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']),
+        open: z.string().refine(
+            isValidTime,
+            'Format must be HH:mm between 00:00 and 23:59'
+        ),
+        close: z.string().refine(
+            isValidTime,
+            'Format must be HH:mm between 00:00 and 23:59'
+        )
+    })
+    .refine(
+        (data) => isOpeningRange(data.open, data.close),
+        {
+            message: 'open must be before close',
+            path: ['close']
+        }
+    );
 
 const socialLinksSchema = z.object({
-    facebook: z.string().url('Invalid Facebook URL').nullable().optional(),
-    zalo: z.string().optional(),
-    instagram: z.string().url('Invalid Instagram URL').nullable().optional(),
-    shoppe: z.string().url('Invalid Shoppe URL').nullable().optional()
+    facebook: z.string().nullable().optional().refine(
+        isOptionalHttpUrl,
+        'Facebook URL must be HTTP(S)'
+    ),
+    zalo: z.string().nullable().optional().refine(
+        isSafeZaloLink,
+        'Zalo must be HTTP(S), phone number, or safe ID'
+    ),
+    instagram: z.string().nullable().optional().refine(
+        isOptionalHttpUrl,
+        'Instagram URL must be HTTP(S)'
+    ),
+    shoppe: z.string().nullable().optional().refine(
+        isOptionalHttpUrl,
+        'Shoppe URL must be HTTP(S)'
+    )
 }).strict();
 
 const createShopInfoSchema = z.object({
@@ -41,9 +75,12 @@ const createShopInfoSchema = z.object({
     social_links: socialLinksSchema.optional(),
 
     map_embed_url: z.string()
-        .url('Invalid map embed URL')
         .nullable()
-        .optional(),
+        .optional()
+        .refine(
+            isOptionalHttpUrl,
+            'Map embed URL must be HTTP(S)'
+        ),
 
     is_active: z.boolean().default(true)
 }).strict();
@@ -81,9 +118,12 @@ const updateShopInfoSchema = z.object({
     social_links: socialLinksSchema.optional(),
 
     map_embed_url: z.string()
-        .url('Invalid map embed URL')
         .nullable()
-        .optional(),
+        .optional()
+        .refine(
+            isOptionalHttpUrl,
+            'Map embed URL must be HTTP(S)'
+        ),
 
     is_active: z.boolean().optional()
 }).strict();

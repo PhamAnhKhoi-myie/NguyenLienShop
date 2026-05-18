@@ -1,6 +1,7 @@
 const ShopInfoService = require('./shop_info.service');
 const asyncHandler = require('../../utils/asyncHandler.util');
 const logger = require('../../utils/logger.util');
+const AppError = require('../../utils/appError.util');
 
 class ShopInfoController {
     static getShopInfo = asyncHandler(async (req, res) => {

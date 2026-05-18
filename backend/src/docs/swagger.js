@@ -4019,7 +4019,7 @@ const swaggerSpec = {
             // ===== SHOP INFO SCHEMAS =====
             ShopInfo: {
                 type: 'object',
-                required: ['id', 'shop_name', 'email', 'phone', 'address', 'working_hours', 'status', 'created_at', 'updated_at'],
+                required: ['id', 'shop_name', 'email', 'phone', 'address', 'working_hours', 'is_active', 'created_at', 'updated_at'],
                 properties: {
                     id: {
                         type: 'string',
@@ -4061,12 +4061,12 @@ const swaggerSpec = {
                                 },
                                 open: {
                                     type: 'string',
-                                    pattern: '^\\d{2}:\\d{2}$',
+                                    pattern: '^([01]\\d|2[0-3]):[0-5]\\d$',
                                     example: '08:00'
                                 },
                                 close: {
                                     type: 'string',
-                                    pattern: '^\\d{2}:\\d{2}$',
+                                    pattern: '^([01]\\d|2[0-3]):[0-5]\\d$',
                                     example: '18:00'
                                 }
                             }
@@ -4134,8 +4134,8 @@ const swaggerSpec = {
                             type: 'object',
                             properties: {
                                 day: { type: 'string', enum: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] },
-                                open: { type: 'string', pattern: '^\\d{2}:\\d{2}$' },
-                                close: { type: 'string', pattern: '^\\d{2}:\\d{2}$' }
+                                open: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' },
+                                close: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
                             }
                         }
                     },
@@ -4177,7 +4177,7 @@ const swaggerSpec = {
                 type: 'object',
                 properties: {
                     date: { type: 'string', format: 'date', example: '2026-04-06' },
-                    time: { type: 'string', pattern: '^\\d{2}:\\d{2}$', example: '08:00' },
+                    time: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$', example: '08:00' },
                     day: { type: 'string', enum: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], example: 'mon' }
                 }
             },
@@ -4215,8 +4215,8 @@ const swaggerSpec = {
                             required: ['day', 'open', 'close'],
                             properties: {
                                 day: { type: 'string', enum: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] },
-                                open: { type: 'string', pattern: '^\\d{2}:\\d{2}$' },
-                                close: { type: 'string', pattern: '^\\d{2}:\\d{2}$' }
+                                open: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' },
+                                close: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
                             }
                         }
                     },
@@ -4256,8 +4256,8 @@ const swaggerSpec = {
                             type: 'object',
                             properties: {
                                 day: { type: 'string', enum: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] },
-                                open: { type: 'string', pattern: '^\\d{2}:\\d{2}$' },
-                                close: { type: 'string', pattern: '^\\d{2}:\\d{2}$' }
+                                open: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' },
+                                close: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
                             }
                         }
                     },
@@ -8990,7 +8990,7 @@ const swaggerSpec = {
                     "500": { $ref: "#/components/responses/InternalError" }
                 }
             },
-            patch: {
+            put: {
                 tags: ["Banners"],
                 summary: "Update banner (Admin)",
                 description: "Update banner details. All fields optional (partial update).",

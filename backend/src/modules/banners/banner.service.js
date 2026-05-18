@@ -4,6 +4,25 @@ const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
 
 class BannerService {
+    static writableFields = [
+        'image',
+        'link',
+        'location',
+        'sort_order',
+        'start_at',
+        'end_at'
+    ];
+
+    static sanitizeBannerData(data = {}) {
+        return this.writableFields.reduce((payload, field) => {
+            if (Object.prototype.hasOwnProperty.call(data, field)) {
+                payload[field] = data[field];
+            }
+
+            return payload;
+        }, {});
+    }
+
     static async getActiveByLocation(location) {
         const now = new Date();
 
@@ -34,23 +53,39 @@ class BannerService {
         return BannerMapper.toDTOList(banners);
     }
 
+    static async getBannerById(bannerId) {
+        const banner = await Banner.findById(bannerId);
+
+        if (!banner) {
+            throw new AppError(
+                'Banner not found',
+                404,
+                'BANNER_NOT_FOUND'
+            );
+        }
+
+        return BannerMapper.toDTO(banner);
+    }
+
     static async createBanner(data, userId) {
+        const bannerData = this.sanitizeBannerData(data);
+
         const existing = await Banner.findOne({
-            location: data.location,
-            sort_order: data.sort_order,
+            location: bannerData.location,
+            sort_order: bannerData.sort_order,
             is_deleted: false
         });
 
         if (existing) {
             throw new AppError(
-                `Banner with sort_order ${data.sort_order} already exists at ${data.location}`,
+                `Banner with sort_order ${bannerData.sort_order} already exists at ${bannerData.location}`,
                 409,
                 'BANNER_DUPLICATE_SORT_ORDER'
             );
         }
 
         const banner = new Banner({
-            ...data,
+            ...bannerData,
             created_by: userId
         });
 
@@ -68,6 +103,8 @@ class BannerService {
     }
 
     static async updateBanner(bannerId, data, userId) {
+        const updateData = this.sanitizeBannerData(data);
+
         const banner = await Banner.findById(bannerId);
 
         if (!banner) {
@@ -79,13 +116,13 @@ class BannerService {
         }
 
         if (
-            (data.location && data.location !== banner.location) ||
-            (data.sort_order !== undefined && data.sort_order !== banner.sort_order)
+            (updateData.location && updateData.location !== banner.location) ||
+            (updateData.sort_order !== undefined && updateData.sort_order !== banner.sort_order)
         ) {
             const conflict = await Banner.findOne({
                 _id: { $ne: bannerId },
-                location: data.location || banner.location,
-                sort_order: data.sort_order !== undefined ? data.sort_order : banner.sort_order,
+                location: updateData.location || banner.location,
+                sort_order: updateData.sort_order !== undefined ? updateData.sort_order : banner.sort_order,
                 is_deleted: false
             });
 
@@ -98,7 +135,7 @@ class BannerService {
             }
         }
 
-        Object.assign(banner, data, { updated_by: userId });
+        Object.assign(banner, updateData, { updated_by: userId });
 
         await banner.save();
 
@@ -106,7 +143,7 @@ class BannerService {
             event: 'banner_updated',
             banner_id: bannerId,
             updated_by: userId,
-            updated_fields: Object.keys(data)
+            updated_fields: Object.keys(updateData)
         });
 
         return BannerMapper.toDTO(banner);

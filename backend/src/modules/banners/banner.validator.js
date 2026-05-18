@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { isSafeBannerLink } = require('./banner-link.util');
 
 /**
  * ============================================
@@ -18,7 +19,7 @@ const bannerLinkSchema = z
     .string()
     .min(1, 'Link is required')
     .refine(
-        (val) => /^(https?:\/\/|\/|[a-zA-Z0-9\-_]+)/.test(val),
+        isSafeBannerLink,
         'Link must be URL (https://...), route (/product/...) or ID'
     );
 
@@ -42,6 +43,10 @@ const dateTimeSchema = z
     .string()
     .datetime('Invalid datetime format (use ISO 8601)')
     .transform((val) => new Date(val));
+
+const bannerIdParamSchema = z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
+});
 
 // ===== OBJECT SCHEMAS =====
 
@@ -92,6 +97,7 @@ const updateBannerSchema = bannerBaseSchema
     );
 
 module.exports = {
+    bannerIdParamSchema,
     createBannerSchema,
     updateBannerSchema,
 

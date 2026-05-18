@@ -5268,7 +5268,7 @@ describe("swaggerSpec", () => {
     });
 
     it("should define update banner endpoint correctly", () => {
-        const route = getPath("/api/v1/banners/{id}", "patch");
+        const route = getPath("/api/v1/banners/{id}", "put");
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Banners");
@@ -5456,7 +5456,7 @@ describe("swaggerSpec", () => {
             ["/api/v1/banners/deleted", "get"],
             ["/api/v1/banners", "get"],
             ["/api/v1/banners", "post"],
-            ["/api/v1/banners/{id}", "patch"],
+            ["/api/v1/banners/{id}", "put"],
             ["/api/v1/banners/{id}", "delete"],
             ["/api/v1/banners/{id}/restore", "post"],
         ];
@@ -5561,7 +5561,7 @@ describe("swaggerSpec", () => {
             ["/api/v1/banners/deleted", "get"],
             ["/api/v1/banners", "get"],
             ["/api/v1/banners", "post"],
-            ["/api/v1/banners/{id}", "patch"],
+            ["/api/v1/banners/{id}", "put"],
             ["/api/v1/banners/{id}", "delete"],
             ["/api/v1/banners/{id}/restore", "post"],
         ];
@@ -6179,6 +6179,8 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.ShopInfo.required).toContain("phone");
         expect(swaggerSpec.components.schemas.ShopInfo.required).toContain("address");
         expect(swaggerSpec.components.schemas.ShopInfo.required).toContain("working_hours");
+        expect(swaggerSpec.components.schemas.ShopInfo.required).toContain("is_active");
+        expect(swaggerSpec.components.schemas.ShopInfo.required).not.toContain("status");
 
         expect(swaggerSpec.components.schemas.ContactInfo).toBeDefined();
         expect(swaggerSpec.components.schemas.ContactInfo.required).toEqual([
@@ -6403,10 +6405,10 @@ describe("swaggerSpec", () => {
             "sun",
         ]);
         expect(hoursSchema.properties.working_hours.items.properties.open.pattern).toBe(
-            "^\\d{2}:\\d{2}$"
+            "^([01]\\d|2[0-3]):[0-5]\\d$"
         );
         expect(hoursSchema.properties.working_hours.items.properties.close.pattern).toBe(
-            "^\\d{2}:\\d{2}$"
+            "^([01]\\d|2[0-3]):[0-5]\\d$"
         );
     });
 
@@ -6681,10 +6683,10 @@ describe("swaggerSpec", () => {
         const hoursSchema = swaggerSpec.components.schemas.ShopInfo;
 
         expect(hoursSchema.properties.working_hours.items.properties.open.pattern).toBe(
-            "^\\d{2}:\\d{2}$"
+            "^([01]\\d|2[0-3]):[0-5]\\d$"
         );
         expect(hoursSchema.properties.working_hours.items.properties.close.pattern).toBe(
-            "^\\d{2}:\\d{2}$"
+            "^([01]\\d|2[0-3]):[0-5]\\d$"
         );
     });
 

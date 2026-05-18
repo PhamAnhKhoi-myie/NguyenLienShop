@@ -27,7 +27,7 @@ router.post(
     '/',
     authenticate,
     authorize(['ADMIN']),
-    validate(createShopInfoSchema),
+    validate({ body: createShopInfoSchema }),
     ShopInfoController.createShopInfo
 );
 
@@ -35,7 +35,7 @@ router.patch(
     '/',
     authenticate,
     authorize(['ADMIN']),
-    validate(updateShopInfoSchema),
+    validate({ body: updateShopInfoSchema }),
     ShopInfoController.updateShopInfo
 );
 

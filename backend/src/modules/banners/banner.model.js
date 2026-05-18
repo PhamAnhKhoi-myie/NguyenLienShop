@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { isSafeBannerLink } = require('./banner-link.util');
 
 const bannerSchema = new mongoose.Schema(
     {
@@ -23,7 +24,7 @@ const bannerSchema = new mongoose.Schema(
             type: String,
             required: true,
             validate: {
-                validator: (v) => /^(https?:\/\/|\/|[a-zA-Z0-9\-_]+)/.test(v),
+                validator: isSafeBannerLink,
                 message: 'Link must be URL, route (/) or ID'
             }
         },

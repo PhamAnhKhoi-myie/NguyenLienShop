@@ -2,6 +2,10 @@ const ShopInfo = require('./shop_info.model');
 const ShopInfoMapper = require('./shop_info.mapper');
 const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
+const {
+    isOpeningRange,
+    isValidTime
+} = require('./shop_info_time.util');
 
 class ShopInfoService {
     static async getShopInfo() {
@@ -245,10 +249,17 @@ class ShopInfoService {
                     );
                 }
 
-                const timeRegex = /^\d{2}:\d{2}$/;
-                if (!timeRegex.test(hour.open) || !timeRegex.test(hour.close)) {
+                if (!isValidTime(hour.open) || !isValidTime(hour.close)) {
                     throw new AppError(
                         'Invalid time format. Use HH:mm',
+                        400,
+                        'VALIDATION_ERROR'
+                    );
+                }
+
+                if (!isOpeningRange(hour.open, hour.close)) {
+                    throw new AppError(
+                        'Opening time must be before closing time',
                         400,
                         'VALIDATION_ERROR'
                     );

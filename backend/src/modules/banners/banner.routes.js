@@ -6,6 +6,7 @@ const { authenticate } = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/authorize.middleware');
 const validate = require('../../middlewares/validate.middleware');
 const {
+    bannerIdParamSchema,
     createBannerSchema,
     updateBannerSchema
 } = require('./banner.validator');
@@ -19,11 +20,6 @@ const {
 router.get(
     '/location/:location',
     BannerController.getByLocation
-);
-
-router.get(
-    '/:id',
-    BannerController.getOne
 );
 
 /**
@@ -46,11 +42,17 @@ router.get(
     BannerController.getAll
 );
 
+router.get(
+    '/:id',
+    validate({ params: bannerIdParamSchema }),
+    BannerController.getOne
+);
+
 router.post(
     '/',
     authenticate,
     authorize(['ADMIN']),
-    validate(createBannerSchema),
+    validate({ body: createBannerSchema }),
     BannerController.create
 );
 
@@ -58,7 +60,10 @@ router.put(
     '/:id',
     authenticate,
     authorize(['ADMIN']),
-    validate(updateBannerSchema),
+    validate({
+        params: bannerIdParamSchema,
+        body: updateBannerSchema
+    }),
     BannerController.update
 );
 
@@ -66,6 +71,7 @@ router.delete(
     '/:id',
     authenticate,
     authorize(['ADMIN']),
+    validate({ params: bannerIdParamSchema }),
     BannerController.delete
 );
 
@@ -73,6 +79,7 @@ router.post(
     '/:id/restore',
     authenticate,
     authorize(['ADMIN']),
+    validate({ params: bannerIdParamSchema }),
     BannerController.restore
 );
 

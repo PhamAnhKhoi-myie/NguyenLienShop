@@ -1,4 +1,13 @@
 const mongoose = require('mongoose');
+const {
+    isOptionalHttpUrl,
+    isSafeZaloLink
+} = require('./shop_info_link.util');
+const {
+    isOpeningRange,
+    isValidTime,
+    timePattern
+} = require('./shop_info_time.util');
 
 const workingHourSchema = new mongoose.Schema(
     {
@@ -14,15 +23,23 @@ const workingHourSchema = new mongoose.Schema(
         open: {
             type: String,
             required: [true, 'Opening time is required'],
-            match: [/^\d{2}:\d{2}$/, 'Opening time must be in HH:MM format'],
-            // Example: "08:00"
+            match: [timePattern, 'Opening time must be a valid HH:MM time']
         },
 
         close: {
             type: String,
             required: [true, 'Closing time is required'],
-            match: [/^\d{2}:\d{2}$/, 'Closing time must be in HH:MM format'],
-            // Example: "18:00"
+            match: [timePattern, 'Closing time must be a valid HH:MM time'],
+            validate: {
+                validator: function (value) {
+                    if (!isValidTime(this.open) || !isValidTime(value)) {
+                        return true;
+                    }
+
+                    return isOpeningRange(this.open, value);
+                },
+                message: 'Opening time must be before closing time'
+            }
         },
     },
     { _id: false }
@@ -33,21 +50,37 @@ const socialLinksSchema = new mongoose.Schema(
         facebook: {
             type: String,
             trim: true,
+            validate: {
+                validator: isOptionalHttpUrl,
+                message: 'Facebook URL must be HTTP(S)'
+            }
         },
 
         zalo: {
             type: String,
             trim: true,
+            validate: {
+                validator: isSafeZaloLink,
+                message: 'Zalo must be HTTP(S), phone number, or safe ID'
+            }
         },
 
         instagram: {
             type: String,
             trim: true,
+            validate: {
+                validator: isOptionalHttpUrl,
+                message: 'Instagram URL must be HTTP(S)'
+            }
         },
 
         shoppe: {
             type: String,
             trim: true,
+            validate: {
+                validator: isOptionalHttpUrl,
+                message: 'Shoppe URL must be HTTP(S)'
+            }
         },
     },
     { _id: false }
@@ -112,6 +145,10 @@ const shopInfoSchema = new mongoose.Schema(
         map_embed_url: {
             type: String,
             trim: true,
+            validate: {
+                validator: isOptionalHttpUrl,
+                message: 'Map embed URL must be HTTP(S)'
+            }
         },
 
         // ===== STATUS =====
