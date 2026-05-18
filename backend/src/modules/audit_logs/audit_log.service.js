@@ -43,66 +43,41 @@ const DOMAIN_ACTION_MAP = {
 
 class AuditLogService {
     static async getAllLogs({ domain, action, level, actor_id, page = 1, limit = 20 }) {
-
         const skip = (page - 1) * limit;
+        const domainConfig = DOMAIN_MODELS.find(d => d.name === domain);
 
-        const MAX_FETCH = 5000;
-
-        let allLogs = [];
-        let total = 0;
-
-        const domains = domain
-            ? DOMAIN_MODELS.filter(d => d.name === domain)
-            : DOMAIN_MODELS;
-
-        const fetchLimit = Math.min(skip + limit, MAX_FETCH);
-
-        for (const d of domains) {
-            const filter = {};
-
-            if (action) {
-                filter.action = action;
-            }
-            if (actor_id) filter.actor_id = actor_id;
-            if (level) filter.level = level;
-
-            const [logs, count] = await Promise.all([
-                d.model.find(filter)
-                    .sort({ created_at: -1 })
-                    .limit(fetchLimit)
-                    .lean(),
-                d.model.countDocuments(filter)
-            ]);
-
-            total += count;
-
-            allLogs.push(
-                ...logs.map(l => ({
-                    ...l,
-                    domain: d.name
-                }))
+        if (!domainConfig) {
+            throw new AppError(
+                'Audit log domain is required',
+                400,
+                'AUDIT_DOMAIN_REQUIRED'
             );
         }
 
-        if (skip >= MAX_FETCH) {
-            return {
-                data: [],
-                pagination: {
-                    current_page: page,
-                    total_pages: Math.ceil(total / limit),
-                    total_items: total,
-                    per_page: limit,
-                },
-            };
+        const filter = {};
+
+        if (action) {
+            filter.action = action;
         }
+        if (actor_id) filter.actor_id = actor_id;
+        if (level) filter.level = level;
 
-        // sort global (1 lần duy nhất)
-        allLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const [logs, total] = await Promise.all([
+            domainConfig.model.find(filter)
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            domainConfig.model.countDocuments(filter)
+        ]);
 
-        const paginatedLogs = allLogs.slice(skip, skip + limit);
+        const data = logs.map(log => ({
+            ...log,
+            domain: domainConfig.name
+        }));
 
         return {
-            data: paginatedLogs,
+            data,
             pagination: {
                 current_page: page,
                 total_pages: Math.ceil(total / limit),

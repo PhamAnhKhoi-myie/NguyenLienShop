@@ -320,7 +320,7 @@ class CategoryService {
         }
     }
 
-    static async hardDeleteCategory(categoryId) {
+    static async hardDeleteCategory(categoryId, metadata = {}) {
         const session = await mongoose.startSession();
         session.startTransaction();
 
@@ -334,6 +334,30 @@ class CategoryService {
             const result = await Category.hardDeleteWithDescendants(categoryId, session);
 
             await session.commitTransaction();
+
+            await CategoryAuditLogService.createLog({
+                actor_id: metadata.actorId,
+                action: AUDIT_ACTIONS.DELETE_CATEGORY_HARD,
+                category_id: categoryId,
+                changes: {
+                    category: {
+                        from: {
+                            id: category._id,
+                            name: category.name,
+                            slug: category.slug,
+                            is_deleted: category.is_deleted || false,
+                        },
+                        to: null,
+                    },
+                    deleted_count: {
+                        from: 0,
+                        to: result.deletedCount,
+                    },
+                },
+                ip_address: metadata.ip,
+                user_agent: metadata.userAgent,
+            });
+
             return result;
         } catch (error) {
             await session.abortTransaction();
@@ -343,7 +367,7 @@ class CategoryService {
         }
     }
 
-    static async restoreCategory(categoryId) {
+    static async restoreCategory(categoryId, metadata = {}) {
         const session = await mongoose.startSession();
         session.startTransaction();
 
@@ -367,6 +391,25 @@ class CategoryService {
 
             await session.commitTransaction();
             const restored = await Category.findById(categoryId);
+
+            await CategoryAuditLogService.createLog({
+                actor_id: metadata.actorId,
+                action: AUDIT_ACTIONS.RESTORE_CATEGORY,
+                category_id: categoryId,
+                changes: {
+                    is_deleted: {
+                        from: true,
+                        to: false,
+                    },
+                    deleted_at: {
+                        from: category.deleted_at,
+                        to: null,
+                    },
+                },
+                ip_address: metadata.ip,
+                user_agent: metadata.userAgent,
+            });
+
             return CategoryMapper.toResponseDTO(restored);
         } catch (error) {
             await session.abortTransaction();

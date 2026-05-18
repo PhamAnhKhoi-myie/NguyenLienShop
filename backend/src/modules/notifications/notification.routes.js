@@ -23,31 +23,31 @@ router.patch(
 
 router.patch(
     '/bulk/mark-read',
-    validate(markBulkAsReadSchema, 'body'),
+    validate({ body: markBulkAsReadSchema }),
     NotificationController.markBulkAsRead
 );
 
 router.get(
     '/:notificationId',
-    validate(deleteNotificationSchema, 'params'),
+    validate({ params: deleteNotificationSchema }),
     NotificationController.getNotificationById
 );
 
 router.patch(
     '/:notificationId/read',
-    validate(markAsReadSchema, 'params'),
+    validate({ params: markAsReadSchema }),
     NotificationController.markAsRead
 );
 
 router.delete(
     '/:notificationId',
-    validate(deleteNotificationSchema, 'params'),
+    validate({ params: deleteNotificationSchema }),
     NotificationController.deleteNotification
 );
 
 router.get(
     '/',
-    validate(getNotificationsSchema, 'query'),
+    validate({ query: getNotificationsSchema }),
     NotificationController.getNotifications
 );
 

@@ -8,7 +8,10 @@ const { ROLES } = require('../../constants/roles');
 
 const {
     getAllLogsQuerySchema,
-    getLogsByDomainQuerySchema,
+    getUserLogsQuerySchema,
+    getUserAddressLogsQuerySchema,
+    getCategoryLogsQuerySchema,
+    getAuthLogsQuerySchema,
     idParamSchema
 } = require('./audit_log.validator');
 
@@ -18,25 +21,25 @@ router.use(authorize([ROLES.ADMIN]));
 // Routes (specific -> generic)
 router.get(
     '/users',
-    validate({ query: getLogsByDomainQuerySchema }),
+    validate({ query: getUserLogsQuerySchema }),
     auditLogController.getUserLogs
 );
 
 router.get(
     '/user-addresses',
-    validate({ query: getLogsByDomainQuerySchema }),
+    validate({ query: getUserAddressLogsQuerySchema }),
     auditLogController.getUserAddressLogs
 );
 
 router.get(
     '/categories',
-    validate({ query: getLogsByDomainQuerySchema }),
+    validate({ query: getCategoryLogsQuerySchema }),
     auditLogController.getCategoryLogs
 );
 
 router.get(
     '/auth',
-    validate({ query: getLogsByDomainQuerySchema }),
+    validate({ query: getAuthLogsQuerySchema }),
     auditLogController.getAuthLogs
 );
 

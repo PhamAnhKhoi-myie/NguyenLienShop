@@ -46,17 +46,17 @@ const createNotificationSchema = z.object({
 
 const getNotificationsSchema = z.object({
     page: z
-        .string()
-        .regex(/^\d+$/, 'Page must be positive integer')
-        .transform(Number)
-        .default('1'),
+        .coerce.number()
+        .int('Page must be positive integer')
+        .min(1, 'Page must be positive integer')
+        .default(1),
 
     limit: z
-        .string()
-        .regex(/^\d+$/, 'Limit must be positive integer')
-        .transform(Number)
-        .default('10')
-        .refine((val) => val >= 1 && val <= 100, 'Limit between 1-100'),
+        .coerce.number()
+        .int('Limit must be positive integer')
+        .min(1, 'Limit between 1-100')
+        .max(100, 'Limit between 1-100')
+        .default(10),
 
     type: z
         .enum(['order', 'system', 'promotion'])
@@ -67,14 +67,13 @@ const getNotificationsSchema = z.object({
         .optional(),
 
     unread_only: z
-        .string()
+        .enum(['true', 'false'])
         .transform((val) => val === 'true')
-        .optional()
-        .default('false')
+        .default(false)
 });
 
 const markAsReadSchema = z.object({
-    notification_id: objectIdString
+    notificationId: objectIdString
 });
 
 const markBulkAsReadSchema = z.object({
@@ -85,7 +84,7 @@ const markBulkAsReadSchema = z.object({
 });
 
 const deleteNotificationSchema = z.object({
-    notification_id: objectIdString
+    notificationId: objectIdString
 });
 
 module.exports = {

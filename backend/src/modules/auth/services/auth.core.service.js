@@ -104,7 +104,7 @@ class AuthCoreService {
         }
     }
 
-    async register(email, password, fullName = null) {
+    async register(email, password, fullName = null, metadata = {}) {
         try {
             const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -130,6 +130,8 @@ class AuthCoreService {
                             to: user.email,
                         },
                     },
+                    ip_address: metadata.ip || null,
+                    user_agent: metadata.userAgent || null,
                 });
             } catch (err) {
                 console.error('Audit log failed:', err);
@@ -222,7 +224,7 @@ class AuthCoreService {
         return { user: UserMapper.toResponseDTO(user), tokens: { accessToken, refreshToken } };
     }
 
-    async changePassword(userId, currentPassword, newPassword) {
+    async changePassword(userId, currentPassword, newPassword, metadata = {}) {
         const user = await User.findById(userId).select('+password_hash');
 
         if (!user) {
@@ -257,6 +259,8 @@ class AuthCoreService {
                         to: 'UPDATED',
                     },
                 },
+                ip_address: metadata.ip || null,
+                user_agent: metadata.userAgent || null,
             });
         } catch (err) {
             console.error('Audit log failed:', err);
@@ -266,7 +270,7 @@ class AuthCoreService {
         return { message: 'Mật khẩu đã được thay đổi' };
     }
 
-    async forgotPassword(email) {
+    async forgotPassword(email, metadata = {}) {
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -313,6 +317,8 @@ class AuthCoreService {
                         to: email,
                     },
                 },
+                ip_address: metadata.ip || null,
+                user_agent: metadata.userAgent || null,
             });
         } catch (err) {
             console.error('Audit log failed:', err);
@@ -321,7 +327,7 @@ class AuthCoreService {
         return { message: 'Nếu email tồn tại, chúng tôi đã gửi mã xác nhận' };
     }
 
-    async resetPassword(email, otp, newPassword) {
+    async resetPassword(email, otp, newPassword, metadata = {}) {
         const record = await PasswordReset.findOne({
             email,
             expires_at: { $gt: new Date() }
@@ -399,6 +405,8 @@ class AuthCoreService {
                         to: 'RESET_SUCCESS',
                     },
                 },
+                ip_address: metadata.ip || null,
+                user_agent: metadata.userAgent || null,
             });
         } catch (err) {
             console.error('Audit log failed:', err);

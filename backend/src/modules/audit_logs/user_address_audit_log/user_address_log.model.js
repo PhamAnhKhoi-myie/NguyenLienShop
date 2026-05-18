@@ -1,10 +1,17 @@
 const mongoose = require('mongoose');
 const { AUDIT_ACTIONS, AUDIT_LEVELS } = require('../../../constants/audit');
 
+const USER_ADDRESS_ACTIONS = [
+    AUDIT_ACTIONS.CREATE_USER_ADDRESS,
+    AUDIT_ACTIONS.UPDATE_USER_ADDRESS,
+    AUDIT_ACTIONS.DELETE_USER_ADDRESS,
+    AUDIT_ACTIONS.SET_DEFAULT_USER_ADDRESS,
+];
+
 const schema = new mongoose.Schema({
     actor_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
-    action: { type: String, enum: Object.values(AUDIT_ACTIONS), required: true },
+    action: { type: String, enum: USER_ADDRESS_ACTIONS, required: true },
 
     level: { type: String, enum: AUDIT_LEVELS, required: true },
 

@@ -9,11 +9,11 @@ class NotificationController {
         const result = await NotificationService.getNotifications(
             req.user.id,
             {
-                page: parseInt(page) || 1,
-                limit: parseInt(limit) || 10,
+                page: page || 1,
+                limit: limit || 10,
                 type,
                 priority,
-                unread_only: unread_only === 'true'
+                unread_only: unread_only === true
             }
         );
 

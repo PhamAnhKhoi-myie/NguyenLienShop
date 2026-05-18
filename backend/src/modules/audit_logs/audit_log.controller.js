@@ -1,7 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
 const { AuditLogService } = require('./audit_log.service');
 
-const getAllLogs = asyncHandler(async (req, res) => {
+const sendLogsResponse = async (req, res, domainOverride = null) => {
     const {
         page = 1,
         limit = 20,
@@ -12,7 +12,7 @@ const getAllLogs = asyncHandler(async (req, res) => {
     } = req.query;
 
     const filters = {
-        domain,
+        domain: domainOverride || domain,
         action,
         level,
         actor_id,
@@ -27,6 +27,10 @@ const getAllLogs = asyncHandler(async (req, res) => {
         data: result.data,
         pagination: result.pagination,
     });
+};
+
+const getAllLogs = asyncHandler(async (req, res) => {
+    return sendLogsResponse(req, res);
 });
 
 const getLogById = asyncHandler(async (req, res) => {
@@ -41,31 +45,19 @@ const getLogById = asyncHandler(async (req, res) => {
 });
 
 const getUserLogs = asyncHandler(async (req, res) => {
-    return getAllLogs(
-        { ...req, query: { ...req.query, domain: 'USER' } },
-        res
-    );
+    return sendLogsResponse(req, res, 'USER');
 });
 
 const getUserAddressLogs = asyncHandler(async (req, res) => {
-    return getAllLogs(
-        { ...req, query: { ...req.query, domain: 'USER_ADDRESS' } },
-        res
-    );
+    return sendLogsResponse(req, res, 'USER_ADDRESS');
 });
 
 const getCategoryLogs = asyncHandler(async (req, res) => {
-    return getAllLogs(
-        { ...req, query: { ...req.query, domain: 'CATEGORY' } },
-        res
-    );
+    return sendLogsResponse(req, res, 'CATEGORY');
 });
 
 const getAuthLogs = asyncHandler(async (req, res) => {
-    return getAllLogs(
-        { ...req, query: { ...req.query, domain: 'AUTH' } },
-        res
-    );
+    return sendLogsResponse(req, res, 'AUTH');
 });
 
 module.exports = {

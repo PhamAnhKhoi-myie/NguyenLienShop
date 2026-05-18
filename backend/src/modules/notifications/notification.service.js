@@ -61,7 +61,7 @@ class NotificationService {
         const skip = (page - 1) * limit;
 
         try {
-            const query = { user_id: userId };
+            const query = { user_id: userId, deleted_at: null };
 
             if (type) query.type = type;
             if (priority) query.priority = priority;
@@ -111,7 +111,8 @@ class NotificationService {
         try {
             const count = await Notification.countDocuments({
                 user_id: userId,
-                read_at: null
+                read_at: null,
+                deleted_at: null
             });
 
             return count;
@@ -183,7 +184,8 @@ class NotificationService {
                 {
                     _id: { $in: notificationIds },
                     user_id: userId,
-                    read_at: null
+                    read_at: null,
+                    deleted_at: null
                 },
                 {
                     read_at: new Date()
@@ -220,7 +222,8 @@ class NotificationService {
             const result = await Notification.updateMany(
                 {
                     user_id: userId,
-                    read_at: null
+                    read_at: null,
+                    deleted_at: null
                 },
                 {
                     read_at: new Date()
@@ -256,7 +259,8 @@ class NotificationService {
             const result = await Notification.updateOne(
                 {
                     _id: notificationId,
-                    user_id: userId
+                    user_id: userId,
+                    deleted_at: null
                 },
                 {
                     deleted_at: new Date()
@@ -297,7 +301,7 @@ class NotificationService {
     static async deleteAllNotifications(userId) {
         try {
             const result = await Notification.updateMany(
-                { user_id: userId },
+                { user_id: userId, deleted_at: null },
                 { deleted_at: new Date() }
             );
 

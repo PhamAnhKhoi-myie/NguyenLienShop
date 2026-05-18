@@ -1,6 +1,13 @@
 const mongoose = require('mongoose');
 const { AUDIT_ACTIONS, AUDIT_LEVELS } = require('../../../constants/audit');
 
+const USER_ACTIONS = [
+    AUDIT_ACTIONS.UPDATE_USER_PROFILE,
+    AUDIT_ACTIONS.UPDATE_USER_ROLES,
+    AUDIT_ACTIONS.UPDATE_USER_STATUS,
+    AUDIT_ACTIONS.DELETE_USER_SOFT,
+];
+
 const schema = new mongoose.Schema(
     {
         actor_id: {
@@ -10,7 +17,7 @@ const schema = new mongoose.Schema(
         },
         action: {
             type: String,
-            enum: Object.values(AUDIT_ACTIONS),
+            enum: USER_ACTIONS,
             required: true,
         },
         level: {
