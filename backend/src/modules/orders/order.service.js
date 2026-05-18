@@ -9,6 +9,7 @@ const Cart = require('../carts/cart.model');
 const EmailJob = require('../emails/email.model');
 const User = require('../users/user.model');
 const DiscountService = require('../discounts/discount.service');
+const ReviewService = require('../reviews/review.service');
 
 /**
  * ============================================
@@ -707,8 +708,11 @@ class OrderService {
         return OrderMapper.toDetailDTO(order);
     }
 
-    static async writeReview(orderId, itemId, rating, comment = '') {
-        const order = await Order.findById(orderId);
+    static async writeReview(orderId, itemId, rating, comment, userId) {
+        const order = await Order.findOne({
+            _id: orderId,
+            user_id: userId,
+        });
         if (!order) {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
         }
@@ -730,11 +734,20 @@ class OrderService {
             );
         }
 
-        item.review_status = 'reviewed';
+        await ReviewService.createReview(
+            userId,
+            item.product_id.toString(),
+            item.variant_id.toString(),
+            orderId,
+            {
+                rating,
+                content: comment
+            }
+        );
 
-        await order.save();
+        const updatedOrder = await Order.findById(orderId);
 
-        return OrderMapper.toDetailDTO(order);
+        return OrderMapper.toDetailDTO(updatedOrder);
     }
 
     static async getAllOrders(page = 1, limit = 20, filters = {}) {

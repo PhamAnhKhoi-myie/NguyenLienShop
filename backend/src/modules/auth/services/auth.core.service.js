@@ -7,11 +7,103 @@ const AppError = require('../../../utils/appError.util');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const PasswordReset = require('../models/password-reset.model');
+const PasswordResetRateLimit = require('../models/password-reset-rate-limit.model');
 const EmailService = require('../../emails/email.service');
 const AuthAuditLogService = require('../../audit_logs/auth_audit_log/auth_log.service');
 const { AUDIT_ACTIONS } = require('../../../constants/audit');
 
 class AuthCoreService {
+    async _consumeForgotPasswordQuota(email) {
+        const now = new Date();
+        const FIFTEEN_MIN = 15 * 60 * 1000;
+        const ONE_MIN = 60 * 1000;
+        const MAX_REQUESTS = 5;
+        const windowCutoff = new Date(now.getTime() - FIFTEEN_MIN);
+        const oneMinuteAgo = new Date(now.getTime() - ONE_MIN);
+
+        const existing = await PasswordResetRateLimit.findOne({ email });
+
+        if (existing) {
+            if (existing.last_requested_at > oneMinuteAgo) {
+                throw new AppError(
+                    'Vui lòng đợi trước khi yêu cầu mã mới',
+                    429,
+                    'OTP_RATE_LIMIT'
+                );
+            }
+
+            if (existing.window_started_at >= windowCutoff && existing.request_count >= MAX_REQUESTS) {
+                throw new AppError(
+                    'Bạn đã yêu cầu quá nhiều lần. Vui lòng thử lại sau',
+                    429,
+                    'TOO_MANY_REQUESTS'
+                );
+            }
+        }
+
+        const windowExpired = !existing || existing.window_started_at < windowCutoff;
+        const windowStartedAt = windowExpired ? now : existing.window_started_at;
+        const expiresAt = new Date(windowStartedAt.getTime() + FIFTEEN_MIN);
+
+        const filter = existing
+            ? {
+                _id: existing._id,
+                last_requested_at: { $lte: oneMinuteAgo },
+                $or: [
+                    { window_started_at: { $lt: windowCutoff } },
+                    {
+                        window_started_at: { $gte: windowCutoff },
+                        request_count: { $lt: MAX_REQUESTS }
+                    }
+                ]
+            }
+            : { email };
+
+        const update = windowExpired
+            ? {
+                $set: {
+                    email,
+                    window_started_at: now,
+                    request_count: 1,
+                    last_requested_at: now,
+                    expires_at: expiresAt
+                }
+            }
+            : {
+                $inc: { request_count: 1 },
+                $set: {
+                    last_requested_at: now,
+                    expires_at: expiresAt
+                }
+            };
+
+        try {
+            const updated = await PasswordResetRateLimit.findOneAndUpdate(
+                filter,
+                update,
+                {
+                    new: true,
+                    upsert: !existing,
+                    runValidators: true,
+                    setDefaultsOnInsert: true
+                }
+            );
+
+            if (!updated) {
+                throw new AppError(
+                    'Vui lòng đợi trước khi yêu cầu mã mới',
+                    429,
+                    'OTP_RATE_LIMIT'
+                );
+            }
+        } catch (error) {
+            if (error.code === 11000) {
+                return this._consumeForgotPasswordQuota(email);
+            }
+            throw error;
+        }
+    }
+
     async register(email, password, fullName = null) {
         try {
             const hashedPassword = await bcrypt.hash(password, 12);
@@ -181,31 +273,7 @@ class AuthCoreService {
             return { message: 'Nếu email tồn tại, chúng tôi đã gửi mã xác nhận' };
         }
 
-        const FIFTEEN_MIN = 15 * 60 * 1000;
-        const ONE_MIN = 60 * 1000;
-
-        const count = await PasswordReset.countDocuments({
-            email,
-            createdAt: { $gte: new Date(Date.now() - FIFTEEN_MIN) }
-        });
-
-        if (count >= 5) {
-            throw new AppError(
-                'Bạn đã yêu cầu quá nhiều lần. Vui lòng thử lại sau',
-                429,
-                'TOO_MANY_REQUESTS'
-            );
-        }
-
-        const latest = await PasswordReset.findOne({ email }).sort({ createdAt: -1 });
-
-        if (latest && Date.now() - latest.createdAt < ONE_MIN) {
-            throw new AppError(
-                'Vui lòng đợi trước khi yêu cầu mã mới',
-                429,
-                'OTP_RATE_LIMIT'
-            );
-        }
+        await this._consumeForgotPasswordQuota(email);
 
         const otp = crypto.randomInt(100000, 999999).toString();
 
@@ -221,7 +289,7 @@ class AuthCoreService {
                 expires_at: new Date(Date.now() + 5 * 60 * 1000),
                 attempt_count: 0
             },
-            { upsert: true }
+            { upsert: true, runValidators: true }
         );
 
         await EmailService.enqueueEmail({

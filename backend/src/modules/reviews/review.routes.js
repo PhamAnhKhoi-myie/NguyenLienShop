@@ -4,6 +4,9 @@ const { authenticate } = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/authorize.middleware');
 const validate = require('../../middlewares/validate.middleware');
 const {
+    reviewIdParamSchema,
+    productIdParamSchema,
+    variantIdParamSchema,
     createReviewSchema,
     updateReviewSchema,
     markHelpfulSchema,
@@ -15,11 +18,23 @@ const {
 // PUBLIC ROUTES (no auth required)
 // ============================================
 
-router.get('/product/:productId', ReviewController.getProductReviews);
+router.get(
+    '/product/:productId',
+    validate({ params: productIdParamSchema }),
+    ReviewController.getProductReviews
+);
 
-router.get('/variant/:variantId', ReviewController.getVariantReviews);
+router.get(
+    '/variant/:variantId',
+    validate({ params: variantIdParamSchema }),
+    ReviewController.getVariantReviews
+);
 
-router.get('/:reviewId', ReviewController.getOne);
+router.get(
+    '/:reviewId',
+    validate({ params: reviewIdParamSchema }),
+    ReviewController.getOne
+);
 
 // ============================================
 // USER ROUTES (require authentication)
@@ -28,20 +43,21 @@ router.get('/:reviewId', ReviewController.getOne);
 router.post(
     '/',
     authenticate,
-    validate(createReviewSchema),
+    validate({ body: createReviewSchema }),
     ReviewController.create
 );
 
 router.put(
     '/:reviewId',
     authenticate,
-    validate(updateReviewSchema),
+    validate({ params: reviewIdParamSchema, body: updateReviewSchema }),
     ReviewController.update
 );
 
 router.delete(
     '/:reviewId',
     authenticate,
+    validate({ params: reviewIdParamSchema }),
     ReviewController.delete
 );
 
@@ -54,14 +70,14 @@ router.get(
 router.post(
     '/:reviewId/helpful',
     authenticate,
-    validate(markHelpfulSchema),
+    validate({ params: reviewIdParamSchema, body: markHelpfulSchema }),
     ReviewController.markHelpful
 );
 
 router.post(
     '/:reviewId/flag',
     authenticate,
-    validate(flagReviewSchema),
+    validate({ params: reviewIdParamSchema, body: flagReviewSchema }),
     ReviewController.flagReview
 );
 
@@ -87,6 +103,7 @@ router.post(
     '/:reviewId/approve',
     authenticate,
     authorize(['ADMIN']),
+    validate({ params: reviewIdParamSchema }),
     ReviewController.approveReview
 );
 
@@ -94,7 +111,7 @@ router.post(
     '/:reviewId/reject',
     authenticate,
     authorize(['ADMIN']),
-    validate(rejectReviewSchema),
+    validate({ params: reviewIdParamSchema, body: rejectReviewSchema }),
     ReviewController.rejectReview
 );
 

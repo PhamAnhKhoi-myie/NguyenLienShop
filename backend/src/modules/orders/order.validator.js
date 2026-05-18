@@ -170,7 +170,7 @@ const cancelOrderBodySchema = z.object({
 const writeReviewBodySchema = z.object({
     item_id: objectIdSchema,
     rating: z.number().int().min(1).max(5),
-    comment: z.string().max(500).optional(),
+    comment: z.string().trim().min(10).max(500),
 });
 
 const updateOrderStatusBodySchema = z.object({

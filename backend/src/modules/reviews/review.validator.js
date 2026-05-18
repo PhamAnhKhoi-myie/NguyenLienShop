@@ -1,20 +1,29 @@
 const { z } = require('zod');
+const mongoose = require('mongoose');
+
+const objectIdSchema = z.string().refine(
+    (val) => mongoose.Types.ObjectId.isValid(val),
+    { message: 'Invalid MongoDB ObjectId' }
+);
+
+const reviewIdParamSchema = z.object({
+    reviewId: objectIdSchema
+});
+
+const productIdParamSchema = z.object({
+    productId: objectIdSchema
+});
+
+const variantIdParamSchema = z.object({
+    variantId: objectIdSchema
+});
 
 const createReviewSchema = z.object({
-    product_id: z
-        .string()
-        .min(24, 'Invalid product ID')
-        .max(24, 'Invalid product ID'),
+    product_id: objectIdSchema,
 
-    variant_id: z
-        .string()
-        .min(24, 'Invalid variant ID')
-        .max(24, 'Invalid variant ID'),
+    variant_id: objectIdSchema,
 
-    order_id: z
-        .string()
-        .min(24, 'Invalid order ID')
-        .max(24, 'Invalid order ID'),
+    order_id: objectIdSchema,
 
     rating: z
         .number()
@@ -56,7 +65,10 @@ const updateReviewSchema = z.object({
 });
 
 const markHelpfulSchema = z.object({
-    helpful: z.boolean('Helpful must be true or false')
+    helpful: z.boolean({
+        required_error: 'Helpful must be true or false',
+        invalid_type_error: 'Helpful must be true or false'
+    })
 });
 
 const rejectReviewSchema = z.object({
@@ -78,6 +90,9 @@ const flagReviewSchema = z.object({
 });
 
 module.exports = {
+    reviewIdParamSchema,
+    productIdParamSchema,
+    variantIdParamSchema,
     createReviewSchema,
     updateReviewSchema,
     markHelpfulSchema,

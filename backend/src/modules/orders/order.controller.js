@@ -130,7 +130,8 @@ const writeReview = asyncHandler(async (req, res) => {
         order_id,
         item_id,
         rating,
-        comment
+        comment,
+        user.userId
     );
 
     res.status(200).json({
