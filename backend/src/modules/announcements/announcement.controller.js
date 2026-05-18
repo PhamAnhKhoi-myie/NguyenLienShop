@@ -5,7 +5,10 @@ class AnnouncementController {
     static getActive = asyncHandler(async (req, res) => {
         const { target } = req.query;
 
-        const announcements = await AnnouncementService.getActive(target);
+        const announcements = await AnnouncementService.getActive(
+            target,
+            req.user
+        );
 
         res.json({
             success: true,
@@ -16,7 +19,10 @@ class AnnouncementController {
     static getOne = asyncHandler(async (req, res) => {
         const { id } = req.params;
 
-        const announcement = await AnnouncementService.getAnnouncementById(id);
+        const announcement = await AnnouncementService.getAnnouncementById(
+            id,
+            req.user
+        );
 
         res.json({
             success: true,

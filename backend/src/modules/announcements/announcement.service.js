@@ -4,8 +4,89 @@ const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
 
 class AnnouncementService {
-    static async getActive(target = null) {
+    static writableFields = [
+        'title',
+        'content',
+        'priority',
+        'target',
+        'type',
+        'is_dismissible',
+        'start_at',
+        'end_at'
+    ];
+
+    static sanitizeAnnouncementData(data = {}) {
+        return this.writableFields.reduce((payload, field) => {
+            if (Object.prototype.hasOwnProperty.call(data, field)) {
+                payload[field] = data[field];
+            }
+
+            return payload;
+        }, {});
+    }
+
+    static normalizeRoles(user) {
+        return Array.isArray(user?.roles)
+            ? user.roles.map((role) => String(role).toUpperCase())
+            : [];
+    }
+
+    static isAdmin(user) {
+        return this.normalizeRoles(user).includes('ADMIN');
+    }
+
+    static isActive(announcement, now = new Date()) {
+        return announcement.start_at <= now && now < announcement.end_at;
+    }
+
+    static assertCanViewTarget(target, user) {
+        if (!target || target === 'all' || target === 'guest') {
+            return;
+        }
+
+        if (target === 'admin' && this.isAdmin(user)) {
+            return;
+        }
+
+        if (target === 'user' && user?.id) {
+            return;
+        }
+
+        throw new AppError(
+            'You do not have permission to view this announcement target',
+            403,
+            'ANNOUNCEMENT_TARGET_FORBIDDEN'
+        );
+    }
+
+    static canViewAnnouncement(announcement, user, now = new Date()) {
+        if (this.isAdmin(user)) {
+            return true;
+        }
+
+        if (!this.isActive(announcement, now)) {
+            return false;
+        }
+
+        if (announcement.target === 'all') {
+            return true;
+        }
+
+        if (announcement.target === 'guest') {
+            return !user?.id;
+        }
+
+        if (announcement.target === 'user') {
+            return Boolean(user?.id);
+        }
+
+        return false;
+    }
+
+    static async getActive(target = null, user = null) {
         const now = new Date();
+
+        this.assertCanViewTarget(target, user);
 
         const query = {
             is_deleted: false,
@@ -50,10 +131,18 @@ class AnnouncementService {
         return AnnouncementMapper.toDTOList(announcements);
     }
 
-    static async getAnnouncementById(announcementId) {
+    static async getAnnouncementById(announcementId, user = null) {
         const announcement = await Announcement.findById(announcementId);
 
         if (!announcement) {
+            throw new AppError(
+                'Announcement not found',
+                404,
+                'ANNOUNCEMENT_NOT_FOUND'
+            );
+        }
+
+        if (!this.canViewAnnouncement(announcement, user)) {
             throw new AppError(
                 'Announcement not found',
                 404,
@@ -66,7 +155,7 @@ class AnnouncementService {
 
     static async createAnnouncement(data, userId) {
         const announcement = new Announcement({
-            ...data,
+            ...this.sanitizeAnnouncementData(data),
             created_by: userId
         });
 
@@ -95,7 +184,9 @@ class AnnouncementService {
             );
         }
 
-        Object.assign(announcement, data, { updated_by: userId });
+        const updateData = this.sanitizeAnnouncementData(data);
+
+        Object.assign(announcement, updateData, { updated_by: userId });
 
         await announcement.save();
 
@@ -103,7 +194,7 @@ class AnnouncementService {
             event: 'announcement_updated',
             announcement_id: announcementId,
             updated_by: userId,
-            updated_fields: Object.keys(data)
+            updated_fields: Object.keys(updateData)
         });
 
         return AnnouncementMapper.toDTO(announcement);

@@ -1,10 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const AnnouncementController = require('./announcement.controller');
-const { authenticate } = require('../../middlewares/auth.middleware');
+const {
+    authenticate,
+    optionalAuthenticate
+} = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/authorize.middleware');
 const validate = require('../../middlewares/validate.middleware');
 const {
+    announcementIdParamSchema,
     createAnnouncementSchema,
     updateAnnouncementSchema
 } = require('./announcement.validator');
@@ -14,9 +18,7 @@ const {
  * PUBLIC ROUTES (no auth required)
  * ============================================
  */
-router.get('/', AnnouncementController.getActive);
-
-router.get('/:id', AnnouncementController.getOne);
+router.get('/', optionalAuthenticate, AnnouncementController.getActive);
 
 /**
  * ============================================
@@ -52,11 +54,18 @@ router.get(
     AnnouncementController.getDeleted
 );
 
+router.get(
+    '/:id',
+    validate({ params: announcementIdParamSchema }),
+    optionalAuthenticate,
+    AnnouncementController.getOne
+);
+
 router.post(
     '/',
     authenticate,
     authorize(['ADMIN']),
-    validate(createAnnouncementSchema),
+    validate({ body: createAnnouncementSchema }),
     AnnouncementController.create
 );
 
@@ -64,7 +73,10 @@ router.put(
     '/:id',
     authenticate,
     authorize(['ADMIN']),
-    validate(updateAnnouncementSchema),
+    validate({
+        params: announcementIdParamSchema,
+        body: updateAnnouncementSchema
+    }),
     AnnouncementController.update
 );
 
@@ -72,6 +84,7 @@ router.delete(
     '/:id',
     authenticate,
     authorize(['ADMIN']),
+    validate({ params: announcementIdParamSchema }),
     AnnouncementController.delete
 );
 
@@ -79,6 +92,7 @@ router.post(
     '/:id/restore',
     authenticate,
     authorize(['ADMIN']),
+    validate({ params: announcementIdParamSchema }),
     AnnouncementController.restore
 );
 
