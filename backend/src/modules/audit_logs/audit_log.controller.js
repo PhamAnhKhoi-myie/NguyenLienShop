@@ -60,11 +60,16 @@ const getAuthLogs = asyncHandler(async (req, res) => {
     return sendLogsResponse(req, res, 'AUTH');
 });
 
+const getPaymentLogs = asyncHandler(async (req, res) => {
+    return sendLogsResponse(req, res, 'PAYMENT');
+});
+
 module.exports = {
     getAllLogs,
     getLogById,
     getUserLogs,
     getUserAddressLogs,
     getCategoryLogs,
-    getAuthLogs
+    getAuthLogs,
+    getPaymentLogs
 };

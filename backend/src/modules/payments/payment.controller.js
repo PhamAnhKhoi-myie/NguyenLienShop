@@ -3,14 +3,23 @@ const AppError = require('../../utils/appError.util');
 const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const PaymentService = require('./payment.service');
 const PaymentMapper = require('./payment.mapper');
+const { buildAuditMetadata } = require('../../utils/audit.util');
+
+const shouldAuditWebhookRejection = (error) =>
+    (error?.code || error?.errorCode) !== 'AMOUNT_MISMATCH_FRAUD_ATTEMPT';
 
 // ===== PUBLIC =====
 
 const handleVNPayWebhook = asyncHandler(async (req, res) => {
+    const metadata = buildAuditMetadata(req);
+
     try {
         const webhookData = req.method === 'GET' ? req.query : req.body;
 
-        const result = await PaymentService.handleVNPayWebhook(webhookData);
+        const result = await PaymentService.handleVNPayWebhook(
+            webhookData,
+            metadata
+        );
 
         if (
             result?.message === 'Payment already processed (idempotent)' ||
@@ -29,7 +38,15 @@ const handleVNPayWebhook = asyncHandler(async (req, res) => {
     } catch (error) {
         console.error('[VNPay IPN Error]', error.message);
 
-        const errorCode = error.errorCode;
+        if (shouldAuditWebhookRejection(error)) {
+            await PaymentService.auditPaymentWebhookRejected(
+                'vnpay',
+                error,
+                metadata
+            );
+        }
+
+        const errorCode = error.code || error.errorCode;
 
         if (errorCode === 'WEBHOOK_VERIFICATION_FAILED') {
             return res.status(200).json({
@@ -91,20 +108,43 @@ const handleVNPayReturn = asyncHandler(async (req, res) => {
 });
 
 const handleStripeWebhook = asyncHandler(async (req, res) => {
+    const metadata = buildAuditMetadata(req);
     const signature = req.headers['x-stripe-signature'];
 
     if (!signature) {
-        throw new AppError(
+        const error = new AppError(
             'Missing x-stripe-signature header',
             400,
             'MISSING_WEBHOOK_SIGNATURE'
         );
+
+        await PaymentService.auditPaymentWebhookRejected(
+            'stripe',
+            error,
+            metadata
+        );
+
+        throw error;
     }
 
-    const result = await PaymentService.handleStripeWebhook(
-        req.body,
-        signature
-    );
+    let result;
+
+    try {
+        result = await PaymentService.handleStripeWebhook(
+            req.body,
+            signature,
+            metadata
+        );
+    } catch (error) {
+        if (shouldAuditWebhookRejection(error)) {
+            await PaymentService.auditPaymentWebhookRejected(
+                'stripe',
+                error,
+                metadata
+            );
+        }
+        throw error;
+    }
 
     return res.status(200).json({
         success: true,
@@ -113,6 +153,7 @@ const handleStripeWebhook = asyncHandler(async (req, res) => {
 });
 
 const handlePayPalWebhook = asyncHandler(async (req, res) => {
+    const metadata = buildAuditMetadata(req);
     const webhookHeaders = {
         transmission_id: req.headers['paypal-transmission-id'],
         transmission_time: req.headers['paypal-transmission-time'],
@@ -121,10 +162,24 @@ const handlePayPalWebhook = asyncHandler(async (req, res) => {
         transmission_sig: req.headers['paypal-transmission-sig'],
     };
 
-    const result = await PaymentService.handlePayPalWebhook(
-        req.body,
-        webhookHeaders
-    );
+    let result;
+
+    try {
+        result = await PaymentService.handlePayPalWebhook(
+            req.body,
+            webhookHeaders,
+            metadata
+        );
+    } catch (error) {
+        if (shouldAuditWebhookRejection(error)) {
+            await PaymentService.auditPaymentWebhookRejected(
+                'paypal',
+                error,
+                metadata
+            );
+        }
+        throw error;
+    }
 
     return res.status(200).json({
         success: true,
@@ -142,7 +197,8 @@ const createPayment = asyncHandler(async (req, res) => {
     const result = await PaymentService.createPayment(
         orderId,
         user.userId,
-        provider
+        provider,
+        buildAuditMetadata(req)
     );
 
     return res.status(201).json({
@@ -258,7 +314,8 @@ const retryPayment = asyncHandler(async (req, res) => {
 
     const result = await PaymentService.retryPayment(
         paymentId,
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     return res.status(200).json({
@@ -276,7 +333,8 @@ const cancelPayment = asyncHandler(async (req, res) => {
     const result = await PaymentService.cancelPayment(
         paymentId,
         user.userId,
-        reason || 'User cancelled'
+        reason || 'User cancelled',
+        buildAuditMetadata(req)
     );
 
     return res.status(200).json({
@@ -335,6 +393,12 @@ const adminVerifyPayment = asyncHandler(async (req, res) => {
         );
     }
 
+    await PaymentService.auditAdminVerifyPayment(
+        payment,
+        user.userId,
+        buildAuditMetadata(req)
+    );
+
     return res.status(200).json({
         success: true,
         data: {
@@ -352,7 +416,11 @@ const adminDeletePayment = asyncHandler(async (req, res) => {
 
     const { payment_id: paymentId } = req.params;
 
-    const result = await PaymentService.softDeletePayment(paymentId);
+    const result = await PaymentService.softDeletePayment(
+        paymentId,
+        user.userId,
+        buildAuditMetadata(req)
+    );
 
     return res.status(200).json({
         success: true,

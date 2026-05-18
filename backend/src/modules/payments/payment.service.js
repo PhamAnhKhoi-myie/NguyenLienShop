@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const Payment = require('./payment.model');
 const PaymentMapper = require('./payment.mapper');
 const AppError = require('../../utils/appError.util');
+const PaymentAuditLogService = require('../audit_logs/payment_audit_log/payment_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 const Order = require('../orders/order.model');
 const OrderService = require('../orders/order.service');
@@ -30,7 +32,7 @@ const logger = {
 
 class PaymentService {
 
-    static async createPayment(orderId, userId, provider = 'vnpay') {
+    static async createPayment(orderId, userId, provider = 'vnpay', metadata = {}) {
         if (!orderId || !userId) {
             throw new AppError(
                 'Order ID and user ID required',
@@ -166,6 +168,23 @@ class PaymentService {
 
         const paymentUrl = await this._generatePaymentUrl(payment, provider);
 
+        await this._createPaymentAuditLog({
+            action: AUDIT_ACTIONS.CREATE_PAYMENT,
+            payment,
+            actorId: userId,
+            metadata,
+            changes: {
+                status: {
+                    from: null,
+                    to: payment.status,
+                },
+                amount: {
+                    from: null,
+                    to: payment.amount,
+                },
+            },
+        });
+
         return {
             paymentId: payment._id.toString(),
             payment: PaymentMapper.toResponseDTO(payment),
@@ -173,7 +192,7 @@ class PaymentService {
         };
     }
 
-    static async handleVNPayWebhook(webhookData) {
+    static async handleVNPayWebhook(webhookData, metadata = {}) {
         const {
             vnp_TmnCode,
             vnp_TxnRef,
@@ -224,6 +243,22 @@ class PaymentService {
                 }
             );
 
+            await this._createPaymentAuditLog({
+                action: AUDIT_ACTIONS.PAYMENT_WEBHOOK_AMOUNT_MISMATCH,
+                payment,
+                metadata,
+                changes: {
+                    amount: {
+                        from: expectedAmount,
+                        to: receivedAmount,
+                    },
+                    provider: {
+                        from: null,
+                        to: 'vnpay',
+                    },
+                },
+            });
+
             throw new AppError(
                 'Payment amount mismatch - possible fraud',
                 409,
@@ -244,6 +279,8 @@ class PaymentService {
                 vnp_BankCode,
                 vnp_PayDate,
                 raw_ipn: webhookData,
+                audit_action: AUDIT_ACTIONS.VNPAY_WEBHOOK_PAYMENT,
+                audit_metadata: metadata,
             });
         }
 
@@ -251,6 +288,8 @@ class PaymentService {
             vnp_ResponseCode,
             vnp_TransactionStatus,
             raw_ipn: webhookData,
+            audit_action: AUDIT_ACTIONS.VNPAY_WEBHOOK_PAYMENT,
+            audit_metadata: metadata,
         });
     }
 
@@ -298,7 +337,7 @@ class PaymentService {
         };
     }
 
-    static async handleStripeWebhook(rawBody, signature) {
+    static async handleStripeWebhook(rawBody, signature, metadata = {}) {
         const isSignatureValid = this._verifyStripeSignature(
             rawBody,
             signature
@@ -349,6 +388,22 @@ class PaymentService {
                 }
             );
 
+            await this._createPaymentAuditLog({
+                action: AUDIT_ACTIONS.PAYMENT_WEBHOOK_AMOUNT_MISMATCH,
+                payment,
+                metadata,
+                changes: {
+                    amount: {
+                        from: payment.amount,
+                        to: object.amount,
+                    },
+                    provider: {
+                        from: null,
+                        to: 'stripe',
+                    },
+                },
+            });
+
             throw new AppError(
                 'Payment amount mismatch',
                 409,
@@ -361,6 +416,8 @@ class PaymentService {
                 stripe_pi_id: object.id,
                 stripe_status: object.status,
                 raw_return: webhookEvent,
+                audit_action: AUDIT_ACTIONS.STRIPE_WEBHOOK_PAYMENT,
+                audit_metadata: metadata,
             });
         } else if (
             type === 'payment_intent.payment_failed' ||
@@ -369,6 +426,8 @@ class PaymentService {
             return await this._processPaymentFailure(payment, {
                 stripe_status: object.status,
                 raw_ipn: webhookEvent,
+                audit_action: AUDIT_ACTIONS.STRIPE_WEBHOOK_PAYMENT,
+                audit_metadata: metadata,
             });
         }
 
@@ -378,7 +437,7 @@ class PaymentService {
         };
     }
 
-    static async handlePayPalWebhook(webhookEvent, webhookHeaders = {}) {
+    static async handlePayPalWebhook(webhookEvent, webhookHeaders = {}, metadata = {}) {
         await this._verifyPayPalWebhook(webhookEvent, webhookHeaders);
 
         const { event_type, resource } = webhookEvent;
@@ -413,11 +472,15 @@ class PaymentService {
                 paypal_order_id: resource.id,
                 paypal_status: resource.status,
                 raw_return: webhookEvent,
+                audit_action: AUDIT_ACTIONS.PAYPAL_WEBHOOK_PAYMENT,
+                audit_metadata: metadata,
             });
         } else if (event_type === 'PAYMENT.CAPTURE.DENIED') {
             return await this._processPaymentFailure(payment, {
                 paypal_status: resource.status,
                 raw_ipn: webhookEvent,
+                audit_action: AUDIT_ACTIONS.PAYPAL_WEBHOOK_PAYMENT,
+                audit_metadata: metadata,
             });
         }
 
@@ -511,6 +574,31 @@ class PaymentService {
                 order_id: payment.order_id.toString(),
                 user_id: payment.user_id.toString(),
             });
+
+            if (providerData.audit_action) {
+                await this._createPaymentAuditLog({
+                    action: providerData.audit_action,
+                    payment,
+                    metadata: providerData.audit_metadata || {},
+                    changes: {
+                        status: {
+                            from: 'pending',
+                            to: 'paid',
+                        },
+                        verification_status: {
+                            from: payment.verification_status,
+                            to: 'verified',
+                        },
+                        transaction_ref: {
+                            from: null,
+                            to: providerData.vnp_TxnRef ||
+                                providerData.stripe_pi_id ||
+                                providerData.paypal_order_id ||
+                                null,
+                        },
+                    },
+                });
+            }
 
             return {
                 status: 'paid',
@@ -642,6 +730,27 @@ class PaymentService {
                 failure_code: failureData.vnp_ResponseCode || failureData.stripe_status || 'UNKNOWN'
             });
 
+            if (failureData.audit_action) {
+                await this._createPaymentAuditLog({
+                    action: failureData.audit_action,
+                    payment,
+                    metadata: failureData.audit_metadata || {},
+                    changes: {
+                        status: {
+                            from: 'pending',
+                            to: 'failed',
+                        },
+                        failure_code: {
+                            from: null,
+                            to: failureData.vnp_ResponseCode ||
+                                failureData.stripe_status ||
+                                failureData.paypal_status ||
+                                'UNKNOWN',
+                        },
+                    },
+                });
+            }
+
             return {
                 status: 'failed',
                 orderId: payment.order_id.toString(),
@@ -656,7 +765,7 @@ class PaymentService {
         }
     }
 
-    static async retryPayment(paymentId, userId) {
+    static async retryPayment(paymentId, userId, metadata = {}) {
         if (!paymentId || !userId) {
             throw new AppError(
                 'Payment ID and user ID required',
@@ -829,6 +938,23 @@ class PaymentService {
 
             await session.commitTransaction();
 
+            await this._createPaymentAuditLog({
+                action: AUDIT_ACTIONS.RETRY_PAYMENT,
+                payment: updatedPayment,
+                actorId: userId,
+                metadata,
+                changes: {
+                    status: {
+                        from: 'failed',
+                        to: 'pending',
+                    },
+                    retry_count: {
+                        from: payment.retry_count,
+                        to: updatedPayment.retry_count,
+                    },
+                },
+            });
+
             return {
                 paymentId: updatedPayment._id.toString(),
                 payment: PaymentMapper.toResponseDTO(updatedPayment),
@@ -842,7 +968,7 @@ class PaymentService {
         }
     }
 
-    static async cancelPayment(paymentId, userId, reason = 'User cancelled') {
+    static async cancelPayment(paymentId, userId, reason = 'User cancelled', metadata = {}) {
         if (!paymentId || !userId) {
             throw new AppError(
                 'Payment ID and user ID required',
@@ -953,6 +1079,27 @@ class PaymentService {
             }
 
             await session.commitTransaction();
+
+            await this._createPaymentAuditLog({
+                action: AUDIT_ACTIONS.CANCEL_PAYMENT,
+                payment,
+                actorId: userId,
+                metadata,
+                changes: {
+                    status: {
+                        from: 'pending',
+                        to: 'failed',
+                    },
+                    failure_reason: {
+                        from: null,
+                        to: 'CANCELLED_BY_USER',
+                    },
+                    message: {
+                        from: null,
+                        to: reason,
+                    },
+                },
+            });
 
             return {
                 status: 'failed',
@@ -1149,7 +1296,69 @@ class PaymentService {
         return stats[0];
     }
 
+    static async auditAdminVerifyPayment(payment, actorId, metadata = {}) {
+        await this._createPaymentAuditLog({
+            action: AUDIT_ACTIONS.ADMIN_VERIFY_PAYMENT,
+            payment,
+            actorId,
+            metadata,
+            changes: {
+                verification_status: {
+                    from: null,
+                    to: payment.verification_status,
+                },
+                status: {
+                    from: null,
+                    to: payment.status,
+                },
+            },
+        });
+    }
+
+    static async auditPaymentWebhookRejected(provider, error, metadata = {}) {
+        await PaymentAuditLogService.createLog({
+            actor_id: null,
+            action: AUDIT_ACTIONS.PAYMENT_WEBHOOK_REJECTED,
+            payment_id: null,
+            order_id: null,
+            user_id: null,
+            provider,
+            changes: {
+                error_code: {
+                    from: null,
+                    to: error?.code || error?.errorCode || 'WEBHOOK_REJECTED',
+                },
+                message: {
+                    from: null,
+                    to: error?.message || 'Webhook rejected',
+                },
+            },
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
+    }
+
     // ===== INTERNAL HELPERS =====
+
+    static async _createPaymentAuditLog({
+        action,
+        payment = null,
+        actorId = null,
+        metadata = {},
+        changes = {},
+    }) {
+        await PaymentAuditLogService.createLog({
+            actor_id: actorId,
+            action,
+            payment_id: payment?._id || null,
+            order_id: payment?.order_id || null,
+            user_id: payment?.user_id || null,
+            provider: payment?.provider || null,
+            changes,
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
+    }
 
     static _verifyVNPayTmnCode(vnpTmnCode) {
         const expectedTmnCode = process.env.VNPAY_TMN_CODE;
@@ -1736,7 +1945,7 @@ class PaymentService {
         };
     }
 
-    static async softDeletePayment(paymentId) {
+    static async softDeletePayment(paymentId, actorId = null, metadata = {}) {
         const payment = await Payment.findByIdAndUpdate(
             paymentId,
             {
@@ -1753,6 +1962,23 @@ class PaymentService {
                 'PAYMENT_NOT_FOUND'
             );
         }
+
+        await this._createPaymentAuditLog({
+            action: AUDIT_ACTIONS.DELETE_PAYMENT_SOFT,
+            payment,
+            actorId,
+            metadata,
+            changes: {
+                is_deleted: {
+                    from: false,
+                    to: true,
+                },
+                deleted_at: {
+                    from: null,
+                    to: payment.deleted_at,
+                },
+            },
+        });
 
         return PaymentMapper.toAdminDTO(payment);
     }

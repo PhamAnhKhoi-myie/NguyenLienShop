@@ -2,6 +2,7 @@ const UserAuditLog = require('./user_audit_log/user_audit_log.model');
 const UserAddressAuditLog = require('./user_address_audit_log/user_address_log.model');
 const CategoryAuditLog = require('./category_audit_log/category_log.model');
 const AuthAuditLog = require('./auth_audit_log/auth_log.model');
+const PaymentAuditLog = require('./payment_audit_log/payment_log.model');
 
 const AppError = require('../../utils/appError.util');
 
@@ -9,7 +10,8 @@ const DOMAIN_MODELS = [
     { name: 'USER', model: UserAuditLog },
     { name: 'USER_ADDRESS', model: UserAddressAuditLog },
     { name: 'AUTH', model: AuthAuditLog },
-    { name: 'CATEGORY', model: CategoryAuditLog }
+    { name: 'CATEGORY', model: CategoryAuditLog },
+    { name: 'PAYMENT', model: PaymentAuditLog }
 ];
 
 const DOMAIN_ACTION_MAP = {
@@ -38,6 +40,18 @@ const DOMAIN_ACTION_MAP = {
         'DELETE_CATEGORY_SOFT',
         'DELETE_CATEGORY_HARD',
         'RESTORE_CATEGORY'
+    ],
+    PAYMENT: [
+        'CREATE_PAYMENT',
+        'RETRY_PAYMENT',
+        'CANCEL_PAYMENT',
+        'ADMIN_VERIFY_PAYMENT',
+        'DELETE_PAYMENT_SOFT',
+        'VNPAY_WEBHOOK_PAYMENT',
+        'STRIPE_WEBHOOK_PAYMENT',
+        'PAYPAL_WEBHOOK_PAYMENT',
+        'PAYMENT_WEBHOOK_AMOUNT_MISMATCH',
+        'PAYMENT_WEBHOOK_REJECTED'
     ]
 };
 
