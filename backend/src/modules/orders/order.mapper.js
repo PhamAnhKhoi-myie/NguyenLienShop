@@ -169,8 +169,8 @@ class OrderMapper {
         return {
             ...detailDTO,
 
-            customer_notes: order.notes || null,
-            admin_notes: order.admin_notes || null,
+            customer_notes: detailDTO.customer_notes,
+            admin_notes: order.notes || null,
 
             payment_id: detailDTO.payment_id,
             shipment_id: detailDTO.shipment_id,

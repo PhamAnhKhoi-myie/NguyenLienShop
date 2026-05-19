@@ -63,6 +63,7 @@ const getUserAddressLogsQuerySchema = createDomainLogsQuerySchema('USER_ADDRESS'
 const getCategoryLogsQuerySchema = createDomainLogsQuerySchema('CATEGORY');
 const getAuthLogsQuerySchema = createDomainLogsQuerySchema('AUTH');
 const getPaymentLogsQuerySchema = createDomainLogsQuerySchema('PAYMENT');
+const getOrderLogsQuerySchema = createDomainLogsQuerySchema('ORDER');
 
 module.exports = {
     objectIdSchema,
@@ -73,4 +74,5 @@ module.exports = {
     getCategoryLogsQuerySchema,
     getAuthLogsQuerySchema,
     getPaymentLogsQuerySchema,
+    getOrderLogsQuerySchema,
 };

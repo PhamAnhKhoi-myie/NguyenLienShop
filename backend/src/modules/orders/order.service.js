@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Order = require('./order.model');
 const OrderMapper = require('./order.mapper');
 const AppError = require('../../utils/appError.util');
+const OrderAuditLogService = require('../audit_logs/order_audit_log/order_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 // Import dependencies
 const Variant = require('../products/variant.model');
@@ -18,7 +20,7 @@ const ReviewService = require('../reviews/review.service');
  */
 
 class OrderService {
-    static async createOrderFromCart(userId, cartId, shippingData) {
+    static async createOrderFromCart(userId, cartId, shippingData, metadata = {}) {
         if (!userId || !cartId) {
             throw new AppError(
                 'User ID and cart ID required',
@@ -216,6 +218,35 @@ class OrderService {
             await Cart.deleteOne({ _id: cartId }, { session });
 
             await session.commitTransaction();
+
+            await this._createOrderAuditLog({
+                action: AUDIT_ACTIONS.CREATE_ORDER,
+                order,
+                actorId: userId,
+                metadata,
+                changes: {
+                    status: {
+                        from: null,
+                        to: order.status,
+                    },
+                    payment_status: {
+                        from: null,
+                        to: order.payment.status,
+                    },
+                    total_amount: {
+                        from: null,
+                        to: order.pricing.total_amount,
+                    },
+                    cart_id: {
+                        from: null,
+                        to: cartId,
+                    },
+                    stock_reserved: {
+                        from: null,
+                        to: this._summarizeStockItems(order.items),
+                    },
+                },
+            });
 
             return OrderMapper.toResponseDTO(order);
         } catch (error) {
@@ -445,7 +476,9 @@ class OrderService {
     static async fulfillItems(
         orderId,
         itemId,
-        quantityFulfilled
+        quantityFulfilled,
+        actorId = null,
+        metadata = {}
     ) {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -488,6 +521,7 @@ class OrderService {
                 );
             }
 
+            const previousQuantityFulfilled = item.quantity_fulfilled;
             const qtyItems = quantityFulfilled * item.pack_size;
 
             const result = await Variant.updateOne(
@@ -517,6 +551,32 @@ class OrderService {
             await order.save({ session });
             await session.commitTransaction();
 
+            await this._createOrderAuditLog({
+                action: AUDIT_ACTIONS.FULFILL_ORDER_ITEMS,
+                order,
+                actorId,
+                metadata,
+                changes: {
+                    item_id: {
+                        from: null,
+                        to: item._id,
+                    },
+                    quantity_fulfilled: {
+                        from: previousQuantityFulfilled,
+                        to: item.quantity_fulfilled,
+                    },
+                    stock_movement: {
+                        from: null,
+                        to: {
+                            variant_id: item.variant_id,
+                            unit_id: item.unit_id,
+                            reserved_delta: -qtyItems,
+                            sold_delta: qtyItems,
+                        },
+                    },
+                },
+            });
+
             return OrderMapper.toDetailDTO(order);
         } catch (error) {
             await session.abortTransaction();
@@ -526,7 +586,7 @@ class OrderService {
         }
     }
 
-    static async recordShipment(orderId, shipmentData) {
+    static async recordShipment(orderId, shipmentData, actorId = null, metadata = {}) {
         const order = await Order.findById(orderId);
         if (!order) {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
@@ -541,6 +601,8 @@ class OrderService {
         }
 
         const { carrier, tracking_code } = shipmentData;
+        const fromStatus = order.status;
+        const previousShipment = this._summarizeShipment(order.shipment);
 
         if (!carrier || !tracking_code) {
             throw new AppError(
@@ -550,24 +612,47 @@ class OrderService {
             );
         }
 
+        const shippedAt = new Date();
+
         order.shipment = {
             carrier,
             tracking_code,
-            shipped_at: new Date(),
+            shipped_at: shippedAt,
         };
 
         order.addStatusTransition(
             'SHIPPED',
-            null,
+            actorId,
             `Shipped via ${carrier}`
         );
 
         await order.save();
 
+        await this._createOrderAuditLog({
+            action: AUDIT_ACTIONS.RECORD_ORDER_SHIPMENT,
+            order,
+            actorId,
+            metadata,
+            changes: {
+                status: {
+                    from: fromStatus,
+                    to: order.status,
+                },
+                shipment: {
+                    from: previousShipment,
+                    to: {
+                        carrier,
+                        tracking_code,
+                        shipped_at: shippedAt,
+                    },
+                },
+            },
+        });
+
         return OrderMapper.toResponseDTO(order);
     }
 
-    static async confirmDelivery(orderId) {
+    static async confirmDelivery(orderId, actorId = null, metadata = {}) {
         const order = await Order.findById(orderId);
         if (!order) {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
@@ -585,15 +670,36 @@ class OrderService {
             order.shipment = {};
         }
 
-        order.shipment.delivered_at = new Date();
-        order.addStatusTransition('DELIVERED', null, 'Delivery confirmed');
+        const fromStatus = order.status;
+        const previousDeliveredAt = order.shipment.delivered_at || null;
+        const deliveredAt = new Date();
+
+        order.shipment.delivered_at = deliveredAt;
+        order.addStatusTransition('DELIVERED', actorId, 'Delivery confirmed');
 
         await order.save();
+
+        await this._createOrderAuditLog({
+            action: AUDIT_ACTIONS.CONFIRM_ORDER_DELIVERY,
+            order,
+            actorId,
+            metadata,
+            changes: {
+                status: {
+                    from: fromStatus,
+                    to: order.status,
+                },
+                delivered_at: {
+                    from: previousDeliveredAt,
+                    to: deliveredAt,
+                },
+            },
+        });
 
         return OrderMapper.toDetailDTO(order);
     }
 
-    static async cancelOrder(orderId, reason, cancelledBy = null) {
+    static async cancelOrder(orderId, reason, cancelledBy = null, metadata = {}) {
         const session = await mongoose.startSession();
         session.startTransaction();
 
@@ -614,6 +720,10 @@ class OrderService {
                     'CANNOT_CANCEL_ORDER'
                 );
             }
+
+            const fromStatus = order.status;
+            const fromPaymentStatus = order.payment?.status || null;
+            const stockRestored = [];
 
             if (order.status === 'PENDING' || order.status === 'PAID') {
                 for (const item of order.items) {
@@ -641,6 +751,13 @@ class OrderService {
                             'STOCK_RESTORATION_FAILED'
                         );
                     }
+
+                    stockRestored.push({
+                        variant_id: item.variant_id,
+                        unit_id: item.unit_id,
+                        available_delta: qtyItems,
+                        reserved_delta: -qtyItems,
+                    });
                 }
             }
 
@@ -648,6 +765,31 @@ class OrderService {
 
             await order.save({ session });
             await session.commitTransaction();
+
+            await this._createOrderAuditLog({
+                action: AUDIT_ACTIONS.CANCEL_ORDER,
+                order,
+                actorId: cancelledBy,
+                metadata,
+                changes: {
+                    status: {
+                        from: fromStatus,
+                        to: order.status,
+                    },
+                    payment_status: {
+                        from: fromPaymentStatus,
+                        to: order.payment?.status || null,
+                    },
+                    reason: {
+                        from: null,
+                        to: reason,
+                    },
+                    stock_restored: {
+                        from: null,
+                        to: stockRestored,
+                    },
+                },
+            });
 
             return OrderMapper.toDetailDTO(order);
         } catch (error) {
@@ -662,50 +804,121 @@ class OrderService {
         orderId,
         toStatus,
         adminUserId,
-        note = ''
+        note = '',
+        metadata = {},
+        auditAction = AUDIT_ACTIONS.ADMIN_UPDATE_ORDER_STATUS
     ) {
         const order = await Order.findById(orderId);
         if (!order) {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
         }
 
-        const validStatuses = [
-            'PENDING',
-            'PAID',
-            'PROCESSING',
-            'SHIPPED',
-            'DELIVERED',
-            'FAILED',
-            'CANCELED',
-        ];
+        this._assertValidOrderStatus(toStatus);
 
-        if (!validStatuses.includes(toStatus)) {
-            throw new AppError(
-                'Invalid status value',
-                400,
-                'INVALID_STATUS'
-            );
-        }
-
+        const fromStatus = order.status;
         order.addStatusTransition(toStatus, adminUserId, note);
 
         await order.save();
 
+        await this._createOrderAuditLog({
+            action: auditAction,
+            order,
+            actorId: adminUserId,
+            metadata,
+            changes: {
+                status: {
+                    from: fromStatus,
+                    to: order.status,
+                },
+                note: {
+                    from: null,
+                    to: note || null,
+                },
+            },
+        });
+
         return OrderMapper.toDetailDTO(order);
     }
 
-    static async updateAdminNotes(orderId, notes) {
-        const order = await Order.findByIdAndUpdate(
-            orderId,
-            { admin_notes: notes },
-            { new: true }
-        );
+    static async adminUpdateOrder(orderId, updateData, adminUserId, metadata = {}) {
+        const order = await Order.findById(orderId);
 
         if (!order) {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
         }
 
-        return OrderMapper.toDetailDTO(order);
+        const changes = {};
+
+        if (updateData.status) {
+            this._assertValidOrderStatus(updateData.status);
+
+            const fromStatus = order.status;
+
+            order.addStatusTransition(
+                updateData.status,
+                adminUserId,
+                'Admin update'
+            );
+
+            changes.status = {
+                from: fromStatus,
+                to: order.status,
+            };
+        }
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'admin_notes')) {
+            const fromNotes = order.notes || null;
+            order.notes = updateData.admin_notes || null;
+
+            changes.admin_notes = {
+                from: fromNotes,
+                to: order.notes,
+            };
+        }
+
+        if (Object.keys(changes).length === 0) {
+            return OrderMapper.toAdminDTO(order);
+        }
+
+        await order.save();
+
+        await this._createOrderAuditLog({
+            action: AUDIT_ACTIONS.ADMIN_UPDATE_ORDER,
+            order,
+            actorId: adminUserId,
+            metadata,
+            changes,
+        });
+
+        return OrderMapper.toAdminDTO(order);
+    }
+
+    static async updateAdminNotes(orderId, notes, actorId = null, metadata = {}) {
+        const order = await Order.findById(orderId);
+
+        if (!order) {
+            throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
+        }
+
+        const fromNotes = order.notes || null;
+        order.notes = notes || null;
+
+        await order.save();
+
+        await this._createOrderAuditLog({
+            action: AUDIT_ACTIONS.ADMIN_UPDATE_ORDER,
+            order,
+            actorId,
+            metadata,
+            changes: {
+                admin_notes: {
+                    from: fromNotes,
+                    to: order.notes,
+                },
+            },
+        });
+
+        return OrderMapper.toAdminDTO(order);
     }
 
     static async writeReview(orderId, itemId, rating, comment, userId) {
@@ -842,6 +1055,70 @@ class OrderService {
         if (!order) return null;
 
         return OrderMapper.toListDTO(order);
+    }
+
+    static _assertValidOrderStatus(status) {
+        const validStatuses = [
+            'PENDING',
+            'PAID',
+            'PROCESSING',
+            'SHIPPED',
+            'DELIVERED',
+            'FAILED',
+            'CANCELED',
+        ];
+
+        if (!validStatuses.includes(status)) {
+            throw new AppError(
+                'Invalid status value',
+                400,
+                'INVALID_STATUS'
+            );
+        }
+    }
+
+    static _summarizeStockItems(items = []) {
+        return items.map((item) => ({
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            unit_id: item.unit_id,
+            quantity_ordered: item.quantity_ordered,
+            pack_size: item.pack_size,
+            stock_units: item.quantity_ordered * item.pack_size,
+        }));
+    }
+
+    static _summarizeShipment(shipment) {
+        if (!shipment) {
+            return null;
+        }
+
+        return {
+            carrier: shipment.carrier || null,
+            tracking_code: shipment.tracking_code || null,
+            shipped_at: shipment.shipped_at || null,
+            delivered_at: shipment.delivered_at || null,
+        };
+    }
+
+    static async _createOrderAuditLog({
+        action,
+        order,
+        actorId = null,
+        metadata = {},
+        changes = {},
+    }) {
+        await OrderAuditLogService.createLog({
+            actor_id: actorId,
+            action,
+            order_id: order._id,
+            user_id: order.user_id || null,
+            order_code: order.order_code || null,
+            status: order.status || null,
+            changes,
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
     }
 
 }

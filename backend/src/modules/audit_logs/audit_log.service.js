@@ -3,6 +3,7 @@ const UserAddressAuditLog = require('./user_address_audit_log/user_address_log.m
 const CategoryAuditLog = require('./category_audit_log/category_log.model');
 const AuthAuditLog = require('./auth_audit_log/auth_log.model');
 const PaymentAuditLog = require('./payment_audit_log/payment_log.model');
+const OrderAuditLog = require('./order_audit_log/order_log.model');
 
 const AppError = require('../../utils/appError.util');
 
@@ -11,7 +12,8 @@ const DOMAIN_MODELS = [
     { name: 'USER_ADDRESS', model: UserAddressAuditLog },
     { name: 'AUTH', model: AuthAuditLog },
     { name: 'CATEGORY', model: CategoryAuditLog },
-    { name: 'PAYMENT', model: PaymentAuditLog }
+    { name: 'PAYMENT', model: PaymentAuditLog },
+    { name: 'ORDER', model: OrderAuditLog }
 ];
 
 const DOMAIN_ACTION_MAP = {
@@ -52,6 +54,15 @@ const DOMAIN_ACTION_MAP = {
         'PAYPAL_WEBHOOK_PAYMENT',
         'PAYMENT_WEBHOOK_AMOUNT_MISMATCH',
         'PAYMENT_WEBHOOK_REJECTED'
+    ],
+    ORDER: [
+        'CREATE_ORDER',
+        'CANCEL_ORDER',
+        'ADMIN_UPDATE_ORDER_STATUS',
+        'ADMIN_UPDATE_ORDER',
+        'FULFILL_ORDER_ITEMS',
+        'RECORD_ORDER_SHIPMENT',
+        'CONFIRM_ORDER_DELIVERY'
     ]
 };
 

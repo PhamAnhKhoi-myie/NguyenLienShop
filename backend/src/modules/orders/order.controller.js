@@ -2,6 +2,7 @@ const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
 const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const OrderService = require('./order.service');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 // ===== PUBLIC ENDPOINTS =====
 
@@ -26,7 +27,8 @@ const createOrder = asyncHandler(async (req, res) => {
     const order = await OrderService.createOrderFromCart(
         user.userId,
         orderData.cart_id,
-        orderData
+        orderData,
+        buildAuditMetadata(req)
     );
 
     res.status(201).json({
@@ -100,7 +102,8 @@ const cancelOrder = asyncHandler(async (req, res) => {
     const cancelledOrder = await OrderService.cancelOrder(
         order_id,
         reason,
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -154,7 +157,8 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
         order_id,
         status,
         user.userId,
-        note
+        note,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -171,27 +175,12 @@ const adminUpdateOrder = asyncHandler(async (req, res) => {
     const { order_id } = req.params;
     const updateData = req.body;
 
-    let updatedOrder;
-
-    if (updateData.status) {
-        updatedOrder = await OrderService.updateOrderStatus(
-            order_id,
-            updateData.status,
-            user.userId,
-            'Admin update'
-        );
-    }
-
-    if (updateData.admin_notes) {
-        updatedOrder = await OrderService.updateAdminNotes(
-            order_id,
-            updateData.admin_notes
-        );
-    }
-
-    if (!updatedOrder) {
-        updatedOrder = await OrderService.getOrderById(order_id);
-    }
+    const updatedOrder = await OrderService.adminUpdateOrder(
+        order_id,
+        updateData,
+        user.userId,
+        buildAuditMetadata(req)
+    );
 
     res.status(200).json({
         success: true,
@@ -210,7 +199,9 @@ const fulfillItems = asyncHandler(async (req, res) => {
     const updatedOrder = await OrderService.fulfillItems(
         order_id,
         item_id,
-        quantity_fulfilled
+        quantity_fulfilled,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -232,7 +223,9 @@ const recordShipment = asyncHandler(async (req, res) => {
         {
             carrier,
             tracking_code,
-        }
+        },
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -248,7 +241,11 @@ const confirmDelivery = asyncHandler(async (req, res) => {
 
     const { order_id } = req.params;
 
-    const updatedOrder = await OrderService.confirmDelivery(order_id);
+    const updatedOrder = await OrderService.confirmDelivery(
+        order_id,
+        user.userId,
+        buildAuditMetadata(req)
+    );
 
     res.status(200).json({
         success: true,
