@@ -2,6 +2,8 @@ const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
 const DiscountService = require('./discount.service');
 const DiscountMapper = require('./discount.mapper');
+const { assertAuthenticated } = require('../../utils/auth.util');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 class DiscountController {
     static validateDiscount = asyncHandler(async (req, res) => {
@@ -23,9 +25,12 @@ class DiscountController {
     });
 
     static createDiscount = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+
         const discount = await DiscountService.createDiscount(
             req.body,
-            req.user.userId
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.status(201).json({
@@ -67,12 +72,14 @@ class DiscountController {
     });
 
     static updateDiscount = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { discountId } = req.params;
 
         const discount = await DiscountService.updateDiscount(
             discountId,
             req.body,
-            req.user.userId
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.status(200).json({
@@ -82,9 +89,14 @@ class DiscountController {
     });
 
     static deleteDiscount = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { discountId } = req.params;
 
-        await DiscountService.deleteDiscount(discountId);
+        await DiscountService.deleteDiscount(
+            discountId,
+            user.userId,
+            buildAuditMetadata(req)
+        );
 
         res.status(200).json({
             success: true,
@@ -93,11 +105,13 @@ class DiscountController {
     });
 
     static revokeDiscount = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { discountId } = req.params;
 
         const discount = await DiscountService.revokeDiscount(
             discountId,
-            req.user.userId
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.status(200).json({
@@ -108,6 +122,7 @@ class DiscountController {
     });
 
     static bulkImport = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { discounts } = req.body;
 
         if (!Array.isArray(discounts) || discounts.length === 0) {
@@ -116,7 +131,8 @@ class DiscountController {
 
         const result = await DiscountService.bulkCreateDiscounts(
             discounts,
-            req.user.userId
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         const responseData = {
@@ -148,13 +164,15 @@ class DiscountController {
     });
 
     static duplicateDiscount = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { discountId } = req.params;
         const { newCode } = req.body;
 
         const clonedDiscount = await DiscountService.duplicateDiscount(
             discountId,
             { code: newCode },
-            req.user.userId
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.status(201).json({

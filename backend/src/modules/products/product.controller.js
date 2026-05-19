@@ -2,6 +2,7 @@ const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
 const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const ProductService = require('./product.service');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 // ===== PUBLIC ENDPOINTS =====
 
@@ -85,7 +86,13 @@ const getProductById = asyncHandler(async (req, res) => {
 // ===== ADMIN ENDPOINTS =====
 
 const createProduct = asyncHandler(async (req, res) => {
-    const product = await ProductService.createProduct(req.body);
+    const user = assertAuthenticated(req.user);
+
+    const product = await ProductService.createProduct(
+        req.body,
+        user.userId,
+        buildAuditMetadata(req)
+    );
 
     res.status(201).json({
         success: true,
@@ -94,11 +101,15 @@ const createProduct = asyncHandler(async (req, res) => {
 });
 
 const updateProduct = asyncHandler(async (req, res) => {
+    const user = assertAuthenticated(req.user);
+
     const { productId } = req.params;
 
     const product = await ProductService.updateProduct(
         productId,
-        req.body
+        req.body,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -108,9 +119,15 @@ const updateProduct = asyncHandler(async (req, res) => {
 });
 
 const deleteProduct = asyncHandler(async (req, res) => {
+    const user = assertAuthenticated(req.user);
+
     const { productId } = req.params;
 
-    const result = await ProductService.deleteProduct(productId);
+    const result = await ProductService.deleteProduct(
+        productId,
+        user.userId,
+        buildAuditMetadata(req)
+    );
 
     res.status(200).json({
         success: true,

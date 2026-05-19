@@ -3,6 +3,8 @@ const Discount = require('./discount.model');
 const DiscountUsageLog = require('./discount.usage-log.model');
 const DiscountMapper = require('./discount.mapper');
 const AppError = require('../../utils/appError.util');
+const DiscountAuditLogService = require('../audit_logs/discount_audit_log/discount_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 const User = require('../users/user.model');
 const Order = require('../orders/order.model');
 
@@ -471,6 +473,7 @@ class DiscountService {
             sessionKey,
             ipAddress,
             metadata,
+            auditMetadata,
         } = redemptionData;
 
         const query = {
@@ -538,6 +541,8 @@ class DiscountService {
             }
         }
 
+        const previousUsageCount = discount.usage_count;
+
         const updateResult = await Discount.updateOne(
             {
                 _id: discount._id,
@@ -574,6 +579,41 @@ class DiscountService {
             options
         );
 
+        await this._createDiscountAuditLog({
+            action: AUDIT_ACTIONS.REDEEM_DISCOUNT,
+            discount: {
+                ...discount.toObject(),
+                usage_count: previousUsageCount + 1,
+            },
+            actorId: userId || null,
+            actorType: userId ? 'USER' : 'INTERNAL',
+            orderId,
+            userId: userId || null,
+            metadata: auditMetadata || { ip: ipAddress || null },
+            changes: {
+                usage_count: {
+                    from: previousUsageCount,
+                    to: previousUsageCount + 1,
+                },
+                discount_amount: {
+                    from: null,
+                    to: discountAmount,
+                },
+                order_total: {
+                    from: null,
+                    to: orderTotal,
+                },
+                order_id: {
+                    from: null,
+                    to: orderId,
+                },
+            },
+            auditOptions: {
+                session: options.session,
+                throwOnError: true,
+            },
+        });
+
         return usageLog;
     }
 
@@ -591,12 +631,13 @@ class DiscountService {
                 sessionKey: data.sessionKey,
                 ipAddress: data.ipAddress,
                 metadata: data.metadata,
+                auditMetadata: data.auditMetadata,
             },
             options
         );
     }
 
-    static async createDiscount(data, createdBy) {
+    static async createDiscount(data, createdBy, metadata = {}) {
         const normalizedData = {
             ...data,
             code: data.code.toUpperCase().trim(),
@@ -605,6 +646,31 @@ class DiscountService {
         };
 
         const discount = await Discount.create(normalizedData);
+
+        await this._createDiscountAuditLog({
+            action: AUDIT_ACTIONS.CREATE_DISCOUNT,
+            discount,
+            actorId: createdBy,
+            metadata,
+            changes: this._buildCreatedChanges(discount, [
+                'code',
+                'type',
+                'value',
+                'max_discount_amount',
+                'application_strategy',
+                'applicable_targets',
+                'user_eligibility',
+                'min_order_value',
+                'usage_limit',
+                'usage_per_user_limit',
+                'usage_count',
+                'is_stackable',
+                'stack_priority',
+                'started_at',
+                'expiry_date',
+                'status',
+            ]),
+        });
 
         return DiscountMapper.toDetailDTO(discount);
     }
@@ -667,7 +733,7 @@ class DiscountService {
         };
     }
 
-    static async updateDiscount(discountId, data, updatedBy) {
+    static async updateDiscount(discountId, data, updatedBy, metadata = {}) {
         const existingDiscount = await Discount.findById(discountId);
 
         if (!existingDiscount) {
@@ -771,10 +837,28 @@ class DiscountService {
             { new: true, runValidators: true }
         );
 
+        await this._createDiscountAuditLog({
+            action: AUDIT_ACTIONS.UPDATE_DISCOUNT,
+            discount,
+            actorId: updatedBy,
+            metadata,
+            changes: this._buildUpdatedChanges(
+                existingDiscount,
+                discount,
+                Object.keys(data)
+            ),
+        });
+
         return DiscountMapper.toDetailDTO(discount);
     }
 
-    static async deleteDiscount(discountId) {
+    static async deleteDiscount(discountId, deletedBy = null, metadata = {}) {
+        const existingDiscount = await Discount.findById(discountId);
+
+        if (!existingDiscount) {
+            throw new AppError('Discount not found', 404, 'DISCOUNT_NOT_FOUND');
+        }
+
         const discount = await Discount.findByIdAndUpdate(
             discountId,
             {
@@ -784,14 +868,22 @@ class DiscountService {
             { new: true }
         );
 
-        if (!discount) {
-            throw new AppError('Discount not found', 404, 'DISCOUNT_NOT_FOUND');
-        }
+        await this._createDiscountAuditLog({
+            action: AUDIT_ACTIONS.DELETE_DISCOUNT_SOFT,
+            discount,
+            actorId: deletedBy,
+            metadata,
+            changes: this._buildUpdatedChanges(
+                existingDiscount,
+                discount,
+                ['is_deleted', 'deleted_at']
+            ),
+        });
 
         return { success: true, message: 'Discount deleted' };
     }
 
-    static async bulkCreateDiscounts(discounts, createdBy) {
+    static async bulkCreateDiscounts(discounts, createdBy, metadata = {}) {
         const results = { created: [], failed: [] };
 
         for (const discountData of discounts) {
@@ -817,6 +909,38 @@ class DiscountService {
                 });
             }
         }
+
+        await this._createDiscountAuditLog({
+            action: AUDIT_ACTIONS.BULK_IMPORT_DISCOUNTS,
+            discount: null,
+            actorId: createdBy,
+            metadata,
+            changes: {
+                requested_count: {
+                    from: null,
+                    to: discounts.length,
+                },
+                created_count: {
+                    from: 0,
+                    to: results.created.length,
+                },
+                failed_count: {
+                    from: 0,
+                    to: results.failed.length,
+                },
+                created: {
+                    from: null,
+                    to: results.created.map((item) => ({
+                        id: item.id,
+                        code: item.code,
+                    })),
+                },
+                failed: {
+                    from: null,
+                    to: results.failed,
+                },
+            },
+        });
 
         return results;
     }
@@ -951,7 +1075,13 @@ class DiscountService {
         };
     }
 
-    static async revokeDiscount(discountId, revokedBy) {
+    static async revokeDiscount(discountId, revokedBy, metadata = {}) {
+        const existingDiscount = await Discount.findById(discountId);
+
+        if (!existingDiscount) {
+            throw new AppError('Discount not found', 404, 'DISCOUNT_NOT_FOUND');
+        }
+
         const discount = await Discount.findByIdAndUpdate(
             discountId,
             {
@@ -962,14 +1092,22 @@ class DiscountService {
             { new: true }
         );
 
-        if (!discount) {
-            throw new AppError('Discount not found', 404, 'DISCOUNT_NOT_FOUND');
-        }
+        await this._createDiscountAuditLog({
+            action: AUDIT_ACTIONS.REVOKE_DISCOUNT,
+            discount,
+            actorId: revokedBy,
+            metadata,
+            changes: this._buildUpdatedChanges(
+                existingDiscount,
+                discount,
+                ['status', 'updated_by', 'updated_at']
+            ),
+        });
 
         return DiscountMapper.toDetailDTO(discount);
     }
 
-    static async duplicateDiscount(discountId, overrides = {}, createdBy) {
+    static async duplicateDiscount(discountId, overrides = {}, createdBy, metadata = {}) {
         const discount = await Discount.findById(discountId);
 
         if (!discount) {
@@ -1002,7 +1140,125 @@ class DiscountService {
 
         const created = await Discount.create(newDiscount);
 
+        await this._createDiscountAuditLog({
+            action: AUDIT_ACTIONS.DUPLICATE_DISCOUNT,
+            discount: created,
+            sourceDiscountId: discount._id,
+            actorId: createdBy,
+            metadata,
+            changes: {
+                source_discount_id: {
+                    from: null,
+                    to: discount._id,
+                },
+                code: {
+                    from: discount.code,
+                    to: created.code,
+                },
+                usage_count: {
+                    from: discount.usage_count,
+                    to: created.usage_count,
+                },
+                status: {
+                    from: discount.status,
+                    to: created.status,
+                },
+            },
+        });
+
         return DiscountMapper.toDetailDTO(created);
+    }
+
+    static _buildCreatedChanges(discount, fields = []) {
+        const doc = discount?.toObject ? discount.toObject() : discount;
+
+        return fields.reduce((changes, field) => {
+            changes[field] = {
+                from: null,
+                to: this._toAuditValue(doc?.[field]),
+            };
+
+            return changes;
+        }, {});
+    }
+
+    static _buildUpdatedChanges(beforeDiscount, afterDiscount, fields = []) {
+        const before = beforeDiscount?.toObject
+            ? beforeDiscount.toObject()
+            : beforeDiscount;
+        const after = afterDiscount?.toObject
+            ? afterDiscount.toObject()
+            : afterDiscount;
+
+        return [...new Set(fields)].reduce((changes, field) => {
+            const from = this._toAuditValue(before?.[field]);
+            const to = this._toAuditValue(after?.[field]);
+
+            if (!this._auditValuesEqual(from, to)) {
+                changes[field] = { from, to };
+            }
+
+            return changes;
+        }, {});
+    }
+
+    static _toAuditValue(value) {
+        if (value === undefined || value === null) {
+            return null;
+        }
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        if (value instanceof mongoose.Types.ObjectId) {
+            return value.toString();
+        }
+        if (Array.isArray(value)) {
+            return value.map((item) => this._toAuditValue(item));
+        }
+        if (value?.toObject) {
+            return this._toAuditValue(value.toObject());
+        }
+        if (typeof value === 'object') {
+            return Object.fromEntries(
+                Object.entries(value).map(([key, item]) => [
+                    key,
+                    this._toAuditValue(item),
+                ])
+            );
+        }
+
+        return value;
+    }
+
+    static _auditValuesEqual(left, right) {
+        return JSON.stringify(left) === JSON.stringify(right);
+    }
+
+    static async _createDiscountAuditLog({
+        action,
+        discount = null,
+        sourceDiscountId = null,
+        actorId = null,
+        actorType = 'USER',
+        orderId = null,
+        userId = null,
+        metadata = {},
+        changes = {},
+        auditOptions = {},
+    }) {
+        await DiscountAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: actorType,
+            action,
+            discount_id: discount?._id || null,
+            source_discount_id: sourceDiscountId || null,
+            order_id: orderId || null,
+            user_id: userId || null,
+            discount_code: discount?.code || null,
+            changes: this._toAuditValue(changes),
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        }, auditOptions);
     }
 }
 

@@ -186,10 +186,12 @@ class OrderService {
                         discountAmount,
                         orderTotal: totalAmount,
                         sessionKey: cart.session_key,
+                        ipAddress: metadata.ip,
                         metadata: {
                             order_code: order.order_code,
                             cart_id: cart._id,
                         },
+                        auditMetadata: metadata,
                     },
                     { session }
                 );

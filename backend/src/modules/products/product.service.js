@@ -4,9 +4,11 @@ const Variant = require('./variant.model');
 const VariantUnit = require('./variant_unit.model');
 const ProductMapper = require('./product.mapper');
 const AppError = require('../../utils/appError.util');
+const ProductAuditLogService = require('../audit_logs/product_audit_log/product_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class ProductService {
-    static async createProduct(data) {
+    static async createProduct(data, actorId = null, metadata = {}) {
         const { name, category_id, ...rest } = data;
 
         if (category_id) {
@@ -29,6 +31,32 @@ class ProductService {
             });
 
             await product.save();
+
+            await this._createProductAuditLog({
+                action: AUDIT_ACTIONS.CREATE_PRODUCT,
+                targetType: 'PRODUCT',
+                product,
+                actorId,
+                metadata,
+                changes: {
+                    name: {
+                        from: null,
+                        to: product.name,
+                    },
+                    category_id: {
+                        from: null,
+                        to: product.category_id,
+                    },
+                    status: {
+                        from: null,
+                        to: product.status,
+                    },
+                    slug: {
+                        from: null,
+                        to: product.slug,
+                    },
+                },
+            });
 
             return ProductMapper.toResponseDTO(product);
 
@@ -160,7 +188,7 @@ class ProductService {
         };
     }
 
-    static async updateProduct(productId, updateData) {
+    static async updateProduct(productId, updateData, actorId = null, metadata = {}) {
         if (!updateData || Object.keys(updateData).length === 0) {
             throw new AppError(
                 'No valid fields to update',
@@ -170,6 +198,16 @@ class ProductService {
         }
 
         try {
+            const currentProduct = await Product.findById(productId);
+
+            if (!currentProduct) {
+                throw new AppError(
+                    'Product not found',
+                    404,
+                    'PRODUCT_NOT_FOUND'
+                );
+            }
+
             const product = await Product.findByIdAndUpdate(
                 productId,
                 { $set: updateData },
@@ -184,6 +222,19 @@ class ProductService {
                 );
             }
 
+            await this._createProductAuditLog({
+                action: AUDIT_ACTIONS.UPDATE_PRODUCT,
+                targetType: 'PRODUCT',
+                product,
+                actorId,
+                metadata,
+                changes: this._buildFieldChanges(
+                    currentProduct,
+                    product,
+                    Object.keys(updateData)
+                ),
+            });
+
             return ProductMapper.toResponseDTO(product);
         } catch (error) {
             if (error.code === 11000) {
@@ -197,12 +248,15 @@ class ProductService {
         }
     }
 
-    static async deleteProduct(productId) {
+    static async deleteProduct(productId, actorId = null, metadata = {}) {
         const session = await mongoose.startSession();
         session.startTransaction();
 
+        let product = null;
+        let variantCount = 0;
+
         try {
-            const product = await Product.findById(productId).session(
+            product = await Product.findById(productId).session(
                 session
             );
             if (!product) {
@@ -214,9 +268,32 @@ class ProductService {
             }
 
             // ✅ Soft-delete product + variants (cascade)
+            variantCount = await Variant.countDocuments({
+                product_id: productId,
+            }).session(session);
+
             await Product.softDelete(productId, session);
 
             await session.commitTransaction();
+
+            await this._createProductAuditLog({
+                action: AUDIT_ACTIONS.DELETE_PRODUCT_SOFT,
+                targetType: 'PRODUCT',
+                product,
+                actorId,
+                metadata,
+                changes: {
+                    is_deleted: {
+                        from: false,
+                        to: true,
+                    },
+                    cascade_variants: {
+                        from: 0,
+                        to: variantCount,
+                    },
+                },
+            });
+
             return {
                 message: 'Product deleted successfully (soft delete)',
                 productId,
@@ -299,6 +376,69 @@ class ProductService {
         }));
 
         return ProductMapper.toDetailDTO(product, variantsWithUnits);
+    }
+
+    static _buildFieldChanges(before, after, fields) {
+        return fields.reduce((changes, field) => {
+            const fromValue = this._toAuditValue(before?.[field]);
+            const toValue = this._toAuditValue(after?.[field]);
+
+            if (JSON.stringify(fromValue) !== JSON.stringify(toValue)) {
+                changes[field] = {
+                    from: fromValue,
+                    to: toValue,
+                };
+            }
+
+            return changes;
+        }, {});
+    }
+
+    static _toAuditValue(value) {
+        if (value === undefined || value === null) return null;
+        if (value instanceof Date) return value;
+        if (value?.toString && value.constructor?.name === 'ObjectId') {
+            return value.toString();
+        }
+        if (Array.isArray(value)) {
+            return value.map((item) => this._toAuditValue(item));
+        }
+        if (value?.toObject) {
+            return this._toAuditValue(value.toObject());
+        }
+        if (typeof value === 'object') {
+            return Object.fromEntries(
+                Object.entries(value).map(([key, item]) => [
+                    key,
+                    this._toAuditValue(item),
+                ])
+            );
+        }
+        return value;
+    }
+
+    static async _createProductAuditLog({
+        action,
+        targetType,
+        product,
+        actorId = null,
+        actorType = 'USER',
+        metadata = {},
+        changes = {},
+    }) {
+        await ProductAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: actorType,
+            action,
+            target_type: targetType,
+            product_id: product?._id || null,
+            variant_id: null,
+            unit_id: null,
+            sku: null,
+            changes,
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
     }
 }
 

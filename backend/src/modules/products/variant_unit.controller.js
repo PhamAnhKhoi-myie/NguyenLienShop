@@ -2,6 +2,7 @@ const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
 const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const VariantUnitService = require('./variant_unit.service');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 // ===== PUBLIC =====
 
@@ -96,7 +97,9 @@ const createVariantUnit = asyncHandler(async (req, res) => {
 
     const unit = await VariantUnitService.createVariantUnit(
         variantId,
-        req.body
+        req.body,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(201).json({
@@ -113,7 +116,9 @@ const updateVariantUnit = asyncHandler(async (req, res) => {
 
     const unit = await VariantUnitService.updateVariantUnit(
         unitId,
-        req.body
+        req.body,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -128,7 +133,11 @@ const deleteVariantUnit = asyncHandler(async (req, res) => {
 
     const { unitId } = req.params;
 
-    const result = await VariantUnitService.deleteVariantUnit(unitId);
+    const result = await VariantUnitService.deleteVariantUnit(
+        unitId,
+        user.userId,
+        buildAuditMetadata(req)
+    );
 
     res.status(200).json({
         success: true,

@@ -1,6 +1,8 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
 const VariantService = require('./variant.service');
+const { assertAuthenticated } = require('../../utils/auth.util');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 // ===== PUBLIC =====
 
@@ -64,11 +66,14 @@ const getMaxOrderQty = asyncHandler(async (req, res) => {
 // ===== ADMIN =====
 
 const createVariant = asyncHandler(async (req, res) => {
+    const user = assertAuthenticated(req.user);
     const { productId } = req.params;
 
     const variant = await VariantService.createVariant(
         productId,
-        req.body
+        req.body,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(201).json({
@@ -78,6 +83,7 @@ const createVariant = asyncHandler(async (req, res) => {
 });
 
 const updateVariant = asyncHandler(async (req, res) => {
+    const user = assertAuthenticated(req.user);
     const { variantId } = req.params;
 
     const forbiddenFields = ['size', 'fabric_type', 'sku'];
@@ -90,7 +96,9 @@ const updateVariant = asyncHandler(async (req, res) => {
 
     const variant = await VariantService.updateVariant(
         variantId,
-        req.body
+        req.body,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -100,9 +108,14 @@ const updateVariant = asyncHandler(async (req, res) => {
 });
 
 const deleteVariant = asyncHandler(async (req, res) => {
+    const user = assertAuthenticated(req.user);
     const { variantId } = req.params;
 
-    const result = await VariantService.deleteVariant(variantId);
+    const result = await VariantService.deleteVariant(
+        variantId,
+        user.userId,
+        buildAuditMetadata(req)
+    );
 
     res.status(200).json({
         success: true,
@@ -118,7 +131,8 @@ const reserveStock = asyncHandler(async (req, res) => {
 
     const variant = await VariantService.reserveStock(
         variantId,
-        qty_items
+        qty_items,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -136,7 +150,8 @@ const completeSale = asyncHandler(async (req, res) => {
 
     const variant = await VariantService.completeSale(
         variantId,
-        qty_items
+        qty_items,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -154,7 +169,8 @@ const releaseReservedStock = asyncHandler(async (req, res) => {
 
     const variant = await VariantService.releaseReservedStock(
         variantId,
-        qty_items
+        qty_items,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({

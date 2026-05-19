@@ -5,6 +5,8 @@ const AuthAuditLog = require('./auth_audit_log/auth_log.model');
 const PaymentAuditLog = require('./payment_audit_log/payment_log.model');
 const OrderAuditLog = require('./order_audit_log/order_log.model');
 const ShipmentAuditLog = require('./shipment_audit_log/shipment_log.model');
+const ProductAuditLog = require('./product_audit_log/product_log.model');
+const DiscountAuditLog = require('./discount_audit_log/discount_log.model');
 
 const AppError = require('../../utils/appError.util');
 
@@ -15,7 +17,9 @@ const DOMAIN_MODELS = [
     { name: 'CATEGORY', model: CategoryAuditLog },
     { name: 'PAYMENT', model: PaymentAuditLog },
     { name: 'ORDER', model: OrderAuditLog },
-    { name: 'SHIPMENT', model: ShipmentAuditLog }
+    { name: 'SHIPMENT', model: ShipmentAuditLog },
+    { name: 'PRODUCT', model: ProductAuditLog },
+    { name: 'DISCOUNT', model: DiscountAuditLog }
 ];
 
 const DOMAIN_ACTION_MAP = {
@@ -77,6 +81,29 @@ const DOMAIN_ACTION_MAP = {
         'CONFIRM_SHIPMENT_DELIVERY',
         'ADMIN_UPDATE_SHIPMENT',
         'DELETE_SHIPMENT_SOFT'
+    ],
+    PRODUCT: [
+        'CREATE_PRODUCT',
+        'UPDATE_PRODUCT',
+        'DELETE_PRODUCT_SOFT',
+        'CREATE_VARIANT',
+        'UPDATE_VARIANT',
+        'DELETE_VARIANT_SOFT',
+        'CREATE_VARIANT_UNIT',
+        'UPDATE_VARIANT_UNIT',
+        'DELETE_VARIANT_UNIT',
+        'RESERVE_VARIANT_STOCK',
+        'COMPLETE_VARIANT_SALE',
+        'RELEASE_VARIANT_STOCK'
+    ],
+    DISCOUNT: [
+        'CREATE_DISCOUNT',
+        'BULK_IMPORT_DISCOUNTS',
+        'UPDATE_DISCOUNT',
+        'DELETE_DISCOUNT_SOFT',
+        'REVOKE_DISCOUNT',
+        'DUPLICATE_DISCOUNT',
+        'REDEEM_DISCOUNT'
     ]
 };
 

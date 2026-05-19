@@ -72,6 +72,14 @@ const getShipmentLogs = asyncHandler(async (req, res) => {
     return sendLogsResponse(req, res, 'SHIPMENT');
 });
 
+const getProductLogs = asyncHandler(async (req, res) => {
+    return sendLogsResponse(req, res, 'PRODUCT');
+});
+
+const getDiscountLogs = asyncHandler(async (req, res) => {
+    return sendLogsResponse(req, res, 'DISCOUNT');
+});
+
 module.exports = {
     getAllLogs,
     getLogById,
@@ -81,5 +89,7 @@ module.exports = {
     getAuthLogs,
     getPaymentLogs,
     getOrderLogs,
-    getShipmentLogs
+    getShipmentLogs,
+    getProductLogs,
+    getDiscountLogs
 };

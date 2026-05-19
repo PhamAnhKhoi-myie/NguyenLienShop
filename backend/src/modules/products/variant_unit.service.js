@@ -4,9 +4,11 @@ const Variant = require('./variant.model');
 const VariantService = require('./variant.service');
 const VariantUnitMapper = require('./variant_unit.mapper');
 const AppError = require('../../utils/appError.util');
+const ProductAuditLogService = require('../audit_logs/product_audit_log/product_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class VariantUnitService {
-    static async createVariantUnit(variantId, data) {
+    static async createVariantUnit(variantId, data, actorId = null, metadata = {}) {
         const { pack_size, price_tiers, is_default, ...rest } = data;
 
         const variant = await Variant.findById(variantId);
@@ -64,6 +66,37 @@ class VariantUnitService {
 
         await VariantService.recalculatePriceCache(variantId);
 
+        await this._createProductAuditLog({
+            action: AUDIT_ACTIONS.CREATE_VARIANT_UNIT,
+            targetType: 'VARIANT_UNIT',
+            unit,
+            variant,
+            actorId,
+            metadata,
+            changes: {
+                variant_id: {
+                    from: null,
+                    to: unit.variant_id,
+                },
+                display_name: {
+                    from: null,
+                    to: unit.display_name,
+                },
+                pack_size: {
+                    from: null,
+                    to: unit.pack_size,
+                },
+                price_tiers: {
+                    from: null,
+                    to: unit.price_tiers,
+                },
+                is_default: {
+                    from: null,
+                    to: unit.is_default,
+                },
+            },
+        });
+
         return VariantUnitMapper.toResponseDTO(unit);
     }
 
@@ -95,7 +128,7 @@ class VariantUnitService {
         return VariantUnitMapper.toResponseDTO(unit);
     }
 
-    static async updateVariantUnit(unitId, updateData) {
+    static async updateVariantUnit(unitId, updateData, actorId = null, metadata = {}) {
         if (!updateData || Object.keys(updateData).length === 0) {
             throw new AppError(
                 'No valid fields to update',
@@ -112,6 +145,9 @@ class VariantUnitService {
                 'VARIANT_UNIT_NOT_FOUND'
             );
         }
+
+        const variant = await this._getVariantForAudit(unit.variant_id);
+        const originalUnit = unit.toObject ? unit.toObject() : unit;
 
         if (updateData.price_tiers) {
             try {
@@ -149,13 +185,33 @@ class VariantUnitService {
                 );
             }
 
+            await this._createProductAuditLog({
+                action: AUDIT_ACTIONS.UPDATE_VARIANT_UNIT,
+                targetType: 'VARIANT_UNIT',
+                unit: updated,
+                variant,
+                actorId,
+                metadata,
+                changes: {
+                    ...this._buildFieldChanges(
+                        originalUnit,
+                        updated,
+                        Object.keys(updateData)
+                    ),
+                    default_reset: {
+                        from: false,
+                        to: updateData.is_default === true,
+                    },
+                },
+            });
+
             return VariantUnitMapper.toResponseDTO(updated);
         } catch (error) {
             throw error;
         }
     }
 
-    static async deleteVariantUnit(unitId) {
+    static async deleteVariantUnit(unitId, actorId = null, metadata = {}) {
         const unit = await VariantUnit.findById(unitId);
         if (!unit) {
             throw new AppError(
@@ -165,6 +221,7 @@ class VariantUnitService {
             );
         }
 
+        const variant = await this._getVariantForAudit(unit.variant_id);
         const unitCount = await VariantUnit.countDocuments({
             variant_id: unit.variant_id,
         });
@@ -181,6 +238,8 @@ class VariantUnitService {
 
         await VariantService.recalculatePriceCache(unit.variant_id);
 
+        let nextDefaultUnitId = null;
+
         if (unit.is_default) {
             const nextUnit = await VariantUnit.findOne({
                 variant_id: unit.variant_id,
@@ -190,8 +249,28 @@ class VariantUnitService {
                 await VariantUnit.findByIdAndUpdate(nextUnit._id, {
                     is_default: true,
                 });
+                nextDefaultUnitId = nextUnit._id;
             }
         }
+
+        await this._createProductAuditLog({
+            action: AUDIT_ACTIONS.DELETE_VARIANT_UNIT,
+            targetType: 'VARIANT_UNIT',
+            unit,
+            variant,
+            actorId,
+            metadata,
+            changes: {
+                deleted_unit: {
+                    from: this._toAuditValue(unit),
+                    to: null,
+                },
+                reassigned_default_unit_id: {
+                    from: null,
+                    to: nextDefaultUnitId,
+                },
+            },
+        });
 
         return {
             message: 'Variant unit deleted successfully',
@@ -293,6 +372,74 @@ class VariantUnitService {
             ),
             currency: unit.currency,
         }));
+    }
+
+    static async _getVariantForAudit(variantId) {
+        return Variant.findById(variantId, 'product_id sku').lean();
+    }
+
+    static _buildFieldChanges(before, after, fields) {
+        return fields.reduce((changes, field) => {
+            const fromValue = this._toAuditValue(before?.[field]);
+            const toValue = this._toAuditValue(after?.[field]);
+
+            if (JSON.stringify(fromValue) !== JSON.stringify(toValue)) {
+                changes[field] = {
+                    from: fromValue,
+                    to: toValue,
+                };
+            }
+
+            return changes;
+        }, {});
+    }
+
+    static _toAuditValue(value) {
+        if (value === undefined || value === null) return null;
+        if (value instanceof Date) return value;
+        if (value?.toString && value.constructor?.name === 'ObjectId') {
+            return value.toString();
+        }
+        if (Array.isArray(value)) {
+            return value.map((item) => this._toAuditValue(item));
+        }
+        if (value?.toObject) {
+            return this._toAuditValue(value.toObject());
+        }
+        if (typeof value === 'object') {
+            return Object.fromEntries(
+                Object.entries(value).map(([key, item]) => [
+                    key,
+                    this._toAuditValue(item),
+                ])
+            );
+        }
+        return value;
+    }
+
+    static async _createProductAuditLog({
+        action,
+        targetType,
+        unit,
+        variant,
+        actorId = null,
+        actorType = 'USER',
+        metadata = {},
+        changes = {},
+    }) {
+        await ProductAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: actorType,
+            action,
+            target_type: targetType,
+            product_id: variant?.product_id || null,
+            variant_id: unit?.variant_id || variant?._id || null,
+            unit_id: unit?._id || null,
+            sku: variant?.sku || null,
+            changes,
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
     }
 }
 
