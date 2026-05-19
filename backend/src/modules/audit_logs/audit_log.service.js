@@ -4,6 +4,7 @@ const CategoryAuditLog = require('./category_audit_log/category_log.model');
 const AuthAuditLog = require('./auth_audit_log/auth_log.model');
 const PaymentAuditLog = require('./payment_audit_log/payment_log.model');
 const OrderAuditLog = require('./order_audit_log/order_log.model');
+const ShipmentAuditLog = require('./shipment_audit_log/shipment_log.model');
 
 const AppError = require('../../utils/appError.util');
 
@@ -13,7 +14,8 @@ const DOMAIN_MODELS = [
     { name: 'AUTH', model: AuthAuditLog },
     { name: 'CATEGORY', model: CategoryAuditLog },
     { name: 'PAYMENT', model: PaymentAuditLog },
-    { name: 'ORDER', model: OrderAuditLog }
+    { name: 'ORDER', model: OrderAuditLog },
+    { name: 'SHIPMENT', model: ShipmentAuditLog }
 ];
 
 const DOMAIN_ACTION_MAP = {
@@ -63,6 +65,18 @@ const DOMAIN_ACTION_MAP = {
         'FULFILL_ORDER_ITEMS',
         'RECORD_ORDER_SHIPMENT',
         'CONFIRM_ORDER_DELIVERY'
+    ],
+    SHIPMENT: [
+        'CREATE_SHIPMENT',
+        'SHIPMENT_WEBHOOK_STATUS',
+        'SHIPMENT_WEBHOOK_REJECTED',
+        'UPDATE_SHIPMENT_STATUS',
+        'RECORD_SHIPMENT_FAILURE',
+        'CANCEL_SHIPMENT',
+        'RETRY_SHIPMENT',
+        'CONFIRM_SHIPMENT_DELIVERY',
+        'ADMIN_UPDATE_SHIPMENT',
+        'DELETE_SHIPMENT_SOFT'
     ]
 };
 

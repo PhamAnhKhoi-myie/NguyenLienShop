@@ -2,6 +2,7 @@ const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
 const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const ShipmentService = require('./shipment.service');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 // ===== PUBLIC ENDPOINTS (No Auth) =====
 
@@ -20,6 +21,7 @@ const trackShipment = asyncHandler(async (req, res) => {
 
 const handleCarrierWebhook = asyncHandler(async (req, res) => {
     const { carrier } = req.params;
+    const auditMetadata = buildAuditMetadata(req);
 
     const {
         tracking_code,
@@ -30,23 +32,45 @@ const handleCarrierWebhook = asyncHandler(async (req, res) => {
     } = req.body;
 
     if (!signature) {
-        throw new AppError(
+        const error = new AppError(
             'Missing shipment webhook signature',
             400,
             'MISSING_WEBHOOK_SIGNATURE'
         );
+
+        await ShipmentService.auditShipmentWebhookRejected(
+            carrier,
+            { tracking_code, status },
+            error,
+            auditMetadata
+        );
+
+        throw error;
     }
 
-    const result = await ShipmentService.updateShipmentStatusFromWebhook(
-        carrier,
-        tracking_code,
-        status,
-        {
-            carrier_details,
-            signature,
-            timestamp,
-        }
-    );
+    let result;
+
+    try {
+        result = await ShipmentService.updateShipmentStatusFromWebhook(
+            carrier,
+            tracking_code,
+            status,
+            {
+                carrier_details,
+                signature,
+                timestamp,
+                audit_metadata: auditMetadata,
+            }
+        );
+    } catch (error) {
+        await ShipmentService.auditShipmentWebhookRejected(
+            carrier,
+            { tracking_code, status },
+            error,
+            auditMetadata
+        );
+        throw error;
+    }
 
     res.status(200).json({
         success: true,
@@ -129,7 +153,9 @@ const cancelShipment = asyncHandler(async (req, res) => {
 
     const cancelledShipment = await ShipmentService.cancelShipment(
         shipmentId,
-        reason
+        reason,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -149,7 +175,9 @@ const retryShipment = asyncHandler(async (req, res) => {
     );
 
     const retriedShipment = await ShipmentService.retryFailedShipment(
-        shipmentId
+        shipmentId,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -170,7 +198,8 @@ const createShipment = asyncHandler(async (req, res) => {
     const shipment = await ShipmentService.createShipment(
         shipmentData.order_id,
         user.userId,
-        shipmentData
+        shipmentData,
+        buildAuditMetadata(req)
     );
 
     res.status(201).json({
@@ -190,7 +219,11 @@ const updateShipmentStatus = asyncHandler(async (req, res) => {
     const updatedShipment = await ShipmentService.updateShipmentStatus(
         shipmentId,
         status,
-        { notes }
+        {
+            notes,
+            changed_by: user.userId,
+            audit_metadata: buildAuditMetadata(req),
+        }
     );
 
     res.status(200).json({
@@ -210,7 +243,9 @@ const recordShipmentFailure = asyncHandler(async (req, res) => {
     const failedShipment = await ShipmentService.recordDeliveryFailure(
         shipmentId,
         failure_reason,
-        failure_notes
+        failure_notes,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -227,7 +262,9 @@ const confirmDelivery = asyncHandler(async (req, res) => {
     const { shipmentId } = req.params;
 
     const deliveredShipment = await ShipmentService.confirmDelivery(
-        shipmentId
+        shipmentId,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -295,7 +332,8 @@ const adminUpdateShipment = asyncHandler(async (req, res) => {
     const updatedShipment = await ShipmentService.adminUpdateShipment(
         shipmentId,
         req.body,
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -324,7 +362,9 @@ const deleteShipment = asyncHandler(async (req, res) => {
     const { shipmentId } = req.params;
 
     const deletedShipment = await ShipmentService.softDeleteShipment(
-        shipmentId
+        shipmentId,
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({

@@ -14,6 +14,7 @@ const {
     getAuthLogsQuerySchema,
     getPaymentLogsQuerySchema,
     getOrderLogsQuerySchema,
+    getShipmentLogsQuerySchema,
     idParamSchema
 } = require('./audit_log.validator');
 
@@ -55,6 +56,12 @@ router.get(
     '/orders',
     validate({ query: getOrderLogsQuerySchema }),
     auditLogController.getOrderLogs
+);
+
+router.get(
+    '/shipments',
+    validate({ query: getShipmentLogsQuerySchema }),
+    auditLogController.getShipmentLogs
 );
 
 router.get(

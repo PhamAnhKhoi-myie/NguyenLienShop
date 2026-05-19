@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const Shipment = require('./shipment.model');
 const ShipmentMapper = require('./shipment.mapper');
 const AppError = require('../../utils/appError.util');
+const ShipmentAuditLogService = require('../audit_logs/shipment_audit_log/shipment_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 // Import dependencies
 const Order = require('../orders/order.model');
@@ -28,7 +30,7 @@ const logger = {
 };
 
 class ShipmentService {
-    static async createShipment(orderId, adminUserId, shipmentData) {
+    static async createShipment(orderId, adminUserId, shipmentData, metadata = {}) {
         if (!orderId || !adminUserId) {
             throw new AppError(
                 'Order ID and admin user ID required',
@@ -110,7 +112,7 @@ class ShipmentService {
                 max_retries: 3,
             }], { session });
 
-            await this._markOrderShipped(
+            const updatedOrder = await this._markOrderShipped(
                 orderId,
                 shipment,
                 adminUserId,
@@ -118,6 +120,31 @@ class ShipmentService {
             );
 
             await session.commitTransaction();
+
+            await this._createShipmentAuditLog({
+                action: AUDIT_ACTIONS.CREATE_SHIPMENT,
+                shipment,
+                actorId: adminUserId,
+                metadata,
+                changes: {
+                    status: {
+                        from: null,
+                        to: shipment.status,
+                    },
+                    order_status: {
+                        from: 'PROCESSING',
+                        to: updatedOrder.status,
+                    },
+                    carrier: {
+                        from: null,
+                        to: shipment.carrier,
+                    },
+                    tracking_code: {
+                        from: null,
+                        to: shipment.tracking_code,
+                    },
+                },
+            });
 
             logger.info({
                 event: 'shipment_created',
@@ -291,16 +318,18 @@ class ShipmentService {
             );
         }
 
+        const oldStatus = shipment.status;
         const timelineField = this._getStatusTimestampField(newStatus);
+        const statusChangedAt = new Date();
         const update = {
             $set: {
                 status: newStatus,
-                updated_at: new Date(),
+                updated_at: statusChangedAt,
             },
         };
 
         if (timelineField) {
-            update.$set[`timeline.${timelineField}`] = new Date();
+            update.$set[`timeline.${timelineField}`] = statusChangedAt;
         }
 
         const session = await mongoose.startSession();
@@ -330,6 +359,39 @@ class ShipmentService {
         } finally {
             session.endSession();
         }
+
+        await this._createShipmentAuditLog({
+            action: metadata.audit_action || AUDIT_ACTIONS.UPDATE_SHIPMENT_STATUS,
+            shipment: updatedShipment,
+            actorId: metadata.changed_by || null,
+            metadata: metadata.audit_metadata || metadata,
+            changes: {
+                status: {
+                    from: oldStatus,
+                    to: newStatus,
+                },
+                timeline_field: {
+                    from: null,
+                    to: timelineField || null,
+                },
+                changed_at: {
+                    from: null,
+                    to: statusChangedAt,
+                },
+                notes: {
+                    from: null,
+                    to: metadata.notes || null,
+                },
+                carrier_details: {
+                    from: null,
+                    to: metadata.carrier_details || null,
+                },
+                webhook_status: {
+                    from: null,
+                    to: metadata.webhook_status || null,
+                },
+            },
+        });
 
         logger.info({
             event: 'shipment_status_updated',
@@ -402,7 +464,15 @@ class ShipmentService {
             return this.recordDeliveryFailure(
                 shipment._id,
                 'carrier_error',
-                `Carrier webhook reported failed status: ${carrierStatus}`
+                `Carrier webhook reported failed status: ${carrierStatus}`,
+                null,
+                metadata.audit_metadata || {},
+                AUDIT_ACTIONS.SHIPMENT_WEBHOOK_STATUS,
+                {
+                    carrier_status: carrierStatus,
+                    carrier_details: carrier_details || null,
+                    timestamp: timestamp || null,
+                }
             );
         }
 
@@ -413,11 +483,22 @@ class ShipmentService {
                 carrier_details,
                 notes: `Carrier webhook: ${carrierStatus}`,
                 timestamp,
+                webhook_status: carrierStatus,
+                audit_metadata: metadata.audit_metadata || {},
+                audit_action: AUDIT_ACTIONS.SHIPMENT_WEBHOOK_STATUS,
             }
         );
     }
 
-    static async recordDeliveryFailure(shipmentId, reason, notes = '') {
+    static async recordDeliveryFailure(
+        shipmentId,
+        reason,
+        notes = '',
+        actorId = null,
+        metadata = {},
+        auditAction = AUDIT_ACTIONS.RECORD_SHIPMENT_FAILURE,
+        extraChanges = {}
+    ) {
         const shipment = await Shipment.findById(shipmentId);
 
         if (!shipment) {
@@ -447,14 +528,48 @@ class ShipmentService {
             );
         }
 
+        const oldStatus = shipment.status;
+        const oldRetryCount = shipment.retry_count || 0;
+        const failedAt = new Date();
+
         shipment.status = 'failed';
         shipment.failure_reason = reason;
         shipment.failure_notes = failureNotes;
-        shipment.retry_count = (shipment.retry_count || 0) + 1;
-        shipment.timeline.failed_at = new Date();
-        shipment.updated_at = new Date();
+        shipment.retry_count = oldRetryCount + 1;
+        shipment.timeline.failed_at = failedAt;
+        shipment.updated_at = failedAt;
 
         await shipment.save();
+
+        await this._createShipmentAuditLog({
+            action: auditAction,
+            shipment,
+            actorId,
+            metadata,
+            changes: {
+                status: {
+                    from: oldStatus,
+                    to: shipment.status,
+                },
+                failure_reason: {
+                    from: null,
+                    to: reason,
+                },
+                failure_notes: {
+                    from: null,
+                    to: failureNotes,
+                },
+                retry_count: {
+                    from: oldRetryCount,
+                    to: shipment.retry_count,
+                },
+                failed_at: {
+                    from: null,
+                    to: failedAt,
+                },
+                ...extraChanges,
+            },
+        });
 
         logger.warn({
             event: 'shipment_delivery_failed',
@@ -468,7 +583,7 @@ class ShipmentService {
         return ShipmentMapper.toDetailDTO(shipment);
     }
 
-    static async retryFailedShipment(shipmentId) {
+    static async retryFailedShipment(shipmentId, actorId = null, metadata = {}) {
         const shipment = await Shipment.findById(shipmentId);
 
         if (!shipment) {
@@ -495,14 +610,53 @@ class ShipmentService {
             );
         }
 
+        const oldStatus = shipment.status;
+        const oldFailureReason = shipment.failure_reason || null;
+        const oldFailureNotes = shipment.failure_notes || null;
+        const oldFailedAt = shipment.timeline.failed_at || null;
+        const lastRetryAt = new Date();
+
         shipment.status = 'pending';
         shipment.failure_reason = null;
         shipment.failure_notes = null;
-        shipment.last_retry_at = new Date();
+        shipment.last_retry_at = lastRetryAt;
         shipment.timeline.failed_at = null;
-        shipment.updated_at = new Date();
+        shipment.updated_at = lastRetryAt;
 
         await shipment.save();
+
+        await this._createShipmentAuditLog({
+            action: AUDIT_ACTIONS.RETRY_SHIPMENT,
+            shipment,
+            actorId,
+            metadata,
+            changes: {
+                status: {
+                    from: oldStatus,
+                    to: shipment.status,
+                },
+                failure_reason: {
+                    from: oldFailureReason,
+                    to: null,
+                },
+                failure_notes: {
+                    from: oldFailureNotes,
+                    to: null,
+                },
+                failed_at: {
+                    from: oldFailedAt,
+                    to: null,
+                },
+                last_retry_at: {
+                    from: null,
+                    to: lastRetryAt,
+                },
+                retry_count: {
+                    from: shipment.retry_count,
+                    to: shipment.retry_count,
+                },
+            },
+        });
 
         logger.info({
             event: 'shipment_retry',
@@ -515,7 +669,7 @@ class ShipmentService {
         return ShipmentMapper.toDetailDTO(shipment);
     }
 
-    static async cancelShipment(shipmentId, reason) {
+    static async cancelShipment(shipmentId, reason, actorId = null, metadata = {}) {
         const shipment = await Shipment.findById(shipmentId);
 
         if (!shipment) {
@@ -537,18 +691,23 @@ class ShipmentService {
         const session = await mongoose.startSession();
         session.startTransaction();
 
+        const oldStatus = shipment.status;
+        const oldFailureNotes = shipment.failure_notes || null;
+        const cancelledAt = new Date();
+        let updatedOrder = null;
+
         try {
             shipment.$session(session);
             shipment.status = 'cancelled';
             shipment.failure_notes = reason;
-            shipment.timeline.cancelled_at = new Date();
-            shipment.updated_at = new Date();
+            shipment.timeline.cancelled_at = cancelledAt;
+            shipment.updated_at = cancelledAt;
 
             await shipment.save({ session });
 
-            await this._returnOrderToProcessing(
+            updatedOrder = await this._returnOrderToProcessing(
                 shipment.order_id,
-                null,
+                actorId,
                 reason,
                 { session }
             );
@@ -561,6 +720,31 @@ class ShipmentService {
             session.endSession();
         }
 
+        await this._createShipmentAuditLog({
+            action: AUDIT_ACTIONS.CANCEL_SHIPMENT,
+            shipment,
+            actorId,
+            metadata,
+            changes: {
+                status: {
+                    from: oldStatus,
+                    to: shipment.status,
+                },
+                failure_notes: {
+                    from: oldFailureNotes,
+                    to: reason,
+                },
+                cancelled_at: {
+                    from: null,
+                    to: cancelledAt,
+                },
+                order_status: {
+                    from: 'SHIPPED',
+                    to: updatedOrder?.status || null,
+                },
+            },
+        });
+
         logger.info({
             event: 'shipment_cancelled',
             shipment_id: shipmentId,
@@ -571,7 +755,7 @@ class ShipmentService {
         return ShipmentMapper.toDetailDTO(shipment);
     }
 
-    static async confirmDelivery(shipmentId) {
+    static async confirmDelivery(shipmentId, actorId = null, metadata = {}) {
         const shipment = await Shipment.findById(shipmentId);
 
         if (!shipment) {
@@ -595,17 +779,21 @@ class ShipmentService {
         const session = await mongoose.startSession();
         session.startTransaction();
 
+        const oldStatus = shipment.status;
+        const deliveredAt = new Date();
+        let updatedOrder = null;
+
         try {
             shipment.$session(session);
             shipment.status = 'delivered';
-            shipment.timeline.delivered_at = new Date();
-            shipment.updated_at = new Date();
+            shipment.timeline.delivered_at = deliveredAt;
+            shipment.updated_at = deliveredAt;
 
             await shipment.save({ session });
 
-            await this._markOrderDelivered(
+            updatedOrder = await this._markOrderDelivered(
                 shipment.order_id,
-                null,
+                actorId,
                 { session }
             );
 
@@ -616,6 +804,27 @@ class ShipmentService {
         } finally {
             session.endSession();
         }
+
+        await this._createShipmentAuditLog({
+            action: AUDIT_ACTIONS.CONFIRM_SHIPMENT_DELIVERY,
+            shipment,
+            actorId,
+            metadata,
+            changes: {
+                status: {
+                    from: oldStatus,
+                    to: shipment.status,
+                },
+                delivered_at: {
+                    from: null,
+                    to: deliveredAt,
+                },
+                order_status: {
+                    from: 'SHIPPED',
+                    to: updatedOrder?.status || null,
+                },
+            },
+        });
 
         logger.info({
             event: 'shipment_delivered',
@@ -831,7 +1040,7 @@ class ShipmentService {
             .lean();
     }
 
-    static async softDeleteShipment(shipmentId) {
+    static async softDeleteShipment(shipmentId, actorId = null, metadata = {}) {
         const shipment = await Shipment.findByIdAndUpdate(
             shipmentId,
             {
@@ -848,6 +1057,23 @@ class ShipmentService {
                 'SHIPMENT_NOT_FOUND'
             );
         }
+
+        await this._createShipmentAuditLog({
+            action: AUDIT_ACTIONS.DELETE_SHIPMENT_SOFT,
+            shipment,
+            actorId,
+            metadata,
+            changes: {
+                is_deleted: {
+                    from: false,
+                    to: true,
+                },
+                deleted_at: {
+                    from: null,
+                    to: shipment.deleted_at,
+                },
+            },
+        });
 
         return ShipmentMapper.toAdminDTO(shipment);
     }
@@ -869,7 +1095,8 @@ class ShipmentService {
     static async adminUpdateShipment(
         shipmentId,
         updateData = {},
-        adminUserId = null
+        adminUserId = null,
+        metadata = {}
     ) {
         const shipment = await Shipment.findById(shipmentId);
 
@@ -886,6 +1113,7 @@ class ShipmentService {
             : null;
         const oldTrackingCode = shipment.tracking_code;
         const oldCarrier = shipment.carrier;
+        const oldAdminNotes = shipment.admin_notes || null;
 
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -945,6 +1173,43 @@ class ShipmentService {
         } finally {
             session.endSession();
         }
+
+        const changes = {};
+
+        if (shipment.tracking_code !== oldTrackingCode) {
+            changes.tracking_code = {
+                from: oldTrackingCode,
+                to: shipment.tracking_code,
+            };
+        }
+
+        if (shipment.carrier !== oldCarrier) {
+            changes.carrier = {
+                from: oldCarrier,
+                to: shipment.carrier,
+            };
+        }
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'admin_notes')) {
+            changes.admin_notes = {
+                from: oldAdminNotes,
+                to: shipment.admin_notes || null,
+            };
+        }
+
+        changes.order_shipment_synced = {
+            from: false,
+            to: shipment.tracking_code !== oldTrackingCode ||
+                shipment.carrier !== oldCarrier,
+        };
+
+        await this._createShipmentAuditLog({
+            action: AUDIT_ACTIONS.ADMIN_UPDATE_SHIPMENT,
+            shipment,
+            actorId: adminUserId,
+            metadata,
+            changes,
+        });
 
         logger.info({
             event: 'shipment_admin_updated',
@@ -1152,6 +1417,62 @@ class ShipmentService {
     }
 
     // ===== INTERNAL HELPERS =====
+
+    static async auditShipmentWebhookRejected(
+        carrier,
+        payload = {},
+        error,
+        metadata = {}
+    ) {
+        await ShipmentAuditLogService.createLog({
+            actor_id: null,
+            action: AUDIT_ACTIONS.SHIPMENT_WEBHOOK_REJECTED,
+            shipment_id: null,
+            order_id: null,
+            user_id: null,
+            carrier: carrier || null,
+            tracking_code: payload.tracking_code || null,
+            status: null,
+            changes: {
+                webhook_status: {
+                    from: null,
+                    to: payload.status || null,
+                },
+                error_code: {
+                    from: null,
+                    to: error?.code || error?.errorCode || 'WEBHOOK_REJECTED',
+                },
+                message: {
+                    from: null,
+                    to: error?.message || 'Shipment webhook rejected',
+                },
+            },
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
+    }
+
+    static async _createShipmentAuditLog({
+        action,
+        shipment,
+        actorId = null,
+        metadata = {},
+        changes = {},
+    }) {
+        await ShipmentAuditLogService.createLog({
+            actor_id: actorId,
+            action,
+            shipment_id: shipment?._id || null,
+            order_id: shipment?.order_id || null,
+            user_id: shipment?.user_id || null,
+            carrier: shipment?.carrier || null,
+            tracking_code: shipment?.tracking_code || null,
+            status: shipment?.status || null,
+            changes,
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
+    }
 
     static _mapCarrierStatus(carrierStatus) {
         const normalizedStatus = String(carrierStatus || '').toLowerCase();

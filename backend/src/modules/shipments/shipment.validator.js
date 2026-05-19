@@ -143,7 +143,7 @@ const carrierWebhookBodySchema = z
         tracking_code: trackingCodeSchema,
         status: z.string().min(1),
         carrier_details: z.record(z.any()).optional(),
-        signature: z.string().min(1),
+        signature: z.string().optional(),
         timestamp: z.coerce.number().default(() => Math.floor(Date.now() / 1000)),
     });
 
