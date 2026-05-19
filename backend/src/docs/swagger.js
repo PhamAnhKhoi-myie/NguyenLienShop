@@ -149,6 +149,14 @@ const swaggerSpec = {
                     },
                 },
             },
+            TooManyRequests: {
+                description: "Too Many Requests",
+                content: {
+                    "application/json": {
+                        schema: { $ref: "#/components/schemas/ErrorResponse" },
+                    },
+                },
+            },
             InternalError: {
                 description: "Internal Server Error",
                 content: {
@@ -10142,7 +10150,7 @@ const swaggerSpec = {
                             schema: {
                                 type: "object",
                                 properties: {
-                                    title: { type: "string", example: "Tư vấn túi lưới" }
+                                    title: { type: "string", minLength: 1, maxLength: 100, example: "Tư vấn túi lưới" }
                                 }
                             }
                         }
@@ -10157,6 +10165,7 @@ const swaggerSpec = {
                             }
                         }
                     },
+                    400: { $ref: "#/components/responses/BadRequest" },
                     401: { $ref: "#/components/responses/Unauthorized" }
                 }
             }
@@ -10174,7 +10183,7 @@ const swaggerSpec = {
                                 type: "object",
                                 required: ["message", "session_id"],
                                 properties: {
-                                    message: { type: "string", example: "Túi bọc trái na giá bao nhiêu?" },
+                                    message: { type: "string", minLength: 1, maxLength: 1000, example: "Túi bọc trái na giá bao nhiêu?" },
                                     session_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" }
                                 }
                             }
@@ -10190,7 +10199,9 @@ const swaggerSpec = {
                             }
                         }
                     },
+                    400: { $ref: "#/components/responses/BadRequest" },
                     404: { $ref: "#/components/responses/NotFound" },
+                    429: { $ref: "#/components/responses/TooManyRequests" },
                     503: { $ref: "#/components/responses/InternalError" }
                 }
             }

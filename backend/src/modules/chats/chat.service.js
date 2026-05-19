@@ -18,6 +18,16 @@ class ChatService {
                 .lean()
         ]);
 
+        if (!session) {
+            throw new AppError('Phiên trò chuyện không tồn tại', 404, 'CHAT_SESSION_NOT_FOUND');
+        }
+
+        await ChatMessage.create({
+            session_id: sessionId,
+            role: 'user',
+            content: messageText
+        });
+
         const lastProduct = session?.last_entities?.product || "Chưa có";
 
         const historyContext = history.reverse()
@@ -53,10 +63,7 @@ class ChatService {
                 parsed.intent = CHAT_INTENTS.UNKNOWN;
             }
 
-            const aiMessage = await ChatMessage.create({
-                session_id: sessionId,
-                role: 'assistant',
-                content: rawText,
+            return {
                 raw_ai_response: rawText,
                 parsed_data: {
                     intent: parsed.intent,
@@ -66,21 +73,37 @@ class ChatService {
                 metadata: {
                     parse_success: parsed.parse_success,
                     latency_ms: Date.now() - startTime
-                }
-            });
-
-            if (parsed.product && parsed.product !== lastProduct) {
-                await ChatSession.findByIdAndUpdate(sessionId, {
-                    'last_entities.product': parsed.product,
-                    last_message_at: new Date()
-                });
-            }
-
-            return aiMessage;
+                },
+                product_changed: parsed.product && parsed.product !== lastProduct
+            };
         } catch (error) {
             console.error('[AI_ERROR]', { userId, sessionId, error: error.message });
             throw new AppError('AI không phản hồi, thử lại sau', 503, 'AI_SERVICE_ERROR');
         }
+    }
+
+    static async saveAssistantMessage(sessionId, content, aiResult) {
+        const aiMessage = await ChatMessage.create({
+            session_id: sessionId,
+            role: 'assistant',
+            content,
+            raw_ai_response: aiResult.raw_ai_response,
+            parsed_data: aiResult.parsed_data,
+            metadata: aiResult.metadata
+        });
+
+        const sessionUpdate = {
+            last_message_at: new Date()
+        };
+
+        const product = aiResult.parsed_data?.entities?.product;
+        if (aiResult.product_changed && product) {
+            sessionUpdate['last_entities.product'] = product;
+        }
+
+        await ChatSession.findByIdAndUpdate(sessionId, sessionUpdate);
+
+        return aiMessage;
     }
 
     static _parseAndNormalize(text) {
