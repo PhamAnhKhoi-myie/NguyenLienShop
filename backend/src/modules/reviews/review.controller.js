@@ -1,6 +1,8 @@
 const ReviewService = require('./review.service');
 const ReviewMapper = require('./review.mapper');
 const asyncHandler = require('../../utils/asyncHandler.util');
+const { assertAuthenticated } = require('../../utils/auth.util');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 class ReviewController {
     static getProductReviews = asyncHandler(async (req, res) => {
@@ -33,15 +35,17 @@ class ReviewController {
     });
 
     static create = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { product_id, variant_id, order_id, rating, title, content } =
             req.body;
 
         const review = await ReviewService.createReview(
-            req.user.id,
+            user.userId,
             product_id,
             variant_id,
             order_id,
-            { rating, title, content }
+            { rating, title, content },
+            buildAuditMetadata(req)
         );
 
         res.status(201).json({
@@ -51,13 +55,15 @@ class ReviewController {
     });
 
     static update = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { reviewId } = req.params;
         const { rating, title, content } = req.body;
 
         const review = await ReviewService.updateReview(
             reviewId,
-            req.user.id,
-            { rating, title, content }
+            user.userId,
+            { rating, title, content },
+            buildAuditMetadata(req)
         );
 
         res.status(200).json({
@@ -67,9 +73,14 @@ class ReviewController {
     });
 
     static delete = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { reviewId } = req.params;
 
-        await ReviewService.deleteReview(reviewId, req.user.id);
+        await ReviewService.deleteReview(
+            reviewId,
+            user.userId,
+            buildAuditMetadata(req)
+        );
 
         res.status(200).json({
             success: true,
@@ -123,13 +134,15 @@ class ReviewController {
     });
 
     static flagReview = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { reviewId } = req.params;
         const { reason } = req.body;
 
         const review = await ReviewService.flagReview(
             reviewId,
             reason,
-            req.user.id
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.status(200).json({
@@ -170,9 +183,14 @@ class ReviewController {
     });
 
     static approveReview = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { reviewId } = req.params;
 
-        const review = await ReviewService.approveReview(reviewId, req.user.id);
+        const review = await ReviewService.approveReview(
+            reviewId,
+            user.userId,
+            buildAuditMetadata(req)
+        );
 
         res.status(200).json({
             success: true,
@@ -182,13 +200,15 @@ class ReviewController {
     });
 
     static rejectReview = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { reviewId } = req.params;
         const { reason } = req.body;
 
         const review = await ReviewService.rejectReview(
             reviewId,
             reason,
-            req.user.id
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.status(200).json({

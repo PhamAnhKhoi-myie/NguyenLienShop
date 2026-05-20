@@ -923,7 +923,7 @@ class OrderService {
         return OrderMapper.toAdminDTO(order);
     }
 
-    static async writeReview(orderId, itemId, rating, comment, userId) {
+    static async writeReview(orderId, itemId, rating, comment, userId, metadata = {}) {
         const order = await Order.findOne({
             _id: orderId,
             user_id: userId,
@@ -957,7 +957,8 @@ class OrderService {
             {
                 rating,
                 content: comment
-            }
+            },
+            metadata
         );
 
         const updatedOrder = await Order.findById(orderId);

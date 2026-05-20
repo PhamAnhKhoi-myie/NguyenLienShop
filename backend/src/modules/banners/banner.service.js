@@ -2,6 +2,8 @@ const Banner = require('./banner.model');
 const BannerMapper = require('./banner.mapper');
 const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
+const ShopContentAuditLogService = require('../audit_logs/shop_content_audit_log/content_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class BannerService {
     static writableFields = [
@@ -67,7 +69,7 @@ class BannerService {
         return BannerMapper.toDTO(banner);
     }
 
-    static async createBanner(data, userId) {
+    static async createBanner(data, userId, metadata = {}) {
         const bannerData = this.sanitizeBannerData(data);
 
         const existing = await Banner.findOne({
@@ -91,6 +93,17 @@ class BannerService {
 
         await banner.save();
 
+        await this._createBannerAuditLog({
+            action: AUDIT_ACTIONS.CREATE_BANNER,
+            banner,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildCreatedChanges(
+                banner,
+                [...this.writableFields, 'is_deleted']
+            ),
+        });
+
         logger.info({
             event: 'banner_created',
             banner_id: banner._id.toString(),
@@ -102,7 +115,7 @@ class BannerService {
         return BannerMapper.toDTO(banner);
     }
 
-    static async updateBanner(bannerId, data, userId) {
+    static async updateBanner(bannerId, data, userId, metadata = {}) {
         const updateData = this.sanitizeBannerData(data);
 
         const banner = await Banner.findById(bannerId);
@@ -135,9 +148,23 @@ class BannerService {
             }
         }
 
+        const before = banner.toObject();
+
         Object.assign(banner, updateData, { updated_by: userId });
 
         await banner.save();
+
+        await this._createBannerAuditLog({
+            action: AUDIT_ACTIONS.UPDATE_BANNER,
+            banner,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildUpdatedChanges(
+                before,
+                banner,
+                [...Object.keys(updateData), 'updated_by']
+            ),
+        });
 
         logger.info({
             event: 'banner_updated',
@@ -149,7 +176,18 @@ class BannerService {
         return BannerMapper.toDTO(banner);
     }
 
-    static async deleteBanner(bannerId, userId) {
+    static async deleteBanner(bannerId, userId, metadata = {}) {
+        const before = await Banner.findById(bannerId)
+            .setOptions({ includeDeleted: true });
+
+        if (!before) {
+            throw new AppError(
+                'Banner not found',
+                404,
+                'BANNER_NOT_FOUND'
+            );
+        }
+
         const result = await Banner.updateOne(
             { _id: bannerId },
             {
@@ -166,6 +204,21 @@ class BannerService {
                 'BANNER_NOT_FOUND'
             );
         }
+
+        const banner = await Banner.findById(bannerId)
+            .setOptions({ includeDeleted: true });
+
+        await this._createBannerAuditLog({
+            action: AUDIT_ACTIONS.DELETE_BANNER_SOFT,
+            banner,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildUpdatedChanges(
+                before,
+                banner,
+                ['is_deleted', 'deleted_at', 'updated_by']
+            ),
+        });
 
         logger.info({
             event: 'banner_deleted',
@@ -186,7 +239,18 @@ class BannerService {
         return BannerMapper.toDTOList(banners);
     }
 
-    static async restoreBanner(bannerId, userId) {
+    static async restoreBanner(bannerId, userId, metadata = {}) {
+        const before = await Banner.findById(bannerId)
+            .setOptions({ includeDeleted: true });
+
+        if (!before) {
+            throw new AppError(
+                'Banner not found',
+                404,
+                'BANNER_NOT_FOUND'
+            );
+        }
+
         const result = await Banner.updateOne(
             { _id: bannerId },
             {
@@ -204,14 +268,68 @@ class BannerService {
             );
         }
 
+        const banner = await Banner.findById(bannerId)
+            .setOptions({ includeDeleted: true });
+
+        await this._createBannerAuditLog({
+            action: AUDIT_ACTIONS.RESTORE_BANNER,
+            banner,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildUpdatedChanges(
+                before,
+                banner,
+                ['is_deleted', 'deleted_at', 'updated_by']
+            ),
+        });
+
         logger.info({
             event: 'banner_restored',
             banner_id: bannerId,
             restored_by: userId
         });
 
-        const banner = await Banner.findById(bannerId);
         return BannerMapper.toDTO(banner);
+    }
+
+    static _getBannerPublicStatus(banner) {
+        if (banner?.is_deleted) {
+            return 'DELETED';
+        }
+
+        const now = new Date();
+
+        if (banner?.start_at && banner.start_at > now) {
+            return 'SCHEDULED';
+        }
+        if (banner?.end_at && banner.end_at <= now) {
+            return 'EXPIRED';
+        }
+
+        return 'ACTIVE';
+    }
+
+    static async _createBannerAuditLog({
+        action,
+        banner,
+        actorId,
+        metadata = {},
+        changes = {},
+    }) {
+        await ShopContentAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: 'ADMIN',
+            action,
+            target_type: 'BANNER',
+            banner_id: banner._id,
+            announcement_id: null,
+            shop_info_id: null,
+            display_name: `${banner.location}:${banner.sort_order}`,
+            public_status: this._getBannerPublicStatus(banner),
+            changes,
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
     }
 }
 

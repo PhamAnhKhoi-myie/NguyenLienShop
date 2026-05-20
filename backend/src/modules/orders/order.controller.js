@@ -134,7 +134,8 @@ const writeReview = asyncHandler(async (req, res) => {
         item_id,
         rating,
         comment,
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({

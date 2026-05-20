@@ -2,6 +2,8 @@ const ShopInfoService = require('./shop_info.service');
 const asyncHandler = require('../../utils/asyncHandler.util');
 const logger = require('../../utils/logger.util');
 const AppError = require('../../utils/appError.util');
+const { assertAuthenticated } = require('../../utils/auth.util');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 class ShopInfoController {
     static getShopInfo = asyncHandler(async (req, res) => {
@@ -61,7 +63,13 @@ class ShopInfoController {
     });
 
     static createShopInfo = asyncHandler(async (req, res) => {
-        const shopInfo = await ShopInfoService.createShopInfo(req.body);
+        const user = assertAuthenticated(req.user);
+
+        const shopInfo = await ShopInfoService.createShopInfo(
+            req.body,
+            user.userId,
+            buildAuditMetadata(req)
+        );
 
         logger.info({
             event: 'shop_info_created',
@@ -77,7 +85,13 @@ class ShopInfoController {
     });
 
     static updateShopInfo = asyncHandler(async (req, res) => {
-        const shopInfo = await ShopInfoService.updateShopInfo(req.body);
+        const user = assertAuthenticated(req.user);
+
+        const shopInfo = await ShopInfoService.updateShopInfo(
+            req.body,
+            user.userId,
+            buildAuditMetadata(req)
+        );
 
         logger.info({
             event: 'shop_info_updated',
@@ -93,6 +107,7 @@ class ShopInfoController {
     });
 
     static toggleShopStatus = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
         const { is_active } = req.body;
 
         if (typeof is_active !== 'boolean') {
@@ -103,7 +118,11 @@ class ShopInfoController {
             );
         }
 
-        const shopInfo = await ShopInfoService.toggleShopStatus(is_active);
+        const shopInfo = await ShopInfoService.toggleShopStatus(
+            is_active,
+            user.userId,
+            buildAuditMetadata(req)
+        );
 
         logger.info({
             event: 'shop_status_toggled',

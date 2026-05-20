@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 const asyncHandler = require('../../utils/asyncHandler.util');
 const AppError = require('../../utils/appError.util');
 const { assertAuthenticated } = require('../../utils/auth.util');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 const CartService = require('./cart.service');
 const CartMapper = require('./cart.mapper');
 
@@ -196,7 +197,8 @@ const applyDiscount = asyncHandler(async (req, res) => {
     const cart = await CartService.applyDiscount(
         userCart.id,
         code,
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -213,7 +215,11 @@ const removeDiscount = asyncHandler(async (req, res) => {
         extend: false,
     });
 
-    const cart = await CartService.removeDiscount(userCart.id);
+    const cart = await CartService.removeDiscount(
+        userCart.id,
+        user.userId,
+        buildAuditMetadata(req)
+    );
 
     res.status(200).json({
         success: true,
@@ -228,7 +234,8 @@ const mergeCart = asyncHandler(async (req, res) => {
 
     const mergedCart = await CartService.mergeGuestCartToUser(
         sessionKey,
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -249,7 +256,8 @@ const clearCart = asyncHandler(async (req, res) => {
     const cart = await CartService.clearCart(
         userCart.id,
         { keep_discount },
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -284,7 +292,8 @@ const checkoutCart = asyncHandler(async (req, res) => {
 
     const snapshot = await CartService.checkoutCart(
         userCart.id,
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({

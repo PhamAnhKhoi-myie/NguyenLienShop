@@ -8,6 +8,8 @@ const Variant = require('../products/variant.model');
 const VariantUnit = require('../products/variant_unit.model');
 const VariantUnitService = require('../products/variant_unit.service');
 const DiscountService = require('../discounts/discount.service');
+const CartAuditLogService = require('../audit_logs/cart_audit_log/cart_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 /**
  * ============================================
@@ -443,7 +445,7 @@ class CartService {
         return CartMapper.toResponseDTO(discountAdjustedCart);
     }
 
-    static async applyDiscount(cartId, code, userId) {
+    static async applyDiscount(cartId, code, userId, metadata = {}) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -477,11 +479,28 @@ class CartService {
             { new: true }
         );
 
+        await this._createCartAuditLog({
+            action: AUDIT_ACTIONS.APPLY_CART_DISCOUNT,
+            cart: updatedCart,
+            actorId: userId,
+            metadata,
+            changes: {
+                discount: {
+                    from: this._summarizeDiscount(cart.discount),
+                    to: this._summarizeDiscount(updatedCart.discount),
+                },
+                totals: {
+                    from: this._summarizeTotals(cart),
+                    to: this._summarizeTotals(updatedCart),
+                },
+            },
+        });
+
         return CartMapper.toResponseDTO(updatedCart);
 
     }
 
-    static async removeDiscount(cartId) {
+    static async removeDiscount(cartId, userId = null, metadata = {}) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -504,10 +523,27 @@ class CartService {
             { new: true }
         );
 
+        await this._createCartAuditLog({
+            action: AUDIT_ACTIONS.REMOVE_CART_DISCOUNT,
+            cart: updatedCart,
+            actorId: userId,
+            metadata,
+            changes: {
+                discount: {
+                    from: this._summarizeDiscount(cart.discount),
+                    to: null,
+                },
+                totals: {
+                    from: this._summarizeTotals(cart),
+                    to: this._summarizeTotals(updatedCart),
+                },
+            },
+        });
+
         return CartMapper.toResponseDTO(updatedCart);
     }
 
-    static async mergeGuestCartToUser(sessionKey, userId) {
+    static async mergeGuestCartToUser(sessionKey, userId, metadata = {}) {
         if (!sessionKey || !userId) {
             throw new AppError(
                 'Session key and user ID required',
@@ -520,6 +556,7 @@ class CartService {
         session.startTransaction();
 
         try {
+            let mergeAuditContext = null;
             const guestCart = await Cart.findOne(
                 { session_key: sessionKey, status: 'ACTIVE' },
                 null,
@@ -528,7 +565,27 @@ class CartService {
 
             if (!guestCart || guestCart.items.length === 0) {
                 const userCart = await Cart.getOrCreateUserCart(userId);
+                mergeAuditContext = {
+                    sourceCart: guestCart,
+                    sourceSessionKey: sessionKey,
+                    sourceStatusFrom: guestCart?.status || null,
+                    sourceStatusTo: guestCart?.status || null,
+                    beforeUserCart: userCart.toObject(),
+                    mergedItemsCount: 0,
+                };
                 await session.commitTransaction();
+                await this._createCartAuditLog({
+                    action: AUDIT_ACTIONS.MERGE_CART,
+                    cart: userCart,
+                    actorId: userId,
+                    sourceCart: mergeAuditContext.sourceCart,
+                    sourceSessionKey: mergeAuditContext.sourceSessionKey,
+                    metadata,
+                    changes: this._buildMergeChanges(
+                        mergeAuditContext,
+                        userCart
+                    ),
+                });
                 return CartMapper.toResponseDTO(userCart);
             }
 
@@ -549,6 +606,8 @@ class CartService {
                 });
                 await userCart.save({ session });
             }
+
+            const beforeUserCart = userCart.toObject();
 
             for (const guestItem of guestCart.items) {
                 const existingIndex = userCart.items.findIndex(
@@ -578,12 +637,37 @@ class CartService {
                 { session }
             );
 
+            mergeAuditContext = {
+                sourceCart: {
+                    ...guestCart.toObject(),
+                    status: 'ABANDONED',
+                },
+                sourceSessionKey: sessionKey,
+                sourceStatusFrom: guestCart.status,
+                sourceStatusTo: 'ABANDONED',
+                beforeUserCart,
+                mergedItemsCount: guestCart.items.length,
+            };
+
             await session.commitTransaction();
 
             const discountAdjustedCart = await this.refreshAppliedDiscount(
                 userCart,
                 userId
             );
+
+            await this._createCartAuditLog({
+                action: AUDIT_ACTIONS.MERGE_CART,
+                cart: discountAdjustedCart,
+                actorId: userId,
+                sourceCart: mergeAuditContext.sourceCart,
+                sourceSessionKey: mergeAuditContext.sourceSessionKey,
+                metadata,
+                changes: this._buildMergeChanges(
+                    mergeAuditContext,
+                    discountAdjustedCart
+                ),
+            });
 
             return CartMapper.toResponseDTO(discountAdjustedCart);
         } catch (error) {
@@ -594,7 +678,7 @@ class CartService {
         }
     }
 
-    static async clearCart(cartId, options = {}, userId) {
+    static async clearCart(cartId, options = {}, userId, metadata = {}) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -621,8 +705,28 @@ class CartService {
                 userId
             );
 
+            await this._createCartAuditLog({
+                action: AUDIT_ACTIONS.CLEAR_CART,
+                cart: discountAdjustedCart,
+                actorId: userId,
+                metadata,
+                changes: this._buildClearChanges(
+                    cart,
+                    discountAdjustedCart,
+                    options
+                ),
+            });
+
             return CartMapper.toResponseDTO(discountAdjustedCart);
         }
+
+        await this._createCartAuditLog({
+            action: AUDIT_ACTIONS.CLEAR_CART,
+            cart: clearedCart,
+            actorId: userId,
+            metadata,
+            changes: this._buildClearChanges(cart, clearedCart, options),
+        });
 
         return CartMapper.toResponseDTO(clearedCart);
     }
@@ -642,7 +746,7 @@ class CartService {
         return CartMapper.toAbandonedDTO(abandonedCart);
     }
 
-    static async checkoutCart(cartId, userId) {
+    static async checkoutCart(cartId, userId, metadata = {}) {
         let cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -692,12 +796,42 @@ class CartService {
             }
         }
 
+        const before = cart.toObject();
         const snapshot = CartMapper.toOrderSnapshotDTO(cart);
 
-        await Cart.findByIdAndUpdate(cartId, {
-            status: 'CHECKED_OUT',
-            checked_out_at: new Date(),
-            updated_at: new Date(),
+        const checkedOutCart = await Cart.findByIdAndUpdate(
+            cartId,
+            {
+                status: 'CHECKED_OUT',
+                checked_out_at: new Date(),
+                updated_at: new Date(),
+            },
+            { new: true, includeExpired: true }
+        );
+
+        await this._createCartAuditLog({
+            action: AUDIT_ACTIONS.CHECKOUT_CART,
+            cart: checkedOutCart,
+            actorId: userId,
+            metadata,
+            changes: {
+                status: {
+                    from: before.status,
+                    to: checkedOutCart.status,
+                },
+                checked_out_at: {
+                    from: before.checked_out_at || null,
+                    to: checkedOutCart.checked_out_at || null,
+                },
+                totals: {
+                    from: this._summarizeTotals(before),
+                    to: this._summarizeTotals(checkedOutCart),
+                },
+                discount: {
+                    from: this._summarizeDiscount(before.discount),
+                    to: this._summarizeDiscount(checkedOutCart.discount),
+                },
+            },
         });
 
         return {
@@ -727,6 +861,147 @@ class CartService {
         }
 
         return CartMapper.validateCartTotals(cart);
+    }
+
+    static _summarizeDiscount(discount) {
+        if (!discount) {
+            return null;
+        }
+
+        return {
+            discount_id: discount.discount_id || null,
+            code: discount.code || null,
+            type: discount.type || null,
+            value: discount.value || 0,
+            discount_amount: discount.discount_amount || 0,
+            apply_scope: discount.apply_scope || null,
+            applied_at: discount.applied_at || null,
+            expires_at: discount.expires_at || null,
+        };
+    }
+
+    static _summarizeTotals(cart) {
+        const totals = CartMapper.calculateCartTotals(
+            cart?.items || [],
+            cart?.discount || null
+        );
+
+        return {
+            ...totals,
+            item_count: cart?.items?.length || 0,
+            items_total_units: CartMapper.calculateTotalUnits(cart?.items || []),
+        };
+    }
+
+    static _buildMergeChanges(context, afterCart) {
+        const beforeCart = context.beforeUserCart || null;
+
+        return {
+            source_session_key: {
+                from: null,
+                to: context.sourceSessionKey || null,
+            },
+            source_cart_status: {
+                from: context.sourceStatusFrom || null,
+                to: context.sourceStatusTo || null,
+            },
+            merged_items_count: {
+                from: 0,
+                to: context.mergedItemsCount || 0,
+            },
+            target_item_count: {
+                from: beforeCart?.items?.length || 0,
+                to: afterCart?.items?.length || 0,
+            },
+            target_totals: {
+                from: this._summarizeTotals(beforeCart),
+                to: this._summarizeTotals(afterCart),
+            },
+            discount: {
+                from: this._summarizeDiscount(beforeCart?.discount),
+                to: this._summarizeDiscount(afterCart?.discount),
+            },
+        };
+    }
+
+    static _buildClearChanges(beforeCart, afterCart, options = {}) {
+        return {
+            keep_discount: {
+                from: null,
+                to: Boolean(options.keep_discount),
+            },
+            item_count: {
+                from: beforeCart?.items?.length || 0,
+                to: afterCart?.items?.length || 0,
+            },
+            items_total_units: {
+                from: CartMapper.calculateTotalUnits(beforeCart?.items || []),
+                to: CartMapper.calculateTotalUnits(afterCart?.items || []),
+            },
+            discount: {
+                from: this._summarizeDiscount(beforeCart?.discount),
+                to: this._summarizeDiscount(afterCart?.discount),
+            },
+            totals: {
+                from: this._summarizeTotals(beforeCart),
+                to: this._summarizeTotals(afterCart),
+            },
+        };
+    }
+
+    static _toAuditValue(value) {
+        if (value === undefined || value === null) {
+            return null;
+        }
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        if (value instanceof mongoose.Types.ObjectId) {
+            return value.toString();
+        }
+        if (Array.isArray(value)) {
+            return value.map((item) => this._toAuditValue(item));
+        }
+        if (value?.toObject) {
+            return this._toAuditValue(value.toObject());
+        }
+        if (typeof value === 'object') {
+            return Object.fromEntries(
+                Object.entries(value).map(([key, item]) => [
+                    key,
+                    this._toAuditValue(item),
+                ])
+            );
+        }
+
+        return value;
+    }
+
+    static async _createCartAuditLog({
+        action,
+        cart,
+        actorId = null,
+        actorType = 'USER',
+        sourceCart = null,
+        sourceSessionKey = null,
+        metadata = {},
+        changes = {},
+    }) {
+        await CartAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: actorType,
+            action,
+            cart_id: cart._id,
+            source_cart_id: sourceCart?._id || null,
+            user_id: cart.user_id || actorId || null,
+            session_key: cart.session_key || null,
+            source_session_key: sourceSessionKey || sourceCart?.session_key || null,
+            status: cart.status || null,
+            discount_code: cart.discount?.code || null,
+            changes: this._toAuditValue(changes),
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
     }
 }
 

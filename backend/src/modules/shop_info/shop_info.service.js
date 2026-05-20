@@ -2,12 +2,25 @@ const ShopInfo = require('./shop_info.model');
 const ShopInfoMapper = require('./shop_info.mapper');
 const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
+const ShopContentAuditLogService = require('../audit_logs/shop_content_audit_log/content_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 const {
     isOpeningRange,
     isValidTime
 } = require('./shop_info_time.util');
 
 class ShopInfoService {
+    static writableFields = [
+        'shop_name',
+        'email',
+        'phone',
+        'address',
+        'working_hours',
+        'social_links',
+        'map_embed_url',
+        'is_active'
+    ];
+
     static async getShopInfo() {
         const shopInfo = await ShopInfo.findOne();
 
@@ -69,7 +82,7 @@ class ShopInfoService {
         return ShopInfoMapper.toSocialDTO(shopInfo);
     }
 
-    static async createShopInfo(data) {
+    static async createShopInfo(data, userId = null, metadata = {}) {
         const existing = await ShopInfo.findOne();
 
         if (existing) {
@@ -95,6 +108,17 @@ class ShopInfoService {
 
         await shopInfo.save();
 
+        await this._createShopInfoAuditLog({
+            action: AUDIT_ACTIONS.CREATE_SHOP_INFO,
+            shopInfo,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildCreatedChanges(
+                shopInfo,
+                this.writableFields
+            ),
+        });
+
         logger.info({
             event: 'shop_info_created',
             shop_id: shopInfo._id.toString(),
@@ -104,7 +128,7 @@ class ShopInfoService {
         return ShopInfoMapper.toDTO(shopInfo);
     }
 
-    static async updateShopInfo(data) {
+    static async updateShopInfo(data, userId = null, metadata = {}) {
         const shopInfo = await ShopInfo.findOne();
 
         if (!shopInfo) {
@@ -116,6 +140,7 @@ class ShopInfoService {
         }
 
         const changes = {};
+        const before = shopInfo.toObject();
 
         if (data.shop_name !== undefined) {
             changes.shop_name = data.shop_name;
@@ -162,6 +187,22 @@ class ShopInfoService {
 
         await shopInfo.save();
 
+        const updatedFields = this.writableFields.filter((field) =>
+            Object.prototype.hasOwnProperty.call(data, field)
+        );
+
+        await this._createShopInfoAuditLog({
+            action: AUDIT_ACTIONS.UPDATE_SHOP_INFO,
+            shopInfo,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildUpdatedChanges(
+                before,
+                shopInfo,
+                updatedFields
+            ),
+        });
+
         logger.info({
             event: 'shop_info_updated',
             shop_id: shopInfo._id.toString(),
@@ -171,7 +212,7 @@ class ShopInfoService {
         return ShopInfoMapper.toDTO(shopInfo);
     }
 
-    static async toggleShopStatus(isActive) {
+    static async toggleShopStatus(isActive, userId = null, metadata = {}) {
         const shopInfo = await ShopInfo.findOne();
 
         if (!shopInfo) {
@@ -182,10 +223,23 @@ class ShopInfoService {
             );
         }
 
+        const before = shopInfo.toObject();
         const previousStatus = shopInfo.is_active;
         shopInfo.is_active = isActive;
 
         await shopInfo.save();
+
+        await this._createShopInfoAuditLog({
+            action: AUDIT_ACTIONS.UPDATE_SHOP_INFO_STATUS,
+            shopInfo,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildUpdatedChanges(
+                before,
+                shopInfo,
+                ['is_active']
+            ),
+        });
 
         logger.info({
             event: 'shop_status_toggled',
@@ -319,6 +373,33 @@ class ShopInfoService {
         }
 
         return null;
+    }
+
+    static getPublicStatus(shopInfo) {
+        return shopInfo?.is_active ? 'ACTIVE' : 'INACTIVE';
+    }
+
+    static async _createShopInfoAuditLog({
+        action,
+        shopInfo,
+        actorId,
+        metadata = {},
+        changes = {},
+    }) {
+        await ShopContentAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: 'ADMIN',
+            action,
+            target_type: 'SHOP_INFO',
+            banner_id: null,
+            announcement_id: null,
+            shop_info_id: shopInfo._id,
+            display_name: shopInfo.shop_name || null,
+            public_status: this.getPublicStatus(shopInfo),
+            changes,
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
     }
 }
 

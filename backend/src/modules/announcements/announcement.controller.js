@@ -1,5 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
 const AnnouncementService = require('./announcement.service');
+const { assertAuthenticated } = require('../../utils/auth.util');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 class AnnouncementController {
     static getActive = asyncHandler(async (req, res) => {
@@ -46,9 +48,12 @@ class AnnouncementController {
     });
 
     static create = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+
         const announcement = await AnnouncementService.createAnnouncement(
             req.body,
-            req.user.id
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.status(201).json({
@@ -58,10 +63,13 @@ class AnnouncementController {
     });
 
     static update = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+
         const announcement = await AnnouncementService.updateAnnouncement(
             req.params.id,
             req.body,
-            req.user.id
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.json({
@@ -71,9 +79,12 @@ class AnnouncementController {
     });
 
     static delete = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+
         await AnnouncementService.deleteAnnouncement(
             req.params.id,
-            req.user.id
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.json({
@@ -92,9 +103,12 @@ class AnnouncementController {
     });
 
     static restore = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+
         const announcement = await AnnouncementService.restoreAnnouncement(
             req.params.id,
-            req.user.id
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.json({

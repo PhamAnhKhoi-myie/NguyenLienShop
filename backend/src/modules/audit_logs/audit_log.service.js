@@ -7,6 +7,9 @@ const OrderAuditLog = require('./order_audit_log/order_log.model');
 const ShipmentAuditLog = require('./shipment_audit_log/shipment_log.model');
 const ProductAuditLog = require('./product_audit_log/product_log.model');
 const DiscountAuditLog = require('./discount_audit_log/discount_log.model');
+const ReviewAuditLog = require('./review_audit_log/review_log.model');
+const ShopContentAuditLog = require('./shop_content_audit_log/content_log.model');
+const CartAuditLog = require('./cart_audit_log/cart_log.model');
 
 const AppError = require('../../utils/appError.util');
 
@@ -19,7 +22,10 @@ const DOMAIN_MODELS = [
     { name: 'ORDER', model: OrderAuditLog },
     { name: 'SHIPMENT', model: ShipmentAuditLog },
     { name: 'PRODUCT', model: ProductAuditLog },
-    { name: 'DISCOUNT', model: DiscountAuditLog }
+    { name: 'DISCOUNT', model: DiscountAuditLog },
+    { name: 'REVIEW', model: ReviewAuditLog },
+    { name: 'SHOP_CONTENT', model: ShopContentAuditLog },
+    { name: 'CART', model: CartAuditLog }
 ];
 
 const DOMAIN_ACTION_MAP = {
@@ -104,6 +110,34 @@ const DOMAIN_ACTION_MAP = {
         'REVOKE_DISCOUNT',
         'DUPLICATE_DISCOUNT',
         'REDEEM_DISCOUNT'
+    ],
+    REVIEW: [
+        'CREATE_REVIEW',
+        'UPDATE_REVIEW',
+        'DELETE_REVIEW_SOFT',
+        'FLAG_REVIEW',
+        'APPROVE_REVIEW',
+        'REJECT_REVIEW'
+    ],
+    SHOP_CONTENT: [
+        'CREATE_BANNER',
+        'UPDATE_BANNER',
+        'DELETE_BANNER_SOFT',
+        'RESTORE_BANNER',
+        'CREATE_ANNOUNCEMENT',
+        'UPDATE_ANNOUNCEMENT',
+        'DELETE_ANNOUNCEMENT_SOFT',
+        'RESTORE_ANNOUNCEMENT',
+        'CREATE_SHOP_INFO',
+        'UPDATE_SHOP_INFO',
+        'UPDATE_SHOP_INFO_STATUS'
+    ],
+    CART: [
+        'APPLY_CART_DISCOUNT',
+        'REMOVE_CART_DISCOUNT',
+        'MERGE_CART',
+        'CHECKOUT_CART',
+        'CLEAR_CART'
     ]
 };
 

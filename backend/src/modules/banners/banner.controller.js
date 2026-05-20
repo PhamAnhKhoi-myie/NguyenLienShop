@@ -1,5 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
 const BannerService = require('./banner.service');
+const { assertAuthenticated } = require('../../utils/auth.util');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 
 class BannerController {
     static getByLocation = asyncHandler(async (req, res) => {
@@ -36,9 +38,12 @@ class BannerController {
     });
 
     static create = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+
         const banner = await BannerService.createBanner(
             req.body,
-            req.user.id
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.status(201).json({
@@ -48,10 +53,13 @@ class BannerController {
     });
 
     static update = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+
         const banner = await BannerService.updateBanner(
             req.params.id,
             req.body,
-            req.user.id
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.json({
@@ -61,7 +69,13 @@ class BannerController {
     });
 
     static delete = asyncHandler(async (req, res) => {
-        await BannerService.deleteBanner(req.params.id, req.user.id);
+        const user = assertAuthenticated(req.user);
+
+        await BannerService.deleteBanner(
+            req.params.id,
+            user.userId,
+            buildAuditMetadata(req)
+        );
 
         res.json({
             success: true,
@@ -79,9 +93,12 @@ class BannerController {
     });
 
     static restore = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+
         const banner = await BannerService.restoreBanner(
             req.params.id,
-            req.user.id
+            user.userId,
+            buildAuditMetadata(req)
         );
 
         res.json({

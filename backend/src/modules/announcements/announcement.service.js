@@ -2,6 +2,8 @@ const Announcement = require('./announcement.model');
 const AnnouncementMapper = require('./announcement.mapper');
 const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
+const ShopContentAuditLogService = require('../audit_logs/shop_content_audit_log/content_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class AnnouncementService {
     static writableFields = [
@@ -153,13 +155,24 @@ class AnnouncementService {
         return AnnouncementMapper.toDTO(announcement);
     }
 
-    static async createAnnouncement(data, userId) {
+    static async createAnnouncement(data, userId, metadata = {}) {
         const announcement = new Announcement({
             ...this.sanitizeAnnouncementData(data),
             created_by: userId
         });
 
         await announcement.save();
+
+        await this._createAnnouncementAuditLog({
+            action: AUDIT_ACTIONS.CREATE_ANNOUNCEMENT,
+            announcement,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildCreatedChanges(
+                announcement,
+                [...this.writableFields, 'is_deleted']
+            ),
+        });
 
         logger.info({
             event: 'announcement_created',
@@ -173,7 +186,7 @@ class AnnouncementService {
         return AnnouncementMapper.toDTO(announcement);
     }
 
-    static async updateAnnouncement(announcementId, data, userId) {
+    static async updateAnnouncement(announcementId, data, userId, metadata = {}) {
         const announcement = await Announcement.findById(announcementId);
 
         if (!announcement) {
@@ -185,10 +198,23 @@ class AnnouncementService {
         }
 
         const updateData = this.sanitizeAnnouncementData(data);
+        const before = announcement.toObject();
 
         Object.assign(announcement, updateData, { updated_by: userId });
 
         await announcement.save();
+
+        await this._createAnnouncementAuditLog({
+            action: AUDIT_ACTIONS.UPDATE_ANNOUNCEMENT,
+            announcement,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildUpdatedChanges(
+                before,
+                announcement,
+                [...Object.keys(updateData), 'updated_by']
+            ),
+        });
 
         logger.info({
             event: 'announcement_updated',
@@ -200,7 +226,18 @@ class AnnouncementService {
         return AnnouncementMapper.toDTO(announcement);
     }
 
-    static async deleteAnnouncement(announcementId, userId) {
+    static async deleteAnnouncement(announcementId, userId, metadata = {}) {
+        const before = await Announcement.findById(announcementId)
+            .setOptions({ includeDeleted: true });
+
+        if (!before) {
+            throw new AppError(
+                'Announcement not found',
+                404,
+                'ANNOUNCEMENT_NOT_FOUND'
+            );
+        }
+
         const result = await Announcement.updateOne(
             { _id: announcementId },
             {
@@ -218,6 +255,21 @@ class AnnouncementService {
             );
         }
 
+        const announcement = await Announcement.findById(announcementId)
+            .setOptions({ includeDeleted: true });
+
+        await this._createAnnouncementAuditLog({
+            action: AUDIT_ACTIONS.DELETE_ANNOUNCEMENT_SOFT,
+            announcement,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildUpdatedChanges(
+                before,
+                announcement,
+                ['is_deleted', 'deleted_at', 'updated_by']
+            ),
+        });
+
         logger.info({
             event: 'announcement_deleted',
             announcement_id: announcementId,
@@ -225,7 +277,18 @@ class AnnouncementService {
         });
     }
 
-    static async restoreAnnouncement(announcementId, userId) {
+    static async restoreAnnouncement(announcementId, userId, metadata = {}) {
+        const before = await Announcement.findById(announcementId)
+            .setOptions({ includeDeleted: true });
+
+        if (!before) {
+            throw new AppError(
+                'Announcement not found',
+                404,
+                'ANNOUNCEMENT_NOT_FOUND'
+            );
+        }
+
         const result = await Announcement.updateOne(
             { _id: announcementId },
             {
@@ -243,13 +306,27 @@ class AnnouncementService {
             );
         }
 
+        const announcement = await Announcement.findById(announcementId)
+            .setOptions({ includeDeleted: true });
+
+        await this._createAnnouncementAuditLog({
+            action: AUDIT_ACTIONS.RESTORE_ANNOUNCEMENT,
+            announcement,
+            actorId: userId,
+            metadata,
+            changes: ShopContentAuditLogService.buildUpdatedChanges(
+                before,
+                announcement,
+                ['is_deleted', 'deleted_at', 'updated_by']
+            ),
+        });
+
         logger.info({
             event: 'announcement_restored',
             announcement_id: announcementId,
             restored_by: userId
         });
 
-        const announcement = await Announcement.findById(announcementId);
         return AnnouncementMapper.toDTO(announcement);
     }
 
@@ -289,6 +366,46 @@ class AnnouncementService {
             .exec();
 
         return AnnouncementMapper.toDTOList(announcements);
+    }
+
+    static getPublicStatus(announcement) {
+        if (announcement?.is_deleted) {
+            return 'DELETED';
+        }
+
+        const now = new Date();
+
+        if (announcement?.start_at && announcement.start_at > now) {
+            return 'SCHEDULED';
+        }
+        if (announcement?.end_at && announcement.end_at <= now) {
+            return 'EXPIRED';
+        }
+
+        return 'ACTIVE';
+    }
+
+    static async _createAnnouncementAuditLog({
+        action,
+        announcement,
+        actorId,
+        metadata = {},
+        changes = {},
+    }) {
+        await ShopContentAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: 'ADMIN',
+            action,
+            target_type: 'ANNOUNCEMENT',
+            banner_id: null,
+            announcement_id: announcement._id,
+            shop_info_id: null,
+            display_name: announcement.title || null,
+            public_status: this.getPublicStatus(announcement),
+            changes,
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
     }
 }
 

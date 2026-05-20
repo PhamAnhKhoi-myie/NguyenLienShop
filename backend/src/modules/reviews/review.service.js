@@ -4,9 +4,11 @@ const mongoose = require('mongoose');
 const ReviewMapper = require('./review.mapper');
 const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
+const ReviewAuditLogService = require('../audit_logs/review_audit_log/review_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class ReviewService {
-    static async createReview(userId, productId, variantId, orderId, data) {
+    static async createReview(userId, productId, variantId, orderId, data, metadata = {}) {
         const session = await mongoose.startSession();
         session.startTransaction();
 
@@ -88,6 +90,28 @@ class ReviewService {
             });
 
             await order.save({ session });
+
+            await this._createReviewAuditLog({
+                action: AUDIT_ACTIONS.CREATE_REVIEW,
+                review,
+                actorId: userId,
+                actorType: 'USER',
+                metadata,
+                changes: this._buildCreatedChanges(review, [
+                    'rating',
+                    'title',
+                    'content',
+                    'is_verified_purchase',
+                    'is_approved',
+                    'is_flagged',
+                    'order_id',
+                ]),
+                auditOptions: {
+                    session,
+                    throwOnError: true,
+                },
+            });
+
             await session.commitTransaction();
 
             logger.info({
@@ -143,7 +167,7 @@ class ReviewService {
         return ReviewMapper.toPublicDTO(review, currentUserId);
     }
 
-    static async updateReview(reviewId, userId, data) {
+    static async updateReview(reviewId, userId, data, metadata = {}) {
         const review = await Review.findOne(
             {
                 _id: reviewId,
@@ -157,6 +181,8 @@ class ReviewService {
         if (!review) {
             throw new AppError('Review not found', 404, 'REVIEW_NOT_FOUND');
         }
+
+        const before = review.toObject();
 
         if (!review.original_content) {
             review.original_content = review.content;
@@ -180,6 +206,25 @@ class ReviewService {
 
         await review.save();
 
+        await this._createReviewAuditLog({
+            action: AUDIT_ACTIONS.UPDATE_REVIEW,
+            review,
+            actorId: userId,
+            actorType: 'USER',
+            metadata,
+            changes: this._buildUpdatedChanges(
+                before,
+                review,
+                [
+                    ...Object.keys(data),
+                    'edit_count',
+                    'edited_at',
+                    'is_approved',
+                    'approved_at',
+                ]
+            ),
+        });
+
         logger.info({
             event: 'review_edited',
             review_id: reviewId,
@@ -191,7 +236,7 @@ class ReviewService {
         return ReviewMapper.toDTO(review, userId);
     }
 
-    static async deleteReview(reviewId, userId) {
+    static async deleteReview(reviewId, userId, metadata = {}) {
         const review = await Review.findOne(
             {
                 _id: reviewId,
@@ -206,9 +251,24 @@ class ReviewService {
             throw new AppError('Review not found', 404, 'REVIEW_NOT_FOUND');
         }
 
+        const before = review.toObject();
+
         review.is_deleted = true;
         review.deleted_at = new Date();
         await review.save();
+
+        await this._createReviewAuditLog({
+            action: AUDIT_ACTIONS.DELETE_REVIEW_SOFT,
+            review,
+            actorId: userId,
+            actorType: 'USER',
+            metadata,
+            changes: this._buildUpdatedChanges(
+                before,
+                review,
+                ['is_deleted', 'deleted_at']
+            ),
+        });
 
         logger.info({
             event: 'review_deleted',
@@ -282,7 +342,7 @@ class ReviewService {
         return { success: true };
     }
 
-    static async approveReview(reviewId, adminId) {
+    static async approveReview(reviewId, adminId, metadata = {}) {
         const review = await Review.findById(reviewId, null, {
             includeUnapproved: true
         });
@@ -291,12 +351,27 @@ class ReviewService {
             throw new AppError('Review not found', 404, 'REVIEW_NOT_FOUND');
         }
 
+        const before = review.toObject();
+
         review.is_approved = true;
         review.approved_at = new Date();
         review.approved_by = adminId;
         review.is_flagged = false;
 
         await review.save();
+
+        await this._createReviewAuditLog({
+            action: AUDIT_ACTIONS.APPROVE_REVIEW,
+            review,
+            actorId: adminId,
+            actorType: 'ADMIN',
+            metadata,
+            changes: this._buildUpdatedChanges(
+                before,
+                review,
+                ['is_approved', 'approved_at', 'approved_by', 'is_flagged']
+            ),
+        });
 
         logger.info({
             event: 'review_approved',
@@ -307,7 +382,7 @@ class ReviewService {
         return ReviewMapper.toAdminDTO(review);
     }
 
-    static async rejectReview(reviewId, reason, adminId) {
+    static async rejectReview(reviewId, reason, adminId, metadata = {}) {
         const review = await Review.findById(reviewId, null, {
             includeUnapproved: true
         });
@@ -316,11 +391,26 @@ class ReviewService {
             throw new AppError('Review not found', 404, 'REVIEW_NOT_FOUND');
         }
 
+        const before = review.toObject();
+
         review.is_approved = false;
         review.rejected_at = new Date();
         review.rejection_reason = reason;
 
         await review.save();
+
+        await this._createReviewAuditLog({
+            action: AUDIT_ACTIONS.REJECT_REVIEW,
+            review,
+            actorId: adminId,
+            actorType: 'ADMIN',
+            metadata,
+            changes: this._buildUpdatedChanges(
+                before,
+                review,
+                ['is_approved', 'rejected_at', 'rejection_reason']
+            ),
+        });
 
         logger.info({
             event: 'review_rejected',
@@ -332,18 +422,33 @@ class ReviewService {
         return ReviewMapper.toAdminDTO(review);
     }
 
-    static async flagReview(reviewId, flagReason, userId) {
+    static async flagReview(reviewId, flagReason, userId, metadata = {}) {
         const review = await Review.findById(reviewId);
 
         if (!review) {
             throw new AppError('Review not found', 404, 'REVIEW_NOT_FOUND');
         }
 
+        const before = review.toObject();
+
         review.is_flagged = true;
         review.flag_reason = flagReason;
         review.flagged_by = userId;
 
         await review.save();
+
+        await this._createReviewAuditLog({
+            action: AUDIT_ACTIONS.FLAG_REVIEW,
+            review,
+            actorId: userId,
+            actorType: 'USER',
+            metadata,
+            changes: this._buildUpdatedChanges(
+                before,
+                review,
+                ['is_flagged', 'flag_reason', 'flagged_by']
+            ),
+        });
 
         logger.warn({
             event: 'review_flagged',
@@ -468,6 +573,109 @@ class ReviewService {
                 totalPages: Math.ceil(total / limit)
             }
         };
+    }
+
+    static _getModerationStatus(review) {
+        if (review?.is_deleted) {
+            return 'DELETED';
+        }
+        if (review?.rejected_at) {
+            return 'REJECTED';
+        }
+        if (review?.is_flagged) {
+            return 'FLAGGED';
+        }
+        if (review?.is_approved) {
+            return 'APPROVED';
+        }
+
+        return 'PENDING';
+    }
+
+    static _buildCreatedChanges(review, fields = []) {
+        const doc = review?.toObject ? review.toObject() : review;
+
+        return fields.reduce((changes, field) => {
+            changes[field] = {
+                from: null,
+                to: this._toAuditValue(doc?.[field]),
+            };
+
+            return changes;
+        }, {});
+    }
+
+    static _buildUpdatedChanges(beforeReview, afterReview, fields = []) {
+        const before = beforeReview?.toObject ? beforeReview.toObject() : beforeReview;
+        const after = afterReview?.toObject ? afterReview.toObject() : afterReview;
+
+        return [...new Set(fields)].reduce((changes, field) => {
+            const from = this._toAuditValue(before?.[field]);
+            const to = this._toAuditValue(after?.[field]);
+
+            if (!this._auditValuesEqual(from, to)) {
+                changes[field] = { from, to };
+            }
+
+            return changes;
+        }, {});
+    }
+
+    static _toAuditValue(value) {
+        if (value === undefined || value === null) {
+            return null;
+        }
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        if (value instanceof mongoose.Types.ObjectId) {
+            return value.toString();
+        }
+        if (Array.isArray(value)) {
+            return value.map((item) => this._toAuditValue(item));
+        }
+        if (value?.toObject) {
+            return this._toAuditValue(value.toObject());
+        }
+        if (typeof value === 'object') {
+            return Object.fromEntries(
+                Object.entries(value).map(([key, item]) => [
+                    key,
+                    this._toAuditValue(item),
+                ])
+            );
+        }
+
+        return value;
+    }
+
+    static _auditValuesEqual(left, right) {
+        return JSON.stringify(left) === JSON.stringify(right);
+    }
+
+    static async _createReviewAuditLog({
+        action,
+        review,
+        actorId = null,
+        actorType = 'USER',
+        metadata = {},
+        changes = {},
+        auditOptions = {},
+    }) {
+        await ReviewAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: actorType,
+            action,
+            review_id: review._id,
+            user_id: review.user_id || null,
+            product_id: review.product_id || null,
+            variant_id: review.variant_id || null,
+            order_id: review.order_id || null,
+            moderation_status: this._getModerationStatus(review),
+            changes: this._toAuditValue(changes),
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        }, auditOptions);
     }
 }
 

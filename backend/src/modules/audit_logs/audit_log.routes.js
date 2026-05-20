@@ -17,6 +17,9 @@ const {
     getShipmentLogsQuerySchema,
     getProductLogsQuerySchema,
     getDiscountLogsQuerySchema,
+    getReviewLogsQuerySchema,
+    getShopContentLogsQuerySchema,
+    getCartLogsQuerySchema,
     idParamSchema
 } = require('./audit_log.validator');
 
@@ -76,6 +79,24 @@ router.get(
     '/discounts',
     validate({ query: getDiscountLogsQuerySchema }),
     auditLogController.getDiscountLogs
+);
+
+router.get(
+    '/reviews',
+    validate({ query: getReviewLogsQuerySchema }),
+    auditLogController.getReviewLogs
+);
+
+router.get(
+    '/shop-content',
+    validate({ query: getShopContentLogsQuerySchema }),
+    auditLogController.getShopContentLogs
+);
+
+router.get(
+    '/carts',
+    validate({ query: getCartLogsQuerySchema }),
+    auditLogController.getCartLogs
 );
 
 router.get(
