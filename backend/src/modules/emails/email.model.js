@@ -8,6 +8,8 @@ const emailJobSchema = new mongoose.Schema({
         required: true
     },
     payload: { type: Object, required: true },
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    order_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
     status: {
         type: String,
         enum: ['pending', 'processing', 'sent', 'failed'],
@@ -29,5 +31,7 @@ emailJobSchema.index({
     locked_until: 1,
     retry_count: 1
 });
+emailJobSchema.index({ user_id: 1, createdAt: -1 });
+emailJobSchema.index({ order_id: 1, createdAt: -1 });
 
 module.exports = mongoose.model('EmailJob', emailJobSchema);

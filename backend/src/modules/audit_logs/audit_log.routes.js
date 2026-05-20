@@ -20,6 +20,8 @@ const {
     getReviewLogsQuerySchema,
     getShopContentLogsQuerySchema,
     getCartLogsQuerySchema,
+    getNotificationLogsQuerySchema,
+    getEmailLogsQuerySchema,
     idParamSchema
 } = require('./audit_log.validator');
 
@@ -97,6 +99,18 @@ router.get(
     '/carts',
     validate({ query: getCartLogsQuerySchema }),
     auditLogController.getCartLogs
+);
+
+router.get(
+    '/notifications',
+    validate({ query: getNotificationLogsQuerySchema }),
+    auditLogController.getNotificationLogs
+);
+
+router.get(
+    '/emails',
+    validate({ query: getEmailLogsQuerySchema }),
+    auditLogController.getEmailLogs
 );
 
 router.get(

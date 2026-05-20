@@ -141,7 +141,7 @@ class CartService {
         return CartMapper.toResponseDTO(cart);
     }
 
-    static async addItemToCart(userId, userType, itemData) {
+    static async addItemToCart(userId, userType, itemData, metadata = {}) {
         const {
             product_id,
             variant_id,
@@ -216,6 +216,7 @@ class CartService {
         } else {
             throw new AppError('Invalid user type', 400, 'INVALID_USER_TYPE');
         }
+        const beforeCart = cart.toObject();
 
         const existingItem = cart.items.find(
             (item) => item.unit_id?.toString() === unit_id
@@ -304,11 +305,50 @@ class CartService {
             updatedCart,
             userType === 'user' ? userId : null
         );
+        const afterItem = discountAdjustedCart.items.find(
+            (item) => item.unit_id?.toString() === unit_id
+        );
+
+        await this._createCartAuditLog({
+            action: AUDIT_ACTIONS.ADD_CART_ITEM,
+            cart: discountAdjustedCart,
+            actorId: userType === 'user' ? userId : null,
+            actorType: userType === 'user' ? 'USER' : 'GUEST',
+            metadata,
+            changes: {
+                item: {
+                    from: this._summarizeCartItem(existingItem),
+                    to: this._summarizeCartItem(afterItem),
+                },
+                quantity: {
+                    from: existingQuantity,
+                    to: afterItem?.quantity || totalQuantity,
+                },
+                item_count: {
+                    from: beforeCart.items?.length || 0,
+                    to: discountAdjustedCart.items?.length || 0,
+                },
+                discount: {
+                    from: this._summarizeDiscount(beforeCart.discount),
+                    to: this._summarizeDiscount(discountAdjustedCart.discount),
+                },
+                totals: {
+                    from: this._summarizeTotals(beforeCart),
+                    to: this._summarizeTotals(discountAdjustedCart),
+                },
+            },
+        });
 
         return CartMapper.toResponseDTO(discountAdjustedCart);
     }
 
-    static async updateItemQuantity(cartId, itemId, newQuantity, userId) {
+    static async updateItemQuantity(
+        cartId,
+        itemId,
+        newQuantity,
+        userId,
+        metadata = {}
+    ) {
         if (newQuantity < 1 || newQuantity > 999) {
             throw new AppError(
                 'Quantity must be between 1 and 999',
@@ -330,6 +370,8 @@ class CartService {
                 'ITEM_NOT_FOUND'
             );
         }
+        const beforeCart = cart.toObject();
+        const beforeItem = item.toObject ? item.toObject() : item;
 
         const product = await Product.findById(item.product_id);
         if (!product || product.status !== 'ACTIVE') {
@@ -416,11 +458,42 @@ class CartService {
             updatedCart,
             userId
         );
+        const afterItem = discountAdjustedCart.items.id(itemId);
+
+        await this._createCartAuditLog({
+            action: AUDIT_ACTIONS.UPDATE_CART_ITEM_QUANTITY,
+            cart: discountAdjustedCart,
+            actorId: userId,
+            metadata,
+            changes: {
+                item: {
+                    from: this._summarizeCartItem(beforeItem),
+                    to: this._summarizeCartItem(afterItem),
+                },
+                quantity: {
+                    from: beforeItem.quantity,
+                    to: afterItem?.quantity || newQuantity,
+                },
+                discount: {
+                    from: this._summarizeDiscount(beforeCart.discount),
+                    to: this._summarizeDiscount(discountAdjustedCart.discount),
+                },
+                totals: {
+                    from: this._summarizeTotals(beforeCart),
+                    to: this._summarizeTotals(discountAdjustedCart),
+                },
+            },
+        });
 
         return CartMapper.toResponseDTO(discountAdjustedCart);
     }
 
-    static async removeItemFromCart(cartId, itemId, userId) {
+    static async removeItemFromCart(
+        cartId,
+        itemId,
+        userId,
+        metadata = {}
+    ) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -434,6 +507,8 @@ class CartService {
                 'ITEM_NOT_FOUND'
             );
         }
+        const beforeCart = cart.toObject();
+        const removedItem = item.toObject ? item.toObject() : item;
 
         const updatedCart = await Cart.removeItemAtomic(cartId, itemId);
 
@@ -441,6 +516,35 @@ class CartService {
             updatedCart,
             userId
         );
+
+        await this._createCartAuditLog({
+            action: AUDIT_ACTIONS.REMOVE_CART_ITEM,
+            cart: discountAdjustedCart,
+            actorId: userId,
+            metadata,
+            changes: {
+                item: {
+                    from: this._summarizeCartItem(removedItem),
+                    to: null,
+                },
+                quantity: {
+                    from: removedItem.quantity,
+                    to: 0,
+                },
+                item_count: {
+                    from: beforeCart.items?.length || 0,
+                    to: discountAdjustedCart.items?.length || 0,
+                },
+                discount: {
+                    from: this._summarizeDiscount(beforeCart.discount),
+                    to: this._summarizeDiscount(discountAdjustedCart.discount),
+                },
+                totals: {
+                    from: this._summarizeTotals(beforeCart),
+                    to: this._summarizeTotals(discountAdjustedCart),
+                },
+            },
+        });
 
         return CartMapper.toResponseDTO(discountAdjustedCart);
     }
@@ -890,6 +994,27 @@ class CartService {
             ...totals,
             item_count: cart?.items?.length || 0,
             items_total_units: CartMapper.calculateTotalUnits(cart?.items || []),
+        };
+    }
+
+    static _summarizeCartItem(item) {
+        if (!item) {
+            return null;
+        }
+
+        return {
+            item_id: item._id || null,
+            product_id: item.product_id || null,
+            variant_id: item.variant_id || null,
+            unit_id: item.unit_id || null,
+            category_id: item.category_id || null,
+            sku: item.sku || null,
+            product_name: item.product_name || null,
+            variant_label: item.variant_label || null,
+            display_name: item.display_name || null,
+            pack_size: item.pack_size || 0,
+            price_at_added: item.price_at_added || 0,
+            quantity: item.quantity || 0,
         };
     }
 

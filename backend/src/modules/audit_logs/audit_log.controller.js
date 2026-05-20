@@ -92,6 +92,14 @@ const getCartLogs = asyncHandler(async (req, res) => {
     return sendLogsResponse(req, res, 'CART');
 });
 
+const getNotificationLogs = asyncHandler(async (req, res) => {
+    return sendLogsResponse(req, res, 'NOTIFICATION');
+});
+
+const getEmailLogs = asyncHandler(async (req, res) => {
+    return sendLogsResponse(req, res, 'EMAIL');
+});
+
 module.exports = {
     getAllLogs,
     getLogById,
@@ -106,5 +114,7 @@ module.exports = {
     getDiscountLogs,
     getReviewLogs,
     getShopContentLogs,
-    getCartLogs
+    getCartLogs,
+    getNotificationLogs,
+    getEmailLogs
 };

@@ -303,7 +303,10 @@ class AuthCoreService {
                 email,
                 otp,
                 expires_in: 5
-            }
+            },
+            actorId: user._id,
+            userId: user._id,
+            auditMetadata: metadata
         });
 
         try {

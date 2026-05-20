@@ -70,6 +70,8 @@ const getDiscountLogsQuerySchema = createDomainLogsQuerySchema('DISCOUNT');
 const getReviewLogsQuerySchema = createDomainLogsQuerySchema('REVIEW');
 const getShopContentLogsQuerySchema = createDomainLogsQuerySchema('SHOP_CONTENT');
 const getCartLogsQuerySchema = createDomainLogsQuerySchema('CART');
+const getNotificationLogsQuerySchema = createDomainLogsQuerySchema('NOTIFICATION');
+const getEmailLogsQuerySchema = createDomainLogsQuerySchema('EMAIL');
 
 module.exports = {
     objectIdSchema,
@@ -87,4 +89,6 @@ module.exports = {
     getReviewLogsQuerySchema,
     getShopContentLogsQuerySchema,
     getCartLogsQuerySchema,
+    getNotificationLogsQuerySchema,
+    getEmailLogsQuerySchema,
 };

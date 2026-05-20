@@ -1,9 +1,12 @@
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const EmailJob = require('./email.model');
 const createTransporter = require('../../config/mail');
 const nodemailer = require('nodemailer');
 const logger = require('../../utils/logger.util');
 const AppError = require('../../utils/appError.util');
+const EmailAuditLogService = require('../audit_logs/email_audit_log/email_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class EmailService {
     static transporter = null;
@@ -124,6 +127,28 @@ class EmailService {
                 preview: testUrl || null
             });
 
+            await this._createEmailAuditLog({
+                action: AUDIT_ACTIONS.EMAIL_SEND_SUCCESS,
+                job: markedSent,
+                actorType: 'SYSTEM',
+                changes: {
+                    status: {
+                        from: 'processing',
+                        to: 'sent'
+                    },
+                    sent_at: {
+                        from: null,
+                        to: markedSent.sent_at
+                    },
+                    transport: {
+                        from: null,
+                        to: {
+                            preview_available: Boolean(testUrl)
+                        }
+                    }
+                }
+            });
+
         } catch (error) {
             const retryCount = job.retry_count + 1;
             const delayInMinutes = Math.min(
@@ -153,14 +178,59 @@ class EmailService {
                 update.$unset.sent_at = "";
             }
 
-            await EmailJob.updateOne(filter, update, { runValidators: true });
+            const failedJob = await EmailJob.findOneAndUpdate(
+                filter,
+                update,
+                { new: true, runValidators: true }
+            );
+
+            if (failedJob) {
+                await this._createEmailAuditLog({
+                    action: AUDIT_ACTIONS.EMAIL_SEND_FAILED,
+                    job: failedJob,
+                    actorType: 'SYSTEM',
+                    changes: {
+                        status: {
+                            from: markedSent ? 'sent' : 'processing',
+                            to: failedJob.status
+                        },
+                        retry_count: {
+                            from: job.retry_count,
+                            to: failedJob.retry_count
+                        },
+                        next_retry_at: {
+                            from: job.scheduled_at || null,
+                            to: failedJob.scheduled_at || null
+                        },
+                        will_retry: {
+                            from: null,
+                            to: failedJob.retry_count < failedJob.max_retries
+                        },
+                        error: {
+                            from: null,
+                            to: this._summarizeError(error)
+                        }
+                    }
+                });
+            }
+
             logger.error({ event: 'email_job_failed', job_id: job._id, error: error.message });
         } finally {
             clearInterval(heartbeat);
         }
     }
 
-    static async enqueueEmail({ to, template, payload, scheduledAt = null }) {
+    static async enqueueEmail({
+        to,
+        template,
+        payload,
+        scheduledAt = null,
+        actorId = null,
+        actorType = 'USER',
+        userId = null,
+        orderId = null,
+        auditMetadata = {}
+    }, options = {}) {
         if (template === 'RESET_PASSWORD_LINK' && !payload?.reset_url) {
             throw new AppError('reset_url is required', 400, 'INVALID_EMAIL_PAYLOAD');
         }
@@ -174,12 +244,42 @@ class EmailService {
                 throw new AppError('Invalid OTP payload', 400, 'INVALID_EMAIL_PAYLOAD');
             }
         }
-        return EmailJob.create({
+        const jobPayload = {
             to,
             template,
             payload,
+            user_id: userId || null,
+            order_id: orderId || null,
             scheduled_at: scheduledAt || new Date()
-        });
+        };
+
+        const job = options.session
+            ? (await EmailJob.create([jobPayload], { session: options.session }))[0]
+            : await EmailJob.create(jobPayload);
+
+        await this._createEmailAuditLog({
+            action: AUDIT_ACTIONS.ENQUEUE_EMAIL,
+            job,
+            actorId,
+            actorType,
+            metadata: auditMetadata,
+            changes: {
+                job: {
+                    from: null,
+                    to: this._summarizeJob(job)
+                },
+                status: {
+                    from: null,
+                    to: job.status
+                },
+                scheduled_at: {
+                    from: null,
+                    to: job.scheduled_at
+                }
+            }
+        }, options);
+
+        return job;
     }
 
     static _escapeHtml(value) {
@@ -249,6 +349,98 @@ class EmailService {
     `;
         }
         return `<h3>Thông báo từ hệ thống</h3><p>Payload: ${this._escapeHtml(JSON.stringify(payload))}</p>`;
+    }
+
+    static _maskEmail(value) {
+        const email = String(value || '').trim().toLowerCase();
+        const [local, domain] = email.split('@');
+
+        if (!local || !domain) {
+            return null;
+        }
+
+        const visible = local.slice(0, Math.min(2, local.length));
+        return `${visible}${'*'.repeat(Math.max(local.length - visible.length, 1))}@${domain}`;
+    }
+
+    static _summarizeJob(job) {
+        return {
+            job_id: job._id,
+            template: job.template,
+            status: job.status,
+            user_id: job.user_id || null,
+            order_id: job.order_id || null,
+            recipient_count: Array.isArray(job.to) ? job.to.length : 0,
+            recipients: Array.isArray(job.to)
+                ? job.to.map(email => this._maskEmail(email)).filter(Boolean)
+                : [],
+            retry_count: job.retry_count || 0,
+            max_retries: job.max_retries || 0,
+            scheduled_at: job.scheduled_at || null,
+            sent_at: job.sent_at || null
+        };
+    }
+
+    static _summarizeError(error) {
+        return {
+            name: error?.name || 'Error',
+            message: String(error?.message || 'Email send failed').slice(0, 250)
+        };
+    }
+
+    static _toAuditValue(value) {
+        if (value === undefined || value === null) {
+            return null;
+        }
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        if (value instanceof mongoose.Types.ObjectId) {
+            return value.toString();
+        }
+        if (Array.isArray(value)) {
+            return value.map(item => this._toAuditValue(item));
+        }
+        if (value?.toObject) {
+            return this._toAuditValue(value.toObject());
+        }
+        if (typeof value === 'object') {
+            return Object.fromEntries(
+                Object.entries(value).map(([key, item]) => [
+                    key,
+                    this._toAuditValue(item),
+                ])
+            );
+        }
+
+        return value;
+    }
+
+    static async _createEmailAuditLog({
+        action,
+        job,
+        actorId = null,
+        actorType = 'USER',
+        metadata = {},
+        changes = {}
+    }, options = {}) {
+        await EmailAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: actorType,
+            action,
+            email_job_id: job._id,
+            user_id: job.user_id || actorId || null,
+            order_id: job.order_id || null,
+            template: job.template,
+            status: job.status || null,
+            recipient_count: Array.isArray(job.to) ? job.to.length : 0,
+            recipients: Array.isArray(job.to)
+                ? job.to.map(email => this._maskEmail(email)).filter(Boolean)
+                : [],
+            changes: this._toAuditValue(changes),
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null
+        }, options);
     }
 }
 

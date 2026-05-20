@@ -1,6 +1,8 @@
 const Notification = require('./notification.model');
 const NotificationMapper = require('./notification.mapper');
 const AppError = require('../../utils/appError.util');
+const NotificationAuditLogService = require('../audit_logs/notification_audit_log/notification_log.service');
+const { AUDIT_ACTIONS } = require('../../constants/audit');
 const logger = require('../../utils/logger.util');
 
 const ERROR_CODES = {
@@ -131,11 +133,12 @@ class NotificationService {
         }
     }
 
-    static async markAsRead(notificationId, userId) {
+    static async markAsRead(notificationId, userId, metadata = {}) {
         try {
             const notification = await Notification.findOne({
                 _id: notificationId,
-                user_id: userId
+                user_id: userId,
+                deleted_at: null
             });
 
             if (!notification) {
@@ -150,8 +153,25 @@ class NotificationService {
                 return NotificationMapper.toDTO(notification);
             }
 
+            const before = {
+                read_at: notification.read_at
+            };
+
             notification.read_at = new Date();
             const updated = await notification.save();
+
+            await this._createNotificationAuditLog({
+                action: AUDIT_ACTIONS.MARK_NOTIFICATION_READ,
+                notification: updated,
+                actorId: userId,
+                metadata,
+                changes: {
+                    before,
+                    after: {
+                        read_at: updated.read_at
+                    }
+                }
+            });
 
             logger.info({
                 event: 'notification_marked_read',
@@ -178,8 +198,15 @@ class NotificationService {
         }
     }
 
-    static async markBulkAsRead(notificationIds, userId) {
+    static async markBulkAsRead(notificationIds, userId, metadata = {}) {
         try {
+            const targetNotifications = await Notification.find({
+                _id: { $in: notificationIds },
+                user_id: userId,
+                read_at: null,
+                deleted_at: null
+            }).select('_id type priority read_at');
+
             const result = await Notification.updateMany(
                 {
                     _id: { $in: notificationIds },
@@ -191,6 +218,21 @@ class NotificationService {
                     read_at: new Date()
                 }
             );
+
+            await this._createNotificationAuditLog({
+                action: AUDIT_ACTIONS.MARK_BULK_NOTIFICATIONS_READ,
+                userId,
+                actorId: userId,
+                notificationIds: targetNotifications.map(item => item._id),
+                metadata,
+                changes: {
+                    requested_ids: notificationIds,
+                    matched_ids: targetNotifications.map(item => item._id),
+                    requested_count: notificationIds.length,
+                    matched_count: targetNotifications.length,
+                    marked_count: result.modifiedCount
+                }
+            });
 
             logger.info({
                 event: 'notifications_marked_bulk_read',
@@ -217,7 +259,7 @@ class NotificationService {
         }
     }
 
-    static async markAllAsRead(userId) {
+    static async markAllAsRead(userId, metadata = {}) {
         try {
             const result = await Notification.updateMany(
                 {
@@ -229,6 +271,16 @@ class NotificationService {
                     read_at: new Date()
                 }
             );
+
+            await this._createNotificationAuditLog({
+                action: AUDIT_ACTIONS.MARK_ALL_NOTIFICATIONS_READ,
+                userId,
+                actorId: userId,
+                metadata,
+                changes: {
+                    marked_count: result.modifiedCount
+                }
+            });
 
             logger.info({
                 event: 'all_notifications_marked_read',
@@ -254,26 +306,39 @@ class NotificationService {
         }
     }
 
-    static async deleteNotification(notificationId, userId) {
+    static async deleteNotification(notificationId, userId, metadata = {}) {
         try {
-            const result = await Notification.updateOne(
-                {
-                    _id: notificationId,
-                    user_id: userId,
-                    deleted_at: null
-                },
-                {
-                    deleted_at: new Date()
-                }
-            );
+            const notification = await Notification.findOne({
+                _id: notificationId,
+                user_id: userId,
+                deleted_at: null
+            });
 
-            if (result.matchedCount === 0) {
+            if (!notification) {
                 throw new AppError(
                     'Notification not found',
                     404,
                     ERROR_CODES.NOTIFICATION_NOT_FOUND
                 );
             }
+
+            notification.deleted_at = new Date();
+            await notification.save();
+
+            await this._createNotificationAuditLog({
+                action: AUDIT_ACTIONS.DELETE_NOTIFICATION_SOFT,
+                notification,
+                actorId: userId,
+                metadata,
+                changes: {
+                    before: {
+                        deleted_at: null
+                    },
+                    after: {
+                        deleted_at: notification.deleted_at
+                    }
+                }
+            });
 
             logger.info({
                 event: 'notification_deleted',
@@ -298,12 +363,27 @@ class NotificationService {
         }
     }
 
-    static async deleteAllNotifications(userId) {
+    static async deleteAllNotifications(userId, metadata = {}) {
         try {
             const result = await Notification.updateMany(
-                { user_id: userId, deleted_at: null },
-                { deleted_at: new Date() }
+                {
+                    user_id: userId,
+                    deleted_at: null
+                },
+                {
+                    deleted_at: new Date()
+                }
             );
+
+            await this._createNotificationAuditLog({
+                action: AUDIT_ACTIONS.DELETE_ALL_NOTIFICATIONS_SOFT,
+                userId,
+                actorId: userId,
+                metadata,
+                changes: {
+                    deleted_count: result.modifiedCount
+                }
+            });
 
             logger.info({
                 event: 'all_notifications_deleted',
@@ -361,6 +441,62 @@ class NotificationService {
                 ERROR_CODES.DATABASE_ERROR
             );
         }
+    }
+
+    static _toAuditValue(value) {
+        if (value == null) return value;
+
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+
+        if (value?._bsontype === 'ObjectId') {
+            return value.toString();
+        }
+
+        if (Array.isArray(value)) {
+            return value.map((item) => this._toAuditValue(item));
+        }
+
+        if (value?.toObject) {
+            return this._toAuditValue(value.toObject());
+        }
+
+        if (typeof value === 'object') {
+            return Object.fromEntries(
+                Object.entries(value).map(([key, item]) => [
+                    key,
+                    this._toAuditValue(item),
+                ])
+            );
+        }
+
+        return value;
+    }
+
+    static async _createNotificationAuditLog({
+        action,
+        notification = null,
+        userId = null,
+        actorId = null,
+        actorType = 'USER',
+        notificationIds = [],
+        metadata = {},
+        changes = {},
+    }) {
+        await NotificationAuditLogService.createLog({
+            actor_id: actorId,
+            actor_type: actorType,
+            action,
+            notification_id: notification?._id || null,
+            notification_ids: notificationIds,
+            user_id: notification?.user_id || userId || actorId,
+            notification_type: notification?.type || null,
+            priority: notification?.priority || null,
+            changes: this._toAuditValue(changes),
+            ip_address: metadata.ip || null,
+            user_agent: metadata.userAgent || null,
+        });
     }
 }
 

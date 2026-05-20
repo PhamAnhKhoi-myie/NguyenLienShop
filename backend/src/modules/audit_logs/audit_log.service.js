@@ -10,6 +10,8 @@ const DiscountAuditLog = require('./discount_audit_log/discount_log.model');
 const ReviewAuditLog = require('./review_audit_log/review_log.model');
 const ShopContentAuditLog = require('./shop_content_audit_log/content_log.model');
 const CartAuditLog = require('./cart_audit_log/cart_log.model');
+const EmailAuditLog = require('./email_audit_log/email_log.model');
+const NotificationAuditLog = require('./notification_audit_log/notification_log.model');
 
 const AppError = require('../../utils/appError.util');
 
@@ -25,7 +27,9 @@ const DOMAIN_MODELS = [
     { name: 'DISCOUNT', model: DiscountAuditLog },
     { name: 'REVIEW', model: ReviewAuditLog },
     { name: 'SHOP_CONTENT', model: ShopContentAuditLog },
-    { name: 'CART', model: CartAuditLog }
+    { name: 'CART', model: CartAuditLog },
+    { name: 'NOTIFICATION', model: NotificationAuditLog },
+    { name: 'EMAIL', model: EmailAuditLog }
 ];
 
 const DOMAIN_ACTION_MAP = {
@@ -133,11 +137,26 @@ const DOMAIN_ACTION_MAP = {
         'UPDATE_SHOP_INFO_STATUS'
     ],
     CART: [
+        'ADD_CART_ITEM',
+        'UPDATE_CART_ITEM_QUANTITY',
+        'REMOVE_CART_ITEM',
         'APPLY_CART_DISCOUNT',
         'REMOVE_CART_DISCOUNT',
         'MERGE_CART',
         'CHECKOUT_CART',
         'CLEAR_CART'
+    ],
+    NOTIFICATION: [
+        'MARK_NOTIFICATION_READ',
+        'MARK_BULK_NOTIFICATIONS_READ',
+        'MARK_ALL_NOTIFICATIONS_READ',
+        'DELETE_NOTIFICATION_SOFT',
+        'DELETE_ALL_NOTIFICATIONS_SOFT',
+    ],
+    EMAIL: [
+        'ENQUEUE_EMAIL',
+        'EMAIL_SEND_SUCCESS',
+        'EMAIL_SEND_FAILED'
     ]
 };
 

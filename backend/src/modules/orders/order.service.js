@@ -8,7 +8,7 @@ const { AUDIT_ACTIONS } = require('../../constants/audit');
 // Import dependencies
 const Variant = require('../products/variant.model');
 const Cart = require('../carts/cart.model');
-const EmailJob = require('../emails/email.model');
+const EmailService = require('../emails/email.service');
 const User = require('../users/user.model');
 const DiscountService = require('../discounts/discount.service');
 const ReviewService = require('../reviews/review.service');
@@ -200,7 +200,7 @@ class OrderService {
             const user = await User.findById(userId).session(session);
 
             if (user && user.email) {
-                await EmailJob.create([{
+                await EmailService.enqueueEmail({
                     to: [user.email],
                     template: 'ORDER_CONFIRMATION',
                     payload: {
@@ -213,8 +213,11 @@ class OrderService {
                             price: item.unit_price.toLocaleString('vi-VN')
                         }))
                     },
-                    status: 'pending'
-                }], { session });
+                    actorId: userId,
+                    userId,
+                    orderId: order._id,
+                    auditMetadata: metadata
+                }, { session });
             }
 
             await Cart.deleteOne({ _id: cartId }, { session });

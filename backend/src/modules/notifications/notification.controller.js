@@ -1,5 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler.util');
 const NotificationService = require('./notification.service');
+const { buildAuditMetadata } = require('../../utils/audit.util');
 const logger = require('../../utils/logger.util');
 
 class NotificationController {
@@ -64,7 +65,8 @@ class NotificationController {
     static markAsRead = asyncHandler(async (req, res) => {
         const notification = await NotificationService.markAsRead(
             req.params.notificationId,
-            req.user.id
+            req.user.id,
+            buildAuditMetadata(req)
         );
 
         res.status(200).json({
@@ -78,7 +80,8 @@ class NotificationController {
 
         const result = await NotificationService.markBulkAsRead(
             notification_ids,
-            req.user.id
+            req.user.id,
+            buildAuditMetadata(req)
         );
 
         logger.info({
@@ -94,7 +97,10 @@ class NotificationController {
     });
 
     static markAllAsRead = asyncHandler(async (req, res) => {
-        const result = await NotificationService.markAllAsRead(req.user.id);
+        const result = await NotificationService.markAllAsRead(
+            req.user.id,
+            buildAuditMetadata(req)
+        );
 
         logger.info({
             event: 'all_notifications_marked_read',
@@ -111,7 +117,8 @@ class NotificationController {
     static deleteNotification = asyncHandler(async (req, res) => {
         await NotificationService.deleteNotification(
             req.params.notificationId,
-            req.user.id
+            req.user.id,
+            buildAuditMetadata(req)
         );
 
         logger.info({
@@ -128,7 +135,8 @@ class NotificationController {
 
     static deleteAllNotifications = asyncHandler(async (req, res) => {
         const result = await NotificationService.deleteAllNotifications(
-            req.user.id
+            req.user.id,
+            buildAuditMetadata(req)
         );
 
         logger.info({

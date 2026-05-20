@@ -132,7 +132,8 @@ const addItem = asyncHandler(async (req, res) => {
     const cart = await CartService.addItemToCart(
         userId,
         userType,
-        itemData
+        itemData,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -155,7 +156,8 @@ const updateItem = asyncHandler(async (req, res) => {
         userCart.id,
         itemId,
         quantity,
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
@@ -176,7 +178,8 @@ const removeItem = asyncHandler(async (req, res) => {
     const cart = await CartService.removeItemFromCart(
         userCart.id,
         itemId,
-        user.userId
+        user.userId,
+        buildAuditMetadata(req)
     );
 
     res.status(200).json({
