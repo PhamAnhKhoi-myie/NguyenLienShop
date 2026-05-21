@@ -16,12 +16,6 @@ class AuthSessionService {
         }
         const userId = decoded.userId;
 
-        console.log('[auth.session.refresh] Decoded token:', {
-            userId,
-            jti: decoded.jti,
-            tokenVersion: decoded.tokenVersion,
-        });
-
         const tokenRecord = await TokenService.findByJti(decoded.jti);
 
         if (!tokenRecord) {
@@ -34,10 +28,7 @@ class AuthSessionService {
 
         if (tokenRecord.replaced_by_jti) {
             console.warn('[SECURITY] Refresh token reuse detected', {
-                userId,
-                jti: decoded.jti,
-                ipAddress,
-                userAgent
+                userId
             });
 
             await TokenService.revokeAllByUser(userId, 'reuse_detected');
@@ -70,11 +61,6 @@ class AuthSessionService {
         if (decoded.tokenVersion !== user.token_version) {
             throw new AppError('Token version không khớp', 401, 'TOKEN_VERSION_MISMATCH');
         }
-
-        console.log('[auth.session.refresh] User validated:', {
-            userId: user._id,
-            tokenVersion: user.token_version
-        });
 
         const newRefreshJti = crypto.randomUUID();
 
