@@ -1,0 +1,167 @@
+const roleEnum = ["CUSTOMER", "VIP", "MANAGER", "ADMIN"];
+const statusEnum = ["ACTIVE", "INACTIVE", "SUSPENDED"];
+
+module.exports = {
+    UserPublic: {
+        type: "object",
+        description: "User DTO returned by UserMapper.toResponseDTO.",
+        properties: {
+            id: {
+                type: "string",
+                pattern: "^[a-fA-F0-9]{24}$",
+                example: "507f1f77bcf86cd799439011",
+            },
+            email: { type: "string", format: "email", example: "user@example.com" },
+            profile: {
+                type: "object",
+                properties: {
+                    full_name: { type: "string", nullable: true, example: "Nguyen Van A" },
+                    avatar_url: {
+                        type: "string",
+                        nullable: true,
+                        example: "https://example.com/avatar.png",
+                    },
+                    phone_number: { type: "string", nullable: true, example: "0912345678" },
+                },
+            },
+            roles: {
+                type: "array",
+                items: { type: "string", enum: roleEnum },
+                example: ["CUSTOMER"],
+            },
+            tier: {
+                type: "string",
+                enum: ["bronze", "silver", "gold", "platinum"],
+                nullable: true,
+                example: "bronze",
+            },
+            status: { type: "string", enum: statusEnum, example: "ACTIVE" },
+            is_email_verified: { type: "boolean", example: false },
+            email_verified_at: {
+                type: "string",
+                format: "date-time",
+                nullable: true,
+                example: null,
+            },
+            last_login_at: {
+                type: "string",
+                format: "date-time",
+                nullable: true,
+                example: null,
+            },
+            created_at: { type: "string", format: "date-time" },
+            updated_at: { type: "string", format: "date-time" },
+        },
+    },
+
+    UserListItem: {
+        $ref: "#/components/schemas/UserPublic",
+    },
+
+    UserProfileInput: {
+        type: "object",
+        description: "At least one field should be provided.",
+        properties: {
+            name: { type: "string", minLength: 2, example: "Nguyen Van B" },
+            avatar: {
+                type: "string",
+                format: "uri",
+                example: "https://example.com/avatar.png",
+            },
+            email: { type: "string", format: "email", example: "new@example.com" },
+            phone: {
+                type: "string",
+                pattern: "^\\d{10,}$",
+                example: "0912345678",
+            },
+        },
+    },
+
+    UpdateUserRolesInput: {
+        type: "object",
+        required: ["roles"],
+        properties: {
+            roles: {
+                type: "array",
+                minItems: 1,
+                items: { type: "string", enum: roleEnum },
+                example: ["MANAGER"],
+            },
+        },
+    },
+
+    UpdateUserStatusInput: {
+        type: "object",
+        required: ["status"],
+        properties: {
+            status: { type: "string", enum: statusEnum, example: "SUSPENDED" },
+        },
+    },
+
+    UserProfileResponse: {
+        type: "object",
+        required: ["success", "data"],
+        properties: {
+            success: { type: "boolean", example: true },
+            data: { $ref: "#/components/schemas/UserPublic" },
+        },
+    },
+
+    UsersListResponse: {
+        type: "object",
+        required: ["success", "data", "pagination"],
+        properties: {
+            success: { type: "boolean", example: true },
+            data: {
+                type: "array",
+                items: { $ref: "#/components/schemas/UserPublic" },
+            },
+            pagination: {
+                type: "object",
+                required: ["current_page", "total_pages", "total_items", "per_page"],
+                properties: {
+                    current_page: { type: "integer", example: 1 },
+                    total_pages: { type: "integer", example: 5 },
+                    total_items: { type: "integer", example: 92 },
+                    per_page: { type: "integer", example: 20 },
+                },
+            },
+        },
+    },
+
+    UpdateUserResponse: {
+        type: "object",
+        required: ["success", "data"],
+        properties: {
+            success: { type: "boolean", example: true },
+            data: { $ref: "#/components/schemas/UserPublic" },
+        },
+    },
+
+    DeleteUserResponse: {
+        type: "object",
+        required: ["success", "data"],
+        properties: {
+            success: { type: "boolean", example: true },
+            data: { $ref: "#/components/schemas/UserPublic" },
+        },
+    },
+
+    UpdateRolesResponse: {
+        type: "object",
+        required: ["success", "data"],
+        properties: {
+            success: { type: "boolean", example: true },
+            data: { $ref: "#/components/schemas/UserPublic" },
+        },
+    },
+
+    UpdateUserStatusResponse: {
+        type: "object",
+        required: ["success", "data"],
+        properties: {
+            success: { type: "boolean", example: true },
+            data: { $ref: "#/components/schemas/UserPublic" },
+        },
+    },
+};
