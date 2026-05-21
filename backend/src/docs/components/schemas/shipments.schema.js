@@ -396,6 +396,33 @@ module.exports = {
             }
         }
     },
+    "AdminUpdateShipmentInput": {
+        "type": "object",
+        "properties": {
+            "carrier": {
+                "type": "string",
+                "enum": [
+                    "GHN",
+                    "GHTK",
+                    "JT",
+                    "GRAB",
+                    "BEST",
+                    "OTHER"
+                ]
+            },
+            "tracking_code": {
+                "type": "string",
+                "minLength": 5,
+                "maxLength": 100,
+                "pattern": "^[A-Z0-9\\-_]+$"
+            },
+            "admin_notes": {
+                "type": "string",
+                "maxLength": 1000
+            }
+        },
+        "description": "If tracking_code is provided, carrier is required."
+    },
     "ShipmentResponse": {
         "type": "object",
         "required": [
@@ -408,6 +435,24 @@ module.exports = {
             },
             "data": {
                 "$ref": "#/components/schemas/ShipmentDTO"
+            }
+        }
+    },
+    "ShipmentsArrayResponse": {
+        "type": "object",
+        "required": [
+            "success",
+            "data"
+        ],
+        "properties": {
+            "success": {
+                "type": "boolean"
+            },
+            "data": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/components/schemas/ShipmentListDTO"
+                }
             }
         }
     },

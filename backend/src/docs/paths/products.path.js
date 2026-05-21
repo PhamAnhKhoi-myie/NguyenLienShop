@@ -574,6 +574,178 @@ module.exports = {
         },
     },
 
+    "/variants/{variantId}/units/validate-tiers": {
+        post: {
+            tags: ["Variant Units"],
+            summary: "Validate price tiers",
+            description: "Admin or manager only. Nested alias under a variant route; the service validates only the submitted tiers.",
+            security: [{ bearerAuth: [] }],
+            parameters: [variantIdParam],
+            requestBody: {
+                required: true,
+                content: {
+                    "application/json": {
+                        schema: { $ref: "#/components/schemas/ValidatePriceTiersInput" },
+                    },
+                },
+            },
+            responses: {
+                200: {
+                    description: "OK",
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/ValidatePriceTiersResponse" },
+                        },
+                    },
+                },
+                400: { $ref: "#/components/responses/BadRequest" },
+                401: { $ref: "#/components/responses/Unauthorized" },
+                403: { $ref: "#/components/responses/Forbidden" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
+    "/variants/{variantId}/units/{unitId}": {
+        get: {
+            tags: ["Variant Units"],
+            summary: "Get variant unit by id",
+            security: [],
+            parameters: [variantIdParam, unitIdParam],
+            responses: {
+                200: {
+                    description: "OK",
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/VariantUnitResponse" },
+                        },
+                    },
+                },
+                400: { $ref: "#/components/responses/BadRequest" },
+                404: { $ref: "#/components/responses/NotFound" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+        patch: {
+            tags: ["Variant Units"],
+            summary: "Update variant unit",
+            description: "Admin or manager only.",
+            security: [{ bearerAuth: [] }],
+            parameters: [variantIdParam, unitIdParam],
+            requestBody: {
+                required: true,
+                content: {
+                    "application/json": {
+                        schema: { $ref: "#/components/schemas/UpdateVariantUnitInput" },
+                    },
+                },
+            },
+            responses: {
+                200: {
+                    description: "OK",
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/VariantUnitResponse" },
+                        },
+                    },
+                },
+                ...authErrors,
+            },
+        },
+        delete: {
+            tags: ["Variant Units"],
+            summary: "Delete variant unit",
+            description: "Admin or manager only.",
+            security: [{ bearerAuth: [] }],
+            parameters: [variantIdParam, unitIdParam],
+            responses: {
+                200: {
+                    description: "OK",
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/VariantUnitDeleteResponse" },
+                        },
+                    },
+                },
+                ...authErrors,
+            },
+        },
+    },
+
+    "/variants/{variantId}/units/{unitId}/price-tiers": {
+        get: {
+            tags: ["Variant Units"],
+            summary: "Get unit price tiers",
+            security: [],
+            parameters: [variantIdParam, unitIdParam],
+            responses: {
+                200: {
+                    description: "OK",
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/PriceTierSummaryResponse" },
+                        },
+                    },
+                },
+                400: { $ref: "#/components/responses/BadRequest" },
+                404: { $ref: "#/components/responses/NotFound" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
+    "/variants/{variantId}/units/{unitId}/max-orderable-qty": {
+        get: {
+            tags: ["Variant Units"],
+            summary: "Get max orderable quantity",
+            security: [],
+            parameters: [variantIdParam, unitIdParam],
+            responses: {
+                200: {
+                    description: "OK",
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/MaxOrderableQtyResponse" },
+                        },
+                    },
+                },
+                400: { $ref: "#/components/responses/BadRequest" },
+                404: { $ref: "#/components/responses/NotFound" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
+    "/variants/{variantId}/units/{unitId}/calculate-price": {
+        post: {
+            tags: ["Variant Units"],
+            summary: "Calculate unit price",
+            security: [],
+            parameters: [variantIdParam, unitIdParam],
+            requestBody: {
+                required: true,
+                content: {
+                    "application/json": {
+                        schema: { $ref: "#/components/schemas/CalculatePriceInput" },
+                    },
+                },
+            },
+            responses: {
+                200: {
+                    description: "OK",
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/CalculatePriceResponse" },
+                        },
+                    },
+                },
+                400: { $ref: "#/components/responses/BadRequest" },
+                404: { $ref: "#/components/responses/NotFound" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
     "/variant-units/{unitId}": {
         get: {
             tags: ["Variant Units"],

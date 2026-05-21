@@ -159,6 +159,51 @@ module.exports = {
             }
         }
     },
+    "/shipments/order/{orderId}": {
+        "get": {
+            "tags": [
+                "Shipments"
+            ],
+            "summary": "Get shipments for order",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "orderId",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "pattern": "^[a-fA-F0-9]{24}$"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Order shipments",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShipmentsArrayResponse"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "$ref": "#/components/responses/BadRequest"
+                },
+                "401": {
+                    "$ref": "#/components/responses/Unauthorized"
+                },
+                "404": {
+                    "$ref": "#/components/responses/NotFound"
+                }
+            }
+        }
+    },
     "/shipments": {
         "get": {
             "tags": [
@@ -618,6 +663,156 @@ module.exports = {
                 },
                 "403": {
                     "$ref": "#/components/responses/Forbidden"
+                }
+            }
+        }
+    },
+    "/shipments/admin/{shipmentId}": {
+        "get": {
+            "tags": [
+                "Shipments"
+            ],
+            "summary": "Get admin shipment detail",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "shipmentId",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "pattern": "^[a-fA-F0-9]{24}$"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Shipment details",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShipmentResponse"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "$ref": "#/components/responses/BadRequest"
+                },
+                "401": {
+                    "$ref": "#/components/responses/Unauthorized"
+                },
+                "403": {
+                    "$ref": "#/components/responses/Forbidden"
+                },
+                "404": {
+                    "$ref": "#/components/responses/NotFound"
+                }
+            }
+        },
+        "patch": {
+            "tags": [
+                "Shipments"
+            ],
+            "summary": "Admin update shipment",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "shipmentId",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "pattern": "^[a-fA-F0-9]{24}$"
+                    }
+                }
+            ],
+            "requestBody": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/AdminUpdateShipmentInput"
+                        }
+                    }
+                }
+            },
+            "responses": {
+                "200": {
+                    "description": "Shipment updated",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShipmentResponse"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "$ref": "#/components/responses/BadRequest"
+                },
+                "401": {
+                    "$ref": "#/components/responses/Unauthorized"
+                },
+                "403": {
+                    "$ref": "#/components/responses/Forbidden"
+                },
+                "404": {
+                    "$ref": "#/components/responses/NotFound"
+                }
+            }
+        },
+        "delete": {
+            "tags": [
+                "Shipments"
+            ],
+            "summary": "Soft delete shipment",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "shipmentId",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "pattern": "^[a-fA-F0-9]{24}$"
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Shipment deleted",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShipmentResponse"
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "$ref": "#/components/responses/BadRequest"
+                },
+                "401": {
+                    "$ref": "#/components/responses/Unauthorized"
+                },
+                "403": {
+                    "$ref": "#/components/responses/Forbidden"
+                },
+                "404": {
+                    "$ref": "#/components/responses/NotFound"
                 }
             }
         }
