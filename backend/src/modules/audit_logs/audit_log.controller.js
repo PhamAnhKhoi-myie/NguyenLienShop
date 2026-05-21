@@ -6,6 +6,10 @@ const sendLogsResponse = async (req, res, domainOverride = null) => {
         page = 1,
         limit = 20,
         actor_id,
+        user_id,
+        order_id,
+        target_type,
+        target_id,
         level,
         domain,
         action
@@ -16,6 +20,10 @@ const sendLogsResponse = async (req, res, domainOverride = null) => {
         action,
         level,
         actor_id,
+        user_id,
+        order_id,
+        target_type,
+        target_id,
         page,
         limit
     };

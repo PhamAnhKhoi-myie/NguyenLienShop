@@ -19,6 +19,7 @@ const notificationRoutes = require("../modules/notifications/notification.routes
 const chatRoutes = require("../modules/chats/chat.routes");
 const paymentRoutes = require("../modules/payments/payment.routes");
 const auditLogRoutes = require("../modules/audit_logs/audit_log.routes");
+const uploadRoutes = require("../modules/uploads/upload.routes");
 
 // ============================================================================
 // ===== MOUNT ALL ROUTES =====
@@ -71,6 +72,9 @@ router.use("/chats", chatRoutes);
 
 // Audit log routes
 router.use("/audit-logs", auditLogRoutes);
+
+// Upload routes
+router.use("/uploads", uploadRoutes);
 
 // Product module routes
 // Routes structure:

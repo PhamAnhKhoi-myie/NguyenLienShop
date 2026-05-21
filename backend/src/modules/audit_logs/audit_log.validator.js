@@ -17,21 +17,23 @@ const baseQuerySchema = {
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     actor_id: objectIdSchema.optional(),
+    user_id: objectIdSchema.optional(),
+    order_id: objectIdSchema.optional(),
+    target_id: objectIdSchema.optional(),
+    target_type: z.string().trim().min(1).optional(),
     level: z.enum(AUDIT_LEVELS).optional(),
     domain: z.enum(ALLOWED_DOMAINS).optional(),
     action: z.enum(ALLOWED_ACTIONS).optional(),
 };
 
 const getAllLogsQuerySchema = z
-    .object({
-        ...baseQuerySchema,
-        domain: z.enum(ALLOWED_DOMAINS),
-    })
+    .object(baseQuerySchema)
     .refine(
         (data) => {
             if (data.domain && data.action) {
                 return DOMAIN_ACTION_MAP[data.domain]?.includes(data.action);
             }
+
             return true;
         },
         {
@@ -50,6 +52,7 @@ const createDomainLogsQuerySchema = (domain) => z
             if (data.action) {
                 return DOMAIN_ACTION_MAP[domain]?.includes(data.action);
             }
+
             return true;
         },
         {

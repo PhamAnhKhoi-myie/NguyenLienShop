@@ -1,4 +1,4 @@
-const CartAuditLog = require('./cart_log.model');
+const AuditLog = require('../audit_log.model');
 const { AUDIT_ACTIONS } = require('../../../constants/audit');
 
 const ACTION_LEVEL_MAP = {
@@ -18,15 +18,18 @@ class CartAuditLogService {
             const level = ACTION_LEVEL_MAP[data.action] || 'INFO';
             const payload = {
                 ...data,
+                domain: 'CART',
                 level,
+                target_type: data.target_type || 'CART',
+                target_id: data.target_id || data.cart_id || null,
             };
 
             if (options.session) {
-                await CartAuditLog.create([payload], { session: options.session });
+                await AuditLog.create([payload], { session: options.session });
                 return;
             }
 
-            await CartAuditLog.create(payload);
+            await AuditLog.create(payload);
         } catch (err) {
             console.error('[CartAuditLog]', err);
 

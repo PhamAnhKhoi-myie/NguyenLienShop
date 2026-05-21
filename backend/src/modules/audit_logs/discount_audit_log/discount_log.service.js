@@ -1,4 +1,4 @@
-const DiscountAuditLog = require('./discount_log.model');
+const AuditLog = require('../audit_log.model');
 const { AUDIT_ACTIONS } = require('../../../constants/audit');
 
 const ACTION_LEVEL_MAP = {
@@ -17,15 +17,18 @@ class DiscountAuditLogService {
             const level = ACTION_LEVEL_MAP[data.action] || 'INFO';
             const payload = {
                 ...data,
+                domain: 'DISCOUNT',
                 level,
+                target_type: data.target_type || 'DISCOUNT',
+                target_id: data.target_id || data.discount_id || null,
             };
 
             if (options.session) {
-                await DiscountAuditLog.create([payload], { session: options.session });
+                await AuditLog.create([payload], { session: options.session });
                 return;
             }
 
-            await DiscountAuditLog.create(payload);
+            await AuditLog.create(payload);
         } catch (err) {
             console.error('[DiscountAuditLog]', err);
 

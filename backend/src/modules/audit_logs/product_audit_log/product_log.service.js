@@ -1,4 +1,4 @@
-const ProductAuditLog = require('./product_log.model');
+const AuditLog = require('../audit_log.model');
 const { AUDIT_ACTIONS } = require('../../../constants/audit');
 
 const ACTION_LEVEL_MAP = {
@@ -17,16 +17,28 @@ const ACTION_LEVEL_MAP = {
 };
 
 class ProductAuditLogService {
-    static async createLog(data) {
+    static async createLog(data, options = {}) {
         try {
-            const level = ACTION_LEVEL_MAP[data.action] || 'INFO';
-
-            await ProductAuditLog.create({
+            const payload = {
                 ...data,
-                level,
-            });
+                domain: 'PRODUCT',
+                level: ACTION_LEVEL_MAP[data.action] || 'INFO',
+                target_type: data.target_type || 'PRODUCT',
+                target_id: data.target_id || data.product_id || data.variant_id || data.unit_id || null,
+            };
+
+            if (options.session) {
+                await AuditLog.create([payload], { session: options.session });
+                return;
+            }
+
+            await AuditLog.create(payload);
         } catch (err) {
             console.error('[ProductAuditLog]', err);
+
+            if (options.throwOnError) {
+                throw err;
+            }
         }
     }
 }

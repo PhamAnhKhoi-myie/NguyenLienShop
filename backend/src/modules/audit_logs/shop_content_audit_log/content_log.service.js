@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const ShopContentAuditLog = require('./content_log.model');
+const ShopContentAuditLog = require('../audit_log.model');
 const { AUDIT_ACTIONS } = require('../../../constants/audit');
 
 const ACTION_LEVEL_MAP = {
@@ -22,6 +22,9 @@ class ShopContentAuditLogService {
             const level = ACTION_LEVEL_MAP[data.action] || 'INFO';
             const payload = {
                 ...data,
+                domain: 'SHOP_CONTENT',
+                target_type: data.target_type || 'SHOP_CONTENT',
+                target_id: data.target_id || data.banner_id || data.announcement_id || data.shop_info_id || null,
                 changes: this.toAuditValue(data.changes),
                 level,
             };

@@ -1,4 +1,4 @@
-const EmailAuditLog = require('./email_log.model');
+const AuditLog = require('../audit_log.model');
 const { AUDIT_ACTIONS } = require('../../../constants/audit');
 
 const ACTION_LEVEL_MAP = {
@@ -12,15 +12,18 @@ class EmailAuditLogService {
         try {
             const payload = {
                 ...data,
+                domain: 'EMAIL',
                 level: ACTION_LEVEL_MAP[data.action] || 'INFO',
+                target_type: data.target_type || 'EMAIL',
+                target_id: data.target_id || data.email_job_id || null,
             };
 
             if (options.session) {
-                await EmailAuditLog.create([payload], { session: options.session });
+                await AuditLog.create([payload], { session: options.session });
                 return;
             }
 
-            await EmailAuditLog.create(payload);
+            await AuditLog.create(payload);
         } catch (err) {
             console.error('[EmailAuditLog]', err);
 

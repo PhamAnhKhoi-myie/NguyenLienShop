@@ -1,36 +1,11 @@
-const UserAuditLog = require('./user_audit_log/user_audit_log.model');
-const UserAddressAuditLog = require('./user_address_audit_log/user_address_log.model');
-const CategoryAuditLog = require('./category_audit_log/category_log.model');
-const AuthAuditLog = require('./auth_audit_log/auth_log.model');
-const PaymentAuditLog = require('./payment_audit_log/payment_log.model');
-const OrderAuditLog = require('./order_audit_log/order_log.model');
-const ShipmentAuditLog = require('./shipment_audit_log/shipment_log.model');
-const ProductAuditLog = require('./product_audit_log/product_log.model');
-const DiscountAuditLog = require('./discount_audit_log/discount_log.model');
-const ReviewAuditLog = require('./review_audit_log/review_log.model');
-const ShopContentAuditLog = require('./shop_content_audit_log/content_log.model');
-const CartAuditLog = require('./cart_audit_log/cart_log.model');
-const EmailAuditLog = require('./email_audit_log/email_log.model');
-const NotificationAuditLog = require('./notification_audit_log/notification_log.model');
-
+const AuditLog = require('./audit_log.model');
 const AppError = require('../../utils/appError.util');
+const { ENTITY_TYPES } = require('../../constants/audit');
 
-const DOMAIN_MODELS = [
-    { name: 'USER', model: UserAuditLog },
-    { name: 'USER_ADDRESS', model: UserAddressAuditLog },
-    { name: 'AUTH', model: AuthAuditLog },
-    { name: 'CATEGORY', model: CategoryAuditLog },
-    { name: 'PAYMENT', model: PaymentAuditLog },
-    { name: 'ORDER', model: OrderAuditLog },
-    { name: 'SHIPMENT', model: ShipmentAuditLog },
-    { name: 'PRODUCT', model: ProductAuditLog },
-    { name: 'DISCOUNT', model: DiscountAuditLog },
-    { name: 'REVIEW', model: ReviewAuditLog },
-    { name: 'SHOP_CONTENT', model: ShopContentAuditLog },
-    { name: 'CART', model: CartAuditLog },
-    { name: 'NOTIFICATION', model: NotificationAuditLog },
-    { name: 'EMAIL', model: EmailAuditLog }
-];
+const DOMAIN_MODELS = Object.values(ENTITY_TYPES).map((name) => ({
+    name,
+    model: AuditLog,
+}));
 
 const DOMAIN_ACTION_MAP = {
     USER: [
@@ -161,67 +136,98 @@ const DOMAIN_ACTION_MAP = {
 };
 
 class AuditLogService {
-    static async getAllLogs({ domain, action, level, actor_id, page = 1, limit = 20 }) {
-        const skip = (page - 1) * limit;
-        const domainConfig = DOMAIN_MODELS.find(d => d.name === domain);
+    static buildFilter({
+        domain,
+        action,
+        level,
+        actor_id,
+        user_id,
+        order_id,
+        target_type,
+        target_id,
+    }) {
+        const filter = {};
 
-        if (!domainConfig) {
+        if (domain) filter.domain = domain;
+        if (action) filter.action = action;
+        if (level) filter.level = level;
+        if (actor_id) filter.actor_id = actor_id;
+        if (user_id) filter.user_id = user_id;
+        if (order_id) filter.order_id = order_id;
+        if (target_type) filter.target_type = target_type;
+        if (target_id) filter.target_id = target_id;
+
+        return filter;
+    }
+
+    static async getAllLogs({
+        domain,
+        action,
+        level,
+        actor_id,
+        user_id,
+        order_id,
+        target_type,
+        target_id,
+        page = 1,
+        limit = 20,
+    }) {
+        const pageNumber = Number(page);
+        const limitNumber = Number(limit);
+        const skip = (pageNumber - 1) * limitNumber;
+
+        if (domain && !DOMAIN_ACTION_MAP[domain]) {
             throw new AppError(
-                'Audit log domain is required',
+                'Invalid audit log domain',
                 400,
-                'AUDIT_DOMAIN_REQUIRED'
+                'INVALID_AUDIT_DOMAIN'
             );
         }
 
-        const filter = {};
-
-        if (action) {
-            filter.action = action;
-        }
-        if (actor_id) filter.actor_id = actor_id;
-        if (level) filter.level = level;
+        const filter = this.buildFilter({
+            domain,
+            action,
+            level,
+            actor_id,
+            user_id,
+            order_id,
+            target_type,
+            target_id,
+        });
 
         const [logs, total] = await Promise.all([
-            domainConfig.model.find(filter)
+            AuditLog.find(filter)
                 .sort({ created_at: -1 })
                 .skip(skip)
-                .limit(limit)
+                .limit(limitNumber)
                 .lean(),
-            domainConfig.model.countDocuments(filter)
+            AuditLog.countDocuments(filter),
         ]);
 
-        const data = logs.map(log => ({
-            ...log,
-            domain: domainConfig.name
-        }));
-
         return {
-            data,
+            data: logs,
             pagination: {
-                current_page: page,
-                total_pages: Math.ceil(total / limit),
+                current_page: pageNumber,
+                total_pages: Math.ceil(total / limitNumber),
                 total_items: total,
-                per_page: limit,
+                per_page: limitNumber,
             },
         };
     }
 
     static async getLogById(id) {
-        const results = await Promise.all(
-            DOMAIN_MODELS.map(d =>
-                d.model.findById(id).lean().then(log => log && { ...log, domain: d.name })
-            )
-        );
+        const log = await AuditLog.findById(id).lean();
 
-        const found = results.find(Boolean);
-        if (found) return found;
+        if (!log) {
+            throw new AppError('Log not found', 404, 'LOG_NOT_FOUND');
+        }
 
-        throw new AppError('Log not found', 404, 'LOG_NOT_FOUND');
+        return log;
     }
 }
 
 module.exports = {
     AuditLogService,
     DOMAIN_MODELS,
-    DOMAIN_ACTION_MAP
+    DOMAIN_ACTION_MAP,
 };

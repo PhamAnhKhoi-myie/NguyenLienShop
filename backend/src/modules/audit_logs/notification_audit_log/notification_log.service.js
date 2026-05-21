@@ -1,4 +1,4 @@
-const NotificationAuditLog = require('./notification_log.model');
+const AuditLog = require('../audit_log.model');
 const { AUDIT_ACTIONS } = require('../../../constants/audit');
 
 const ACTION_LEVEL_MAP = {
@@ -16,17 +16,20 @@ class NotificationAuditLogService {
 
             const payload = {
                 ...data,
+                domain: 'NOTIFICATION',
                 level,
+                target_type: data.target_type || 'NOTIFICATION',
+                target_id: data.target_id || data.notification_id || null,
             };
 
             if (options.session) {
-                await NotificationAuditLog.create([payload], {
+                await AuditLog.create([payload], {
                     session: options.session,
                 });
                 return;
             }
 
-            await NotificationAuditLog.create(payload);
+            await AuditLog.create(payload);
         } catch (err) {
             console.error('[NotificationAuditLog]', err);
 
