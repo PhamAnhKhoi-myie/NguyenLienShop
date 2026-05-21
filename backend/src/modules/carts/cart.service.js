@@ -141,6 +141,32 @@ class CartService {
         return CartMapper.toResponseDTO(cart);
     }
 
+    static async getExistingGuestCart(sessionKey, options = {}) {
+        if (!sessionKey) {
+            throw new AppError(
+                'Session key is required',
+                400,
+                'MISSING_SESSION_KEY'
+            );
+        }
+
+        let cart = await Cart.findOne(
+            { session_key: sessionKey, status: 'ACTIVE' },
+            null,
+            { includeExpired: true }
+        );
+
+        if (!cart) {
+            throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
+        }
+
+        if (options.extend) {
+            cart = await Cart.extendExpiry(cart._id, 7);
+        }
+
+        return CartMapper.toResponseDTO(cart);
+    }
+
     static async addItemToCart(userId, userType, itemData, metadata = {}) {
         const {
             product_id,
@@ -347,7 +373,8 @@ class CartService {
         itemId,
         newQuantity,
         userId,
-        metadata = {}
+        metadata = {},
+        actorType = userId ? 'USER' : 'GUEST'
     ) {
         if (newQuantity < 1 || newQuantity > 999) {
             throw new AppError(
@@ -464,6 +491,7 @@ class CartService {
             action: AUDIT_ACTIONS.UPDATE_CART_ITEM_QUANTITY,
             cart: discountAdjustedCart,
             actorId: userId,
+            actorType,
             metadata,
             changes: {
                 item: {
@@ -492,7 +520,8 @@ class CartService {
         cartId,
         itemId,
         userId,
-        metadata = {}
+        metadata = {},
+        actorType = userId ? 'USER' : 'GUEST'
     ) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
@@ -521,6 +550,7 @@ class CartService {
             action: AUDIT_ACTIONS.REMOVE_CART_ITEM,
             cart: discountAdjustedCart,
             actorId: userId,
+            actorType,
             metadata,
             changes: {
                 item: {
@@ -782,7 +812,13 @@ class CartService {
         }
     }
 
-    static async clearCart(cartId, options = {}, userId, metadata = {}) {
+    static async clearCart(
+        cartId,
+        options = {},
+        userId,
+        metadata = {},
+        actorType = userId ? 'USER' : 'GUEST'
+    ) {
         const cart = await Cart.findById(cartId);
         if (!cart) {
             throw new AppError('Cart not found', 404, 'CART_NOT_FOUND');
@@ -813,6 +849,7 @@ class CartService {
                 action: AUDIT_ACTIONS.CLEAR_CART,
                 cart: discountAdjustedCart,
                 actorId: userId,
+                actorType,
                 metadata,
                 changes: this._buildClearChanges(
                     cart,
@@ -828,6 +865,7 @@ class CartService {
             action: AUDIT_ACTIONS.CLEAR_CART,
             cart: clearedCart,
             actorId: userId,
+            actorType,
             metadata,
             changes: this._buildClearChanges(cart, clearedCart, options),
         });

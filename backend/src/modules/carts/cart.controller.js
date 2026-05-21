@@ -114,6 +114,33 @@ const getUserCart = asyncHandler(async (req, res) => {
     });
 });
 
+const resolveMutableCartContext = async (req, res) => {
+    const user = req.user;
+
+    if (user?.userId) {
+        const cart = await CartService.getUserCart(user.userId, {
+            extend: false,
+        });
+
+        return {
+            cartId: cart.id,
+            userId: user.userId,
+            actorType: 'USER',
+        };
+    }
+
+    const sessionKey = resolveGuestSessionKey(req, res);
+    const cart = await CartService.getExistingGuestCart(sessionKey, {
+        extend: false,
+    });
+
+    return {
+        cartId: cart.id,
+        userId: null,
+        actorType: 'GUEST',
+    };
+};
+
 const addItem = asyncHandler(async (req, res) => {
     const itemData = req.body;
 
@@ -144,20 +171,18 @@ const addItem = asyncHandler(async (req, res) => {
 });
 
 const updateItem = asyncHandler(async (req, res) => {
-    const user = assertAuthenticated(req.user);
     const { itemId } = req.params;
     const { quantity } = req.body;
 
-    const userCart = await CartService.getUserCart(user.userId, {
-        extend: false,
-    });
+    const context = await resolveMutableCartContext(req, res);
 
     const cart = await CartService.updateItemQuantity(
-        userCart.id,
+        context.cartId,
         itemId,
         quantity,
-        user.userId,
-        buildAuditMetadata(req)
+        context.userId,
+        buildAuditMetadata(req),
+        context.actorType
     );
 
     res.status(200).json({
@@ -168,18 +193,16 @@ const updateItem = asyncHandler(async (req, res) => {
 });
 
 const removeItem = asyncHandler(async (req, res) => {
-    const user = assertAuthenticated(req.user);
     const { itemId } = req.params;
 
-    const userCart = await CartService.getUserCart(user.userId, {
-        extend: false,
-    });
+    const context = await resolveMutableCartContext(req, res);
 
     const cart = await CartService.removeItemFromCart(
-        userCart.id,
+        context.cartId,
         itemId,
-        user.userId,
-        buildAuditMetadata(req)
+        context.userId,
+        buildAuditMetadata(req),
+        context.actorType
     );
 
     res.status(200).json({
@@ -249,18 +272,16 @@ const mergeCart = asyncHandler(async (req, res) => {
 });
 
 const clearCart = asyncHandler(async (req, res) => {
-    const user = assertAuthenticated(req.user);
     const { keep_discount } = req.query;
 
-    const userCart = await CartService.getUserCart(user.userId, {
-        extend: false,
-    });
+    const context = await resolveMutableCartContext(req, res);
 
     const cart = await CartService.clearCart(
-        userCart.id,
+        context.cartId,
         { keep_discount },
-        user.userId,
-        buildAuditMetadata(req)
+        context.userId,
+        buildAuditMetadata(req),
+        context.actorType
     );
 
     res.status(200).json({

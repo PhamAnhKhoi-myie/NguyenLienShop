@@ -1115,11 +1115,16 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Carts");
-        expect(route.security).toEqual([{ bearerAuth: [] }]);
+        expect(route.security).toEqual([{ bearerAuth: [] }, {}]);
         expect(route.parameters[0]).toMatchObject({
             in: "query",
             name: "keep_discount",
             schema: { type: "boolean", default: false },
+        });
+        expect(route.parameters[1]).toMatchObject({
+            in: "query",
+            name: "session_key",
+            schema: { type: "string", format: "uuid" },
         });
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/CartResponse"
@@ -1132,6 +1137,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Carts");
+        expect(route.security).toEqual([{ bearerAuth: [] }, {}]);
         expect(route.description).toContain("Thêm sản phẩm vào giỏ hàng");
         expect(route.parameters[0]).toMatchObject({
             in: "query",
@@ -1153,12 +1159,17 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Carts");
-        expect(route.security).toEqual([{ bearerAuth: [] }]);
+        expect(route.security).toEqual([{ bearerAuth: [] }, {}]);
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "itemId",
             required: true,
             schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+        });
+        expect(route.parameters[1]).toMatchObject({
+            in: "query",
+            name: "session_key",
+            schema: { type: "string", format: "uuid" },
         });
         expect(getSchemaRef(route.requestBody)).toBe("#/components/schemas/UpdateCartItemInput");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
@@ -1174,12 +1185,17 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Carts");
-        expect(route.security).toEqual([{ bearerAuth: [] }]);
+        expect(route.security).toEqual([{ bearerAuth: [] }, {}]);
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "itemId",
             required: true,
             schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+        });
+        expect(route.parameters[1]).toMatchObject({
+            in: "query",
+            name: "session_key",
+            schema: { type: "string", format: "uuid" },
         });
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/CartResponse"
@@ -1274,7 +1290,7 @@ describe("swaggerSpec", () => {
     });
 
     it("should define get abandoned carts endpoint correctly", () => {
-        const route = getPath("/api/v1/admin/carts/abandoned", "get");
+        const route = getPath("/api/v1/carts/admin/abandoned", "get");
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Carts");
@@ -1421,7 +1437,7 @@ describe("swaggerSpec", () => {
             ["/api/v1/carts/abandon", "post"],
             ["/api/v1/carts/checkout", "post"],
             ["/api/v1/carts/validate", "get"],
-            ["/api/v1/admin/carts/abandoned", "get"],
+            ["/api/v1/carts/admin/abandoned", "get"],
         ];
 
         cartEndpoints.forEach(([path, method]) => {
@@ -1439,18 +1455,22 @@ describe("swaggerSpec", () => {
         expect(guestGetRoute.security).toEqual([]);
     });
 
-    it("should validate user cart endpoints require auth", () => {
+    it("should validate cart auth modes", () => {
         const userRoute = getPath("/api/v1/carts", "get");
+        const clearRoute = getPath("/api/v1/carts", "delete");
         const addItemRoute = getPath("/api/v1/carts/items", "post");
         const updateItemRoute = getPath("/api/v1/carts/items/{itemId}", "patch");
+        const removeItemRoute = getPath("/api/v1/carts/items/{itemId}", "delete");
 
         expect(userRoute.security).toEqual([{ bearerAuth: [] }]);
-        expect(addItemRoute.security).toBeDefined();
-        expect(updateItemRoute.security).toEqual([{ bearerAuth: [] }]);
+        expect(clearRoute.security).toEqual([{ bearerAuth: [] }, {}]);
+        expect(addItemRoute.security).toEqual([{ bearerAuth: [] }, {}]);
+        expect(updateItemRoute.security).toEqual([{ bearerAuth: [] }, {}]);
+        expect(removeItemRoute.security).toEqual([{ bearerAuth: [] }, {}]);
     });
 
     it("should validate admin cart endpoints require admin role", () => {
-        const adminRoute = getPath("/api/v1/admin/carts/abandoned", "get");
+        const adminRoute = getPath("/api/v1/carts/admin/abandoned", "get");
 
         expect(adminRoute.security).toEqual([{ bearerAuth: [] }]);
         expect(adminRoute.parameters).toBeDefined();
@@ -6251,7 +6271,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shop Info");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("ADMIN ONLY");
+        expect(route.description).toContain("ADMIN/MANAGER");
         expect(route.description).toContain("setup");
         expect(getSchemaRef(route.requestBody)).toBe(
             "#/components/schemas/CreateShopInfoInput"
@@ -6272,7 +6292,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shop Info");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("ADMIN ONLY");
+        expect(route.description).toContain("ADMIN/MANAGER");
         expect(route.description).toContain("partial");
         expect(getSchemaRef(route.requestBody)).toBe(
             "#/components/schemas/UpdateShopInfoInput"
@@ -6361,7 +6381,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shop Info");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("ADMIN ONLY");
+        expect(route.description).toContain("ADMIN/MANAGER");
         expect(route.description).toContain("maintenance");
         expect(getSchemaRef(route.requestBody)).toBe(
             "#/components/schemas/ToggleShopStatusInput"

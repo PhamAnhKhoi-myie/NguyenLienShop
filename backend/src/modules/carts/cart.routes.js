@@ -65,7 +65,7 @@ router.post(
 
 router.patch(
     '/items/:itemId',
-    authenticate,
+    optionalAuthenticate,
     validate({
         params: ItemIdParamSchema,
         body: updateCartItemBodySchema,
@@ -75,7 +75,7 @@ router.patch(
 
 router.delete(
     '/items/:itemId',
-    authenticate,
+    optionalAuthenticate,
     validate({ params: ItemIdParamSchema }),
     CartController.removeItem
 );
@@ -102,7 +102,7 @@ router.post(
 
 router.delete(
     '/',
-    authenticate,
+    optionalAuthenticate,
     validate({ query: clearCartQuerySchema }),
     CartController.clearCart
 );

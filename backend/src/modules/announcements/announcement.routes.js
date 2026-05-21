@@ -29,28 +29,28 @@ router.get('/', optionalAuthenticate, AnnouncementController.getActive);
 router.get(
     '/admin/all',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     AnnouncementController.getAll
 );
 
 router.get(
     '/admin/scheduled',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     AnnouncementController.getScheduled
 );
 
 router.get(
     '/admin/expired',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     AnnouncementController.getExpired
 );
 
 router.get(
     '/admin/deleted',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     AnnouncementController.getDeleted
 );
 
@@ -64,7 +64,7 @@ router.get(
 router.post(
     '/',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({ body: createAnnouncementSchema }),
     AnnouncementController.create
 );
@@ -72,7 +72,7 @@ router.post(
 router.put(
     '/:id',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({
         params: announcementIdParamSchema,
         body: updateAnnouncementSchema
@@ -83,7 +83,7 @@ router.put(
 router.delete(
     '/:id',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({ params: announcementIdParamSchema }),
     AnnouncementController.delete
 );
@@ -91,7 +91,7 @@ router.delete(
 router.post(
     '/:id/restore',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({ params: announcementIdParamSchema }),
     AnnouncementController.restore
 );

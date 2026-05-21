@@ -103,7 +103,14 @@ const logout = asyncHandler(async (req, res) => {
     const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
 
     if (refreshToken) {
-        await authService.logout(refreshToken);
+        try {
+            await authService.logout(refreshToken);
+        } catch (error) {
+            console.warn('[auth.logout] Refresh token revoke skipped', {
+                code: error.code,
+                name: error.name,
+            });
+        }
     }
 
     res.clearCookie(

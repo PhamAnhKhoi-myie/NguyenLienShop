@@ -31,14 +31,14 @@ router.get(
 router.get(
     '/deleted',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     BannerController.getDeleted
 );
 
 router.get(
     '/',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     BannerController.getAll
 );
 
@@ -51,7 +51,7 @@ router.get(
 router.post(
     '/',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({ body: createBannerSchema }),
     BannerController.create
 );
@@ -59,7 +59,7 @@ router.post(
 router.put(
     '/:id',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({
         params: bannerIdParamSchema,
         body: updateBannerSchema
@@ -70,7 +70,7 @@ router.put(
 router.delete(
     '/:id',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({ params: bannerIdParamSchema }),
     BannerController.delete
 );
@@ -78,7 +78,7 @@ router.delete(
 router.post(
     '/:id/restore',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({ params: bannerIdParamSchema }),
     BannerController.restore
 );

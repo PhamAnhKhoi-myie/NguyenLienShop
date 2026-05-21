@@ -116,23 +116,29 @@ class AuthSessionService {
     }
 
     async logout(refreshToken) {
-        const decoded = verifyRefreshToken(refreshToken);
+        let decoded;
+        try {
+            decoded = verifyRefreshToken(refreshToken);
+        } catch (error) {
+            return false;
+        }
 
         const tokenRecord = await TokenService.findByJti(decoded.jti);
 
         if (!tokenRecord) {
-            return;
+            return false;
         }
 
         if (tokenRecord.user_id.toString() !== decoded.userId) {
-            return;
+            return false;
         }
 
         if (!TokenHash.verify(refreshToken, tokenRecord.token_hash)) {
-            return;
+            return false;
         }
 
         await TokenService.revokeByJti(decoded.jti, 'manual');
+        return true;
     }
 
     async logoutAllDevices(userId) {

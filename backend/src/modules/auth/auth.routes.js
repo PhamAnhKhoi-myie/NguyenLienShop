@@ -45,10 +45,8 @@ router.post(
     authController.resetPassword
 );
 
-// ===== AUTHENTICATED =====
 router.post(
     "/logout",
-    authenticate,
     authController.logout
 );
 

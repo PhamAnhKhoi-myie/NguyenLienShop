@@ -6160,13 +6160,20 @@ const swaggerSpec = {
             delete: {
                 tags: ["Carts"],
                 summary: "Clear cart",
-                security: [{ bearerAuth: [] }],
+                security: [{ bearerAuth: [] }, {}],
+                description: "Bearer token clears the user cart. Without Bearer, backend clears the guest cart from guest_cart_session cookie, x-cart-session-key header, or session_key query.",
                 parameters: [
                     {
                         in: "query",
                         name: "keep_discount",
                         schema: { type: "boolean", default: false },
                         description: "Keep promo code after clearing",
+                    },
+                    {
+                        in: "query",
+                        name: "session_key",
+                        schema: { type: "string", format: "uuid" },
+                        description: "Guest cart session key fallback when cookie/header is unavailable",
                     },
                 ],
                 responses: {
@@ -6188,7 +6195,7 @@ const swaggerSpec = {
             post: {
                 tags: ["Carts"],
                 summary: "Add item to cart",
-                security: [{ bearerAuth: [] }],
+                security: [{ bearerAuth: [] }, {}],
                 description: "Thêm sản phẩm vào giỏ hàng. Có thể dùng JWT hoặc ?session_key=UUID (cho khách).",
                 parameters: [
                     {
@@ -6226,13 +6233,20 @@ const swaggerSpec = {
             patch: {
                 tags: ["Carts"],
                 summary: "Update item quantity",
-                security: [{ bearerAuth: [] }],
+                security: [{ bearerAuth: [] }, {}],
+                description: "Bearer token updates the user cart. Without Bearer, backend updates the guest cart from guest_cart_session cookie, x-cart-session-key header, or session_key query.",
                 parameters: [
                     {
                         in: "path",
                         name: "itemId",
                         required: true,
                         schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+                    },
+                    {
+                        in: "query",
+                        name: "session_key",
+                        schema: { type: "string", format: "uuid" },
+                        description: "Guest cart session key fallback when cookie/header is unavailable",
                     },
                 ],
                 requestBody: {
@@ -6261,13 +6275,20 @@ const swaggerSpec = {
             delete: {
                 tags: ["Carts"],
                 summary: "Remove item from cart",
-                security: [{ bearerAuth: [] }],
+                security: [{ bearerAuth: [] }, {}],
+                description: "Bearer token removes from the user cart. Without Bearer, backend removes from the guest cart from guest_cart_session cookie, x-cart-session-key header, or session_key query.",
                 parameters: [
                     {
                         in: "path",
                         name: "itemId",
                         required: true,
                         schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+                    },
+                    {
+                        in: "query",
+                        name: "session_key",
+                        schema: { type: "string", format: "uuid" },
+                        description: "Guest cart session key fallback when cookie/header is unavailable",
                     },
                 ],
                 responses: {
@@ -6424,7 +6445,7 @@ const swaggerSpec = {
                 },
             },
         },
-        "/api/v1/admin/carts/abandoned": {
+        "/api/v1/carts/admin/abandoned": {
             get: {
                 tags: ["Carts"],
                 summary: "Get abandoned carts (admin)",
@@ -9000,7 +9021,7 @@ const swaggerSpec = {
             },
             put: {
                 tags: ["Banners"],
-                summary: "Update banner (Admin)",
+                summary: "Update banner (Admin/Manager)",
                 description: "Update banner details. All fields optional (partial update).",
                 operationId: "updateBanner",
                 security: [{ bearerAuth: [] }],
@@ -9039,7 +9060,7 @@ const swaggerSpec = {
             },
             delete: {
                 tags: ["Banners"],
-                summary: "Delete banner (Admin)",
+                summary: "Delete banner (Admin/Manager)",
                 description: "Soft delete a banner (marks as deleted but retains record).",
                 operationId: "deleteBanner",
                 security: [{ bearerAuth: [] }],
@@ -9077,8 +9098,8 @@ const swaggerSpec = {
         "/api/v1/banners/deleted": {
             get: {
                 tags: ["Banners"],
-                summary: "Get deleted banners (Admin)",
-                description: "admin only: Retrieve deleted banners for recovery. Shows audit trail with deleted_at timestamp.",
+                summary: "Get deleted banners (Admin/Manager)",
+                description: "admin/manager: Retrieve deleted banners for recovery. Shows audit trail with deleted_at timestamp.",
                 operationId: "getDeletedBanners",
                 security: [{ bearerAuth: [] }],
                 responses: {
@@ -9100,8 +9121,8 @@ const swaggerSpec = {
         "/api/v1/banners": {
             get: {
                 tags: ["Banners"],
-                summary: "Get all banners (Admin)",
-                description: "admin only: Retrieve all non-deleted banners (active + scheduled). Optional location filter.",
+                summary: "Get all banners (Admin/Manager)",
+                description: "admin/manager: Retrieve all non-deleted banners (active + scheduled). Optional location filter.",
                 operationId: "getAllBanners",
                 security: [{ bearerAuth: [] }],
                 parameters: [
@@ -9131,8 +9152,8 @@ const swaggerSpec = {
             },
             post: {
                 tags: ["Banners"],
-                summary: "Create banner (Admin)",
-                description: "admin only: Create a new banner. Validation done by middleware. User ID from JWT for audit trail.",
+                summary: "Create banner (Admin/Manager)",
+                description: "admin/manager: Create a new banner. Validation done by middleware. User ID from JWT for audit trail.",
                 operationId: "createBanner",
                 security: [{ bearerAuth: [] }],
                 requestBody: {
@@ -9164,8 +9185,8 @@ const swaggerSpec = {
         "/api/v1/banners/{id}/restore": {
             post: {
                 tags: ["Banners"],
-                summary: "Restore deleted banner (Admin)",
-                description: "admin only: restore a previously deleted banner. User ID from JWT for audit trail.",
+                summary: "Restore deleted banner (Admin/Manager)",
+                description: "admin/manager: restore a previously deleted banner. User ID from JWT for audit trail.",
                 operationId: "restoreBanner",
                 security: [{ bearerAuth: [] }],
                 parameters: [
@@ -9229,7 +9250,7 @@ const swaggerSpec = {
             post: {
                 tags: ['Announcements'],
                 summary: 'Tạo thông báo',
-                description: 'Admin only: Tạo thông báo mới',
+                description: 'Admin/Manager: Tạo thông báo mới',
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
@@ -9307,7 +9328,7 @@ const swaggerSpec = {
             put: {
                 tags: ['Announcements'],
                 summary: 'Cập nhật thông báo',
-                description: 'Admin only: Cập nhật thông báo (hỗ trợ partial update)',
+                description: 'Admin/Manager: Cập nhật thông báo (hỗ trợ partial update)',
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9361,7 +9382,7 @@ const swaggerSpec = {
             delete: {
                 tags: ['Announcements'],
                 summary: 'Xóa thông báo',
-                description: 'Admin only: Soft delete thông báo (có thể restore lại)',
+                description: 'Admin/Manager: Soft delete thông báo (có thể restore lại)',
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9415,7 +9436,7 @@ const swaggerSpec = {
             get: {
                 tags: ['Announcements'],
                 summary: 'Lấy tất cả thông báo',
-                description: 'Admin only: Lấy tất cả thông báo (active + scheduled)',
+                description: 'Admin/Manager: Lấy tất cả thông báo (active + scheduled)',
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9493,7 +9514,7 @@ const swaggerSpec = {
             get: {
                 tags: ['Announcements'],
                 summary: 'Lấy thông báo scheduled',
-                description: 'Admin only: Lấy thông báo chưa bắt đầu (start_at > now)',
+                description: 'Admin/Manager: Lấy thông báo chưa bắt đầu (start_at > now)',
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9544,7 +9565,7 @@ const swaggerSpec = {
             get: {
                 tags: ['Announcements'],
                 summary: 'Lấy thông báo expired',
-                description: 'Admin only: Lấy thông báo đã kết thúc (end_at <= now)',
+                description: 'Admin/Manager: Lấy thông báo đã kết thúc (end_at <= now)',
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9595,7 +9616,7 @@ const swaggerSpec = {
             get: {
                 tags: ['Announcements'],
                 summary: 'Lấy thông báo đã xóa',
-                description: 'Admin only: Lấy danh sách thông báo đã xóa (để recover)',
+                description: 'Admin/Manager: Lấy danh sách thông báo đã xóa (để recover)',
                 security: [{ bearerAuth: [] }],
                 responses: {
                     200: {
@@ -9625,7 +9646,7 @@ const swaggerSpec = {
             post: {
                 tags: ['Announcements'],
                 summary: 'Khôi phục thông báo',
-                description: 'Admin only: Khôi phục thông báo đã xóa',
+                description: 'Admin/Manager: Khôi phục thông báo đã xóa',
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9700,8 +9721,8 @@ const swaggerSpec = {
             },
             post: {
                 tags: ['Shop Info'],
-                summary: 'Create shop information (ADMIN ONLY)',
-                description: 'ADMIN ONLY endpoint. Initialize shop information. Called once during setup. Prevents duplicate creation.',
+                summary: 'Create shop information (ADMIN/MANAGER)',
+                description: 'ADMIN/MANAGER endpoint. Initialize shop information. Called once during setup. Prevents duplicate creation.',
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
@@ -9730,8 +9751,8 @@ const swaggerSpec = {
             },
             patch: {
                 tags: ['Shop Info'],
-                summary: 'Update shop information (ADMIN ONLY)',
-                description: 'ADMIN ONLY endpoint. partial updates allowed. Only provided fields are updated.', security: [{ bearerAuth: [] }],
+                summary: 'Update shop information (ADMIN/MANAGER)',
+                description: 'ADMIN/MANAGER endpoint. partial updates allowed. Only provided fields are updated.', security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
                     content: {
@@ -9866,8 +9887,8 @@ const swaggerSpec = {
         '/api/v1/shop-info/status': {
             patch: {
                 tags: ['Shop Info'],
-                summary: 'Toggle shop status (ADMIN ONLY)',
-                description: 'ADMIN ONLY endpoint. Activate/deactivate shop temporarily (useful for maintenance mode).',
+                summary: 'Toggle shop status (ADMIN/MANAGER)',
+                description: 'ADMIN/MANAGER endpoint. Activate/deactivate shop temporarily (useful for maintenance mode).',
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,

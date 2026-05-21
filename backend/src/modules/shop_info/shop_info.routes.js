@@ -26,7 +26,7 @@ router.get('/next-opening', ShopInfoController.getNextOpeningTime);
 router.post(
     '/',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({ body: createShopInfoSchema }),
     ShopInfoController.createShopInfo
 );
@@ -34,7 +34,7 @@ router.post(
 router.patch(
     '/',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     validate({ body: updateShopInfoSchema }),
     ShopInfoController.updateShopInfo
 );
@@ -42,7 +42,7 @@ router.patch(
 router.patch(
     '/status',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(['ADMIN', 'MANAGER']),
     ShopInfoController.toggleShopStatus
 );
 
