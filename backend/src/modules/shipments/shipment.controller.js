@@ -4,6 +4,10 @@ const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const ShipmentService = require('./shipment.service');
 const { buildAuditMetadata } = require('../../utils/audit.util');
 
+const hasRole = (user, role) =>
+    Array.isArray(user?.roles) &&
+    user.roles.map((item) => String(item).toUpperCase()).includes(role);
+
 // ===== PUBLIC ENDPOINTS (No Auth) =====
 
 const trackShipment = asyncHandler(async (req, res) => {
@@ -146,10 +150,14 @@ const cancelShipment = asyncHandler(async (req, res) => {
     const { shipmentId } = req.params;
     const { reason } = req.body;
 
-    await ShipmentService.getShipment(
-        shipmentId,
-        user.userId
-    );
+    if (hasRole(user, 'ADMIN')) {
+        await ShipmentService.getAdminShipment(shipmentId);
+    } else {
+        await ShipmentService.getShipment(
+            shipmentId,
+            user.userId
+        );
+    }
 
     const cancelledShipment = await ShipmentService.cancelShipment(
         shipmentId,
@@ -169,10 +177,14 @@ const retryShipment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
     const { shipmentId } = req.params;
 
-    await ShipmentService.getShipment(
-        shipmentId,
-        user.userId
-    );
+    if (hasRole(user, 'ADMIN')) {
+        await ShipmentService.getAdminShipment(shipmentId);
+    } else {
+        await ShipmentService.getShipment(
+            shipmentId,
+            user.userId
+        );
+    }
 
     const retriedShipment = await ShipmentService.retryFailedShipment(
         shipmentId,

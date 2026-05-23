@@ -55,6 +55,8 @@ export function getStatusVariant(status) {
             'verified',
             'paid',
             'success',
+            'delivered',
+            'active',
             true,
         ].includes(status)
     ) {
@@ -68,6 +70,10 @@ export function getStatusVariant(status) {
             'CANCELED',
             'SUSPENDED',
             'failed',
+            'cancelled',
+            'returned',
+            'inactive',
+            'expired',
             'deleted',
             false,
         ].includes(status)
@@ -81,6 +87,10 @@ export function getStatusVariant(status) {
             'PROCESSING',
             'SHIPPED',
             'pending',
+            'picked_up',
+            'in_transit',
+            'at_destination',
+            'paused',
             'medium',
             'high',
         ].includes(status)

@@ -4,6 +4,7 @@ import { Link, NavLink } from 'react-router-dom';
 import {
     Bell,
     ChevronDown,
+    LayoutDashboard,
     LogOut,
     Search,
     ShoppingCart,
@@ -16,6 +17,7 @@ import { useAuthStore } from '../features/auth/store/auth.store';
 import { useUnreadNotificationCount } from '../features/notifications/hooks/useNotifications';
 import { ROUTES } from '../shared/constants/routes';
 import { ADMIN_ENTRY_ROLES } from '../shared/constants/roles';
+import { useCartSummary } from '../features/cart/hooks/useCart';
 
 function getUserDisplayName(user) {
     return (
@@ -45,8 +47,13 @@ function hasAdminAccess(user) {
     return roles.some((role) => ADMIN_ENTRY_ROLES.includes(role));
 }
 
-function Header() {
+function getNavLinkClass({ isActive }) {
+    return isActive
+        ? 'text-[var(--color-primary)]'
+        : 'text-[var(--color-text-main)] hover:text-[var(--color-primary)]';
+}
 
+function Header() {
     const [isAccountOpen, setIsAccountOpen] = useState(false);
     const accountMenuRef = useRef(null);
 
@@ -63,10 +70,20 @@ function Header() {
     useClickOutside(accountMenuRef, closeAllDropdowns, isAccountOpen);
 
     const isLoggedIn = Boolean(user);
+    const canAccessAdmin = hasAdminAccess(user);
     const displayName = getUserDisplayName(user);
     const accountLabel = isLoggedIn ? displayName || 'Tài khoản' : 'Khách';
     const initials = getInitials(displayName || user?.email);
     const unreadCount = unreadCountQuery.data?.data?.unread_count || 0;
+
+    const cartSummaryQuery = useCartSummary();
+
+    const cart = cartSummaryQuery.data?.data;
+    const cartItemCount =
+        cart?.item_count ??
+        cart?.totals?.item_count ??
+        cart?.items?.length ??
+        0;
 
     const closeAccountMenu = () => {
         setIsAccountOpen(false);
@@ -89,31 +106,21 @@ function Header() {
                 </Link>
 
                 <nav className="flex items-center gap-4 text-sm font-medium">
-                    <NavLink
-                        to={ROUTES.HOME}
-                        className={({ isActive }) =>
-                            isActive
-                                ? 'text-[var(--color-primary)]'
-                                : 'text-[var(--color-text-main)] hover:text-[var(--color-primary)]'
-                        }
-                    >
+                    <NavLink to={ROUTES.HOME} className={getNavLinkClass}>
                         Trang chủ
                     </NavLink>
 
-                    <NavLink
-                        to={ROUTES.PRODUCTS}
-                        className={({ isActive }) =>
-                            isActive
-                                ? 'text-[var(--color-primary)]'
-                                : 'text-[var(--color-text-main)] hover:text-[var(--color-primary)]'
-                        }
-                    >
+                    <NavLink to={ROUTES.PRODUCTS} className={getNavLinkClass}>
                         Sản phẩm
                     </NavLink>
+
                 </nav>
 
                 <div className="ml-auto hidden w-full max-w-sm items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 md:flex">
-                    <Search size={18} className="text-[var(--color-text-muted)]" />
+                    <Search
+                        size={18}
+                        className="text-[var(--color-text-muted)]"
+                    />
 
                     <input
                         type="search"
@@ -125,12 +132,15 @@ function Header() {
                 <Link
                     to={ROUTES.CART}
                     className="relative rounded-lg border border-[var(--color-border)] p-2 hover:bg-[var(--color-background)]"
+                    aria-label="Giỏ hàng"
                 >
                     <ShoppingCart size={20} />
 
-                    <span className="absolute -right-2 -top-2 rounded-full bg-[var(--color-warning)] px-1.5 text-xs font-semibold text-white">
-                        0
-                    </span>
+                    {cartItemCount > 0 && (
+                        <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-[var(--color-warning)] px-1.5 text-center text-xs font-semibold leading-5 text-white">
+                            {cartItemCount > 99 ? '99+' : cartItemCount}
+                        </span>
+                    )}
                 </Link>
 
                 {isLoggedIn && (
@@ -225,16 +235,6 @@ function Header() {
                                             Thông báo
                                         </Link>
 
-                                        {hasAdminAccess(user) && (
-                                            <Link
-                                                to={ROUTES.ADMIN}
-                                                onClick={closeAccountMenu}
-                                                className="block px-4 py-2 text-sm text-[var(--color-text-main)] hover:bg-[var(--color-background)]"
-                                            >
-                                                Trang quản trị
-                                            </Link>
-                                        )}
-
                                         <button
                                             type="button"
                                             onClick={handleLogout}
@@ -270,6 +270,22 @@ function Header() {
                         </div>
                     )}
                 </div>
+                {canAccessAdmin && (
+                    <NavLink
+                        to={ROUTES.ADMIN}
+                        className={({ isActive }) =>
+                            [
+                                'inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors',
+                                'border border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-sm',
+                                'hover:bg-[var(--color-primary-hover)] hover:border-[var(--color-primary-hover)]',
+                                isActive ? 'ring-2 ring-[var(--color-secondary)]' : '',
+                            ].join(' ')
+                        }
+                    >
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span>Quản trị</span>
+                    </NavLink>
+                )}
             </div>
         </header>
     );

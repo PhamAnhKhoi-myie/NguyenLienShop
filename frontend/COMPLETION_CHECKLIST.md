@@ -55,7 +55,7 @@ Dung checklist nay truoc khi coi mot module FE la xong.
 | Payment | Dat nen | Test VNPAY sandbox khi co order hop le |
 | Account | Dat nen | Test cancel/review tren don PENDING va DELIVERED that |
 | Notifications | Dat nen | Test read/delete voi data thong bao that |
-| Admin | Nen list/action da co | Form create/edit chi tiet cho tung resource con can lam tiep |
+| Admin | Products/categories/variants/variant units, banners/announcements/shop-info, orders, shipments, payments va discounts da co form/action theo contract BE | Users/audit logs con can form/action chi tiet |
 
 ## Manual Test Toi Thieu
 

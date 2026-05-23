@@ -5,12 +5,17 @@ import MainLayout from '../layouts/MainLayout';
 
 import AdminConfiguredPage from '../features/admin/pages/AdminConfiguredPage';
 import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
+import AdminDiscountsPage from '../features/admin/pages/AdminDiscountsPage';
+import AdminOrdersPage from '../features/admin/pages/AdminOrdersPage';
+import AdminPaymentsPage from '../features/admin/pages/AdminPaymentsPage';
+import AdminShipmentsPage from '../features/admin/pages/AdminShipmentsPage';
 import AdminShopInfoPage from '../features/admin/pages/AdminShopInfoPage';
 import AdminVariantsPage from '../features/admin/pages/AdminVariantsPage';
 import AddressesPage from '../features/profile/pages/AddressesPage';
 import CartPage from '../features/cart/pages/CartPage';
 import CheckoutPage from '../features/checkout/pages/CheckoutPage';
 import CheckoutResultPage from '../features/checkout/pages/CheckoutResultPage';
+import ChangePasswordPage from '../features/profile/pages/ChangePasswordPage';
 import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
 import HomePage from '../features/home/pages/HomePage';
 import LoginPage from '../features/auth/pages/LoginPage';
@@ -151,6 +156,14 @@ export const router = createBrowserRouter([
                 ),
             },
             {
+                path: 'profile/change-password',
+                element: (
+                    <ProtectedRoute>
+                        <ChangePasswordPage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
                 path: 'notifications',
                 element: (
                     <ProtectedRoute>
@@ -188,31 +201,19 @@ export const router = createBrowserRouter([
             },
             {
                 path: 'orders',
-                element: adminRoute(
-                    <AdminConfiguredPage resourceKey="orders" />,
-                    ADMIN_ONLY_ROLES
-                ),
+                element: adminRoute(<AdminOrdersPage />, ADMIN_ONLY_ROLES),
             },
             {
                 path: 'payments',
-                element: adminRoute(
-                    <AdminConfiguredPage resourceKey="payments" />,
-                    ADMIN_ONLY_ROLES
-                ),
+                element: adminRoute(<AdminPaymentsPage />, ADMIN_ONLY_ROLES),
             },
             {
                 path: 'shipments',
-                element: adminRoute(
-                    <AdminConfiguredPage resourceKey="shipments" />,
-                    ADMIN_ONLY_ROLES
-                ),
+                element: adminRoute(<AdminShipmentsPage />, ADMIN_ONLY_ROLES),
             },
             {
                 path: 'discounts',
-                element: adminRoute(
-                    <AdminConfiguredPage resourceKey="discounts" />,
-                    ADMIN_ONLY_ROLES
-                ),
+                element: adminRoute(<AdminDiscountsPage />, ADMIN_ONLY_ROLES),
             },
             {
                 path: 'banners',

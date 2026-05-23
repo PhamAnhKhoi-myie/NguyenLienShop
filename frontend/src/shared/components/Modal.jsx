@@ -7,6 +7,8 @@ export default function Modal({
     children,
     footer,
     onClose,
+    panelClassName = '',
+    bodyClassName = '',
 }) {
     if (!open) {
         return null;
@@ -17,7 +19,7 @@ export default function Modal({
             <div
                 role="dialog"
                 aria-modal="true"
-                className="w-full max-w-lg rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl"
+                className={`max-h-[90vh] w-full max-w-lg overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl ${panelClassName}`}
             >
                 <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
                     <h2 className="text-lg font-semibold text-[var(--color-text-main)]">
@@ -33,7 +35,9 @@ export default function Modal({
                     </Button>
                 </div>
 
-                <div className="px-5 py-4">{children}</div>
+                <div className={`max-h-[calc(90vh-130px)] overflow-y-auto px-5 py-4 ${bodyClassName}`}>
+                    {children}
+                </div>
 
                 {footer && (
                     <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4">

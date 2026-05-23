@@ -118,7 +118,7 @@ class VariantUnitService {
             variant_id: variantId,
         }).sort({ pack_size: 1 });
 
-        return units.map(VariantUnitMapper.toResponseDTO);
+        return units.map((unit) => VariantUnitMapper.toResponseDTO(unit));
     }
 
     static async getDefaultVariantUnit(variantId) {

@@ -1,13 +1,19 @@
-import { Filter, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Filter, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import Button from '../../../shared/components/Button';
 import Card, { CardBody, CardHeader } from '../../../shared/components/Card';
 import EmptyState from '../../../shared/components/EmptyState';
 import Input from '../../../shared/components/Input';
 import Loading from '../../../shared/components/Loading';
+import Modal from '../../../shared/components/Modal';
 import Pagination from '../../../shared/components/Pagination';
 import Select from '../../../shared/components/Select';
-import { useAdminList, useAdminMutation } from '../hooks/useAdminResource';
+import AdminResourceForm from './AdminResourceForm';
+import {
+    useAdminDetail,
+    useAdminList,
+    useAdminMutation,
+} from '../hooks/useAdminResource';
 import {
     getPagination,
     getRows,
@@ -96,6 +102,11 @@ function ResourceFilters({ filters, values, onChange, onApply, onReset }) {
 
 export default function AdminResourcePage({ resource }) {
     const [page, setPage] = useState(1);
+    const [formState, setFormState] = useState({
+        open: false,
+        mode: 'create',
+        row: null,
+    });
     const [draftFilters, setDraftFilters] = useState(() =>
         buildInitialFilters(resource.filters)
     );
@@ -107,7 +118,28 @@ export default function AdminResourcePage({ resource }) {
         [appliedFilters, page, resource]
     );
     const listQuery = useAdminList(resource.endpoint, queryParams);
+    const detailEndpoint =
+        resource.form && formState.open && formState.mode === 'edit'
+            ? resource.form.getDetailEndpoint(formState.row)
+            : null;
+    const detailQuery = useAdminDetail(detailEndpoint, {
+        enabled: Boolean(detailEndpoint),
+    });
+    const categoryOptionsQuery = useAdminList(
+        '/categories/all',
+        {},
+        {
+            enabled: Boolean(resource.form?.needsCategoryOptions && formState.open),
+        }
+    );
+    const createMutation = useAdminMutation({ method: 'post' });
+    const patchUpdateMutation = useAdminMutation({ method: 'patch' });
+    const putUpdateMutation = useAdminMutation({ method: 'put' });
     const deleteMutation = useAdminMutation({ method: 'delete' });
+    const updateMutation =
+        resource.form?.updateMethod === 'put'
+            ? putUpdateMutation
+            : patchUpdateMutation;
     const rows = resource.normalizeRows
         ? resource.normalizeRows(listQuery.data)
         : getRows(listQuery.data);
@@ -149,6 +181,67 @@ export default function AdminResourcePage({ resource }) {
         });
     };
 
+    const openCreateForm = () => {
+        createMutation.reset();
+        patchUpdateMutation.reset();
+        putUpdateMutation.reset();
+        setFormState({
+            open: true,
+            mode: 'create',
+            row: null,
+        });
+    };
+
+    const openEditForm = (row) => {
+        createMutation.reset();
+        patchUpdateMutation.reset();
+        putUpdateMutation.reset();
+        setFormState({
+            open: true,
+            mode: 'edit',
+            row,
+        });
+    };
+
+    const closeForm = () => {
+        setFormState({
+            open: false,
+            mode: 'create',
+            row: null,
+        });
+    };
+
+    const handleSave = async (values) => {
+        const form = resource.form;
+        const initialData = detailQuery.data?.data || formState.row || {};
+        const payload = form.toPayload(values, {
+            mode: formState.mode,
+            initialData,
+        });
+
+        if (formState.mode === 'edit') {
+            await updateMutation.mutateAsync({
+                endpoint: form.getUpdateEndpoint(initialData),
+                payload,
+            });
+        } else {
+            await createMutation.mutateAsync({
+                endpoint: form.createEndpoint,
+                payload,
+            });
+        }
+
+        closeForm();
+    };
+
+    const formInitialData =
+        formState.mode === 'edit'
+            ? detailQuery.data?.data || formState.row
+            : null;
+    const formMutation =
+        formState.mode === 'edit' ? updateMutation : createMutation;
+    const categoryOptions = getRows(categoryOptionsQuery.data);
+
     return (
         <div className="space-y-6">
             <Card>
@@ -168,14 +261,22 @@ export default function AdminResourcePage({ resource }) {
                             )}
                         </div>
 
-                        <Button
-                            variant="outline"
-                            isLoading={listQuery.isFetching}
-                            onClick={() => listQuery.refetch()}
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            Tải lại
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                            {resource.form && (
+                                <Button onClick={openCreateForm}>
+                                    <Plus className="h-4 w-4" />
+                                    Thêm mới
+                                </Button>
+                            )}
+                            <Button
+                                variant="outline"
+                                isLoading={listQuery.isFetching}
+                                onClick={() => listQuery.refetch()}
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                Tải lại
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardBody className="space-y-5">
@@ -213,7 +314,8 @@ export default function AdminResourcePage({ resource }) {
                                                 {column.header}
                                             </th>
                                         ))}
-                                        {(resource.rowActions ||
+                                        {(resource.form ||
+                                            resource.rowActions ||
                                             resource.getDeleteEndpoint) && (
                                             <th className="whitespace-nowrap px-4 py-3 text-right">
                                                 Tác vụ
@@ -242,10 +344,25 @@ export default function AdminResourcePage({ resource }) {
                                                         )}
                                                     </td>
                                                 ))}
-                                                {(resource.rowActions ||
+                                                {(resource.form ||
+                                                    resource.rowActions ||
                                                     resource.getDeleteEndpoint) && (
                                                     <td className="whitespace-nowrap px-4 py-3 text-right">
                                                         <div className="flex justify-end gap-2">
+                                                            {resource.form && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() =>
+                                                                        openEditForm(
+                                                                            row
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Pencil className="h-4 w-4" />
+                                                                    Sửa
+                                                                </Button>
+                                                            )}
                                                             {resource.rowActions?.map(
                                                                 (action) => (
                                                                     <Button
@@ -304,6 +421,36 @@ export default function AdminResourcePage({ resource }) {
                     )}
                 </CardBody>
             </Card>
+
+            {resource.form && (
+                <Modal
+                    open={formState.open}
+                    title={
+                        formState.mode === 'edit'
+                            ? `Sửa ${resource.form.title}`
+                            : `Thêm ${resource.form.title}`
+                    }
+                    onClose={closeForm}
+                    panelClassName="max-w-3xl"
+                >
+                    {formState.mode === 'edit' && detailQuery.isLoading ? (
+                        <Loading label="Đang tải dữ liệu..." />
+                    ) : (
+                        <AdminResourceForm
+                            form={resource.form}
+                            mode={formState.mode}
+                            initialData={formInitialData}
+                            optionData={{
+                                categories: categoryOptions,
+                            }}
+                            isLoading={formMutation.isPending}
+                            error={formMutation.error}
+                            onCancel={closeForm}
+                            onSubmit={handleSave}
+                        />
+                    )}
+                </Modal>
+            )}
         </div>
     );
 }

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Bell, MapPin, PackageCheck, UserRound } from 'lucide-react';
+import { Bell, KeyRound, MapPin, PackageCheck, UserRound } from 'lucide-react';
 import { ROUTES } from '../../../shared/constants/routes';
 import { cn } from '../../../shared/utils/cn';
 
@@ -14,6 +14,11 @@ const links = [
         to: ROUTES.ADDRESSES,
         label: 'Địa chỉ',
         icon: MapPin,
+    },
+    {
+        to: ROUTES.CHANGE_PASSWORD,
+        label: 'Mật khẩu',
+        icon: KeyRound,
     },
     {
         to: ROUTES.ORDERS,

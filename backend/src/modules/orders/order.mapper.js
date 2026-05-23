@@ -10,7 +10,7 @@ class OrderMapper {
         return {
             id: doc._id?.toString(),
             order_code: doc.order_code,
-            user_id: doc.user_id?.toString(),
+            user_id: this.transformUserId(doc.user_id),
 
             address_snapshot: {
                 street: doc.address_snapshot?.street,
@@ -171,6 +171,7 @@ class OrderMapper {
 
             customer_notes: detailDTO.customer_notes,
             admin_notes: order.notes || null,
+            customer: this.transformCustomer(order.user_id),
 
             payment_id: detailDTO.payment_id,
             shipment_id: detailDTO.shipment_id,
@@ -284,6 +285,31 @@ class OrderMapper {
 
             review_status: item.review_status || 'pending',
         }));
+    }
+
+    static transformUserId(user) {
+        if (!user) {
+            return null;
+        }
+
+        if (user._id) {
+            return user._id.toString();
+        }
+
+        return user.toString();
+    }
+
+    static transformCustomer(user) {
+        if (!user || !user._id) {
+            return null;
+        }
+
+        return {
+            id: user._id.toString(),
+            email: user.email || null,
+            full_name: user.profile?.full_name || null,
+            phone: user.profile?.phone_number || null,
+        };
     }
 
     static transformItemsForEmail(items) {

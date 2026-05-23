@@ -1,4 +1,13 @@
 import { formatDateTime, formatMoney } from '../utils/adminFormat';
+import {
+    categoryFormConfig,
+    productFormConfig,
+} from './adminCatalogForms';
+import {
+    announcementFormConfig,
+    bannerFormConfig,
+    contentFilterOptions,
+} from './adminContentForms';
 
 const activeStatusOptions = [
     { value: '', label: 'Tất cả trạng thái' },
@@ -43,9 +52,10 @@ function auditActor(row) {
 export const adminResources = {
     products: {
         title: 'Quản lý sản phẩm',
-        description: 'ADMIN/MANAGER quản lý sản phẩm. Form tạo/sửa chi tiết sẽ nối tiếp trên nền bảng này.',
+        description: 'ADMIN/MANAGER tạo, sửa, xóa mềm và quản lý sản phẩm.',
         endpoint: '/products',
         limit: 20,
+        form: productFormConfig,
         filters: [
             { name: 'search', label: 'Tìm kiếm', placeholder: 'Tên sản phẩm...' },
             { name: 'status', label: 'Trạng thái', type: 'select', options: activeStatusOptions },
@@ -63,9 +73,10 @@ export const adminResources = {
     },
     categories: {
         title: 'Quản lý danh mục',
-        description: 'ADMIN/MANAGER quản lý cây danh mục sản phẩm.',
+        description: 'ADMIN/MANAGER tạo, sửa, xóa mềm và quản lý cây danh mục sản phẩm.',
         endpoint: '/categories/all',
         limit: 100,
+        form: categoryFormConfig,
         filters: [
             { name: 'status', label: 'Trạng thái', type: 'select', options: activeStatusOptions },
         ],
@@ -84,12 +95,25 @@ export const adminResources = {
         description: 'ADMIN/MANAGER quản lý banner hiển thị theo vị trí.',
         endpoint: '/banners',
         limit: 50,
+        form: bannerFormConfig,
+        filters: [
+            {
+                name: 'location',
+                label: 'Vị trí',
+                type: 'select',
+                options: [
+                    { value: '', label: 'Tất cả vị trí' },
+                    ...contentFilterOptions.bannerLocations,
+                ],
+            },
+        ],
         columns: [
-            { key: 'title', header: 'Tiêu đề', value: 'title' },
+            { key: 'image', header: 'Ảnh', value: (row) => row.image?.alt_text || row.image?.url },
             { key: 'location', header: 'Vị trí', value: 'location' },
             { key: 'is_active', header: 'Hiển thị', value: 'is_active', type: 'status' },
             { key: 'sort_order', header: 'Thứ tự', value: 'sort_order' },
-            { key: 'created_at', header: 'Ngày tạo', value: 'created_at', type: 'date' },
+            { key: 'start_at', header: 'Bắt đầu', value: 'start_at', type: 'date' },
+            { key: 'end_at', header: 'Kết thúc', value: 'end_at', type: 'date' },
         ],
         getDeleteEndpoint: (row) => `/banners/${row.id || row._id}`,
         deleteConfirm: 'Xóa banner này?',
@@ -99,9 +123,40 @@ export const adminResources = {
         description: 'ADMIN/MANAGER quản lý announcement hiển thị cho khách.',
         endpoint: '/announcements/admin/all',
         limit: 50,
+        form: announcementFormConfig,
+        filters: [
+            {
+                name: 'target',
+                label: 'Đối tượng',
+                type: 'select',
+                options: [
+                    { value: '', label: 'Tất cả đối tượng' },
+                    ...contentFilterOptions.announcementTargets,
+                ],
+            },
+            {
+                name: 'type',
+                label: 'Loại',
+                type: 'select',
+                options: [
+                    { value: '', label: 'Tất cả loại' },
+                    ...contentFilterOptions.announcementTypes,
+                ],
+            },
+            {
+                name: 'activeOnly',
+                label: 'Hiệu lực',
+                type: 'select',
+                options: [
+                    { value: '', label: 'Tất cả' },
+                    { value: 'true', label: 'Đang hiển thị' },
+                ],
+            },
+        ],
         columns: [
             { key: 'title', header: 'Tiêu đề', value: 'title' },
             { key: 'type', header: 'Loại', value: 'type' },
+            { key: 'target', header: 'Đối tượng', value: 'target' },
             { key: 'priority', header: 'Ưu tiên', value: 'priority', type: 'status' },
             { key: 'is_active', header: 'Đang bật', value: 'is_active', type: 'status' },
             { key: 'start_at', header: 'Bắt đầu', value: 'start_at', type: 'date' },

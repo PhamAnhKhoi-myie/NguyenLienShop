@@ -277,8 +277,7 @@ class OrderService {
         }
 
         const order = await Order.findById(orderId)
-            .populate('user_id', 'full_name email phone')
-            .populate('discount.discount_id', 'code name type value')
+            .populate('user_id', 'email profile.full_name profile.phone_number')
             .lean();
 
         if (!order) {
