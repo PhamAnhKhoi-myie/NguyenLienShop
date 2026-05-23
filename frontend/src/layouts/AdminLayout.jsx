@@ -6,6 +6,7 @@ import {
     FileClock,
     Home,
     LayoutDashboard,
+    Layers3,
     LogOut,
     Menu,
     Package,
@@ -23,20 +24,91 @@ import { ROUTES } from '../shared/constants/routes';
 import { cn } from '../shared/utils/cn';
 import { useLogout } from '../features/auth/hooks/useLogout';
 import { useAuthStore } from '../features/auth/store/auth.store';
+import {
+    ADMIN_ONLY_ROLES,
+    CONTENT_MANAGER_ROLES,
+} from '../shared/constants/roles';
 
 const adminNavItems = [
-    { label: 'Tổng quan', to: ROUTES.ADMIN, icon: LayoutDashboard, end: true },
-    { label: 'Sản phẩm', to: ROUTES.ADMIN_PRODUCTS, icon: Package },
-    { label: 'Danh mục', to: ROUTES.ADMIN_CATEGORIES, icon: Boxes },
-    { label: 'Đơn hàng', to: ROUTES.ADMIN_ORDERS, icon: ShoppingBag },
-    { label: 'Thanh toán', to: ROUTES.ADMIN_PAYMENTS, icon: CreditCard },
-    { label: 'Vận chuyển', to: ROUTES.ADMIN_SHIPMENTS, icon: Truck },
-    { label: 'Mã giảm giá', to: ROUTES.ADMIN_DISCOUNTS, icon: Percent },
-    { label: 'Banner', to: ROUTES.ADMIN_BANNERS, icon: BarChart3 },
-    { label: 'Thông báo', to: ROUTES.ADMIN_ANNOUNCEMENTS, icon: Bell },
-    { label: 'Thông tin shop', to: ROUTES.ADMIN_SHOP_INFO, icon: Settings },
-    { label: 'Người dùng', to: ROUTES.ADMIN_USERS, icon: Users },
-    { label: 'Audit logs', to: ROUTES.ADMIN_AUDIT_LOGS, icon: FileClock },
+    {
+        label: 'Tổng quan',
+        to: ROUTES.ADMIN,
+        icon: LayoutDashboard,
+        end: true,
+        roles: CONTENT_MANAGER_ROLES,
+    },
+    {
+        label: 'Sản phẩm',
+        to: ROUTES.ADMIN_PRODUCTS,
+        icon: Package,
+        roles: CONTENT_MANAGER_ROLES,
+    },
+    {
+        label: 'Danh mục',
+        to: ROUTES.ADMIN_CATEGORIES,
+        icon: Boxes,
+        roles: CONTENT_MANAGER_ROLES,
+    },
+    {
+        label: 'Variants',
+        to: ROUTES.ADMIN_VARIANTS,
+        icon: Layers3,
+        roles: CONTENT_MANAGER_ROLES,
+    },
+    {
+        label: 'Banner',
+        to: ROUTES.ADMIN_BANNERS,
+        icon: BarChart3,
+        roles: CONTENT_MANAGER_ROLES,
+    },
+    {
+        label: 'Thông báo shop',
+        to: ROUTES.ADMIN_ANNOUNCEMENTS,
+        icon: Bell,
+        roles: CONTENT_MANAGER_ROLES,
+    },
+    {
+        label: 'Thông tin shop',
+        to: ROUTES.ADMIN_SHOP_INFO,
+        icon: Settings,
+        roles: CONTENT_MANAGER_ROLES,
+    },
+    {
+        label: 'Đơn hàng',
+        to: ROUTES.ADMIN_ORDERS,
+        icon: ShoppingBag,
+        roles: ADMIN_ONLY_ROLES,
+    },
+    {
+        label: 'Vận chuyển',
+        to: ROUTES.ADMIN_SHIPMENTS,
+        icon: Truck,
+        roles: ADMIN_ONLY_ROLES,
+    },
+    {
+        label: 'Thanh toán',
+        to: ROUTES.ADMIN_PAYMENTS,
+        icon: CreditCard,
+        roles: ADMIN_ONLY_ROLES,
+    },
+    {
+        label: 'Mã giảm giá',
+        to: ROUTES.ADMIN_DISCOUNTS,
+        icon: Percent,
+        roles: ADMIN_ONLY_ROLES,
+    },
+    {
+        label: 'Người dùng',
+        to: ROUTES.ADMIN_USERS,
+        icon: Users,
+        roles: ADMIN_ONLY_ROLES,
+    },
+    {
+        label: 'Audit logs',
+        to: ROUTES.ADMIN_AUDIT_LOGS,
+        icon: FileClock,
+        roles: ADMIN_ONLY_ROLES,
+    },
 ];
 
 const getAdminNavClass = ({ isActive }) =>
@@ -52,6 +124,9 @@ export default function AdminLayout() {
     const logoutMutation = useLogout();
     const user = useAuthStore((state) => state.user);
     const roles = user?.roles || [];
+    const visibleNavItems = adminNavItems.filter((item) =>
+        item.roles.some((role) => roles.includes(role))
+    );
     const displayName =
         user?.profile?.full_name || user?.full_name || user?.email || 'Quản trị';
 
@@ -83,7 +158,7 @@ export default function AdminLayout() {
                 </div>
 
                 <nav className="mt-6 space-y-1">
-                    {adminNavItems.map((item) => {
+                    {visibleNavItems.map((item) => {
                         const Icon = item.icon;
 
                         return (

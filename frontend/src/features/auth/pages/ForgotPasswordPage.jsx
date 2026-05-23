@@ -2,9 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
+
 import Button from '../../../shared/components/Button';
 import Input from '../../../shared/components/Input';
 import { ROUTES } from '../../../shared/constants/routes';
+import AuthPageCard from '../components/AuthPageCard';
 import { useForgotPassword } from '../hooks/useForgotPassword';
 
 const forgotPasswordSchema = z.object({
@@ -29,21 +31,16 @@ export default function ForgotPasswordPage() {
         },
     });
 
-    return (
-        <div>
-            <h1 className="text-2xl font-semibold text-[var(--color-text-main)]">
-                Quên mật khẩu
-            </h1>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                Nhập email để nhận mã khôi phục mật khẩu.
-            </p>
+    const onSubmit = (values) => {
+        forgotPasswordMutation.mutate(values);
+    };
 
-            <form
-                className="mt-6 space-y-4"
-                onSubmit={handleSubmit((values) =>
-                    forgotPasswordMutation.mutate(values)
-                )}
-            >
+    return (
+        <AuthPageCard
+            title="Quên mật khẩu"
+            subtitle="Nhập email để nhận mã khôi phục mật khẩu."
+        >
+            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
                 <Input
                     label="Email"
                     type="email"
@@ -75,14 +72,14 @@ export default function ForgotPasswordPage() {
                         ? 'Đang gửi...'
                         : 'Gửi mã khôi phục'}
                 </Button>
-            </form>
 
-            <Link
-                to={ROUTES.RESET_PASSWORD}
-                className="mt-4 block text-center text-sm text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
-            >
-                Đã có mã OTP? Đặt lại mật khẩu
-            </Link>
-        </div>
+                <Link
+                    to={ROUTES.RESET_PASSWORD}
+                    className="block text-center text-sm text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
+                >
+                    Đã có mã OTP? Đặt lại mật khẩu
+                </Link>
+            </form>
+        </AuthPageCard>
     );
 }

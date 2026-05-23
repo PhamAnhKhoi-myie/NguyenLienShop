@@ -2,9 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
+
 import Button from '../../../shared/components/Button';
 import Input from '../../../shared/components/Input';
 import { ROUTES } from '../../../shared/constants/routes';
+import AuthPageCard from '../components/AuthPageCard';
 import { useRegister } from '../hooks/useRegister';
 
 const passwordSchema = z
@@ -58,21 +60,18 @@ export default function RegisterPage() {
     };
 
     return (
-        <div>
-            <h1 className="text-2xl font-semibold text-[var(--color-text-main)]">
-                Đăng ký
-            </h1>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                Tạo tài khoản để theo dõi đơn hàng và lưu địa chỉ giao hàng.
-            </p>
-
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <AuthPageCard
+            title="Đăng ký"
+            subtitle="Tạo tài khoản để mua hàng và theo dõi đơn."
+        >
+            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
                 <Input
                     label="Họ tên"
                     placeholder="Nhập họ tên"
                     error={errors.full_name?.message}
                     {...register('full_name')}
                 />
+
                 <Input
                     label="Email"
                     type="email"
@@ -81,6 +80,7 @@ export default function RegisterPage() {
                     error={errors.email?.message}
                     {...register('email')}
                 />
+
                 <Input
                     label="Mật khẩu"
                     type="password"
@@ -104,14 +104,14 @@ export default function RegisterPage() {
                 >
                     {registerMutation.isPending ? 'Đang tạo...' : 'Tạo tài khoản'}
                 </Button>
-            </form>
 
-            <Link
-                to={ROUTES.LOGIN}
-                className="mt-4 block text-center text-sm text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
-            >
-                Đã có tài khoản? Đăng nhập
-            </Link>
-        </div>
+                <Link
+                    to={ROUTES.LOGIN}
+                    className="block text-center text-sm text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
+                >
+                    Đã có tài khoản? Đăng nhập
+                </Link>
+            </form>
+        </AuthPageCard>
     );
 }

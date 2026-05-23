@@ -59,7 +59,7 @@ class CartMapper {
         const totals = this.calculateCartTotals(doc.items, doc.discount);
 
         return {
-            id: doc._id?.toString(),
+            id: doc._id?.toString?.() || doc.id,
 
             user_id: doc.user_id ? doc.user_id.toString() : null,
             session_key: doc.session_key || null,

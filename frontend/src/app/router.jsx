@@ -1,18 +1,24 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 import AdminLayout from '../layouts/AdminLayout';
-import AuthLayout from '../layouts/AuthLayout';
 import MainLayout from '../layouts/MainLayout';
 
+import AdminConfiguredPage from '../features/admin/pages/AdminConfiguredPage';
 import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
-import AdminSectionPage from '../features/admin/pages/AdminSectionPage';
+import AdminShopInfoPage from '../features/admin/pages/AdminShopInfoPage';
+import AdminVariantsPage from '../features/admin/pages/AdminVariantsPage';
+import AddressesPage from '../features/profile/pages/AddressesPage';
 import CartPage from '../features/cart/pages/CartPage';
 import CheckoutPage from '../features/checkout/pages/CheckoutPage';
+import CheckoutResultPage from '../features/checkout/pages/CheckoutResultPage';
 import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
 import HomePage from '../features/home/pages/HomePage';
 import LoginPage from '../features/auth/pages/LoginPage';
 import NotFoundPage from '../features/home/pages/NotFoundPage';
+import NotificationsPage from '../features/notifications/pages/NotificationsPage';
+import OrderDetailPage from '../features/orders/pages/OrderDetailPage';
 import OrderListPage from '../features/orders/pages/OrderListPage';
+import PaymentReturnPage from '../features/payments/pages/PaymentReturnPage';
 import ProductDetailPage from '../features/products/pages/ProductDetailPage';
 import ProductListPage from '../features/products/pages/ProductListPage';
 import ProfilePage from '../features/profile/pages/ProfilePage';
@@ -21,7 +27,15 @@ import RegisterPage from '../features/auth/pages/RegisterPage';
 import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 import RoleRoute from '../features/auth/components/RoleRoute';
 import { ROUTES } from '../shared/constants/routes';
-import { ADMIN_ENTRY_ROLES } from '../shared/constants/roles';
+import {
+    ADMIN_ENTRY_ROLES,
+    ADMIN_ONLY_ROLES,
+    CONTENT_MANAGER_ROLES,
+} from '../shared/constants/roles';
+
+function adminRoute(element, allowedRoles = CONTENT_MANAGER_ROLES) {
+    return <RoleRoute allowedRoles={allowedRoles}>{element}</RoleRoute>;
+}
 
 export const router = createBrowserRouter([
     {
@@ -45,10 +59,62 @@ export const router = createBrowserRouter([
                 element: <CartPage />,
             },
             {
+                path: 'auth',
+                element: <Navigate to={ROUTES.LOGIN} replace />,
+            },
+            {
+                path: 'auth/login',
+                element: <LoginPage />,
+            },
+            {
+                path: 'auth/register',
+                element: <RegisterPage />,
+            },
+            {
+                path: 'auth/forgot-password',
+                element: <ForgotPasswordPage />,
+            },
+            {
+                path: 'auth/reset-password',
+                element: <ResetPasswordPage />,
+            },
+            {
                 path: 'checkout',
                 element: (
                     <ProtectedRoute>
                         <CheckoutPage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'checkout/success',
+                element: (
+                    <ProtectedRoute>
+                        <CheckoutResultPage status="success" />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'checkout/fail',
+                element: (
+                    <ProtectedRoute>
+                        <CheckoutResultPage status="fail" />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'payment-return',
+                element: (
+                    <ProtectedRoute>
+                        <PaymentReturnPage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'payment/vnpay-return',
+                element: (
+                    <ProtectedRoute>
+                        <PaymentReturnPage />
                     </ProtectedRoute>
                 ),
             },
@@ -61,6 +127,14 @@ export const router = createBrowserRouter([
                 ),
             },
             {
+                path: 'orders/:orderId',
+                element: (
+                    <ProtectedRoute>
+                        <OrderDetailPage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
                 path: 'profile',
                 element: (
                     <ProtectedRoute>
@@ -68,31 +142,21 @@ export const router = createBrowserRouter([
                     </ProtectedRoute>
                 ),
             },
-        ],
-    },
-    {
-        path: '/auth',
-        element: <AuthLayout />,
-        children: [
             {
-                index: true,
-                element: <Navigate to={ROUTES.LOGIN} replace />,
+                path: 'profile/addresses',
+                element: (
+                    <ProtectedRoute>
+                        <AddressesPage />
+                    </ProtectedRoute>
+                ),
             },
             {
-                path: 'login',
-                element: <LoginPage />,
-            },
-            {
-                path: 'register',
-                element: <RegisterPage />,
-            },
-            {
-                path: 'forgot-password',
-                element: <ForgotPasswordPage />,
-            },
-            {
-                path: 'reset-password',
-                element: <ResetPasswordPage />,
+                path: 'notifications',
+                element: (
+                    <ProtectedRoute>
+                        <NotificationsPage />
+                    </ProtectedRoute>
+                ),
             },
         ],
     },
@@ -112,52 +176,71 @@ export const router = createBrowserRouter([
             },
             {
                 path: 'products',
-                element: (
-                    <AdminSectionPage
-                        title="Quản lý sản phẩm"
-                        description="Quản lý sản phẩm, biến thể và đơn vị bán."
-                    />
-                ),
+                element: adminRoute(<AdminConfiguredPage resourceKey="products" />),
             },
             {
                 path: 'categories',
-                element: <AdminSectionPage title="Quản lý danh mục" />,
+                element: adminRoute(<AdminConfiguredPage resourceKey="categories" />),
+            },
+            {
+                path: 'variants',
+                element: adminRoute(<AdminVariantsPage />),
             },
             {
                 path: 'orders',
-                element: <AdminSectionPage title="Quản lý đơn hàng" />,
+                element: adminRoute(
+                    <AdminConfiguredPage resourceKey="orders" />,
+                    ADMIN_ONLY_ROLES
+                ),
             },
             {
                 path: 'payments',
-                element: <AdminSectionPage title="Quản lý thanh toán" />,
+                element: adminRoute(
+                    <AdminConfiguredPage resourceKey="payments" />,
+                    ADMIN_ONLY_ROLES
+                ),
             },
             {
                 path: 'shipments',
-                element: <AdminSectionPage title="Quản lý vận chuyển" />,
+                element: adminRoute(
+                    <AdminConfiguredPage resourceKey="shipments" />,
+                    ADMIN_ONLY_ROLES
+                ),
             },
             {
                 path: 'discounts',
-                element: <AdminSectionPage title="Quản lý mã giảm giá" />,
+                element: adminRoute(
+                    <AdminConfiguredPage resourceKey="discounts" />,
+                    ADMIN_ONLY_ROLES
+                ),
             },
             {
                 path: 'banners',
-                element: <AdminSectionPage title="Quản lý banner" />,
+                element: adminRoute(<AdminConfiguredPage resourceKey="banners" />),
             },
             {
                 path: 'announcements',
-                element: <AdminSectionPage title="Quản lý thông báo" />,
+                element: adminRoute(
+                    <AdminConfiguredPage resourceKey="announcements" />
+                ),
             },
             {
                 path: 'shop-info',
-                element: <AdminSectionPage title="Thông tin cửa hàng" />,
+                element: adminRoute(<AdminShopInfoPage />),
             },
             {
                 path: 'users',
-                element: <AdminSectionPage title="Quản lý người dùng" />,
+                element: adminRoute(
+                    <AdminConfiguredPage resourceKey="users" />,
+                    ADMIN_ONLY_ROLES
+                ),
             },
             {
                 path: 'audit-logs',
-                element: <AdminSectionPage title="Audit logs" />,
+                element: adminRoute(
+                    <AdminConfiguredPage resourceKey="auditLogs" />,
+                    ADMIN_ONLY_ROLES
+                ),
             },
         ],
     },

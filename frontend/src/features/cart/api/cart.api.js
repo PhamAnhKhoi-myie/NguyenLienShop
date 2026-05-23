@@ -38,4 +38,8 @@ export const cartApi = {
     removeItem: (itemId) => axiosClient.delete(`/carts/items/${itemId}`),
     clearCart: (params = {}) => axiosClient.delete('/carts', { params }),
     mergeCart: (payload = {}) => axiosClient.post('/carts/merge', payload),
+    applyDiscount: (payload) => axiosClient.post('/carts/discount', payload),
+    removeDiscount: () => axiosClient.delete('/carts/discount'),
+    validateCart: () => axiosClient.get('/carts/validate'),
+    checkoutCart: () => axiosClient.post('/carts/checkout'),
 };

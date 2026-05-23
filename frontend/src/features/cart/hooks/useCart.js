@@ -87,3 +87,27 @@ export function useMergeCart() {
         onSuccess: invalidateCart,
     });
 }
+
+export function useApplyCartDiscount() {
+    const invalidateCart = useInvalidateCart();
+
+    return useMutation({
+        mutationFn: cartApi.applyDiscount,
+        onSuccess: invalidateCart,
+    });
+}
+
+export function useRemoveCartDiscount() {
+    const invalidateCart = useInvalidateCart();
+
+    return useMutation({
+        mutationFn: cartApi.removeDiscount,
+        onSuccess: invalidateCart,
+    });
+}
+
+export function useValidateCart() {
+    return useMutation({
+        mutationFn: cartApi.validateCart,
+    });
+}
