@@ -1,0 +1,10 @@
+export const ROLES = {
+    CUSTOMER: 'CUSTOMER',
+    VIP: 'VIP',
+    MANAGER: 'MANAGER',
+    ADMIN: 'ADMIN',
+};
+
+export const ADMIN_ENTRY_ROLES = [ROLES.ADMIN, ROLES.MANAGER];
+export const ADMIN_ONLY_ROLES = [ROLES.ADMIN];
+export const CONTENT_MANAGER_ROLES = [ROLES.ADMIN, ROLES.MANAGER];

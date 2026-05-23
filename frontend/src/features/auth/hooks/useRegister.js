@@ -1,0 +1,20 @@
+import { useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../../shared/constants/routes';
+import { authApi } from '../api/auth.api';
+
+export function useRegister() {
+    const navigate = useNavigate();
+
+    return useMutation({
+        mutationFn: authApi.register,
+        onSuccess: () => {
+            navigate(ROUTES.LOGIN, {
+                replace: true,
+                state: {
+                    message: 'Đăng ký thành công. Vui lòng đăng nhập.',
+                },
+            });
+        },
+    });
+}

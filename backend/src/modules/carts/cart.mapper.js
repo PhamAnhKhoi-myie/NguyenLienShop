@@ -9,7 +9,7 @@ class CartMapper {
         const totals = this.calculateCartTotals(doc.items, doc.discount);
 
         return {
-            id: doc._id?.toString(),
+            id: doc._id?.toString?.() || doc.id,
 
             user_id: doc.user_id ? doc.user_id.toString() : null,
             session_key: doc.session_key || null,
@@ -36,7 +36,7 @@ class CartMapper {
         const totals = this.calculateCartTotals(doc.items, doc.discount);
 
         return {
-            id: doc._id?.toString(),
+            id: doc._id?.toString?.() || doc.id,
 
             item_count: doc.items?.length || 0,
             items_total_units: this.calculateTotalUnits(doc.items || []),
@@ -248,7 +248,7 @@ class CartMapper {
         }
 
         return items.map((item) => ({
-            id: item._id?.toString(),
+            id: item._id?.toString?.() || item.id,
 
             product_id: item.product_id?.toString(),
             variant_id: item.variant_id?.toString(),
@@ -277,7 +277,7 @@ class CartMapper {
         }
 
         return items.map((item) => ({
-            id: item._id?.toString(),
+            id: item._id?.toString?.() || item.id,
 
             product_id: item.product_id?.toString(),
             variant_id: item.variant_id?.toString(),
