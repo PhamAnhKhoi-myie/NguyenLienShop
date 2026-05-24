@@ -74,6 +74,7 @@ class UserService {
             full_name: existingUser.profile?.full_name || null,
             phone_number: existingUser.profile?.phone_number || null,
             avatar_url: existingUser.profile?.avatar_url || null,
+            gender: existingUser.profile?.gender || 'UNSPECIFIED',
         };
 
         // ===== MAP NEW DATA =====
@@ -82,6 +83,7 @@ class UserService {
             full_name: updateData["profile.full_name"] ?? oldData.full_name,
             phone_number: updateData["profile.phone_number"] ?? oldData.phone_number,
             avatar_url: updateData["profile.avatar_url"] ?? oldData.avatar_url,
+            gender: updateData["profile.gender"] ?? oldData.gender,
         };
 
         // ===== BUILD CHANGES =====

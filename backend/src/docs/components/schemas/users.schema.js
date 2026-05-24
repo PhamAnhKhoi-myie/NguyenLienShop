@@ -1,5 +1,6 @@
 const roleEnum = ["CUSTOMER", "VIP", "MANAGER", "ADMIN"];
 const statusEnum = ["ACTIVE", "INACTIVE", "SUSPENDED"];
+const genderEnum = ["MALE", "FEMALE", "OTHER", "UNSPECIFIED"];
 
 module.exports = {
     UserPublic: {
@@ -22,6 +23,11 @@ module.exports = {
                         example: "https://example.com/avatar.png",
                     },
                     phone_number: { type: "string", nullable: true, example: "0912345678" },
+                    gender: {
+                        type: "string",
+                        enum: genderEnum,
+                        example: "UNSPECIFIED",
+                    },
                 },
             },
             roles: {
@@ -73,6 +79,11 @@ module.exports = {
                 type: "string",
                 pattern: "^\\d{10,}$",
                 example: "0912345678",
+            },
+            gender: {
+                type: "string",
+                enum: genderEnum,
+                example: "MALE",
             },
         },
     },

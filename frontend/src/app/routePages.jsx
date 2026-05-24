@@ -35,6 +35,12 @@ export const AdminVariantsPage = lazy(() =>
 export const AddressesPage = lazy(() =>
     import('../features/profile/pages/AddressesPage')
 );
+export const BlogDetailPage = lazy(() =>
+    import('../features/blogs/pages/BlogDetailPage')
+);
+export const BlogListPage = lazy(() =>
+    import('../features/blogs/pages/BlogListPage')
+);
 export const CartPage = lazy(() => import('../features/cart/pages/CartPage'));
 export const CheckoutPage = lazy(() =>
     import('../features/checkout/pages/CheckoutPage')

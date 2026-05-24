@@ -6,19 +6,47 @@ const paymentMethodEnum = ["COD", "VNPAY", "MOMO", "CARD"];
 module.exports = {
     OrderAddressSnapshot: {
         type: "object",
-        required: ["street", "district", "city", "phone", "recipient_name"],
+        required: [
+            "receiver_name",
+            "phone",
+            "province_code",
+            "province_name",
+            "ward_code",
+            "ward_name",
+            "detail",
+            "full_address",
+        ],
         properties: {
-            street: { type: "string", minLength: 1, maxLength: 200, example: "123 Le Loi" },
-            district: { type: "string", minLength: 1, maxLength: 100, example: "District 1" },
-            city: { type: "string", minLength: 1, maxLength: 100, example: "Ho Chi Minh City" },
-            postal_code: { type: "string", maxLength: 20, nullable: true, example: "700000" },
-            country: { type: "string", default: "Vietnam", example: "Vietnam" },
+            receiver_name: { type: "string", minLength: 1, maxLength: 100, example: "Nguyen Van A" },
             phone: {
                 type: "string",
-                pattern: "^(?:0[1-9]\\d{8}|0[1-9]\\d{9})$",
+                pattern: "^(0|\\+84)[0-9]{9}$",
                 example: "0912345678",
             },
-            recipient_name: { type: "string", minLength: 2, maxLength: 100, example: "Nguyen Van A" },
+            province_code: { type: "string", pattern: "^\\d{2}$", example: "79" },
+            province_name: { type: "string", example: "Thành phố Hồ Chí Minh" },
+            ward_code: { type: "string", pattern: "^\\d{5}$", example: "26743" },
+            ward_name: { type: "string", example: "Phường Bến Thành" },
+            detail: { type: "string", minLength: 5, maxLength: 255, example: "123 Nguyen Trai" },
+            full_address: { type: "string", example: "123 Nguyen Trai, Phường Bến Thành, Thành phố Hồ Chí Minh" },
+            note: { type: "string", maxLength: 500, nullable: true, example: "Giao giờ hành chính" },
+        },
+    },
+
+    CreateOrderAddressSnapshotInput: {
+        type: "object",
+        required: ["receiver_name", "phone", "province_code", "ward_code", "detail"],
+        properties: {
+            receiver_name: { type: "string", minLength: 1, maxLength: 100, example: "Nguyen Van A" },
+            phone: {
+                type: "string",
+                pattern: "^(0|\\+84)[0-9]{9}$",
+                example: "0912345678",
+            },
+            province_code: { type: "string", pattern: "^\\d{2}$", example: "79" },
+            ward_code: { type: "string", pattern: "^\\d{5}$", example: "26743" },
+            detail: { type: "string", minLength: 5, maxLength: 255, example: "123 Nguyen Trai" },
+            note: { type: "string", maxLength: 500, nullable: true, example: "Giao giờ hành chính" },
         },
     },
 
@@ -311,7 +339,7 @@ module.exports = {
         required: ["cart_id", "address_snapshot"],
         properties: {
             cart_id: { type: "string", pattern: objectIdPattern, example: "507f1f77bcf86cd799439016" },
-            address_snapshot: { $ref: "#/components/schemas/OrderAddressSnapshot" },
+            address_snapshot: { $ref: "#/components/schemas/CreateOrderAddressSnapshotInput" },
             shipping_fee: { type: "number", minimum: 0, default: 0, example: 30000 },
             payment_method: { type: "string", enum: paymentMethodEnum, default: "COD", example: "COD" },
             customer_notes: { type: "string", maxLength: 500, example: "Please deliver in the morning." },

@@ -13,6 +13,8 @@ const EmailService = require('../emails/email.service');
 const User = require('../users/user.model');
 const DiscountService = require('../discounts/discount.service');
 const ReviewService = require('../reviews/review.service');
+const LocationProvince = require('../locations/location_province.model');
+const LocationWard = require('../locations/location_ward.model');
 
 /**
  * ============================================
@@ -67,6 +69,11 @@ class OrderService {
                     'MISSING_ADDRESS'
                 );
             }
+
+            const addressSnapshot = await this.buildAddressSnapshot(
+                shippingData.address_snapshot,
+                session
+            );
 
             const orderCode = await Order.generateOrderCode();
 
@@ -136,7 +143,7 @@ class OrderService {
                 order_code: orderCode,
                 user_id: userId,
 
-                address_snapshot: shippingData.address_snapshot,
+                address_snapshot: addressSnapshot,
                 items: orderItems,
 
                 pricing: {
@@ -1081,6 +1088,85 @@ class OrderService {
         if (!order) return null;
 
         return OrderMapper.toListDTO(order);
+    }
+
+    static async getActiveProvince(provinceCode, session) {
+        const query = LocationProvince.findOne({
+            code: provinceCode,
+            is_active: true,
+        }).select('code name');
+
+        if (session) {
+            query.session(session);
+        }
+
+        const province = await query.lean();
+
+        if (!province) {
+            throw new AppError(
+                'Province not found',
+                400,
+                'INVALID_PROVINCE_CODE'
+            );
+        }
+
+        return province;
+    }
+
+    static async getActiveWard(wardCode, provinceCode, session) {
+        const query = LocationWard.findOne({
+            code: wardCode,
+            province_code: provinceCode,
+            is_active: true,
+        }).select('code name province_code');
+
+        if (session) {
+            query.session(session);
+        }
+
+        const ward = await query.lean();
+
+        if (!ward) {
+            throw new AppError(
+                'Ward not found for province',
+                400,
+                'INVALID_WARD_CODE'
+            );
+        }
+
+        return ward;
+    }
+
+    static buildFullAddress(detail, wardName, provinceName) {
+        return [detail, wardName, provinceName].filter(Boolean).join(', ');
+    }
+
+    static async buildAddressSnapshot(addressSnapshot, session = null) {
+        const province = await this.getActiveProvince(
+            addressSnapshot.province_code,
+            session
+        );
+        const ward = await this.getActiveWard(
+            addressSnapshot.ward_code,
+            addressSnapshot.province_code,
+            session
+        );
+        const detail = addressSnapshot.detail.trim();
+        const note = typeof addressSnapshot.note === 'string'
+            ? addressSnapshot.note.trim() || null
+            : null;
+
+        return {
+            receiver_name: addressSnapshot.receiver_name.trim(),
+            phone: addressSnapshot.phone.trim(),
+            province_code: province.code,
+            province_name: province.name,
+            ward_code: ward.code,
+            ward_name: ward.name,
+            detail,
+            full_address: this.buildFullAddress(detail, ward.name, province.name),
+            note,
+        };
     }
 
     static _assertValidOrderStatus(status) {

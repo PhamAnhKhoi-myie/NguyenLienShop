@@ -2,15 +2,158 @@ const UserAddress = require('./user_addresses.model');
 const UserAddressMapper = require('./user_addresses.mapper');
 const AppError = require('../../utils/appError.util');
 const UserAddressAuditLogService = require('../audit_logs/user_address_audit_log/user_address_log.service');
+const LocationProvince = require('../locations/location_province.model');
+const LocationWard = require('../locations/location_ward.model');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class UserAddressService {
+    static async getActiveProvince(provinceCode, session) {
+        const query = LocationProvince.findOne({
+            code: provinceCode,
+            is_active: true,
+        }).select('code name');
+
+        if (session) {
+            query.session(session);
+        }
+
+        const province = await query.lean();
+
+        if (!province) {
+            throw new AppError(
+                'Province not found',
+                400,
+                'INVALID_PROVINCE_CODE'
+            );
+        }
+
+        return province;
+    }
+
+    static async getActiveWard(wardCode, provinceCode, session) {
+        const query = LocationWard.findOne({
+            code: wardCode,
+            province_code: provinceCode,
+            is_active: true,
+        }).select('code name province_code province_name');
+
+        if (session) {
+            query.session(session);
+        }
+
+        const ward = await query.lean();
+
+        if (!ward) {
+            throw new AppError(
+                'Ward not found for province',
+                400,
+                'INVALID_WARD_CODE'
+            );
+        }
+
+        return ward;
+    }
+
+    static buildFullAddress(detail, wardName, provinceName) {
+        return [detail, wardName, provinceName].filter(Boolean).join(', ');
+    }
+
+    static async buildLocationData(data, existing = null, session = null) {
+        if (
+            existing &&
+            data.province_code &&
+            data.province_code !== existing.province_code &&
+            !data.ward_code
+        ) {
+            throw new AppError(
+                'ward_code is required when province_code changes',
+                400,
+                'WARD_CODE_REQUIRED'
+            );
+        }
+
+        const provinceCode = data.province_code ?? existing?.province_code;
+        const wardCode = data.ward_code ?? existing?.ward_code;
+        const detail = data.detail ?? existing?.detail;
+        const normalizedDetail = typeof detail === 'string' ? detail.trim() : '';
+
+        if (!provinceCode || !wardCode || !normalizedDetail) {
+            throw new AppError(
+                'Complete address location is required',
+                400,
+                'ADDRESS_LOCATION_REQUIRED'
+            );
+        }
+
+        const province = await this.getActiveProvince(provinceCode, session);
+        const ward = await this.getActiveWard(wardCode, provinceCode, session);
+
+        return {
+            province_code: province.code,
+            province_name: province.name,
+            ward_code: ward.code,
+            ward_name: ward.name,
+            detail: normalizedDetail,
+            full_address: this.buildFullAddress(
+                normalizedDetail,
+                ward.name,
+                province.name
+            ),
+        };
+    }
+
+    static getAddressPayload(data) {
+        const payload = {};
+        const fields = ['receiver_name', 'phone', 'is_default'];
+
+        fields.forEach((field) => {
+            if (Object.prototype.hasOwnProperty.call(data, field)) {
+                payload[field] = data[field];
+            }
+        });
+
+        if (Object.prototype.hasOwnProperty.call(data, 'note')) {
+            payload.note = data.note || null;
+        }
+
+        return payload;
+    }
+
+    static toAuditSnapshot(address) {
+        return {
+            receiver_name: address.receiver_name,
+            phone: address.phone,
+            province_code: address.province_code,
+            province_name: address.province_name,
+            ward_code: address.ward_code,
+            ward_name: address.ward_name,
+            detail: address.detail,
+            full_address: address.full_address,
+            note: address.note || null,
+            is_default: address.is_default,
+        };
+    }
+
+    static buildChanges(oldData, newData) {
+        const changes = {};
+
+        Object.keys(newData).forEach((key) => {
+            if (oldData[key] !== newData[key]) {
+                changes[key] = {
+                    from: oldData[key],
+                    to: newData[key],
+                };
+            }
+        });
+
+        return changes;
+    }
+
     static async createAddress(userId, data, metadata = {}) {
         const session = await UserAddress.startSession();
         session.startTransaction();
 
         try {
-            // Count within transaction to prevent race condition
             const count = await UserAddress.countDocuments(
                 { user_id: userId }
             ).session(session);
@@ -23,6 +166,8 @@ class UserAddressService {
                 );
             }
 
+            const locationData = await this.buildLocationData(data, null, session);
+
             if (data.is_default) {
                 await UserAddress.updateMany(
                     { user_id: userId, is_default: true },
@@ -34,7 +179,11 @@ class UserAddressService {
             }
 
             const address = await UserAddress.create(
-                [{ user_id: userId, ...data }],
+                [{
+                    user_id: userId,
+                    ...this.getAddressPayload(data),
+                    ...locationData,
+                }],
                 { session }
             );
 
@@ -42,7 +191,6 @@ class UserAddressService {
 
             const created = address[0];
 
-            // ===== AUDIT LOG =====
             try {
                 await UserAddressAuditLogService.createLog({
                     actor_id: userId,
@@ -81,7 +229,9 @@ class UserAddressService {
     }
 
     static async getAddressesByUserId(userId) {
-        const addresses = await UserAddress.find({ user_id: userId }).sort({ created_at: -1 });
+        const addresses = await UserAddress.find({ user_id: userId })
+            .sort({ created_at: -1 });
+
         return addresses.map(UserAddressMapper.toResponseDTO);
     }
 
@@ -90,7 +240,6 @@ class UserAddressService {
         session.startTransaction();
 
         try {
-            // ===== LẤY DỮ LIỆU CŨ =====
             const address = await UserAddress.findOne(
                 { _id: addressId, user_id: userId }
             ).session(session);
@@ -101,14 +250,12 @@ class UserAddressService {
 
             const oldIsDefault = address.is_default;
 
-            // ===== CLEAR DEFAULT CŨ =====
             await UserAddress.updateMany(
                 { user_id: userId, is_default: true },
                 { is_default: false },
                 { session }
             );
 
-            // ===== SET DEFAULT MỚI =====
             await UserAddress.updateOne(
                 { _id: addressId, user_id: userId },
                 { is_default: true },
@@ -117,7 +264,6 @@ class UserAddressService {
 
             await session.commitTransaction({ writeConcern: { w: 'majority' } });
 
-            // ===== AUDIT LOG =====
             if (oldIsDefault !== true) {
                 try {
                     await UserAddressAuditLogService.createLog({
@@ -163,7 +309,6 @@ class UserAddressService {
         session.startTransaction();
 
         try {
-            // ===== LẤY DỮ LIỆU CŨ =====
             const existing = await UserAddress.findOne(
                 { _id: addressId, user_id: userId }
             ).session(session);
@@ -172,7 +317,6 @@ class UserAddressService {
                 throw new AppError('Address not found', 404, 'ADDRESS_NOT_FOUND');
             }
 
-            // ===== VALIDATION LOGIC CŨ =====
             if (data.is_default === false && existing.is_default) {
                 throw new AppError(
                     'Cannot unset default address directly',
@@ -189,46 +333,33 @@ class UserAddressService {
                 );
             }
 
-            // ===== BUILD oldData / newData =====
-            const oldData = {
-                receiver_name: existing.receiver_name,
-                phone: existing.phone,
-                address_line: existing.address_line,
-                city: existing.city,
-                is_default: existing.is_default,
-            };
+            const locationFields = ['province_code', 'ward_code', 'detail'];
+            const updateData = this.getAddressPayload(data);
 
-            const newData = {
-                receiver_name: data.receiver_name ?? oldData.receiver_name,
-                phone: data.phone ?? oldData.phone,
-                address_line: data.address_line ?? oldData.address_line,
-                city: data.city ?? oldData.city,
-                is_default: data.is_default ?? oldData.is_default,
-            };
-
-            // ===== BUILD changes (giống USER) =====
-            const changes = {};
-
-            for (const key in newData) {
-                if (oldData[key] !== newData[key]) {
-                    changes[key] = {
-                        from: oldData[key],
-                        to: newData[key],
-                    };
-                }
+            if (
+                locationFields.some((field) =>
+                    Object.prototype.hasOwnProperty.call(data, field)
+                )
+            ) {
+                Object.assign(
+                    updateData,
+                    await this.buildLocationData(data, existing, session)
+                );
             }
 
-            // ===== UPDATE =====
+            const oldData = this.toAuditSnapshot(existing);
+
             const address = await UserAddress.findOneAndUpdate(
                 { _id: addressId, user_id: userId },
-                data,
+                updateData,
                 { new: true, runValidators: true, session }
             );
 
-            // ===== COMMIT =====
+            const newData = this.toAuditSnapshot(address);
+            const changes = this.buildChanges(oldData, newData);
+
             await session.commitTransaction({ writeConcern: { w: 'majority' } });
 
-            // ===== AUDIT LOG =====
             if (Object.keys(changes).length > 0) {
                 try {
                     await UserAddressAuditLogService.createLog({
@@ -268,7 +399,6 @@ class UserAddressService {
         session.startTransaction();
 
         try {
-            // ===== LẤY DỮ LIỆU CŨ =====
             const existing = await UserAddress.findOne(
                 { _id: addressId, user_id: userId, deleted_at: null }
             ).session(session);
@@ -278,8 +408,6 @@ class UserAddressService {
             }
 
             const oldIsDefault = existing.is_default;
-
-            // ===== DELETE =====
             const deletedAt = new Date();
 
             const address = await UserAddress.findOneAndUpdate(
@@ -292,7 +420,6 @@ class UserAddressService {
                 { new: true, session }
             );
 
-            // ===== FIX BUG: CHECK TRƯỚC UPDATE =====
             if (oldIsDefault) {
                 const nextDefault = await UserAddress.findOne(
                     { user_id: userId, deleted_at: null }
@@ -311,7 +438,6 @@ class UserAddressService {
 
             await session.commitTransaction();
 
-            // ===== AUDIT LOG =====
             try {
                 await UserAddressAuditLogService.createLog({
                     actor_id: actorId,

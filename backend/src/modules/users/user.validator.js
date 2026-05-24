@@ -24,6 +24,7 @@ const updateUserBodySchema = z.object({
     avatar: z.string().url().optional(),
     email: z.string().email().optional(),
     phone: z.string().regex(/^\d{10,}$/).optional(),
+    gender: z.enum(["MALE", "FEMALE", "OTHER", "UNSPECIFIED"]).optional(),
 });
 
 const updateUserRolesBodySchema = z.object({

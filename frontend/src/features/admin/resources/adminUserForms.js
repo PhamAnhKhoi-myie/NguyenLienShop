@@ -21,6 +21,13 @@ export const userTierOptions = [
     { value: 'platinum', label: 'platinum' },
 ];
 
+export const userGenderOptions = [
+    { value: 'UNSPECIFIED', label: 'Chưa cập nhật' },
+    { value: 'MALE', label: 'Nam' },
+    { value: 'FEMALE', label: 'Nữ' },
+    { value: 'OTHER', label: 'Khác' },
+];
+
 const optionalUrlSchema = z
     .string()
     .trim()
@@ -50,18 +57,21 @@ export const userProfileFormConfig = {
             .email('Email không hợp lệ'),
         phone: optionalPhoneSchema,
         avatar: optionalUrlSchema,
+        gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED']),
     }),
     defaultValues: {
         name: '',
         email: '',
         phone: '',
         avatar: '',
+        gender: 'UNSPECIFIED',
     },
     toFormValues: (user = {}) => ({
         name: user.profile?.full_name || '',
         email: user.email || '',
         phone: user.profile?.phone_number || '',
         avatar: user.profile?.avatar_url || '',
+        gender: user.profile?.gender || 'UNSPECIFIED',
     }),
     toPayload: (values) => {
         const payload = {
@@ -80,6 +90,8 @@ export const userProfileFormConfig = {
             payload.avatar = values.avatar.trim();
         }
 
+        payload.gender = values.gender;
+
         return payload;
     },
     fields: [
@@ -87,6 +99,12 @@ export const userProfileFormConfig = {
         { name: 'email', label: 'Email', type: 'email' },
         { name: 'phone', label: 'Số điện thoại' },
         { name: 'avatar', label: 'Avatar URL', placeholder: 'https://...' },
+        {
+            name: 'gender',
+            label: 'Giới tính',
+            type: 'select',
+            options: userGenderOptions,
+        },
     ],
 };
 

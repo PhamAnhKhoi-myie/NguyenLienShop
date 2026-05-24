@@ -62,6 +62,14 @@ export const uploadApi = {
             tags: ['banner'],
         }),
 
+    uploadBlogThumbnail: (file) =>
+        uploadApi.uploadImage({
+            file,
+            asset_type: 'blog',
+            folder: 'blogs',
+            tags: ['blog', 'thumbnail'],
+        }),
+
     uploadProductImage: (file) =>
         uploadApi.uploadImage({
             file,

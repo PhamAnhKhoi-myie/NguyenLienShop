@@ -24,7 +24,7 @@ const tagSchema = z
 const cloudinarySignatureBodySchema = z
     .object({
         asset_type: z
-            .enum(['product', 'banner', 'announcement', 'shop_info', 'avatar', 'misc'])
+            .enum(['product', 'banner', 'announcement', 'shop_info', 'avatar', 'blog', 'misc'])
             .default('misc'),
         folder: folderSchema.optional(),
         public_id: publicIdSchema.optional(),

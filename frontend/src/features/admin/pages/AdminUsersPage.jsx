@@ -28,6 +28,7 @@ import {
 } from '../hooks/useAdminResource';
 import {
     userProfileFormConfig,
+    userGenderOptions,
     userRoleOptions,
     userRolesSchema,
     userStatusFormConfig,
@@ -44,6 +45,10 @@ const actionTitles = {
     roles: 'Cập nhật vai trò',
 };
 
+const genderLabels = Object.fromEntries(
+    userGenderOptions.map((option) => [option.value, option.label])
+);
+
 function getUserId(user) {
     return user?.id || user?._id;
 }
@@ -54,6 +59,10 @@ function getRows(response) {
 
 function getPages(pagination = {}) {
     return pagination.total_pages || pagination.totalPages || pagination.pages || 1;
+}
+
+function formatGender(value) {
+    return genderLabels[value] || genderLabels.UNSPECIFIED;
 }
 
 function getCurrentPage(pagination = {}, fallback) {
@@ -344,6 +353,10 @@ function UserDetailPanel({
                         <DetailRow
                             label="Điện thoại"
                             value={user.profile?.phone_number}
+                        />
+                        <DetailRow
+                            label="Giới tính"
+                            value={formatGender(user.profile?.gender)}
                         />
                         <DetailRow
                             label="Avatar"

@@ -1,4 +1,4 @@
-const uploadAssetTypeEnum = ["product", "banner", "announcement", "shop_info", "avatar", "misc"];
+const uploadAssetTypeEnum = ["product", "banner", "announcement", "shop_info", "avatar", "blog", "misc"];
 
 module.exports = {
     CloudinarySignatureInput: {

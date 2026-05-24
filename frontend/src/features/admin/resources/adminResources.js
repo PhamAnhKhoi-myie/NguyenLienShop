@@ -8,6 +8,7 @@ import {
     bannerFormConfig,
     contentFilterOptions,
 } from './adminContentForms';
+import { blogFormConfig, blogStatusOptions } from './adminBlogForms';
 
 const activeStatusOptions = [
     { value: '', label: 'Tất cả trạng thái' },
@@ -164,6 +165,29 @@ export const adminResources = {
         ],
         getDeleteEndpoint: (row) => `/announcements/${row.id || row._id}`,
         deleteConfirm: 'Xóa thông báo này?',
+    },
+    blogs: {
+        title: 'Quản lý bài viết',
+        description: 'ADMIN/MANAGER tạo, sửa, publish và archive bài viết.',
+        endpoint: '/blogs/admin/all',
+        limit: 20,
+        form: blogFormConfig,
+        filters: [
+            { name: 'search', label: 'Tìm kiếm', placeholder: 'Tiêu đề hoặc nội dung...' },
+            { name: 'status', label: 'Trạng thái', type: 'select', options: blogStatusOptions },
+            { name: 'category', label: 'Danh mục', placeholder: 'Hướng dẫn sử dụng' },
+            { name: 'tag', label: 'Tag', placeholder: 'túi bao' },
+        ],
+        columns: [
+            { key: 'title', header: 'Tiêu đề', value: 'title' },
+            { key: 'category', header: 'Danh mục', value: 'category' },
+            { key: 'status', header: 'Trạng thái', value: 'status', type: 'status' },
+            { key: 'published_at', header: 'Xuất bản', value: 'published_at', type: 'date' },
+            { key: 'view_count', header: 'Lượt xem', value: 'view_count' },
+            { key: 'updated_at', header: 'Cập nhật', value: 'updated_at', type: 'date' },
+        ],
+        getDeleteEndpoint: (row) => `/blogs/${row.id || row._id}`,
+        deleteConfirm: 'Archive bài viết này?',
     },
     orders: {
         title: 'Quản lý đơn hàng',

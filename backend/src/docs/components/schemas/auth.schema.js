@@ -10,6 +10,11 @@ module.exports = {
                     full_name: { type: "string", nullable: true, example: "Nguyen Van A" },
                     avatar_url: { type: "string", nullable: true, example: null },
                     phone_number: { type: "string", nullable: true, example: null },
+                    gender: {
+                        type: "string",
+                        enum: ["MALE", "FEMALE", "OTHER", "UNSPECIFIED"],
+                        example: "UNSPECIFIED",
+                    },
                 },
             },
             roles: {

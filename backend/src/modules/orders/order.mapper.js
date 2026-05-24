@@ -12,15 +12,7 @@ class OrderMapper {
             order_code: doc.order_code,
             user_id: this.transformUserId(doc.user_id),
 
-            address_snapshot: {
-                street: doc.address_snapshot?.street,
-                district: doc.address_snapshot?.district,
-                city: doc.address_snapshot?.city,
-                postal_code: doc.address_snapshot?.postal_code,
-                country: doc.address_snapshot?.country,
-                phone: doc.address_snapshot?.phone,
-                recipient_name: doc.address_snapshot?.recipient_name,
-            },
+            address_snapshot: this.transformAddressSnapshot(doc.address_snapshot),
 
             items: this.transformItems(doc.items || []),
 
@@ -197,13 +189,15 @@ class OrderMapper {
 
         const doc = order.toObject ? order.toObject() : order;
 
+        const addressSnapshot = this.transformAddressSnapshot(doc.address_snapshot);
+
         return {
             order_code: doc.order_code,
             order_date: this.formatDate(doc.created_at),
 
-            recipient_name: doc.address_snapshot?.recipient_name,
-            phone: doc.address_snapshot?.phone,
-            address: this.formatAddress(doc.address_snapshot),
+            recipient_name: addressSnapshot?.receiver_name,
+            phone: addressSnapshot?.phone,
+            address: addressSnapshot?.full_address,
 
             items: this.transformItemsForEmail(doc.items || []),
 
@@ -309,6 +303,26 @@ class OrderMapper {
             email: user.email || null,
             full_name: user.profile?.full_name || null,
             phone: user.profile?.phone_number || null,
+        };
+    }
+
+    static transformAddressSnapshot(address) {
+        if (!address) {
+            return null;
+        }
+
+        const fullAddress = address.full_address || this.formatAddress(address);
+
+        return {
+            receiver_name: address.receiver_name || address.recipient_name || null,
+            phone: address.phone || null,
+            province_code: address.province_code || null,
+            province_name: address.province_name || address.city || null,
+            ward_code: address.ward_code || null,
+            ward_name: address.ward_name || null,
+            detail: address.detail || address.street || null,
+            full_address: fullAddress || null,
+            note: address.note || null,
         };
     }
 
@@ -449,6 +463,20 @@ class OrderMapper {
     static formatAddress(address) {
         if (!address) {
             return '';
+        }
+
+        if (address.full_address) {
+            return address.full_address;
+        }
+
+        const locationParts = [
+            address.detail,
+            address.ward_name,
+            address.province_name,
+        ].filter(Boolean);
+
+        if (locationParts.length > 0) {
+            return locationParts.join(', ');
         }
 
         const parts = [

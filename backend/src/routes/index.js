@@ -20,6 +20,8 @@ const chatRoutes = require("../modules/chats/chat.routes");
 const paymentRoutes = require("../modules/payments/payment.routes");
 const auditLogRoutes = require("../modules/audit_logs/audit_log.routes");
 const uploadRoutes = require("../modules/uploads/upload.routes");
+const locationRoutes = require("../modules/locations/location.routes");
+const blogRoutes = require("../modules/blogs/blog.routes");
 
 // ============================================================================
 // ===== MOUNT ALL ROUTES =====
@@ -33,6 +35,8 @@ router.use("/users", userRoutes);
 
 // User address routes
 router.use("/user-addresses", userAddressRoutes);
+
+router.use("/locations", locationRoutes);
 
 // Category routes
 router.use("/categories", categoryRoutes);
@@ -75,6 +79,8 @@ router.use("/audit-logs", auditLogRoutes);
 
 // Upload routes
 router.use("/uploads", uploadRoutes);
+
+router.use("/blogs", blogRoutes);
 
 // Product module routes
 // Routes structure:

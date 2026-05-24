@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useClickOutside } from '../shared/hooks/useClickOutside';
 import { Link, NavLink } from 'react-router-dom';
 import {
@@ -88,9 +88,27 @@ function getNavLinkClass({ isActive }) {
         : 'text-[var(--color-text-main)] hover:text-[var(--color-primary)]';
 }
 
+const navItems = [
+    {
+        label: 'Trang chủ',
+        to: ROUTES.HOME,
+        end: true,
+    },
+    {
+        label: 'Sản phẩm',
+        to: ROUTES.PRODUCTS,
+    },
+    {
+        label: 'Blog',
+        to: ROUTES.BLOGS,
+    },
+];
+
 function Header() {
     const [isAccountOpen, setIsAccountOpen] = useState(false);
+    const [isNavVisible, setIsNavVisible] = useState(true);
     const accountMenuRef = useRef(null);
+    const lastScrollYRef = useRef(0);
 
     const user = useAuthStore((state) => state.user);
     const logoutMutation = useLogout();
@@ -103,6 +121,34 @@ function Header() {
     }, []);
 
     useClickOutside(accountMenuRef, closeAllDropdowns, isAccountOpen);
+
+    useEffect(() => {
+        lastScrollYRef.current = window.scrollY;
+
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            const difference = currentScrollY - lastScrollYRef.current;
+
+            if (currentScrollY <= 8) {
+                setIsNavVisible(true);
+                lastScrollYRef.current = currentScrollY;
+                return;
+            }
+
+            if (Math.abs(difference) < 6) {
+                return;
+            }
+
+            setIsNavVisible(difference < 0);
+            lastScrollYRef.current = currentScrollY;
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
 
     const isLoggedIn = Boolean(user);
     const canAccessAdmin = hasAdminAccess(user);
@@ -139,17 +185,6 @@ function Header() {
                         className="h-8 w-auto object-contain sm:h-9"
                     />
                 </Link>
-
-                <nav className="hidden items-center gap-4 text-sm font-medium sm:flex">
-                    <NavLink to={ROUTES.HOME} className={getNavLinkClass}>
-                        Trang chủ
-                    </NavLink>
-
-                    <NavLink to={ROUTES.PRODUCTS} className={getNavLinkClass}>
-                        Sản phẩm
-                    </NavLink>
-
-                </nav>
 
                 <div className="ml-auto hidden w-full max-w-sm items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 md:flex">
                     <Search
@@ -303,6 +338,27 @@ function Header() {
                         <span>Quản trị</span>
                     </NavLink>
                 )}
+            </div>
+            <div
+                className={[
+                    'hidden overflow-hidden border-t border-[var(--color-border)] bg-[var(--color-surface)] transition-[max-height,opacity,transform] duration-300 ease-out sm:block',
+                    isNavVisible
+                        ? 'max-h-12 translate-y-0 opacity-100'
+                        : 'max-h-0 -translate-y-full opacity-0',
+                ].join(' ')}
+            >
+                <nav className="mx-auto flex h-11 max-w-7xl items-center gap-6 px-4 text-sm font-medium">
+                    {navItems.map((item) => (
+                        <NavLink
+                            key={item.to}
+                            to={item.to}
+                            end={item.end}
+                            className={getNavLinkClass}
+                        >
+                            {item.label}
+                        </NavLink>
+                    ))}
+                </nav>
             </div>
         </header>
     );

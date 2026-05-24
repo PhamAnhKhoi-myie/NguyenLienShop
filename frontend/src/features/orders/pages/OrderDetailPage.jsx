@@ -375,7 +375,10 @@ export default function OrderDetailPage() {
                         <CardBody>
                             <InfoRow
                                 label="Người nhận"
-                                value={order.address_snapshot?.recipient_name}
+                                value={
+                                    order.address_snapshot?.receiver_name ||
+                                    order.address_snapshot?.recipient_name
+                                }
                             />
                             <InfoRow
                                 label="Điện thoại"
@@ -383,13 +386,19 @@ export default function OrderDetailPage() {
                             />
                             <InfoRow
                                 label="Địa chỉ"
-                                value={[
-                                    order.address_snapshot?.street,
-                                    order.address_snapshot?.district,
-                                    order.address_snapshot?.city,
-                                ]
-                                    .filter(Boolean)
-                                    .join(', ')}
+                                value={
+                                    order.address_snapshot?.full_address ||
+                                    [
+                                        order.address_snapshot?.detail,
+                                        order.address_snapshot?.ward_name,
+                                        order.address_snapshot?.province_name,
+                                        order.address_snapshot?.street,
+                                        order.address_snapshot?.district,
+                                        order.address_snapshot?.city,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(', ')
+                                }
                             />
                         </CardBody>
                     </Card>

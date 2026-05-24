@@ -19,6 +19,10 @@ class UserMapper {
             update["profile.phone_number"] = data.phone;
         }
 
+        if (data.gender !== undefined) {
+            update["profile.gender"] = data.gender;
+        }
+
         return update;
     }
 
@@ -34,6 +38,7 @@ class UserMapper {
                 full_name: doc.profile?.full_name || null,
                 avatar_url: doc.profile?.avatar_url || null,
                 phone_number: doc.profile?.phone_number || null,
+                gender: doc.profile?.gender || 'UNSPECIFIED',
             },
             roles: doc.roles || [],
             tier: doc.tier || null,

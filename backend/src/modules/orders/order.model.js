@@ -19,12 +19,20 @@ const orderSchema = new mongoose.Schema(
 
         // === ADDRESS SNAPSHOT (Immutable) ===
         address_snapshot: {
+            receiver_name: String,
+            phone: String,
+            province_code: String,
+            province_name: String,
+            ward_code: String,
+            ward_name: String,
+            detail: String,
+            full_address: String,
+            note: String,
             street: String,
             district: String,
             city: String,
             postal_code: String,
             country: String,
-            phone: String,
             recipient_name: String
         },
 

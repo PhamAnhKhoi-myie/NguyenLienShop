@@ -57,9 +57,20 @@ function getPages(pagination = {}) {
 }
 
 function formatAddress(address = {}) {
-    return [address.street, address.district, address.city, address.postal_code]
-        .filter(Boolean)
-        .join(', ');
+    return (
+        address.full_address ||
+        [
+            address.detail,
+            address.ward_name,
+            address.province_name,
+            address.street,
+            address.district,
+            address.city,
+            address.postal_code,
+        ]
+            .filter(Boolean)
+            .join(', ')
+    );
 }
 
 function getStatTotal(items = []) {
@@ -359,6 +370,7 @@ function OrderDetailPanel({
                     <CardBody className="space-y-2 text-sm">
                         <p className="font-medium text-[var(--color-text-main)]">
                             {order.customer?.full_name ||
+                                order.address_snapshot?.receiver_name ||
                                 order.address_snapshot?.recipient_name ||
                                 '-'}
                         </p>

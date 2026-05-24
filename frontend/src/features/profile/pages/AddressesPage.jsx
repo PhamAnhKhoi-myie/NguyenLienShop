@@ -10,6 +10,9 @@ import EmptyState from '../../../shared/components/EmptyState';
 import Input from '../../../shared/components/Input';
 import Loading from '../../../shared/components/Loading';
 import Modal from '../../../shared/components/Modal';
+import Select from '../../../shared/components/Select';
+import Textarea from '../../../shared/components/Textarea';
+import { useProvinces, useWards } from '../../../shared/hooks/useLocations';
 import AccountNav from '../components/AccountNav';
 import {
     useAccountAddresses,
@@ -25,22 +28,20 @@ const addressSchema = z.object({
         .string()
         .trim()
         .regex(/^(0|\+84)[0-9]{9}$/, 'Số điện thoại không hợp lệ'),
-    address_line_1: z.string().trim().min(1, 'Vui lòng nhập địa chỉ'),
-    address_line_2: z.string().trim().optional(),
-    ward: z.string().trim().min(1, 'Vui lòng nhập phường/xã'),
-    district: z.string().trim().min(1, 'Vui lòng nhập quận/huyện'),
-    city: z.string().trim().min(1, 'Vui lòng nhập tỉnh/thành'),
+    province_code: z.string().trim().min(1, 'Vui lòng chọn tỉnh/thành'),
+    ward_code: z.string().trim().min(1, 'Vui lòng chọn phường/xã'),
+    detail: z.string().trim().min(5, 'Địa chỉ cụ thể tối thiểu 5 ký tự'),
+    note: z.string().trim().max(500, 'Ghi chú tối đa 500 ký tự').optional(),
     is_default: z.boolean().default(false),
 });
 
 const emptyAddress = {
     receiver_name: '',
     phone: '',
-    address_line_1: '',
-    address_line_2: '',
-    ward: '',
-    district: '',
-    city: '',
+    province_code: '',
+    ward_code: '',
+    detail: '',
+    note: '',
     is_default: false,
 };
 
@@ -52,46 +53,60 @@ function toFormValues(address) {
     return {
         receiver_name: address.receiver_name || '',
         phone: address.phone || '',
-        address_line_1: address.address_line_1 || '',
-        address_line_2: address.address_line_2 || '',
-        ward: address.ward || '',
-        district: address.district || '',
-        city: address.city || '',
+        province_code: address.province_code || '',
+        ward_code: address.ward_code || '',
+        detail: address.detail || '',
+        note: address.note || '',
         is_default: Boolean(address.is_default),
     };
 }
 
 function formatAddress(address) {
-    return [
-        address.address_line_1,
-        address.address_line_2,
-        address.ward,
-        address.district,
-        address.city,
-    ]
-        .filter(Boolean)
-        .join(', ');
+    return (
+        address.full_address ||
+        [
+            address.detail,
+            address.ward_name,
+            address.province_name,
+            address.address_line_1,
+            address.address_line_2,
+            address.ward,
+            address.district,
+            address.city,
+        ]
+            .filter(Boolean)
+            .join(', ')
+    );
 }
 
 function AddressForm({ address, isSaving, onSubmit }) {
     const {
         register,
         handleSubmit,
+        watch,
+        setValue,
         formState: { errors },
     } = useForm({
         resolver: zodResolver(addressSchema),
         defaultValues: toFormValues(address),
     });
 
+    const selectedProvinceCode = watch('province_code');
+    const provincesQuery = useProvinces();
+    const wardsQuery = useWards(selectedProvinceCode);
+    const provinces = provincesQuery.data?.data || [];
+    const wards = wardsQuery.data?.data || [];
+    const provinceField = register('province_code');
+    const wardField = register('ward_code');
+
     const submit = (values) => {
         onSubmit({
             receiver_name: values.receiver_name.trim(),
             phone: values.phone.trim(),
-            address_line_1: values.address_line_1.trim(),
-            address_line_2: values.address_line_2?.trim() || undefined,
-            ward: values.ward.trim(),
-            district: values.district.trim(),
-            city: values.city.trim(),
+            province_code: values.province_code,
+            ward_code: values.ward_code,
+            detail: values.detail.trim(),
+            note: values.note?.trim() || null,
             is_default: Boolean(values.is_default),
         });
     };
@@ -112,37 +127,56 @@ function AddressForm({ address, isSaving, onSubmit }) {
                 />
             </div>
 
-            <Input
-                label="Địa chỉ"
-                placeholder="Số nhà, tên đường"
-                error={errors.address_line_1?.message}
-                {...register('address_line_1')}
-            />
+            <div className="grid gap-4 md:grid-cols-2">
+                <Select
+                    label="Tỉnh / Thành phố"
+                    error={errors.province_code?.message}
+                    disabled={provincesQuery.isLoading}
+                    {...provinceField}
+                    onChange={(event) => {
+                        provinceField.onChange(event);
+                        setValue('ward_code', '', {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                        });
+                    }}
+                >
+                    <option value="">Chọn tỉnh/thành</option>
+                    {provinces.map((province) => (
+                        <option key={province.code} value={province.code}>
+                            {province.name}
+                        </option>
+                    ))}
+                </Select>
 
-            <Input
-                label="Địa chỉ bổ sung"
-                placeholder="Tên vườn, ấp, khu vực giao hàng"
-                error={errors.address_line_2?.message}
-                {...register('address_line_2')}
-            />
-
-            <div className="grid gap-4 md:grid-cols-3">
-                <Input
-                    label="Phường/xã"
-                    error={errors.ward?.message}
-                    {...register('ward')}
-                />
-                <Input
-                    label="Quận/huyện"
-                    error={errors.district?.message}
-                    {...register('district')}
-                />
-                <Input
-                    label="Tỉnh/thành"
-                    error={errors.city?.message}
-                    {...register('city')}
-                />
+                <Select
+                    label="Phường / Xã"
+                    error={errors.ward_code?.message}
+                    disabled={!selectedProvinceCode || wardsQuery.isLoading}
+                    {...wardField}
+                >
+                    <option value="">Chọn phường/xã</option>
+                    {wards.map((ward) => (
+                        <option key={ward.code} value={ward.code}>
+                            {ward.name}
+                        </option>
+                    ))}
+                </Select>
             </div>
+
+            <Input
+                label="Địa chỉ cụ thể"
+                placeholder="Số nhà, tên đường, hẻm, thôn/ấp"
+                error={errors.detail?.message}
+                {...register('detail')}
+            />
+
+            <Textarea
+                label="Ghi chú giao hàng"
+                rows={3}
+                error={errors.note?.message}
+                {...register('note')}
+            />
 
             <label className="flex items-center gap-2 text-sm text-[var(--color-text-main)]">
                 <input
@@ -220,7 +254,7 @@ export default function AddressesPage() {
                                 Quản lý địa chỉ giao hàng
                             </h1>
                             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                Địa chỉ sẽ được dùng để đặt hàng - nhận hàng.
+                                Địa chỉ sẽ được dùng để đặt hàng và nhận hàng.
                             </p>
                         </div>
                         {!addressesQuery.isLoading && addresses.length > 0 && (

@@ -7,6 +7,7 @@ const ASSET_TYPE_FOLDER = {
     announcement: 'announcements',
     shop_info: 'shop-info',
     avatar: 'avatars',
+    blog: 'blogs',
     misc: 'misc',
 };
 

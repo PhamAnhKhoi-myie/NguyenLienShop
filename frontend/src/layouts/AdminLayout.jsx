@@ -9,6 +9,7 @@ import {
     Layers3,
     LogOut,
     Menu,
+    Newspaper,
     Package,
     Percent,
     Settings,
@@ -65,6 +66,12 @@ const adminNavItems = [
         label: 'Thông báo shop',
         to: ROUTES.ADMIN_ANNOUNCEMENTS,
         icon: Bell,
+        roles: CONTENT_MANAGER_ROLES,
+    },
+    {
+        label: 'Bài viết',
+        to: ROUTES.ADMIN_BLOGS,
+        icon: Newspaper,
         roles: CONTENT_MANAGER_ROLES,
     },
     {

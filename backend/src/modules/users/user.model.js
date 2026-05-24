@@ -31,6 +31,11 @@ const userSchema = new mongoose.Schema(
                 match: /^[0-9]{9,15}$/,
                 default: null,
             },
+            gender: {
+                type: String,
+                enum: ['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED'],
+                default: 'UNSPECIFIED',
+            },
         },
 
         roles: {

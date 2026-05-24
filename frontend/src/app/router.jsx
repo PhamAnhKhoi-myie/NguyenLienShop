@@ -17,6 +17,8 @@ import {
     AdminUsersPage,
     AdminVariantsPage,
     AddressesPage,
+    BlogDetailPage,
+    BlogListPage,
     CartPage,
     CheckoutPage,
     CheckoutResultPage,
@@ -69,6 +71,14 @@ export const router = createBrowserRouter([
             {
                 path: 'products/:productId',
                 element: routePage(<ProductDetailPage />),
+            },
+            {
+                path: 'blogs',
+                element: routePage(<BlogListPage />),
+            },
+            {
+                path: 'blogs/:slug',
+                element: routePage(<BlogDetailPage />),
             },
             {
                 path: 'cart',
@@ -235,6 +245,10 @@ export const router = createBrowserRouter([
                 element: adminRoute(
                     <AdminConfiguredPage resourceKey="announcements" />
                 ),
+            },
+            {
+                path: 'blogs',
+                element: adminRoute(<AdminConfiguredPage resourceKey="blogs" />),
             },
             {
                 path: 'shop-info',

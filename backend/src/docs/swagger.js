@@ -30,6 +30,10 @@ const swaggerSpec = {
             description: "Quản lý địa chỉ giao hàng.",
         },
         {
+            name: "Locations",
+            description: "Danh muc tinh/thanh va phuong/xa Viet Nam.",
+        },
+        {
             name: "Categories",
             description: "Quản lý danh mục sản phẩm.",
         },
@@ -72,6 +76,10 @@ const swaggerSpec = {
         {
             name: "Banners",
             description: "Quản lý banner.",
+        },
+        {
+            name: "Blogs",
+            description: "Quan ly tin tuc, bai viet va huong dan.",
         },
         {
             name: "Announcements",

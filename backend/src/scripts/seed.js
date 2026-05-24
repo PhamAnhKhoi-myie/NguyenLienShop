@@ -5,6 +5,7 @@ const seedUser = require("./seedUser");
 const seedCategories = require("./seedCategories");
 const seedProducts = require("./seedProducts");
 const seedDiscounts = require("./seedDiscounts");
+const seedLocations = require("./seedLocations");
 
 const MONGODB_URI = process.env.MONGO_URI;
 
@@ -21,6 +22,7 @@ const run = async () => {
         console.log("✓ MongoDB connected");
         console.log("DB NAME:", mongoose.connection.name);
 
+        await seedLocations();
         await seedCategories();
         await seedUser();
         await seedProducts();

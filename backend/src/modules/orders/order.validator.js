@@ -29,14 +29,13 @@ const OrderCodeParamSchema = z.object({
  * Address
  */
 const addressSnapshotSchema = z.object({
-    street: z.string().min(1).max(200).trim(),
-    district: z.string().min(1).max(100).trim(),
-    city: z.string().min(1).max(100).trim(),
-    postal_code: z.string().max(20).optional(),
-    country: z.string().default('Vietnam').optional(),
-    phone: z.string().regex(/^(?:0[1-9]\d{8}|0[1-9]\d{9})$/).trim(),
-    recipient_name: z.string().min(2).max(100).trim(),
-});
+    receiver_name: z.string().min(1).max(100).trim(),
+    phone: z.string().regex(/^(0|\+84)[0-9]{9}$/).trim(),
+    province_code: z.string().trim().regex(/^\d{2}$/),
+    ward_code: z.string().trim().regex(/^\d{5}$/),
+    detail: z.string().min(5).max(255).trim(),
+    note: z.string().trim().max(500).nullable().optional(),
+}).strict();
 
 /**
  * Item
@@ -161,7 +160,7 @@ const createOrderBodySchema = z.object({
     currency: z
         .enum(['VND', 'USD', 'EUR'])
         .default('VND'),
-});
+}).strict();
 
 const cancelOrderBodySchema = z.object({
     reason: z.string().min(1).max(500).trim(),

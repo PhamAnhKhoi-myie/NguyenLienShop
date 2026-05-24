@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CategoryTreeMenu from '../../categories/components/CategoryTreeMenu';
 import Card, { CardBody, CardHeader } from '../../../shared/components/Card';
@@ -10,6 +10,11 @@ import ProductFilter from '../components/ProductFilter';
 import { useProducts } from '../hooks/useProducts';
 
 const DEFAULT_LIMIT = 12;
+
+const normalizePage = (value) => {
+    const page = Number(value || 1);
+    return Number.isInteger(page) && page > 0 ? page : 1;
+};
 
 const cleanParams = (params) =>
     Object.fromEntries(
@@ -23,7 +28,7 @@ export default function ProductListPage() {
 
     const filters = useMemo(
         () => ({
-            page: Number(searchParams.get('page') || 1),
+            page: normalizePage(searchParams.get('page')),
             limit: DEFAULT_LIMIT,
             search: searchParams.get('search') || '',
             category_id: searchParams.get('category_id') || '',
@@ -43,6 +48,7 @@ export default function ProductListPage() {
         total_items: 0,
         per_page: DEFAULT_LIMIT,
     };
+    const totalPages = Math.max(Number(pagination.total_pages) || 1, 1);
 
     const updateFilters = useCallback(
         (updates) => {
@@ -65,6 +71,12 @@ export default function ProductListPage() {
         },
         [setSearchParams]
     );
+
+    useEffect(() => {
+        if (productsQuery.isSuccess && filters.page > totalPages) {
+            updateFilters({ page: totalPages });
+        }
+    }, [filters.page, productsQuery.isSuccess, totalPages, updateFilters]);
 
     const resetFilters = useCallback(() => {
         setSearchParams(
@@ -165,9 +177,14 @@ export default function ProductListPage() {
                                 <CardBody>
                                     <Pagination
                                         page={pagination.current_page || filters.page}
-                                        totalPages={pagination.total_pages || 1}
+                                        totalPages={totalPages}
                                         onPageChange={(page) =>
-                                            updateFilters({ page })
+                                            updateFilters({
+                                                page: Math.min(
+                                                    Math.max(page, 1),
+                                                    totalPages
+                                                ),
+                                            })
                                         }
                                     />
                                 </CardBody>

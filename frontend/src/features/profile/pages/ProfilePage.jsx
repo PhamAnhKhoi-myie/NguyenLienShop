@@ -8,6 +8,7 @@ import Button from '../../../shared/components/Button';
 import Card, { CardBody, CardHeader } from '../../../shared/components/Card';
 import Input from '../../../shared/components/Input';
 import Loading from '../../../shared/components/Loading';
+import Select from '../../../shared/components/Select';
 import { useLogout } from '../../auth/hooks/useLogout';
 import { useMe } from '../../auth/hooks/useMe';
 import { useAuthStore } from '../../auth/store/auth.store';
@@ -24,7 +25,19 @@ const profileSchema = z.object({
         .regex(/^\d{10,15}$/, 'Số điện thoại cần từ 10 đến 15 số')
         .or(z.literal('')),
     avatar: z.string().trim().url('Avatar phải là URL hợp lệ').or(z.literal('')),
+    gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED']),
 });
+
+const genderOptions = [
+    { value: 'UNSPECIFIED', label: 'Chưa cập nhật' },
+    { value: 'MALE', label: 'Nam' },
+    { value: 'FEMALE', label: 'Nữ' },
+    { value: 'OTHER', label: 'Khác' },
+];
+
+const genderLabels = Object.fromEntries(
+    genderOptions.map((option) => [option.value, option.label])
+);
 
 function getDisplayName(user) {
     return (
@@ -42,11 +55,16 @@ function toFormValues(user) {
         email: user?.email || '',
         phone: user?.profile?.phone_number || user?.phone || '',
         avatar: user?.profile?.avatar_url || user?.avatar || '',
+        gender: user?.profile?.gender || 'UNSPECIFIED',
     };
 }
 
 function getDisplayPhone(user) {
     return user?.profile?.phone_number || user?.phone || '-';
+}
+
+function getDisplayGender(user) {
+    return genderLabels[user?.profile?.gender] || genderLabels.UNSPECIFIED;
 }
 
 export default function ProfilePage() {
@@ -170,6 +188,7 @@ export default function ProfilePage() {
                     email: values.email.trim(),
                     phone: values.phone.trim() || undefined,
                     avatar: values.avatar.trim() || undefined,
+                    gender: values.gender,
                 },
             },
             {
@@ -317,6 +336,15 @@ export default function ProfilePage() {
 
                                     <div className="rounded-md border border-[var(--color-border)] p-4">
                                         <dt className="text-sm text-[var(--color-text-muted)]">
+                                            Giới tính
+                                        </dt>
+                                        <dd className="mt-1 font-medium text-[var(--color-text-main)]">
+                                            {getDisplayGender(displayUser)}
+                                        </dd>
+                                    </div>
+
+                                    <div className="rounded-md border border-[var(--color-border)] p-4">
+                                        <dt className="text-sm text-[var(--color-text-muted)]">
                                             Hạng tài khoản
                                         </dt>
                                         <dd className="mt-1 font-medium text-[var(--color-text-main)]">
@@ -360,6 +388,18 @@ export default function ProfilePage() {
                                     error={errors.phone?.message}
                                     {...register('phone')}
                                 />
+
+                                <Select
+                                    label="Giới tính"
+                                    error={errors.gender?.message}
+                                    {...register('gender')}
+                                >
+                                    {genderOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </Select>
 
                                 {updateProfileMutation.isError && (
                                     <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
