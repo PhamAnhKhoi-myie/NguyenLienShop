@@ -18,6 +18,10 @@ export default function ProductFilter({ filters, onChange, onReset }) {
     const debouncedSearch = useDebounce(search, 350);
 
     useEffect(() => {
+        setSearch(filters.search || '');
+    }, [filters.search]);
+
+    useEffect(() => {
         const nextSearch = debouncedSearch || null;
         const currentSearch = filters.search || null;
 

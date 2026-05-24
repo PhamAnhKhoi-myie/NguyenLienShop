@@ -91,9 +91,7 @@ export default function ProductListPage() {
     return (
         <div className="space-y-6">
             <div>
-                <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                    Catalog
-                </p>
+
                 <h1 className="mt-1 text-3xl font-semibold text-[var(--color-text-main)]">
                     Túi bao trái cây
                 </h1>
