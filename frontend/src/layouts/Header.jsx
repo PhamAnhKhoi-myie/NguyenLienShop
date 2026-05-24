@@ -177,7 +177,8 @@ function Header() {
 
     return (
         <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-            <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-4 sm:px-4">
+            <div className="relative z-40 bg-[var(--color-surface)]">
+                <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-4 sm:px-4">
                 <Link to={ROUTES.HOME} className="flex items-center">
                     <img
                         src={logo}
@@ -338,13 +339,14 @@ function Header() {
                         <span>Quản trị</span>
                     </NavLink>
                 )}
+                </div>
             </div>
             <div
                 className={[
-                    'hidden overflow-hidden border-t border-[var(--color-border)] bg-[var(--color-surface)] transition-[max-height,opacity,transform] duration-300 ease-out sm:block',
+                    'fixed left-0 right-0 top-16 z-30 hidden h-11 overflow-hidden border-b border-[var(--color-border)] bg-[var(--color-surface)] transition-transform duration-300 ease-out will-change-transform sm:block',
                     isNavVisible
-                        ? 'max-h-12 translate-y-0 opacity-100'
-                        : 'max-h-0 -translate-y-full opacity-0',
+                        ? 'translate-y-0'
+                        : 'pointer-events-none -translate-y-full',
                 ].join(' ')}
             >
                 <nav className="mx-auto flex h-11 max-w-7xl items-center gap-6 px-4 text-sm font-medium">

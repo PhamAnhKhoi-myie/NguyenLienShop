@@ -21,7 +21,7 @@ function MainLayout() {
             <div className="relative z-10 flex min-h-screen flex-col bg-white/[0.80]">
                 <Header />
 
-                <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+                <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-6 pt-6 sm:pt-[68px]">
                     <Outlet />
                 </main>
 
