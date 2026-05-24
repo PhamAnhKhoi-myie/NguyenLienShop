@@ -1,4 +1,4 @@
-const uploadAssetTypeEnum = ["product", "banner", "announcement", "shop_info", "misc"];
+const uploadAssetTypeEnum = ["product", "banner", "announcement", "shop_info", "avatar", "misc"];
 
 module.exports = {
     CloudinarySignatureInput: {
@@ -42,6 +42,47 @@ module.exports = {
                 type: "boolean",
                 default: false,
                 example: false,
+            },
+            invalidate: {
+                type: "boolean",
+                default: true,
+                example: true,
+            },
+        },
+    },
+
+    CloudinaryAvatarSignatureInput: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+            asset_type: {
+                type: "string",
+                enum: ["avatar"],
+                default: "avatar",
+                example: "avatar",
+            },
+            folder: {
+                type: "string",
+                enum: ["avatars"],
+                default: "avatars",
+                example: "avatars",
+            },
+            tags: {
+                type: "array",
+                maxItems: 10,
+                items: {
+                    type: "string",
+                    minLength: 1,
+                    maxLength: 40,
+                    pattern: "^[a-zA-Z0-9_-]+$",
+                },
+                default: ["avatar", "user"],
+                example: ["avatar", "user"],
+            },
+            overwrite: {
+                type: "boolean",
+                default: true,
+                example: true,
             },
             invalidate: {
                 type: "boolean",

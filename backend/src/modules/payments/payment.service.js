@@ -9,6 +9,7 @@ const { AUDIT_ACTIONS } = require('../../constants/audit');
 const Order = require('../orders/order.model');
 const OrderService = require('../orders/order.service');
 const Variant = require('../products/variant.model');
+const NotificationEventService = require('../notifications/notification_event.service');
 
 const logger = {
     info: (data) => console.log(JSON.stringify({
@@ -556,7 +557,7 @@ class PaymentService {
                 };
             }
 
-            await OrderService.confirmPayment(
+            const confirmedOrder = await OrderService.confirmPayment(
                 payment.order_id,
                 {
                     paid_at: paidAt,
@@ -599,6 +600,8 @@ class PaymentService {
                     },
                 });
             }
+
+            await NotificationEventService.paymentSucceeded(confirmedOrder, payment);
 
             return {
                 status: 'paid',
@@ -750,6 +753,14 @@ class PaymentService {
                     },
                 });
             }
+
+            await NotificationEventService.paymentFailed(order, payment, {
+                failure_code: failureData.vnp_ResponseCode ||
+                    failureData.stripe_status ||
+                    failureData.paypal_status ||
+                    'UNKNOWN',
+                failure_reason: failureData.failure_reason || 'PAYMENT_REJECTED',
+            });
 
             return {
                 status: 'failed',

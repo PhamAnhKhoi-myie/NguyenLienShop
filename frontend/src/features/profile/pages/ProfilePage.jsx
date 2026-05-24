@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LogOut, Save, UserRound } from 'lucide-react';
-import { useEffect } from 'react';
+import { Camera, LogOut, Pencil, Save, UserRound, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Badge from '../../../shared/components/Badge';
@@ -11,6 +11,7 @@ import Loading from '../../../shared/components/Loading';
 import { useLogout } from '../../auth/hooks/useLogout';
 import { useMe } from '../../auth/hooks/useMe';
 import { useAuthStore } from '../../auth/store/auth.store';
+import { useUploadAvatar } from '../../uploads/hooks/useUploadAvatar';
 import AccountNav from '../components/AccountNav';
 import { useUpdateProfile } from '../hooks/useProfile';
 
@@ -44,48 +45,162 @@ function toFormValues(user) {
     };
 }
 
+function getDisplayPhone(user) {
+    return user?.profile?.phone_number || user?.phone || '-';
+}
+
 export default function ProfilePage() {
     const user = useAuthStore((state) => state.user);
     const meQuery = useMe();
     const logoutMutation = useLogout();
     const updateProfileMutation = useUpdateProfile();
+    const uploadAvatarMutation = useUploadAvatar();
+    const [isEditing, setIsEditing] = useState(false);
+    const [avatarPreview, setAvatarPreview] = useState({
+        userId: null,
+        url: '',
+    });
     const displayUser = meQuery.data?.data || user;
 
     const {
         register,
         handleSubmit,
         reset,
+        setValue,
         formState: { errors },
     } = useForm({
         resolver: zodResolver(profileSchema),
         defaultValues: toFormValues(displayUser),
     });
 
+    const uploadedAvatarUrl =
+        avatarPreview.userId === displayUser?.id ? avatarPreview.url : '';
+    const avatarSrc = uploadedAvatarUrl || displayUser?.profile?.avatar_url || '';
+    const avatarUploadInputId = 'profile-avatar-upload';
+
     useEffect(() => {
-        if (displayUser) {
+        if (displayUser && !isEditing) {
             reset(toFormValues(displayUser));
         }
-    }, [displayUser, reset]);
+    }, [displayUser, isEditing, reset]);
+
+    const handleStartEdit = () => {
+        if (!displayUser) {
+            return;
+        }
+
+        updateProfileMutation.reset();
+        uploadAvatarMutation.reset();
+        setAvatarPreview({
+            userId: null,
+            url: '',
+        });
+        reset(toFormValues(displayUser));
+        setIsEditing(true);
+    };
+
+    const handleCancelEdit = () => {
+        updateProfileMutation.reset();
+        uploadAvatarMutation.reset();
+        setAvatarPreview({
+            userId: null,
+            url: '',
+        });
+        reset(toFormValues(displayUser));
+        setIsEditing(false);
+    };
+
+    const handleAvatarChange = async (event) => {
+        const file = event.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        if (!displayUser?.id) {
+            event.target.value = '';
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            event.target.value = '';
+            return;
+        }
+
+        let result;
+
+        try {
+            result = await uploadAvatarMutation.mutateAsync(file);
+        } catch {
+            event.target.value = '';
+            return;
+        }
+
+        setValue('avatar', result.url, {
+            shouldDirty: true,
+            shouldValidate: true,
+        });
+
+        setAvatarPreview({
+            userId: displayUser.id,
+            url: result.url,
+        });
+        event.target.value = '';
+
+        if (!isEditing) {
+            updateProfileMutation.mutate({
+                userId: displayUser.id,
+                payload: {
+                    avatar: result.url,
+                },
+            });
+        }
+    };
 
     const onSubmit = (values) => {
         if (!displayUser?.id) {
             return;
         }
 
-        updateProfileMutation.mutate({
-            userId: displayUser.id,
-            payload: {
-                name: values.name.trim(),
-                email: values.email.trim(),
-                phone: values.phone.trim() || undefined,
-                avatar: values.avatar.trim() || undefined,
+        updateProfileMutation.mutate(
+            {
+                userId: displayUser.id,
+                payload: {
+                    name: values.name.trim(),
+                    email: values.email.trim(),
+                    phone: values.phone.trim() || undefined,
+                    avatar: values.avatar.trim() || undefined,
+                },
             },
-        });
+            {
+                onSuccess: () => {
+                    setIsEditing(false);
+                },
+            }
+        );
     };
 
     if (meQuery.isLoading && !displayUser) {
         return <Loading label="Đang tải tài khoản..." />;
     }
+
+    const avatarCircle = (
+        <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[var(--color-secondary)] text-[var(--color-primary-hover)]">
+            {avatarSrc ? (
+                <img
+                    src={avatarSrc}
+                    alt={getDisplayName(displayUser)}
+                    className="h-full w-full object-cover"
+                />
+            ) : (
+                <UserRound className="h-12 w-12" />
+            )}
+
+            <span className="absolute inset-0 flex items-center justify-center bg-black/35 text-white opacity-0 transition-opacity hover:opacity-100">
+                <Camera className="h-6 w-6" />
+            </span>
+        </div>
+    );
 
     return (
         <div className="space-y-6">
@@ -95,9 +210,42 @@ export default function ProfilePage() {
                 <Card>
                     <CardBody>
                         <div className="flex flex-col items-center text-center">
-                            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-secondary)] text-[var(--color-primary-hover)]">
-                                <UserRound className="h-10 w-10" />
-                            </div>
+                            <label
+                                htmlFor={avatarUploadInputId}
+                                className="cursor-pointer rounded-full focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-primary)]"
+                            >
+                                {avatarCircle}
+                            </label>
+                            <input
+                                id={avatarUploadInputId}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarChange}
+                                disabled={
+                                    uploadAvatarMutation.isPending ||
+                                    updateProfileMutation.isPending
+                                }
+                                className="sr-only"
+                            />
+
+                            {uploadAvatarMutation.isPending && (
+                                <p className="mt-3 text-sm text-[var(--color-text-muted)]">
+                                    Đang upload avatar...
+                                </p>
+                            )}
+
+                            {uploadAvatarMutation.isError && (
+                                <p className="mt-3 text-sm text-[var(--color-error)]">
+                                    {uploadAvatarMutation.error.message || 'Upload avatar thất bại'}
+                                </p>
+                            )}
+
+                            {errors.avatar?.message && (
+                                <p className="mt-3 text-sm text-[var(--color-error)]">
+                                    {errors.avatar.message}
+                                </p>
+                            )}
+
                             <h1 className="mt-4 text-2xl font-semibold text-[var(--color-text-main)]">
                                 {getDisplayName(displayUser)}
                             </h1>
@@ -133,60 +281,117 @@ export default function ProfilePage() {
                 <Card>
                     <CardHeader>
                         <h2 className="font-semibold text-[var(--color-text-main)]">
-                            Thông tin cá nhân
+                            {isEditing ? 'Cập nhật thông tin' : 'Thông tin cá nhân'}
                         </h2>
                     </CardHeader>
                     <CardBody>
-                        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <Input
-                                    label="Họ tên"
-                                    error={errors.name?.message}
-                                    {...register('name')}
-                                />
-                                <Input
-                                    label="Email"
-                                    type="email"
-                                    error={errors.email?.message}
-                                    {...register('email')}
-                                />
-                            </div>
+                        {!isEditing ? (
+                            <div className="space-y-5">
+                                <dl className="grid gap-4 md:grid-cols-2">
+                                    <div className="rounded-md border border-[var(--color-border)] p-4">
+                                        <dt className="text-sm text-[var(--color-text-muted)]">
+                                            Họ tên
+                                        </dt>
+                                        <dd className="mt-1 font-medium text-[var(--color-text-main)]">
+                                            {getDisplayName(displayUser)}
+                                        </dd>
+                                    </div>
 
-                            <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="rounded-md border border-[var(--color-border)] p-4">
+                                        <dt className="text-sm text-[var(--color-text-muted)]">
+                                            Email
+                                        </dt>
+                                        <dd className="mt-1 break-all font-medium text-[var(--color-text-main)]">
+                                            {displayUser?.email || '-'}
+                                        </dd>
+                                    </div>
+
+                                    <div className="rounded-md border border-[var(--color-border)] p-4">
+                                        <dt className="text-sm text-[var(--color-text-muted)]">
+                                            Số điện thoại
+                                        </dt>
+                                        <dd className="mt-1 font-medium text-[var(--color-text-main)]">
+                                            {getDisplayPhone(displayUser)}
+                                        </dd>
+                                    </div>
+
+                                    <div className="rounded-md border border-[var(--color-border)] p-4">
+                                        <dt className="text-sm text-[var(--color-text-muted)]">
+                                            Hạng tài khoản
+                                        </dt>
+                                        <dd className="mt-1 font-medium text-[var(--color-text-main)]">
+                                            {displayUser?.tier || '-'}
+                                        </dd>
+                                    </div>
+                                </dl>
+
+                                {updateProfileMutation.isSuccess && (
+                                    <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                                        Đã cập nhật hồ sơ.
+                                    </p>
+                                )}
+
+                                <Button type="button" onClick={handleStartEdit}>
+                                    <Pencil className="h-4 w-4" />
+                                    Chỉnh sửa
+                                </Button>
+                            </div>
+                        ) : (
+                            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+                                <input type="hidden" {...register('avatar')} />
+
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <Input
+                                        label="Họ tên"
+                                        error={errors.name?.message}
+                                        {...register('name')}
+                                    />
+                                    <Input
+                                        label="Email"
+                                        type="email"
+                                        error={errors.email?.message}
+                                        {...register('email')}
+                                    />
+                                </div>
+
                                 <Input
                                     label="Số điện thoại"
                                     placeholder="0901234567"
                                     error={errors.phone?.message}
                                     {...register('phone')}
                                 />
-                                <Input
-                                    label="Avatar URL"
-                                    placeholder="https://..."
-                                    error={errors.avatar?.message}
-                                    {...register('avatar')}
-                                />
-                            </div>
 
-                            {updateProfileMutation.isError && (
-                                <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
-                                    {updateProfileMutation.error.message}
-                                </p>
-                            )}
+                                {updateProfileMutation.isError && (
+                                    <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
+                                        {updateProfileMutation.error.message}
+                                    </p>
+                                )}
 
-                            {updateProfileMutation.isSuccess && (
-                                <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-                                    Đã cập nhật hồ sơ.
-                                </p>
-                            )}
+                                <div className="flex flex-wrap gap-3">
+                                    <Button
+                                        type="submit"
+                                        isLoading={updateProfileMutation.isPending}
+                                        disabled={uploadAvatarMutation.isPending}
+                                    >
+                                        <Save className="h-4 w-4" />
+                                        Lưu thay đổi
+                                    </Button>
 
-                            <Button
-                                type="submit"
-                                isLoading={updateProfileMutation.isPending}
-                            >
-                                <Save className="h-4 w-4" />
-                                Lưu thay đổi
-                            </Button>
-                        </form>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={
+                                            updateProfileMutation.isPending ||
+                                            uploadAvatarMutation.isPending
+                                        }
+                                        onClick={handleCancelEdit}
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Hủy
+                                    </Button>
+                                </div>
+                            </form>
+                        )}
                     </CardBody>
                 </Card>
             </div>

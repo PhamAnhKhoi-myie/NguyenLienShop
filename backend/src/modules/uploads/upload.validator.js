@@ -24,7 +24,7 @@ const tagSchema = z
 const cloudinarySignatureBodySchema = z
     .object({
         asset_type: z
-            .enum(['product', 'banner', 'announcement', 'shop_info', 'misc'])
+            .enum(['product', 'banner', 'announcement', 'shop_info', 'avatar', 'misc'])
             .default('misc'),
         folder: folderSchema.optional(),
         public_id: publicIdSchema.optional(),
@@ -34,6 +34,17 @@ const cloudinarySignatureBodySchema = z
     })
     .strict();
 
+const cloudinaryAvatarSignatureBodySchema = z
+    .object({
+        asset_type: z.literal('avatar').optional().default('avatar'),
+        folder: z.literal('avatars').optional().default('avatars'),
+        tags: z.array(tagSchema).max(10).optional().default(['avatar', 'user']),
+        overwrite: z.boolean().optional().default(true),
+        invalidate: z.boolean().optional().default(true),
+    })
+    .strict();
+
 module.exports = {
     cloudinarySignatureBodySchema,
+    cloudinaryAvatarSignatureBodySchema,
 };

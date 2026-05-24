@@ -10,6 +10,7 @@ const PasswordReset = require('../models/password-reset.model');
 const PasswordResetRateLimit = require('../models/password-reset-rate-limit.model');
 const EmailService = require('../../emails/email.service');
 const AuthAuditLogService = require('../../audit_logs/auth_audit_log/auth_log.service');
+const NotificationEventService = require('../../notifications/notification_event.service');
 const { AUDIT_ACTIONS } = require('../../../constants/audit');
 
 class AuthCoreService {
@@ -136,6 +137,8 @@ class AuthCoreService {
             } catch (err) {
                 console.error('Audit log failed:', err);
             }
+
+            await NotificationEventService.accountCreated(user);
 
             return UserMapper.toResponseDTO(user);
 
@@ -267,6 +270,7 @@ class AuthCoreService {
         }
 
         await TokenService.revokeAllByUser(userId, 'password_changed');
+        await NotificationEventService.passwordChanged(user);
         return { message: 'Mật khẩu đã được thay đổi' };
     }
 
@@ -419,6 +423,7 @@ class AuthCoreService {
 
         // Xóa OTP sau khi dùng
         await PasswordReset.deleteOne({ _id: record._id });
+        await NotificationEventService.passwordChanged(user);
 
         return { message: 'Mật khẩu đã được đặt lại' };
     }

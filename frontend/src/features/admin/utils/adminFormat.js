@@ -57,6 +57,9 @@ export function getStatusVariant(status) {
             'success',
             'delivered',
             'active',
+            'ADMIN',
+            'VIP',
+            'INFO',
             true,
         ].includes(status)
     ) {
@@ -74,6 +77,7 @@ export function getStatusVariant(status) {
             'returned',
             'inactive',
             'expired',
+            'SECURITY',
             'deleted',
             false,
         ].includes(status)
@@ -91,6 +95,8 @@ export function getStatusVariant(status) {
             'in_transit',
             'at_destination',
             'paused',
+            'MANAGER',
+            'IMPORTANT',
             'medium',
             'high',
         ].includes(status)

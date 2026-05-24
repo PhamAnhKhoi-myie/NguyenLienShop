@@ -96,16 +96,16 @@ function Header() {
 
     return (
         <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-            <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
+            <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-4 sm:px-4">
                 <Link to={ROUTES.HOME} className="flex items-center">
                     <img
                         src={logo}
                         alt="NguyenLien Shop"
-                        className="h-9 w-auto object-contain"
+                        className="h-8 w-auto object-contain sm:h-9"
                     />
                 </Link>
 
-                <nav className="flex items-center gap-4 text-sm font-medium">
+                <nav className="hidden items-center gap-4 text-sm font-medium sm:flex">
                     <NavLink to={ROUTES.HOME} className={getNavLinkClass}>
                         Trang chủ
                     </NavLink>
@@ -136,11 +136,9 @@ function Header() {
                 >
                     <ShoppingCart size={20} />
 
-                    {cartItemCount > 0 && (
-                        <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-[var(--color-warning)] px-1.5 text-center text-xs font-semibold leading-5 text-white">
-                            {cartItemCount > 99 ? '99+' : cartItemCount}
-                        </span>
-                    )}
+                    <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-[var(--color-warning)] px-1.5 text-center text-xs font-semibold leading-5 text-white">
+                        {cartItemCount > 99 ? '99+' : cartItemCount}
+                    </span>
                 </Link>
 
                 {isLoggedIn && (
@@ -162,7 +160,7 @@ function Header() {
                     <button
                         type="button"
                         onClick={() => setIsAccountOpen((current) => !current)}
-                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)]"
+                        className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)] sm:px-3"
                     >
                         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[var(--color-primary)]">
                             {isLoggedIn ? (
@@ -174,8 +172,10 @@ function Header() {
                             )}
                         </span>
 
-                        <span>{accountLabel}</span>
-                        <ChevronDown size={15} />
+                        <span className="hidden max-w-28 truncate sm:inline">
+                            {accountLabel}
+                        </span>
+                        <ChevronDown size={15} className="hidden sm:block" />
                     </button>
 
                     {isAccountOpen && (
@@ -227,14 +227,6 @@ function Header() {
                                             Địa chỉ giao hàng
                                         </Link>
 
-                                        <Link
-                                            to={ROUTES.NOTIFICATIONS}
-                                            onClick={closeAccountMenu}
-                                            className="block px-4 py-2 text-sm text-[var(--color-text-main)] hover:bg-[var(--color-background)]"
-                                        >
-                                            Thông báo
-                                        </Link>
-
                                         <button
                                             type="button"
                                             onClick={handleLogout}
@@ -275,7 +267,7 @@ function Header() {
                         to={ROUTES.ADMIN}
                         className={({ isActive }) =>
                             [
-                                'inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors',
+                                'hidden h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors sm:inline-flex',
                                 'border border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-sm',
                                 'hover:bg-[var(--color-primary-hover)] hover:border-[var(--color-primary-hover)]',
                                 isActive ? 'ring-2 ring-[var(--color-secondary)]' : '',

@@ -3,34 +3,39 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import AdminLayout from '../layouts/AdminLayout';
 import MainLayout from '../layouts/MainLayout';
 
-import AdminConfiguredPage from '../features/admin/pages/AdminConfiguredPage';
-import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
-import AdminDiscountsPage from '../features/admin/pages/AdminDiscountsPage';
-import AdminOrdersPage from '../features/admin/pages/AdminOrdersPage';
-import AdminPaymentsPage from '../features/admin/pages/AdminPaymentsPage';
-import AdminShipmentsPage from '../features/admin/pages/AdminShipmentsPage';
-import AdminShopInfoPage from '../features/admin/pages/AdminShopInfoPage';
-import AdminVariantsPage from '../features/admin/pages/AdminVariantsPage';
-import AddressesPage from '../features/profile/pages/AddressesPage';
-import CartPage from '../features/cart/pages/CartPage';
-import CheckoutPage from '../features/checkout/pages/CheckoutPage';
-import CheckoutResultPage from '../features/checkout/pages/CheckoutResultPage';
-import ChangePasswordPage from '../features/profile/pages/ChangePasswordPage';
-import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
-import HomePage from '../features/home/pages/HomePage';
-import LoginPage from '../features/auth/pages/LoginPage';
-import NotFoundPage from '../features/home/pages/NotFoundPage';
-import NotificationsPage from '../features/notifications/pages/NotificationsPage';
-import OrderDetailPage from '../features/orders/pages/OrderDetailPage';
-import OrderListPage from '../features/orders/pages/OrderListPage';
-import PaymentReturnPage from '../features/payments/pages/PaymentReturnPage';
-import ProductDetailPage from '../features/products/pages/ProductDetailPage';
-import ProductListPage from '../features/products/pages/ProductListPage';
-import ProfilePage from '../features/profile/pages/ProfilePage';
 import ProtectedRoute from '../features/auth/components/ProtectedRoute';
-import RegisterPage from '../features/auth/pages/RegisterPage';
-import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 import RoleRoute from '../features/auth/components/RoleRoute';
+import {
+    AdminAuditLogsPage,
+    AdminConfiguredPage,
+    AdminDashboardPage,
+    AdminDiscountsPage,
+    AdminOrdersPage,
+    AdminPaymentsPage,
+    AdminShipmentsPage,
+    AdminShopInfoPage,
+    AdminUsersPage,
+    AdminVariantsPage,
+    AddressesPage,
+    CartPage,
+    CheckoutPage,
+    CheckoutResultPage,
+    ChangePasswordPage,
+    ForgotPasswordPage,
+    HomePage,
+    LoginPage,
+    NotFoundPage,
+    NotificationsPage,
+    OrderDetailPage,
+    OrderListPage,
+    PaymentReturnPage,
+    ProductDetailPage,
+    ProductListPage,
+    ProfilePage,
+    RegisterPage,
+    ResetPasswordPage,
+    RouteSuspense,
+} from './routePages';
 import { ROUTES } from '../shared/constants/routes';
 import {
     ADMIN_ENTRY_ROLES,
@@ -38,8 +43,14 @@ import {
     CONTENT_MANAGER_ROLES,
 } from '../shared/constants/roles';
 
+function routePage(element) {
+    return <RouteSuspense>{element}</RouteSuspense>;
+}
+
 function adminRoute(element, allowedRoles = CONTENT_MANAGER_ROLES) {
-    return <RoleRoute allowedRoles={allowedRoles}>{element}</RoleRoute>;
+    return (
+        <RoleRoute allowedRoles={allowedRoles}>{routePage(element)}</RoleRoute>
+    );
 }
 
 export const router = createBrowserRouter([
@@ -49,19 +60,19 @@ export const router = createBrowserRouter([
         children: [
             {
                 index: true,
-                element: <HomePage />,
+                element: routePage(<HomePage />),
             },
             {
                 path: 'products',
-                element: <ProductListPage />,
+                element: routePage(<ProductListPage />),
             },
             {
                 path: 'products/:productId',
-                element: <ProductDetailPage />,
+                element: routePage(<ProductDetailPage />),
             },
             {
                 path: 'cart',
-                element: <CartPage />,
+                element: routePage(<CartPage />),
             },
             {
                 path: 'auth',
@@ -69,25 +80,25 @@ export const router = createBrowserRouter([
             },
             {
                 path: 'auth/login',
-                element: <LoginPage />,
+                element: routePage(<LoginPage />),
             },
             {
                 path: 'auth/register',
-                element: <RegisterPage />,
+                element: routePage(<RegisterPage />),
             },
             {
                 path: 'auth/forgot-password',
-                element: <ForgotPasswordPage />,
+                element: routePage(<ForgotPasswordPage />),
             },
             {
                 path: 'auth/reset-password',
-                element: <ResetPasswordPage />,
+                element: routePage(<ResetPasswordPage />),
             },
             {
                 path: 'checkout',
                 element: (
                     <ProtectedRoute>
-                        <CheckoutPage />
+                        {routePage(<CheckoutPage />)}
                     </ProtectedRoute>
                 ),
             },
@@ -95,7 +106,7 @@ export const router = createBrowserRouter([
                 path: 'checkout/success',
                 element: (
                     <ProtectedRoute>
-                        <CheckoutResultPage status="success" />
+                        {routePage(<CheckoutResultPage status="success" />)}
                     </ProtectedRoute>
                 ),
             },
@@ -103,7 +114,7 @@ export const router = createBrowserRouter([
                 path: 'checkout/fail',
                 element: (
                     <ProtectedRoute>
-                        <CheckoutResultPage status="fail" />
+                        {routePage(<CheckoutResultPage status="fail" />)}
                     </ProtectedRoute>
                 ),
             },
@@ -111,7 +122,7 @@ export const router = createBrowserRouter([
                 path: 'payment-return',
                 element: (
                     <ProtectedRoute>
-                        <PaymentReturnPage />
+                        {routePage(<PaymentReturnPage />)}
                     </ProtectedRoute>
                 ),
             },
@@ -119,7 +130,7 @@ export const router = createBrowserRouter([
                 path: 'payment/vnpay-return',
                 element: (
                     <ProtectedRoute>
-                        <PaymentReturnPage />
+                        {routePage(<PaymentReturnPage />)}
                     </ProtectedRoute>
                 ),
             },
@@ -127,7 +138,7 @@ export const router = createBrowserRouter([
                 path: 'orders',
                 element: (
                     <ProtectedRoute>
-                        <OrderListPage />
+                        {routePage(<OrderListPage />)}
                     </ProtectedRoute>
                 ),
             },
@@ -135,7 +146,7 @@ export const router = createBrowserRouter([
                 path: 'orders/:orderId',
                 element: (
                     <ProtectedRoute>
-                        <OrderDetailPage />
+                        {routePage(<OrderDetailPage />)}
                     </ProtectedRoute>
                 ),
             },
@@ -143,7 +154,7 @@ export const router = createBrowserRouter([
                 path: 'profile',
                 element: (
                     <ProtectedRoute>
-                        <ProfilePage />
+                        {routePage(<ProfilePage />)}
                     </ProtectedRoute>
                 ),
             },
@@ -151,7 +162,7 @@ export const router = createBrowserRouter([
                 path: 'profile/addresses',
                 element: (
                     <ProtectedRoute>
-                        <AddressesPage />
+                        {routePage(<AddressesPage />)}
                     </ProtectedRoute>
                 ),
             },
@@ -159,7 +170,7 @@ export const router = createBrowserRouter([
                 path: 'profile/change-password',
                 element: (
                     <ProtectedRoute>
-                        <ChangePasswordPage />
+                        {routePage(<ChangePasswordPage />)}
                     </ProtectedRoute>
                 ),
             },
@@ -167,7 +178,7 @@ export const router = createBrowserRouter([
                 path: 'notifications',
                 element: (
                     <ProtectedRoute>
-                        <NotificationsPage />
+                        {routePage(<NotificationsPage />)}
                     </ProtectedRoute>
                 ),
             },
@@ -185,7 +196,7 @@ export const router = createBrowserRouter([
         children: [
             {
                 index: true,
-                element: <AdminDashboardPage />,
+                element: routePage(<AdminDashboardPage />),
             },
             {
                 path: 'products',
@@ -231,22 +242,16 @@ export const router = createBrowserRouter([
             },
             {
                 path: 'users',
-                element: adminRoute(
-                    <AdminConfiguredPage resourceKey="users" />,
-                    ADMIN_ONLY_ROLES
-                ),
+                element: adminRoute(<AdminUsersPage />, ADMIN_ONLY_ROLES),
             },
             {
                 path: 'audit-logs',
-                element: adminRoute(
-                    <AdminConfiguredPage resourceKey="auditLogs" />,
-                    ADMIN_ONLY_ROLES
-                ),
+                element: adminRoute(<AdminAuditLogsPage />, ADMIN_ONLY_ROLES),
             },
         ],
     },
     {
         path: '*',
-        element: <NotFoundPage />,
+        element: routePage(<NotFoundPage />),
     },
 ]);

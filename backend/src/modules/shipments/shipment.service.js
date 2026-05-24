@@ -8,6 +8,7 @@ const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 // Import dependencies
 const Order = require('../orders/order.model');
+const NotificationEventService = require('../notifications/notification_event.service');
 
 const logger = {
     info: (data) => console.log(JSON.stringify({
@@ -145,6 +146,8 @@ class ShipmentService {
                     },
                 },
             });
+
+            await NotificationEventService.orderStatusChanged(updatedOrder, 'SHIPPED');
 
             logger.info({
                 event: 'shipment_created',
@@ -336,6 +339,7 @@ class ShipmentService {
         session.startTransaction();
 
         let updatedShipment;
+        let updatedOrder = null;
 
         try {
             updatedShipment = await Shipment.findByIdAndUpdate(
@@ -345,7 +349,7 @@ class ShipmentService {
             );
 
             if (newStatus === 'delivered') {
-                await this._markOrderDelivered(
+                updatedOrder = await this._markOrderDelivered(
                     updatedShipment.order_id,
                     metadata.changed_by || null,
                     { session }
@@ -392,6 +396,10 @@ class ShipmentService {
                 },
             },
         });
+
+        if (newStatus === 'delivered') {
+            await NotificationEventService.orderStatusChanged(updatedOrder, 'DELIVERED');
+        }
 
         logger.info({
             event: 'shipment_status_updated',
@@ -825,6 +833,8 @@ class ShipmentService {
                 },
             },
         });
+
+        await NotificationEventService.orderStatusChanged(updatedOrder, 'DELIVERED');
 
         logger.info({
             event: 'shipment_delivered',

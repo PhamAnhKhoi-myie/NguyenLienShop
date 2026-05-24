@@ -3,6 +3,7 @@ const Order = require('./order.model');
 const OrderMapper = require('./order.mapper');
 const AppError = require('../../utils/appError.util');
 const OrderAuditLogService = require('../audit_logs/order_audit_log/order_log.service');
+const NotificationEventService = require('../notifications/notification_event.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 // Import dependencies
@@ -253,6 +254,8 @@ class OrderService {
                 },
             });
 
+            await NotificationEventService.orderCreated(order);
+
             return OrderMapper.toResponseDTO(order);
         } catch (error) {
             await session.abortTransaction();
@@ -443,6 +446,8 @@ class OrderService {
             await order.save({ session });
             await session.commitTransaction();
 
+            await NotificationEventService.paymentFailed(order);
+
             return OrderMapper.toResponseDTO(order);
         } catch (error) {
             await session.abortTransaction();
@@ -473,6 +478,8 @@ class OrderService {
         );
 
         await order.save();
+
+        await NotificationEventService.orderStatusChanged(order, 'PROCESSING');
 
         return OrderMapper.toResponseDTO(order);
     }
@@ -653,6 +660,8 @@ class OrderService {
             },
         });
 
+        await NotificationEventService.orderStatusChanged(order, 'SHIPPED');
+
         return OrderMapper.toResponseDTO(order);
     }
 
@@ -699,6 +708,8 @@ class OrderService {
                 },
             },
         });
+
+        await NotificationEventService.orderStatusChanged(order, 'DELIVERED');
 
         return OrderMapper.toDetailDTO(order);
     }
@@ -795,6 +806,8 @@ class OrderService {
                 },
             });
 
+            await NotificationEventService.orderStatusChanged(order, 'CANCELED');
+
             return OrderMapper.toDetailDTO(order);
         } catch (error) {
             await session.abortTransaction();
@@ -840,6 +853,10 @@ class OrderService {
                 },
             },
         });
+
+        if (fromStatus !== order.status) {
+            await NotificationEventService.orderStatusChanged(order, order.status);
+        }
 
         return OrderMapper.toDetailDTO(order);
     }
@@ -893,6 +910,10 @@ class OrderService {
             metadata,
             changes,
         });
+
+        if (changes.status && changes.status.from !== changes.status.to) {
+            await NotificationEventService.orderStatusChanged(order, order.status);
+        }
 
         return OrderMapper.toAdminDTO(order);
     }

@@ -47,7 +47,7 @@ Dung checklist nay truoc khi coi mot module FE la xong.
 | Module | Trang thai | Con thieu truoc khi goi la full |
 | --- | --- | --- |
 | UI foundation | Dat nen | Chi bo sung component moi khi workflow can |
-| App shell | Dat nen | Kiem tra lai tren mobile sau moi dot them menu |
+| App shell | Dat nen; da polish header mobile va admin card overflow | Tiep tuc kiem tra lai tren mobile sau moi dot them menu |
 | Auth | Dat nen | Manual test login/register/forgot/reset voi BE email that |
 | Public catalog | Dat nen | Bo sung filter nang cao neu BE mo them field |
 | Cart | Dat nen | Test lai merge cart sau login bang guest cart that |
@@ -55,7 +55,13 @@ Dung checklist nay truoc khi coi mot module FE la xong.
 | Payment | Dat nen | Test VNPAY sandbox khi co order hop le |
 | Account | Dat nen | Test cancel/review tren don PENDING va DELIVERED that |
 | Notifications | Dat nen | Test read/delete voi data thong bao that |
-| Admin | Products/categories/variants/variant units, banners/announcements/shop-info, orders, shipments, payments va discounts da co form/action theo contract BE | Users/audit logs con can form/action chi tiet |
+| Admin | Products/categories/variants/variant units, banners/announcements/shop-info, orders, shipments, payments, discounts, users va audit logs da co page/filter/action/detail theo contract BE; da pass e2e doc voi ADMIN/MANAGER va data that; da pass responsive scan desktop/mobile cho cac route admin dai | Tiep tuc regression khi them action ghi du lieu moi |
+
+## Release Hardening Da Lam
+
+- Route pages da lazy-load de tach chunk theo man hinh va giam main bundle.
+- Header shop mobile da het tran ngang khi user ADMIN/MANAGER dang nhap.
+- Card/admin grid da cho phep bang lon scroll trong card thay vi day rong body.
 
 ## Manual Test Toi Thieu
 

@@ -4,7 +4,7 @@ export default function Card({ className, children, ...props }) {
     return (
         <section
             className={cn(
-                'rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm',
+                'min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm',
                 className
             )}
             {...props}
@@ -16,7 +16,7 @@ export default function Card({ className, children, ...props }) {
 
 export function CardHeader({ className, children, ...props }) {
     return (
-        <div className={cn('border-b border-[var(--color-border)] p-5', className)} {...props}>
+        <div className={cn('min-w-0 border-b border-[var(--color-border)] p-5', className)} {...props}>
             {children}
         </div>
     );
@@ -24,7 +24,7 @@ export function CardHeader({ className, children, ...props }) {
 
 export function CardBody({ className, children, ...props }) {
     return (
-        <div className={cn('p-5', className)} {...props}>
+        <div className={cn('min-w-0 p-5', className)} {...props}>
             {children}
         </div>
     );

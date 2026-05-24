@@ -1,0 +1,235 @@
+const NotificationService = require('./notification.service');
+const logger = require('../../utils/logger.util');
+
+const ORDER_STATUS_NOTIFICATIONS = {
+    PROCESSING: {
+        title: 'Đơn hàng đang được xử lý',
+        event: 'ORDER_PROCESSING',
+        priority: 'medium',
+        message: (label) => `${label} đang được xử lý.`,
+    },
+    SHIPPED: {
+        title: 'Đơn hàng đang giao',
+        event: 'ORDER_SHIPPED',
+        priority: 'medium',
+        message: (label) => `${label} đang được giao.`,
+    },
+    DELIVERED: {
+        title: 'Giao hàng thành công',
+        event: 'ORDER_DELIVERED',
+        priority: 'medium',
+        message: (label) => `${label} đã được giao thành công.`,
+    },
+    CANCELED: {
+        title: 'Đơn hàng đã bị hủy',
+        event: 'ORDER_CANCELED',
+        priority: 'high',
+        message: (label) => `${label} đã bị hủy.`,
+    },
+};
+
+function getId(value) {
+    if (!value) {
+        return null;
+    }
+
+    if (value._id) {
+        return value._id;
+    }
+
+    if (value.id) {
+        return value.id;
+    }
+
+    return value;
+}
+
+function getPlain(value) {
+    return value?.toObject ? value.toObject() : value;
+}
+
+function getUserId(user) {
+    return getId(user);
+}
+
+function getOrderUserId(order, fallback = null) {
+    const doc = getPlain(order);
+    return getId(doc?.user_id) || getId(fallback?.user_id);
+}
+
+function getOrderId(order, fallback = null) {
+    const doc = getPlain(order);
+    return getId(doc) || getId(fallback?.order_id);
+}
+
+function getOrderCode(order) {
+    const doc = getPlain(order);
+    return doc?.order_code || null;
+}
+
+function getOrderLabel(order) {
+    const orderCode = getOrderCode(order);
+    return orderCode ? `Đơn hàng ${orderCode}` : 'Đơn hàng của bạn';
+}
+
+function getUserDisplayName(user) {
+    const doc = getPlain(user);
+    return (
+        doc?.profile?.full_name ||
+        doc?.full_name ||
+        doc?.name ||
+        doc?.email ||
+        'bạn'
+    );
+}
+
+function getOrderData(order, event, extra = {}) {
+    const { payment, ...metadata } = extra;
+
+    return {
+        ref_type: 'order',
+        ref_id: getOrderId(order, payment || null),
+        extra: {
+            event,
+            order_code: getOrderCode(order),
+            ...metadata,
+        },
+    };
+}
+
+class NotificationEventService {
+    static async _create(sourceEvent, data) {
+        if (!data.user_id) {
+            logger.warn({
+                event: 'notification_event_skipped',
+                source_event: sourceEvent,
+                reason: 'missing_user_id',
+            });
+
+            return null;
+        }
+
+        try {
+            return await NotificationService.createNotification(data);
+        } catch (error) {
+            logger.warn({
+                event: 'notification_event_failed',
+                source_event: sourceEvent,
+                user_id: data.user_id?.toString?.() || data.user_id,
+                error: error.message,
+            });
+
+            return null;
+        }
+    }
+
+    static async accountCreated(user) {
+        const displayName = getUserDisplayName(user);
+
+        return this._create('REGISTER_SUCCESS', {
+            user_id: getUserId(user),
+            type: 'system',
+            title: 'Tạo tài khoản thành công',
+            message: `Chào mừng ${displayName} đã tạo tài khoản thành công.`,
+            priority: 'low',
+            data: {
+                ref_type: null,
+                ref_id: null,
+                extra: {
+                    event: 'REGISTER_SUCCESS',
+                },
+            },
+        });
+    }
+
+    static async passwordChanged(user) {
+        return this._create('PASSWORD_CHANGED', {
+            user_id: getUserId(user),
+            type: 'system',
+            title: 'Đổi mật khẩu thành công',
+            message: 'Mật khẩu tài khoản của bạn đã được thay đổi thành công.',
+            priority: 'low',
+            data: {
+                ref_type: null,
+                ref_id: null,
+                extra: {
+                    event: 'PASSWORD_CHANGED',
+                },
+            },
+        });
+    }
+
+    static async orderCreated(order) {
+        const label = getOrderLabel(order);
+
+        return this._create('ORDER_CREATED', {
+            user_id: getOrderUserId(order),
+            type: 'order',
+            title: 'Đặt hàng thành công',
+            message: `${label} đã được tạo thành công.`,
+            priority: 'low',
+            data: getOrderData(order, 'ORDER_CREATED', {
+                status: 'PENDING',
+            }),
+        });
+    }
+
+    static async paymentSucceeded(order, payment = null) {
+        const label = getOrderLabel(order);
+
+        return this._create('PAYMENT_SUCCESS', {
+            user_id: getOrderUserId(order, payment),
+            type: 'order',
+            title: 'Thanh toán thành công',
+            message: `Thanh toán cho ${label.toLowerCase()} đã thành công.`,
+            priority: 'medium',
+            data: getOrderData(order, 'PAYMENT_SUCCESS', {
+                status: 'PAID',
+                payment_id: getId(payment),
+                payment,
+            }),
+        });
+    }
+
+    static async paymentFailed(order, payment = null, failure = {}) {
+        const label = getOrderLabel(order);
+
+        return this._create('PAYMENT_FAILED', {
+            user_id: getOrderUserId(order, payment),
+            type: 'order',
+            title: 'Thanh toán thất bại',
+            message: `Thanh toán cho ${label.toLowerCase()} thất bại. Vui lòng thử lại hoặc chọn phương thức khác.`,
+            priority: 'high',
+            data: getOrderData(order, 'PAYMENT_FAILED', {
+                status: 'FAILED',
+                payment_id: getId(payment),
+                failure_code: failure.failure_code || null,
+                failure_reason: failure.failure_reason || null,
+                payment,
+            }),
+        });
+    }
+
+    static async orderStatusChanged(order, status) {
+        const notification = ORDER_STATUS_NOTIFICATIONS[status];
+
+        if (!notification) {
+            return null;
+        }
+
+        const label = getOrderLabel(order);
+
+        return this._create(notification.event, {
+            user_id: getOrderUserId(order),
+            type: 'order',
+            title: notification.title,
+            message: notification.message(label),
+            priority: notification.priority,
+            data: getOrderData(order, notification.event, {
+                status,
+            }),
+        });
+    }
+}
+
+module.exports = NotificationEventService;
