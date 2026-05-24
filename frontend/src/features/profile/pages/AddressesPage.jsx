@@ -217,16 +217,18 @@ export default function AddressesPage() {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h1 className="text-xl font-semibold text-[var(--color-text-main)]">
-                                Địa chỉ giao hàng
+                                Quản lý địa chỉ giao hàng
                             </h1>
                             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                Quản lý địa chỉ dùng khi checkout.
+                                Địa chỉ sẽ được dùng để đặt hàng - nhận hàng.
                             </p>
                         </div>
-                        <Button onClick={openCreateModal}>
-                            <Plus className="h-4 w-4" />
-                            Thêm địa chỉ
-                        </Button>
+                        {!addressesQuery.isLoading && addresses.length > 0 && (
+                            <Button onClick={openCreateModal}>
+                                <Plus className="h-4 w-4" />
+                                Thêm địa chỉ
+                            </Button>
+                        )}
                     </div>
                 </CardHeader>
                 <CardBody>

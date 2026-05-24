@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 import Button from '../../../shared/components/Button';
@@ -31,7 +32,9 @@ const registerSchema = z.object({
 });
 
 export default function RegisterPage() {
+    const navigate = useNavigate();
     const registerMutation = useRegister();
+    const [countdown, setCountdown] = useState(null);
 
     const {
         register,
@@ -46,6 +49,35 @@ export default function RegisterPage() {
         },
     });
 
+    useEffect(() => {
+        if (countdown === null) return;
+
+        if (countdown <= 0) {
+            navigate(ROUTES.LOGIN, {
+                replace: true,
+                state: {
+                    message: 'Đăng ký thành công. Vui lòng đăng nhập.',
+                },
+            });
+            return;
+        }
+
+        const timerId = setTimeout(() => {
+            setCountdown((current) => current - 1);
+        }, 1000);
+
+        return () => clearTimeout(timerId);
+    }, [countdown, navigate]);
+
+    const goToLogin = () => {
+        navigate(ROUTES.LOGIN, {
+            replace: true,
+            state: {
+                message: 'Đăng ký thành công. Vui lòng đăng nhập.',
+            },
+        });
+    };
+
     const onSubmit = (values) => {
         const payload = {
             email: values.email,
@@ -56,7 +88,11 @@ export default function RegisterPage() {
             payload.full_name = values.full_name.trim();
         }
 
-        registerMutation.mutate(payload);
+        registerMutation.mutate(payload, {
+            onSuccess: () => {
+                setCountdown(5);
+            },
+        });
     };
 
     return (
@@ -68,6 +104,7 @@ export default function RegisterPage() {
                 <Input
                     label="Họ tên"
                     placeholder="Nhập họ tên"
+                    disabled={registerMutation.isPending || countdown !== null}
                     error={errors.full_name?.message}
                     {...register('full_name')}
                 />
@@ -77,6 +114,7 @@ export default function RegisterPage() {
                     type="email"
                     autoComplete="email"
                     placeholder="Nhập email"
+                    disabled={registerMutation.isPending || countdown !== null}
                     error={errors.email?.message}
                     {...register('email')}
                 />
@@ -87,20 +125,34 @@ export default function RegisterPage() {
                     autoComplete="new-password"
                     placeholder="Nhập mật khẩu"
                     helperText="Tối thiểu 6 ký tự, có chữ thường và số."
+                    disabled={registerMutation.isPending || countdown !== null}
                     error={errors.password?.message}
                     {...register('password')}
                 />
 
                 {registerMutation.isError && (
                     <p className="text-sm text-[var(--color-error)]">
-                        {registerMutation.error.message}
+                        {registerMutation.error?.response?.data?.message ||
+                            registerMutation.error?.message ||
+                            'Tạo tài khoản thất bại'}
                     </p>
+                )}
+
+                {countdown !== null && (
+                    <button
+                        type="button"
+                        onClick={goToLogin}
+                        className="w-full rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 transition hover:bg-green-100 hover:underline"
+                    >
+                        Tạo thành công, chuyển qua đăng nhập sau {countdown}s.
+                    </button>
                 )}
 
                 <Button
                     type="submit"
                     fullWidth
                     isLoading={registerMutation.isPending}
+                    disabled={countdown !== null}
                 >
                     {registerMutation.isPending ? 'Đang tạo...' : 'Tạo tài khoản'}
                 </Button>

@@ -1,13 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+
 import { authApi } from '../api/auth.api';
 import { cartApi } from '../../cart/api/cart.api';
 import { useAuthStore } from '../store/auth.store';
 import { queryClient } from '../../../shared/api/queryClient';
-import { ROUTES } from '../../../shared/constants/routes';
 
-export function useLogin(redirectTo = ROUTES.HOME) {
-    const navigate = useNavigate();
+export function useLogin() {
     const setAuth = useAuthStore((state) => state.setAuth);
 
     return useMutation({
@@ -25,9 +23,8 @@ export function useLogin(redirectTo = ROUTES.HOME) {
             } catch {
                 await Promise.resolve();
             }
-            await queryClient.invalidateQueries({ queryKey: ['cart'] });
 
-            navigate(redirectTo, { replace: true });
+            await queryClient.invalidateQueries({ queryKey: ['cart'] });
         },
     });
 }

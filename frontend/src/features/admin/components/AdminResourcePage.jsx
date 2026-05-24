@@ -214,7 +214,7 @@ export default function AdminResourcePage({ resource }) {
     const handleSave = async (values) => {
         const form = resource.form;
         const initialData = detailQuery.data?.data || formState.row || {};
-        const payload = form.toPayload(values, {
+        const payload = await form.toPayload(values, {
             mode: formState.mode,
             initialData,
         });
@@ -317,10 +317,10 @@ export default function AdminResourcePage({ resource }) {
                                         {(resource.form ||
                                             resource.rowActions ||
                                             resource.getDeleteEndpoint) && (
-                                            <th className="whitespace-nowrap px-4 py-3 text-right">
-                                                Tác vụ
-                                            </th>
-                                        )}
+                                                <th className="whitespace-nowrap px-4 py-3 text-right">
+                                                    Tác vụ
+                                                </th>
+                                            )}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
@@ -347,63 +347,63 @@ export default function AdminResourcePage({ resource }) {
                                                 {(resource.form ||
                                                     resource.rowActions ||
                                                     resource.getDeleteEndpoint) && (
-                                                    <td className="whitespace-nowrap px-4 py-3 text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            {resource.form && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    onClick={() =>
-                                                                        openEditForm(
-                                                                            row
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <Pencil className="h-4 w-4" />
-                                                                    Sửa
-                                                                </Button>
-                                                            )}
-                                                            {resource.rowActions?.map(
-                                                                (action) => (
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                {resource.form && (
                                                                     <Button
-                                                                        key={
-                                                                            action.label
-                                                                        }
                                                                         size="sm"
-                                                                        variant={
-                                                                            action.variant ||
-                                                                            'outline'
-                                                                        }
+                                                                        variant="outline"
                                                                         onClick={() =>
-                                                                            action.onClick?.(
+                                                                            openEditForm(
                                                                                 row
                                                                             )
                                                                         }
                                                                     >
-                                                                        {action.label}
+                                                                        <Pencil className="h-4 w-4" />
+                                                                        Sửa
                                                                     </Button>
-                                                                )
-                                                            )}
-                                                            {resource.getDeleteEndpoint && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="danger"
-                                                                    isLoading={
-                                                                        deleteMutation.isPending
-                                                                    }
-                                                                    onClick={() =>
-                                                                        handleDelete(
-                                                                            row
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                    Xóa
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                )}
+                                                                )}
+                                                                {resource.rowActions?.map(
+                                                                    (action) => (
+                                                                        <Button
+                                                                            key={
+                                                                                action.label
+                                                                            }
+                                                                            size="sm"
+                                                                            variant={
+                                                                                action.variant ||
+                                                                                'outline'
+                                                                            }
+                                                                            onClick={() =>
+                                                                                action.onClick?.(
+                                                                                    row
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            {action.label}
+                                                                        </Button>
+                                                                    )
+                                                                )}
+                                                                {resource.getDeleteEndpoint && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="danger"
+                                                                        isLoading={
+                                                                            deleteMutation.isPending
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleDelete(
+                                                                                row
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                        Xóa
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    )}
                                             </tr>
                                         );
                                     })}

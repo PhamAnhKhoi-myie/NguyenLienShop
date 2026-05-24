@@ -2,10 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+
 import Button from '../../../shared/components/Button';
 import Input from '../../../shared/components/Input';
 import Select from '../../../shared/components/Select';
 import Textarea from '../../../shared/components/Textarea';
+import FileUploadBox from '../../../shared/components/FileUploadBox';
 import { cn } from '../../../shared/utils/cn';
 
 function getOptionValue(item) {
@@ -49,6 +51,7 @@ function FieldRenderer({
     const fieldContext = { mode, initialData };
     const disabled = resolveFieldFlag(field.disabled, fieldContext);
     const readOnly = resolveFieldFlag(field.readOnly, fieldContext);
+
     const commonProps = {
         label: field.label,
         error: error?.message,
@@ -83,6 +86,35 @@ function FieldRenderer({
                     </option>
                 ))}
             </Select>
+        );
+    }
+
+    if (field.type === 'file') {
+        return (
+            <FileUploadBox
+                label={field.label}
+                accept={field.accept || 'image/png,image/jpeg,image/jpg,image/webp'}
+                helperText={
+                    typeof field.helperText === 'function'
+                        ? field.helperText(fieldContext)
+                        : field.helperText
+                }
+                error={error?.message}
+                disabled={disabled}
+                multiple={field.multiple}
+                previewUrl={field.previewUrl?.(initialData)}
+                className={field.inputClassName}
+                onChange={(file) => {
+                    const eventValue = field.multiple ? file : file ? [file] : [];
+
+                    register(field.name).onChange({
+                        target: {
+                            name: field.name,
+                            value: eventValue,
+                        },
+                    });
+                }}
+            />
         );
     }
 

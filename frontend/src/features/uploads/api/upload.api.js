@@ -2,12 +2,12 @@ import axios from 'axios';
 import { axiosClient } from '../../../shared/api/axiosClient';
 
 export const uploadApi = {
-    createAvatarSignature: () =>
-        axiosClient.post('/uploads/cloudinary/avatar-signature', {
-            asset_type: 'avatar',
-            folder: 'avatars',
-            tags: ['avatar', 'user'],
-            overwrite: true,
+    createSignature: ({ asset_type, folder, tags = [], overwrite = false }) =>
+        axiosClient.post('/uploads/cloudinary/signature', {
+            asset_type,
+            folder,
+            tags,
+            overwrite,
             invalidate: true,
         }),
 
@@ -28,13 +28,16 @@ export const uploadApi = {
         return response.data;
     },
 
-    uploadAvatar: async (file) => {
-        const signatureResponse = await uploadApi.createAvatarSignature();
-        const signatureData = signatureResponse.data;
+    uploadImage: async ({ file, asset_type, folder, tags = [] }) => {
+        const signatureResponse = await uploadApi.createSignature({
+            asset_type,
+            folder,
+            tags,
+        });
 
         const cloudinaryResult = await uploadApi.uploadToCloudinary({
             file,
-            signatureData,
+            signatureData: signatureResponse.data,
         });
 
         return {
@@ -42,4 +45,28 @@ export const uploadApi = {
             public_id: cloudinaryResult.public_id,
         };
     },
+
+    uploadAvatar: (file) =>
+        uploadApi.uploadImage({
+            file,
+            asset_type: 'avatar',
+            folder: 'avatars',
+            tags: ['avatar', 'user'],
+        }),
+
+    uploadBanner: (file) =>
+        uploadApi.uploadImage({
+            file,
+            asset_type: 'banner',
+            folder: 'banners',
+            tags: ['banner'],
+        }),
+
+    uploadProductImage: (file) =>
+        uploadApi.uploadImage({
+            file,
+            asset_type: 'product',
+            folder: 'products',
+            tags: ['product'],
+        }),
 };

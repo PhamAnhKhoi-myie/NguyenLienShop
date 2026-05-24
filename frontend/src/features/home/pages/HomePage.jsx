@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { PackageCheck, ShieldCheck, Truck } from 'lucide-react';
 
 import Card, { CardBody } from '../../../shared/components/Card';
+import HomeBanner from '../../banners/components/HomeBanner';
 import { ROUTES } from '../../../shared/constants/routes';
 
 const benefits = [
@@ -70,19 +71,7 @@ export default function HomePage() {
                     </div>
                 </div>
 
-                <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-                    <div className="text-center">
-
-                        <p className="mt-5 text-base font-semibold text-[var(--color-text-main)]">
-                            Khu vực banner hình ảnh
-                        </p>
-
-                        <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-[var(--color-text-muted)]">
-                            Sau này thay bằng ảnh túi bao trái cây, vườn cây hoặc
-                            banner khuyến mãi thực tế.
-                        </p>
-                    </div>
-                </div>
+                <HomeBanner location="homepage_top" />
             </section>
 
             <section>

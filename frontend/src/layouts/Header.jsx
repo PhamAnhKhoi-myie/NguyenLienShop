@@ -30,6 +30,16 @@ function getUserDisplayName(user) {
     );
 }
 
+function getUserAvatarUrl(user) {
+    return (
+        user?.profile?.avatar_url ||
+        user?.profile?.avatar ||
+        user?.avatar_url ||
+        user?.avatar ||
+        null
+    );
+}
+
 function getInitials(value) {
     if (!value) return 'U';
 
@@ -39,6 +49,31 @@ function getInitials(value) {
         .slice(0, 2)
         .map((word) => word.charAt(0).toUpperCase())
         .join('');
+}
+
+function UserAvatar({ user, initials, size = 'sm' }) {
+    const avatarUrl = getUserAvatarUrl(user);
+
+    const sizeClass = size === 'lg' ? 'h-10 w-10 text-sm' : 'h-6 w-6 text-xs';
+    const iconSize = size === 'lg' ? 20 : 15;
+
+    return (
+        <span
+            className={`flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden rounded-full bg-green-100 font-semibold text-[var(--color-primary)]`}
+        >
+            {avatarUrl ? (
+                <img
+                    src={avatarUrl}
+                    alt={getUserDisplayName(user) || 'Avatar'}
+                    className="h-full w-full object-cover"
+                />
+            ) : user ? (
+                <span>{initials}</span>
+            ) : (
+                <UserRound size={iconSize} />
+            )}
+        </span>
+    );
 }
 
 function hasAdminAccess(user) {
@@ -162,15 +197,7 @@ function Header() {
                         onClick={() => setIsAccountOpen((current) => !current)}
                         className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)] sm:px-3"
                     >
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[var(--color-primary)]">
-                            {isLoggedIn ? (
-                                <span className="text-xs font-semibold">
-                                    {initials}
-                                </span>
-                            ) : (
-                                <UserRound size={15} />
-                            )}
-                        </span>
+                        <UserAvatar user={isLoggedIn ? user : null} initials={initials} />
 
                         <span className="hidden max-w-28 truncate sm:inline">
                             {accountLabel}
@@ -184,9 +211,7 @@ function Header() {
                                 <>
                                     <div className="border-b border-[var(--color-border)] px-4 py-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-[var(--color-primary)]">
-                                                {initials}
-                                            </div>
+                                            <UserAvatar user={user} initials={initials} size="lg" />
 
                                             <div className="min-w-0">
                                                 <p className="truncate text-sm font-semibold text-[var(--color-text-main)]">

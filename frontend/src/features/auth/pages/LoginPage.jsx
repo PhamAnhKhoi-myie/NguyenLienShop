@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 import AuthPageCard from '../components/AuthPageCard';
@@ -18,12 +19,16 @@ const loginSchema = z.object({
 });
 
 function LoginPage() {
+    const navigate = useNavigate();
     const location = useLocation();
+    const [countdown, setCountdown] = useState(null);
+
     const from = location.state?.from;
     const redirectTo = from
         ? `${from.pathname}${from.search || ''}`
         : ROUTES.HOME;
-    const loginMutation = useLogin(redirectTo);
+
+    const loginMutation = useLogin();
 
     const {
         register,
@@ -37,12 +42,33 @@ function LoginPage() {
         },
     });
 
+    useEffect(() => {
+        if (countdown === null) return;
+
+        if (countdown <= 0) {
+            navigate(redirectTo, { replace: true });
+            return;
+        }
+
+        const timerId = setTimeout(() => {
+            setCountdown((current) => current - 1);
+        }, 1000);
+
+        return () => clearTimeout(timerId);
+    }, [countdown, navigate, redirectTo]);
+
     const apiError =
         loginMutation.error?.response?.data?.message ||
         loginMutation.error?.message;
 
+    const isLocked = loginMutation.isPending || countdown !== null;
+
     const onSubmit = (values) => {
-        loginMutation.mutate(values);
+        loginMutation.mutate(values, {
+            onSuccess: () => {
+                setCountdown(3);
+            },
+        });
     };
 
     return (
@@ -59,7 +85,7 @@ function LoginPage() {
                     label="Email"
                     type="email"
                     placeholder="Nhập email"
-                    disabled={loginMutation.isPending}
+                    disabled={isLocked}
                     error={errors.email?.message}
                     {...register('email')}
                 />
@@ -68,36 +94,45 @@ function LoginPage() {
                     label="Mật khẩu"
                     type="password"
                     placeholder="Nhập mật khẩu"
-                    disabled={loginMutation.isPending}
+                    disabled={isLocked}
                     error={errors.password?.message}
                     {...register('password')}
                 />
 
-                {apiError && (
+                {apiError && countdown === null && (
                     <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
                         {apiError}
                     </p>
+                )}
+
+                {countdown !== null && (
+                    <div className="w-full cursor-not-allowed rounded-md border border-green-200 bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700">
+                        Đăng nhập thành công {countdown}s.
+                    </div>
                 )}
 
                 <Button
                     type="submit"
                     className="w-full"
                     isLoading={loginMutation.isPending}
+                    disabled={countdown !== null}
                 >
-                    Đăng nhập
+                    {loginMutation.isPending ? 'Đang đăng nhập...' : 'Đăng nhập'}
                 </Button>
 
                 <div className="flex items-center justify-between text-sm">
                     <Link
                         to={ROUTES.FORGOT_PASSWORD}
-                        className="text-[var(--color-text)] hover:text-[var(--color-primary)]"
+                        className={`text-[var(--color-text)] hover:text-[var(--color-primary)] ${isLocked ? 'pointer-events-none opacity-50' : ''
+                            }`}
                     >
                         Quên mật khẩu?
                     </Link>
 
                     <Link
                         to={ROUTES.REGISTER}
-                        className="text-[var(--color-text)] hover:text-[var(--color-primary)]"
+                        className={`text-[var(--color-text)] hover:text-[var(--color-primary)] ${isLocked ? 'pointer-events-none opacity-50' : ''
+                            }`}
                     >
                         Tạo tài khoản
                     </Link>

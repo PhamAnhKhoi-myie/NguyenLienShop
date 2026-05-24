@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { uploadApi } from '../../uploads/api/upload.api';
 
 const bannerLocations = [
     { value: 'homepage_top', label: 'Trang chủ - đầu trang' },
@@ -46,13 +47,6 @@ const localDateTimeSchema = (label) =>
         .min(1, `${label} là bắt buộc`)
         .refine(isValidLocalDateTime, `${label} không hợp lệ`);
 
-const httpUrlSchema = (label) =>
-    z
-        .string()
-        .trim()
-        .min(1, `${label} là bắt buộc`)
-        .refine(isHttpUrl, `${label} phải là URL HTTP(S)`);
-
 const optionalHttpUrlSchema = (label) =>
     z
         .string()
@@ -85,8 +79,10 @@ const timeOrEmptySchema = (label) =>
 const bannerLinkSchema = z
     .string()
     .trim()
-    .min(1, 'Link banner là bắt buộc')
-    .refine(isSafeBannerLink, 'Link phải là URL HTTP(S), route nội bộ hoặc ID');
+    .refine(
+        (value) => value === '' || isSafeBannerLink(value),
+        'Link phải là URL HTTP(S), route nội bộ hoặc ID'
+    );
 
 function isHttpUrl(value) {
     try {
@@ -222,7 +218,9 @@ const workingHourSchemaShape = dayOptions.reduce((shape, { key, label }) => {
 
 export const bannerFormSchema = z
     .object({
-        image_url: httpUrlSchema('Ảnh banner'),
+        image_file: z.any().optional(),
+        image_url: z.string().optional(),
+        image_public_id: z.string().optional(),
         image_alt_text: z
             .string()
             .trim()
@@ -243,6 +241,17 @@ export const bannerFormSchema = z
         end_at: localDateTimeSchema('Thời điểm kết thúc'),
     })
     .superRefine((values, ctx) => {
+        const hasOldImage = Boolean(values.image_url);
+        const hasNewFile = values.image_file?.length > 0;
+
+        if (!hasOldImage && !hasNewFile) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['image_file'],
+                message: 'Vui lòng chọn ảnh banner',
+            });
+        }
+
         if (new Date(values.end_at) <= new Date(values.start_at)) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
@@ -325,7 +334,9 @@ export const bannerFormConfig = {
     getDetailEndpoint: (row) => `/banners/${row.id || row._id}`,
     getUpdateEndpoint: (row) => `/banners/${row.id || row._id}`,
     defaultValues: {
+        image_file: null,
         image_url: '',
+        image_public_id: '',
         image_alt_text: '',
         link: '',
         location: 'homepage_top',
@@ -334,7 +345,9 @@ export const bannerFormConfig = {
         end_at: '',
     },
     toFormValues: (banner = {}) => ({
+        image_file: null,
         image_url: banner.image?.url || '',
+        image_public_id: banner.image?.public_id || '',
         image_alt_text: banner.image?.alt_text || '',
         link: banner.link || '',
         location: banner.location || 'homepage_top',
@@ -342,21 +355,49 @@ export const bannerFormConfig = {
         start_at: toDateTimeInput(banner.start_at),
         end_at: toDateTimeInput(banner.end_at, addDays(30)),
     }),
-    toPayload: (values) => ({
-        image: {
-            url: values.image_url.trim(),
-            alt_text: cleanNullable(values.image_alt_text) || undefined,
-        },
-        link: values.link.trim(),
-        location: values.location,
-        sort_order: Number(values.sort_order || 0),
-        start_at: toIsoDateTime(values.start_at),
-        end_at: toIsoDateTime(values.end_at),
-    }),
+    toPayload: async (values) => {
+        let imageUrl = values.image_url;
+        let imagePublicId = values.image_public_id;
+
+        const file = values.image_file?.[0];
+
+        if (file) {
+            const uploadedImage = await uploadApi.uploadBanner(file);
+
+            imageUrl = uploadedImage.url;
+            imagePublicId = uploadedImage.public_id;
+        }
+
+        return {
+            image: {
+                url: imageUrl,
+                public_id: imagePublicId,
+                alt_text: cleanNullable(values.image_alt_text) || undefined,
+            },
+            link: values.link?.trim() || '/',
+            location: values.location,
+            sort_order: Number(values.sort_order || 0),
+            start_at: toIsoDateTime(values.start_at),
+            end_at: toIsoDateTime(values.end_at),
+        };
+    },
     fields: [
-        { name: 'image_url', label: 'Ảnh banner', placeholder: 'https://...' },
-        { name: 'image_alt_text', label: 'Alt text', placeholder: 'Túi bao trái cây trắng 16x16' },
-        { name: 'link', label: 'Link', placeholder: '/products hoặc https://...' },
+        {
+            name: 'image_file',
+            label: 'Ảnh banner',
+            type: 'file',
+            accept: 'image/*',
+            helperText: ({ mode }) =>
+                mode === 'edit'
+                    ? 'Chọn ảnh mới nếu muốn thay ảnh hiện tại.'
+                    : 'Chọn ảnh từ máy tính.',
+            className: 'md:col-span-2',
+        },
+        {
+            name: 'image_alt_text',
+            label: 'Alt text',
+            placeholder: 'Túi bao trái cây trắng 16x16',
+        },
         {
             name: 'location',
             label: 'Vị trí',
