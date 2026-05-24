@@ -41,14 +41,13 @@ const categories = [
 export default function HomePage() {
     return (
         <div className="space-y-16">
-            <section className="grid min-h-[360px] items-center gap-10 py-8 md:grid-cols-[1.05fr_0.95fr] md:py-12">
-                <div>
-
-                    <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight text-[var(--color-text-main)] md:text-5xl">
+            <section className="grid min-h-[360px] items-center gap-8 py-8 lg:grid-cols-[0.65fr_1.35fr] lg:py-12">
+                <div className="max-w-xl">
+                    <h1 className="text-4xl font-bold leading-tight text-[var(--color-text-main)] md:text-5xl">
                         Túi bao trái cây sạch, bền và tiện cho nhà vườn
                     </h1>
 
-                    <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--color-text-muted)]">
+                    <p className="mt-5 text-base leading-7 text-[var(--color-text-muted)]">
                         Cung cấp túi bao trái cây, túi vải rút và vật tư hỗ trợ
                         bảo vệ cây trồng. Sản phẩm phù hợp cho vườn bưởi, xoài,
                         ổi và nhiều loại cây ăn trái khác.
@@ -71,13 +70,14 @@ export default function HomePage() {
                     </div>
                 </div>
 
-                <HomeBanner location="homepage_top" />
+                <div className="w-full">
+                    <HomeBanner location="homepage_top" />
+                </div>
             </section>
 
             <section>
                 <div className="mx-auto max-w-3xl text-center">
-
-                    <h2 className="mt-3 text-2xl font-bold text-[var(--color-text-main)] md:text-3xl">
+                    <h2 className="text-2xl font-bold text-[var(--color-text-main)] md:text-3xl">
                         Chọn đúng túi bao cho từng loại trái cây
                     </h2>
 
@@ -115,8 +115,7 @@ export default function HomePage() {
             <section className="border-y border-[var(--color-border)] py-10">
                 <div className="grid gap-8 md:grid-cols-[0.8fr_1.2fr] md:items-center">
                     <div>
-
-                        <h2 className="mt-3 text-2xl font-bold text-[var(--color-text-main)]">
+                        <h2 className="text-2xl font-bold text-[var(--color-text-main)]">
                             Ưu đãi cho đơn hàng đầu tiên
                         </h2>
 
@@ -154,8 +153,7 @@ export default function HomePage() {
             <section>
                 <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-
-                        <h2 className="mt-3 text-2xl font-bold text-[var(--color-text-main)]">
+                        <h2 className="text-2xl font-bold text-[var(--color-text-main)]">
                             Sản phẩm theo nhu cầu nhà vườn
                         </h2>
 

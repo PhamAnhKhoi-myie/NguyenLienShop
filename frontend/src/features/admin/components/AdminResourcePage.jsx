@@ -1,5 +1,6 @@
 import { Filter, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Button from '../../../shared/components/Button';
 import Card, { CardBody, CardHeader } from '../../../shared/components/Card';
 import EmptyState from '../../../shared/components/EmptyState';
@@ -101,6 +102,7 @@ function ResourceFilters({ filters, values, onChange, onApply, onReset }) {
 }
 
 export default function AdminResourcePage({ resource }) {
+    const queryClient = useQueryClient();
     const [page, setPage] = useState(1);
     const [formState, setFormState] = useState({
         open: false,
@@ -179,6 +181,12 @@ export default function AdminResourcePage({ resource }) {
         await deleteMutation.mutateAsync({
             endpoint: resource.getDeleteEndpoint(row),
         });
+
+        if (resource.endpoint === '/banners') {
+            await queryClient.invalidateQueries({
+                queryKey: ['banners'],
+            });
+        }
     };
 
     const openCreateForm = () => {
@@ -228,6 +236,12 @@ export default function AdminResourcePage({ resource }) {
             await createMutation.mutateAsync({
                 endpoint: form.createEndpoint,
                 payload,
+            });
+        }
+
+        if (resource.endpoint === '/banners') {
+            await queryClient.invalidateQueries({
+                queryKey: ['banners'],
             });
         }
 
