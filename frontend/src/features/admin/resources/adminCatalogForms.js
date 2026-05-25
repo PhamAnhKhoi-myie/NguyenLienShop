@@ -17,11 +17,6 @@ const optionalSlugSchema = z
         'Slug chỉ gồm chữ thường, số và dấu gạch ngang'
     );
 
-const optionalUrlSchema = z
-    .string()
-    .trim()
-    .refine((value) => value === '' || isValidUrl(value), 'URL không hợp lệ');
-
 const imageLinesSchema = z.string().superRefine((value, ctx) => {
     const lines = splitLines(value);
 
@@ -114,8 +109,6 @@ export const categoryFormSchema = z.object({
     description: z.string().trim().max(500, 'Mô tả không vượt quá 500 ký tự'),
     parent_id: z.string().optional(),
     status: z.enum(['ACTIVE', 'INACTIVE']),
-    icon_url: optionalUrlSchema,
-    image_url: optionalUrlSchema,
     display_order: z.coerce
         .number()
         .int('Thứ tự phải là số nguyên')
@@ -153,8 +146,6 @@ export const categoryFormConfig = {
         description: '',
         parent_id: '',
         status: 'ACTIVE',
-        icon_url: '',
-        image_url: '',
         display_order: 0,
     },
     toFormValues: (category = {}) => ({
@@ -163,8 +154,6 @@ export const categoryFormConfig = {
         description: category.description || '',
         parent_id: category.parent_id || '',
         status: category.status || 'ACTIVE',
-        icon_url: category.icon_url || '',
-        image_url: category.image_url || '',
         display_order: category.display_order ?? 0,
     }),
     toPayload: (values) => ({
@@ -173,8 +162,6 @@ export const categoryFormConfig = {
         description: cleanOptional(values.description),
         parent_id: values.parent_id || null,
         status: values.status,
-        icon_url: cleanOptional(values.icon_url) || null,
-        image_url: cleanOptional(values.image_url) || null,
         display_order: Number(values.display_order || 0),
     }),
     fields: [
@@ -202,8 +189,6 @@ export const categoryFormConfig = {
             type: 'textarea',
             className: 'md:col-span-2',
         },
-        { name: 'icon_url', label: 'Icon URL', placeholder: 'https://...' },
-        { name: 'image_url', label: 'Ảnh URL', placeholder: 'https://...' },
         { name: 'display_order', label: 'Thứ tự', type: 'number' },
     ],
 };
