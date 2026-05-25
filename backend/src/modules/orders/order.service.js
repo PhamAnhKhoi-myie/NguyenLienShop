@@ -5,6 +5,7 @@ const AppError = require('../../utils/appError.util');
 const OrderAuditLogService = require('../audit_logs/order_audit_log/order_log.service');
 const NotificationEventService = require('../notifications/notification_event.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
+const { assertPaymentProviderEnabled } = require('../payments/payment_provider.util');
 
 // Import dependencies
 const Variant = require('../products/variant.model');
@@ -30,6 +31,12 @@ class OrderService {
                 400,
                 'MISSING_REQUIRED_PARAMS'
             );
+        }
+
+        const paymentMethod = shippingData?.payment_method || 'COD';
+
+        if (paymentMethod === 'VNPAY') {
+            assertPaymentProviderEnabled('vnpay');
         }
 
         const session = await mongoose.startSession();
@@ -166,7 +173,7 @@ class OrderService {
                     : null,
 
                 payment: {
-                    method: shippingData.payment_method || 'COD',
+                    method: paymentMethod,
                     status: 'PENDING',
                 },
 
@@ -953,7 +960,7 @@ class OrderService {
         return OrderMapper.toAdminDTO(order);
     }
 
-    static async writeReview(orderId, itemId, rating, comment, userId, metadata = {}) {
+    static async writeReview(orderId, itemId, rating, title, comment, userId, metadata = {}) {
         const order = await Order.findOne({
             _id: orderId,
             user_id: userId,
@@ -986,6 +993,7 @@ class OrderService {
             orderId,
             {
                 rating,
+                title,
                 content: comment
             },
             metadata

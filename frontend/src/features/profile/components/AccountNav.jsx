@@ -1,5 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Bell, KeyRound, MapPin, PackageCheck, UserRound } from 'lucide-react';
+import {
+    Bell,
+    KeyRound,
+    MapPin,
+    MessageSquare,
+    PackageCheck,
+    UserRound,
+} from 'lucide-react';
 import { ROUTES } from '../../../shared/constants/routes';
 import { cn } from '../../../shared/utils/cn';
 
@@ -24,6 +31,11 @@ const links = [
         to: ROUTES.ORDERS,
         label: 'Đơn hàng',
         icon: PackageCheck,
+    },
+    {
+        to: ROUTES.PROFILE_REVIEWS,
+        label: 'Đánh giá',
+        icon: MessageSquare,
     },
     {
         to: ROUTES.NOTIFICATIONS,

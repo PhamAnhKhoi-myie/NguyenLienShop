@@ -33,10 +33,9 @@ const dashboardSections = [
     },
     {
         title: 'Content',
-        description: 'Banner, announcement và thông tin shop.',
+        description: 'Banner và thông tin shop.',
         links: [
             { label: 'Banners', to: ROUTES.ADMIN_BANNERS, icon: Bell },
-            { label: 'Announcements', to: ROUTES.ADMIN_ANNOUNCEMENTS, icon: Bell },
             { label: 'Shop info', to: ROUTES.ADMIN_SHOP_INFO, icon: Settings },
         ],
         roles: CONTENT_MANAGER_ROLES,

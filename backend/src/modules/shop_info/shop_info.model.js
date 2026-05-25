@@ -14,8 +14,8 @@ const workingHourSchema = new mongoose.Schema(
         day: {
             type: String,
             enum: {
-                values: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
-                message: 'Day must be one of: mon, tue, wed, thu, fri, sat, sun'
+                values: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'holiday'],
+                message: 'Day must be one of: mon, tue, wed, thu, fri, sat, sun, holiday'
             },
             required: [true, 'Day is required']
         },
@@ -82,6 +82,47 @@ const socialLinksSchema = new mongoose.Schema(
                 message: 'Shoppe URL must be HTTP(S)'
             }
         },
+
+        tiktok: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: isOptionalHttpUrl,
+                message: 'TikTok URL must be HTTP(S)'
+            }
+        },
+    },
+    { _id: false }
+);
+
+const certificationLinksSchema = new mongoose.Schema(
+    {
+        ministry_notified: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: isOptionalHttpUrl,
+                message: 'Ministry notified URL must be HTTP(S)'
+            }
+        },
+
+        ministry_registered: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: isOptionalHttpUrl,
+                message: 'Ministry registered URL must be HTTP(S)'
+            }
+        },
+
+        extra: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: isOptionalHttpUrl,
+                message: 'Certification extra URL must be HTTP(S)'
+            }
+        },
     },
     { _id: false }
 );
@@ -124,6 +165,12 @@ const shopInfoSchema = new mongoose.Schema(
             maxlength: [500, 'Address must not exceed 500 characters'],
         },
 
+        shipping_partner: {
+            type: String,
+            trim: true,
+            maxlength: [200, 'Shipping partner must not exceed 200 characters'],
+        },
+
         working_hours: {
             type: [workingHourSchema],
             validate: {
@@ -139,6 +186,11 @@ const shopInfoSchema = new mongoose.Schema(
 
         social_links: {
             type: socialLinksSchema,
+            default: () => ({}),
+        },
+
+        certification_links: {
+            type: certificationLinksSchema,
             default: () => ({}),
         },
 

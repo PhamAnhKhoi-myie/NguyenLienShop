@@ -15,8 +15,10 @@ class ShopInfoService {
         'email',
         'phone',
         'address',
+        'shipping_partner',
         'working_hours',
         'social_links',
+        'certification_links',
         'map_embed_url',
         'is_active'
     ];
@@ -100,8 +102,10 @@ class ShopInfoService {
             email: data.email.toLowerCase().trim(),
             phone: data.phone.trim(),
             address: data.address,
+            shipping_partner: data.shipping_partner || null,
             working_hours: data.working_hours || [],
             social_links: data.social_links || {},
+            certification_links: data.certification_links || {},
             map_embed_url: data.map_embed_url || null,
             is_active: data.is_active !== undefined ? data.is_active : true
         });
@@ -162,6 +166,11 @@ class ShopInfoService {
             shopInfo.address = data.address;
         }
 
+        if (data.shipping_partner !== undefined) {
+            changes.shipping_partner = !!data.shipping_partner;
+            shopInfo.shipping_partner = data.shipping_partner;
+        }
+
         if (data.working_hours !== undefined) {
             changes.working_hours = data.working_hours.length;
             shopInfo.working_hours = data.working_hours;
@@ -172,6 +181,14 @@ class ShopInfoService {
             shopInfo.social_links = {
                 ...shopInfo.social_links,
                 ...data.social_links
+            };
+        }
+
+        if (data.certification_links !== undefined) {
+            changes.certification_links = Object.keys(data.certification_links).length;
+            shopInfo.certification_links = {
+                ...shopInfo.certification_links,
+                ...data.certification_links
             };
         }
 

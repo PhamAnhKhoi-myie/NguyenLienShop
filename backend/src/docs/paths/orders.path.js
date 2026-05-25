@@ -109,6 +109,7 @@ module.exports = {
                 401: { $ref: "#/components/responses/Unauthorized" },
                 404: { $ref: "#/components/responses/NotFound" },
                 409: { $ref: "#/components/responses/Conflict" },
+                503: { $ref: "#/components/responses/ServiceUnavailable" },
                 500: { $ref: "#/components/responses/InternalError" },
             },
         },

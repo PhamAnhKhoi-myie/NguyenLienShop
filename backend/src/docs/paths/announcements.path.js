@@ -14,7 +14,7 @@ const targetQuery = {
     name: "target",
     in: "query",
     schema: { type: "string", enum: announcementTargetEnum },
-    description: "Optional audience filter. Without this, only announcements for all visitors are returned.",
+    description: "Optional audience filter. Without this, only announcements for all visitors are returned. target=admin is visible to ADMIN and MANAGER.",
 };
 
 const typeQuery = {

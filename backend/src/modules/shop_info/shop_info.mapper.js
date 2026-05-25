@@ -9,10 +9,12 @@ class ShopInfoMapper {
             email: doc.email || null,
             phone: doc.phone || null,
             address: doc.address || null,
+            shipping_partner: doc.shipping_partner || null,
 
             working_hours: this.mapWorkingHours(doc.working_hours),
 
             social_links: this.mapSocialLinks(doc.social_links),
+            certification_links: this.mapCertificationLinks(doc.certification_links),
 
             map_embed_url: doc.map_embed_url || null,
 
@@ -41,7 +43,8 @@ class ShopInfoMapper {
                 facebook: null,
                 zalo: null,
                 instagram: null,
-                shoppe: null
+                shoppe: null,
+                tiktok: null
             };
         }
 
@@ -49,7 +52,24 @@ class ShopInfoMapper {
             facebook: links.facebook || null,
             zalo: links.zalo || null,
             instagram: links.instagram || null,
-            shoppe: links.shoppe || null
+            shoppe: links.shoppe || null,
+            tiktok: links.tiktok || null
+        };
+    }
+
+    static mapCertificationLinks(links) {
+        if (!links) {
+            return {
+                ministry_notified: null,
+                ministry_registered: null,
+                extra: null
+            };
+        }
+
+        return {
+            ministry_notified: links.ministry_notified || null,
+            ministry_registered: links.ministry_registered || null,
+            extra: links.extra || null
         };
     }
 
@@ -67,6 +87,7 @@ class ShopInfoMapper {
             email: doc.email || null,
             phone: doc.phone || null,
             address: doc.address || null,
+            shipping_partner: doc.shipping_partner || null,
             is_active: Boolean(doc.is_active)
         };
     }

@@ -5,6 +5,7 @@ const PaymentMapper = require('./payment.mapper');
 const AppError = require('../../utils/appError.util');
 const PaymentAuditLogService = require('../audit_logs/payment_audit_log/payment_log.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
+const { assertPaymentProviderEnabled } = require('./payment_provider.util');
 
 const Order = require('../orders/order.model');
 const OrderService = require('../orders/order.service');
@@ -88,7 +89,9 @@ class PaymentService {
             ) {
                 existingPayment.provider_data = {
                     ...existingPayment.provider_data,
-                    vnp_txn_ref: `${Date.now()}_${existingPayment.order_id.toString()}`,
+                    vnp_txn_ref: this._generateVNPayTxnRef(
+                        existingPayment.order_id
+                    ),
                 };
 
                 await existingPayment.save();
@@ -99,14 +102,15 @@ class PaymentService {
                 payment: PaymentMapper.toResponseDTO(existingPayment),
                 paymentUrl: await this._generatePaymentUrl(
                     existingPayment,
-                    provider
+                    provider,
+                    metadata
                 ),
             };
         }
         const thirtyMinutesFromNow = new Date();
         thirtyMinutesFromNow.setMinutes(thirtyMinutesFromNow.getMinutes() + 30);
 
-        const txnRef = `${Date.now()}_${orderId}`;
+        const txnRef = this._generateVNPayTxnRef(orderId);
 
         const providerData = {};
 
@@ -155,7 +159,8 @@ class PaymentService {
                     payment: PaymentMapper.toResponseDTO(duplicatedPayment),
                     paymentUrl: await this._generatePaymentUrl(
                         duplicatedPayment,
-                        provider
+                        provider,
+                        metadata
                     ),
                 };
             }
@@ -167,7 +172,11 @@ class PaymentService {
             );
         }
 
-        const paymentUrl = await this._generatePaymentUrl(payment, provider);
+        const paymentUrl = await this._generatePaymentUrl(
+            payment,
+            provider,
+            metadata
+        );
 
         await this._createPaymentAuditLog({
             action: AUDIT_ACTIONS.CREATE_PAYMENT,
@@ -944,7 +953,8 @@ class PaymentService {
 
             const paymentUrl = await this._generatePaymentUrl(
                 updatedPayment,
-                payment.provider
+                payment.provider,
+                metadata
             );
 
             await session.commitTransaction();
@@ -1651,11 +1661,11 @@ class PaymentService {
         return error?.code === 11000;
     }
 
-    static async _generatePaymentUrl(payment, provider) {
+    static async _generatePaymentUrl(payment, provider, metadata = {}) {
         this._assertPaymentProviderEnabled(provider);
 
-        if (provider === 'vnpay') {
-            return this._generateVNPayPaymentUrl(payment);
+        if (String(provider || '').trim().toLowerCase() === 'vnpay') {
+            return this._generateVNPayPaymentUrl(payment, metadata);
         }
 
         throw new AppError(
@@ -1666,18 +1676,10 @@ class PaymentService {
     }
 
     static _assertPaymentProviderEnabled(provider) {
-        if (provider === 'vnpay') {
-            return true;
-        }
-
-        throw new AppError(
-            'Payment provider is not enabled',
-            400,
-            'PAYMENT_PROVIDER_NOT_ENABLED'
-        );
+        assertPaymentProviderEnabled(provider);
     }
 
-    static _generateVNPayPaymentUrl(payment) {
+    static _generateVNPayPaymentUrl(payment, metadata = {}) {
         const tmnCode = process.env.VNPAY_TMN_CODE;
         const secureSecret = process.env.VNPAY_SECURE_SECRET;
         const paymentUrl = process.env.VNPAY_PAYMENT_URL;
@@ -1701,6 +1703,10 @@ class PaymentService {
 
         const now = new Date();
         const createDate = this._formatVNPayDate(now);
+        const expireDate = this._formatVNPayDate(
+            payment.expires_at || new Date(now.getTime() + 15 * 60000)
+        );
+        const ipAddress = this._normalizeVNPayIpAddress(metadata.ip);
 
         const txnRef =
             payment.provider_data?.vnp_txn_ref ||
@@ -1717,8 +1723,9 @@ class PaymentService {
             vnp_OrderType: 'other',
             vnp_Locale: 'vn',
             vnp_ReturnUrl: returnUrl,
-            vnp_IpAddr: '127.0.0.1',
+            vnp_IpAddr: ipAddress,
             vnp_CreateDate: createDate,
+            vnp_ExpireDate: expireDate,
         };
 
         const sortedParams = this._sortObject(rawParams);
@@ -1772,6 +1779,33 @@ class PaymentService {
                 return `${encodeURIComponent(key)}=${encodeURIComponent(params[key]).replace(/%20/g, '+')}`;
             })
             .join('&');
+    }
+
+    static _normalizeVNPayIpAddress(ipAddress) {
+        const rawIp = String(ipAddress || '').trim();
+
+        if (!rawIp) {
+            return '127.0.0.1';
+        }
+
+        if (rawIp.startsWith('::ffff:')) {
+            return rawIp.slice(7);
+        }
+
+        if (rawIp === '::1') {
+            return '127.0.0.1';
+        }
+
+        return rawIp;
+    }
+
+    static _generateVNPayTxnRef(orderId) {
+        const normalizedOrderId = String(orderId || '')
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .toUpperCase();
+        const timestamp = Date.now().toString();
+
+        return `${timestamp}${normalizedOrderId}`.slice(0, 100);
     }
 
     static _formatVNPayDate(date) {

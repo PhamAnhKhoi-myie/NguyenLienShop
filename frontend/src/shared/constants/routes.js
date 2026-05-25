@@ -16,6 +16,7 @@ export const ROUTES = {
     ADMIN_BANNERS: '/admin/banners',
     ADMIN_ANNOUNCEMENTS: '/admin/announcements',
     ADMIN_BLOGS: '/admin/blogs',
+    ADMIN_REVIEWS: '/admin/reviews',
     ADMIN_SHOP_INFO: '/admin/shop-info',
     ADMIN_USERS: '/admin/users',
     ADMIN_AUDIT_LOGS: '/admin/audit-logs',
@@ -30,5 +31,6 @@ export const ROUTES = {
     ORDERS: '/orders',
     PROFILE: '/profile',
     ADDRESSES: '/profile/addresses',
+    PROFILE_REVIEWS: '/profile/reviews',
     NOTIFICATIONS: '/notifications',
 };

@@ -1,6 +1,6 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
 const timePattern = "^([01]\\d|2[0-3]):[0-5]\\d$";
-const dayEnum = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const dayEnum = ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "holiday"];
 
 const workingHour = {
     type: "object",
@@ -46,6 +46,37 @@ const socialLinks = {
             description: "HTTP(S) URL.",
             example: "https://shopee.vn/nguyen-lien",
         },
+        tiktok: {
+            type: "string",
+            nullable: true,
+            description: "HTTP(S) URL.",
+            example: "https://www.tiktok.com/@nguyen-lien",
+        },
+    },
+};
+
+const certificationLinks = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+        ministry_notified: {
+            type: "string",
+            nullable: true,
+            description: "HTTP(S) URL for the notified Ministry of Industry and Trade logo.",
+            example: "https://online.gov.vn/Home/WebDetails/12345",
+        },
+        ministry_registered: {
+            type: "string",
+            nullable: true,
+            description: "HTTP(S) URL for the registered Ministry of Industry and Trade logo.",
+            example: "https://online.gov.vn/Home/WebDetails/67890",
+        },
+        extra: {
+            type: "string",
+            nullable: true,
+            description: "Reserved HTTP(S) certification or trust link.",
+            example: "https://nguyenlien.shop/chung-nhan",
+        },
     },
 };
 
@@ -53,6 +84,8 @@ module.exports = {
     ShopInfoWorkingHour: workingHour,
 
     ShopInfoSocialLinks: socialLinks,
+
+    ShopInfoCertificationLinks: certificationLinks,
 
     ShopInfo: {
         type: "object",
@@ -62,8 +95,10 @@ module.exports = {
             "email",
             "phone",
             "address",
+            "shipping_partner",
             "working_hours",
             "social_links",
+            "certification_links",
             "map_embed_url",
             "is_active",
             "created_at",
@@ -102,11 +137,18 @@ module.exports = {
                 maxLength: 500,
                 example: "123 Le Loi, District 1, Ho Chi Minh City",
             },
+            shipping_partner: {
+                type: "string",
+                nullable: true,
+                maxLength: 200,
+                example: "Viettel Post",
+            },
             working_hours: {
                 type: "array",
                 items: { $ref: "#/components/schemas/ShopInfoWorkingHour" },
             },
             social_links: { $ref: "#/components/schemas/ShopInfoSocialLinks" },
+            certification_links: { $ref: "#/components/schemas/ShopInfoCertificationLinks" },
             map_embed_url: {
                 type: "string",
                 format: "uri",
@@ -129,7 +171,7 @@ module.exports = {
 
     ShopContactInfo: {
         type: "object",
-        required: ["id", "shop_name", "email", "phone", "address", "is_active"],
+        required: ["id", "shop_name", "email", "phone", "address", "shipping_partner", "is_active"],
         properties: {
             id: {
                 type: "string",
@@ -148,6 +190,11 @@ module.exports = {
                 type: "string",
                 nullable: true,
                 example: "123 Le Loi, District 1, Ho Chi Minh City",
+            },
+            shipping_partner: {
+                type: "string",
+                nullable: true,
+                example: "Viettel Post",
             },
             is_active: { type: "boolean", example: true },
         },
@@ -233,13 +280,20 @@ module.exports = {
                 maxLength: 500,
                 example: "123 Le Loi, District 1, Ho Chi Minh City",
             },
+            shipping_partner: {
+                type: "string",
+                nullable: true,
+                maxLength: 200,
+                example: "Viettel Post",
+            },
             working_hours: {
                 type: "array",
                 minItems: 1,
-                maxItems: 7,
+                maxItems: 8,
                 items: { $ref: "#/components/schemas/ShopInfoWorkingHour" },
             },
             social_links: { $ref: "#/components/schemas/ShopInfoSocialLinks" },
+            certification_links: { $ref: "#/components/schemas/ShopInfoCertificationLinks" },
             map_embed_url: {
                 type: "string",
                 format: "uri",
@@ -263,13 +317,19 @@ module.exports = {
                 pattern: "^\\+?[\\d\\s\\-\\(\\)]+$",
             },
             address: { type: "string", minLength: 5, maxLength: 500 },
+            shipping_partner: {
+                type: "string",
+                nullable: true,
+                maxLength: 200,
+            },
             working_hours: {
                 type: "array",
                 minItems: 1,
-                maxItems: 7,
+                maxItems: 8,
                 items: { $ref: "#/components/schemas/ShopInfoWorkingHour" },
             },
             social_links: { $ref: "#/components/schemas/ShopInfoSocialLinks" },
+            certification_links: { $ref: "#/components/schemas/ShopInfoCertificationLinks" },
             map_embed_url: { type: "string", format: "uri", nullable: true },
             is_active: { type: "boolean" },
         },

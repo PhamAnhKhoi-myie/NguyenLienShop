@@ -1,6 +1,5 @@
 import {
     BarChart3,
-    Bell,
     Boxes,
     CreditCard,
     FileClock,
@@ -9,6 +8,7 @@ import {
     Layers3,
     LogOut,
     Menu,
+    MessageSquare,
     Newspaper,
     Package,
     Percent,
@@ -63,16 +63,16 @@ const adminNavItems = [
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        label: 'Thông báo shop',
-        to: ROUTES.ADMIN_ANNOUNCEMENTS,
-        icon: Bell,
-        roles: CONTENT_MANAGER_ROLES,
-    },
-    {
         label: 'Bài viết',
         to: ROUTES.ADMIN_BLOGS,
         icon: Newspaper,
         roles: CONTENT_MANAGER_ROLES,
+    },
+    {
+        label: 'Đánh giá',
+        to: ROUTES.ADMIN_REVIEWS,
+        icon: MessageSquare,
+        roles: ADMIN_ONLY_ROLES,
     },
     {
         label: 'Thông tin shop',

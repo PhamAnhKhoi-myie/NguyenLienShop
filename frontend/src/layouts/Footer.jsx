@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 import registeredTradeLogo from '../assets/images/logo-da-dang-ky-bo-cong-thuong-mau-do.png';
 import notifiedTradeLogo from '../assets/images/logo-da-thong-bao-bo-cong-thuong-mau-xanh.png';
 import logo from '../assets/images/logo.png';
+import { useShopInfo } from '../features/shopInfo/hooks/useShopInfo';
 import { ROUTES } from '../shared/constants/routes';
 
 const infoLinks = [
@@ -61,6 +62,7 @@ const paymentMethods = [
 
 const socialLinks = [
     {
+        key: 'facebook',
         label: 'Facebook',
         href: '#',
         icon: Globe2,
@@ -71,6 +73,7 @@ const socialLinks = [
         iconColor: '#FFFFFF',
     },
     {
+        key: 'zalo',
         label: 'Zalo',
         href: '#',
         icon: MessageCircle,
@@ -81,6 +84,7 @@ const socialLinks = [
         iconColor: '#FFFFFF',
     },
     {
+        key: 'instagram',
         label: 'Instagram',
         href: '#',
         icon: Camera,
@@ -91,6 +95,7 @@ const socialLinks = [
         iconColor: '#FFFFFF',
     },
     {
+        key: 'tiktok',
         label: 'TikTok',
         href: '#',
         icon: Music,
@@ -102,6 +107,7 @@ const socialLinks = [
         iconShadow: '2px 0 0 #FE2C55',
     },
     {
+        key: 'shoppe',
         label: 'Shopee',
         href: '#',
         icon: ShoppingBag,
@@ -112,6 +118,17 @@ const socialLinks = [
         iconColor: '#FFFFFF',
     },
 ];
+
+const dayLabels = {
+    mon: 'Thứ 2',
+    tue: 'Thứ 3',
+    wed: 'Thứ 4',
+    thu: 'Thứ 5',
+    fri: 'Thứ 6',
+    sat: 'Thứ 7',
+    sun: 'Chủ nhật',
+    holiday: 'Ngày lễ',
+};
 
 function FooterTitle({ children }) {
     return (
@@ -130,7 +147,48 @@ function ContactLine({ icon: Icon, children }) {
     );
 }
 
+function hasRealHref(href) {
+    return href && href !== '#';
+}
+
+function formatWorkingHour(hour) {
+    return `${dayLabels[hour.day] || hour.day}: ${hour.open} - ${hour.close}`;
+}
+
+function CertificateLogo({ href, src, alt, className }) {
+    const image = <img src={src} alt={alt} className={className} />;
+
+    if (!hasRealHref(href)) {
+        return image;
+    }
+
+    return (
+        <a href={href} target="_blank" rel="noreferrer">
+            {image}
+        </a>
+    );
+}
+
 function Footer() {
+    const shopInfoQuery = useShopInfo();
+    const shopInfo = shopInfoQuery.data?.data;
+    const social = shopInfo?.social_links || {};
+    const certificationLinks = shopInfo?.certification_links || {};
+    const footerSocialLinks = socialLinks.map((item) => ({
+        ...item,
+        href: social[item.key] || item.href,
+    }));
+    const configuredWorkingHours = shopInfo?.working_hours?.length
+        ? shopInfo.working_hours
+        : null;
+    const shopName = shopInfo?.shop_name || 'NguyenLien Shop';
+    const phone = shopInfo?.phone || '0909 123 456';
+    const email = shopInfo?.email || 'support@nguyenlien.shop';
+    const address = shopInfo?.address || 'Kho NguyenLien Shop, TP. Hồ Chí Minh';
+    const shippingText = shopInfo?.shipping_partner
+        ? `Giao hàng toàn quốc qua ${shopInfo.shipping_partner}`
+        : 'Giao hàng toàn quốc qua đối tác vận chuyển';
+
     return (
         <footer className="mt-auto border-t border-[var(--color-border)] bg-[#f3faf5] text-[var(--color-text-main)]">
             <div className="mx-auto max-w-7xl px-4 py-8">
@@ -148,7 +206,7 @@ function Footer() {
                         </Link>
 
                         <p className="max-w-sm text-sm leading-6 text-[var(--color-text-muted)]">
-                            NguyenLien Shop cung cấp túi bao trái cây, túi vải và
+                            {shopName} cung cấp túi bao trái cây, túi vải và
                             vật tư hỗ trợ bảo vệ trái cây cho nhà vườn, cửa hàng
                             và khách mua lẻ.
                         </p>
@@ -157,16 +215,16 @@ function Footer() {
                             <FooterTitle>Mua hàng - Góp ý</FooterTitle>
                             <ul className="space-y-1.5">
                                 <ContactLine icon={Phone}>
-                                    Hotline: 0909 123 456
+                                    Hotline: {phone}
                                 </ContactLine>
                                 <ContactLine icon={Mail}>
-                                    Email: support@nguyenlien.shop
+                                    Email: {email}
                                 </ContactLine>
                                 <ContactLine icon={Globe2}>
                                     Website: nguyenlien.shop
                                 </ContactLine>
                                 <ContactLine icon={MessageCircle}>
-                                    Zalo: NguyenLien Shop
+                                    Zalo: {social.zalo || shopName}
                                 </ContactLine>
                             </ul>
                         </div>
@@ -177,10 +235,10 @@ function Footer() {
                             <FooterTitle>Địa chỉ</FooterTitle>
                             <ul className="space-y-2">
                                 <ContactLine icon={MapPin}>
-                                    Kho NguyenLien Shop, TP. Hồ Chí Minh
+                                    {address}
                                 </ContactLine>
                                 <ContactLine icon={MapPin}>
-                                    Giao hàng toàn quốc qua đối tác vận chuyển
+                                    {shippingText}
                                 </ContactLine>
                             </ul>
                         </div>
@@ -188,12 +246,22 @@ function Footer() {
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
                             <FooterTitle>Thời gian làm việc</FooterTitle>
                             <ul className="space-y-2">
-                                <ContactLine icon={Clock3}>
-                                    Thứ 2 - Thứ 7: 8:00 - 20:00
-                                </ContactLine>
-                                <ContactLine icon={Clock3}>
-                                    Chủ nhật và ngày lễ: 9:00 - 18:00
-                                </ContactLine>
+                                {configuredWorkingHours ? (
+                                    configuredWorkingHours.map((hour) => (
+                                        <ContactLine key={hour.day} icon={Clock3}>
+                                            {formatWorkingHour(hour)}
+                                        </ContactLine>
+                                    ))
+                                ) : (
+                                    <>
+                                        <ContactLine icon={Clock3}>
+                                            Thứ 2 - Thứ 7: 8:00 - 20:00
+                                        </ContactLine>
+                                        <ContactLine icon={Clock3}>
+                                            Chủ nhật và ngày lễ: 9:00 - 18:00
+                                        </ContactLine>
+                                    </>
+                                )}
                             </ul>
                         </div>
                     </section>
@@ -217,12 +285,14 @@ function Footer() {
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
                             <FooterTitle>Chứng nhận - Uy tín</FooterTitle>
                             <div className="flex flex-wrap items-center gap-3">
-                                <img
+                                <CertificateLogo
+                                    href={certificationLinks.ministry_notified}
                                     src={notifiedTradeLogo}
                                     alt="Đã thông báo Bộ Công Thương"
                                     className="h-18 w-auto object-contain"
                                 />
-                                <img
+                                <CertificateLogo
+                                    href={certificationLinks.ministry_registered}
                                     src={registeredTradeLogo}
                                     alt="Đã đăng ký Bộ Công Thương"
                                     className="h-14 w-auto object-contain"
@@ -259,13 +329,17 @@ function Footer() {
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
                             <FooterTitle>Theo dõi tại</FooterTitle>
                             <div className="grid gap-2">
-                                {socialLinks.map((item) => {
+                                {footerSocialLinks.map((item) => {
                                     const Icon = item.icon;
+                                    const linkProps = hasRealHref(item.href)
+                                        ? { target: '_blank', rel: 'noreferrer' }
+                                        : {};
 
                                     return (
                                         <a
                                             key={item.label}
                                             href={item.href}
+                                            {...linkProps}
                                             className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition-transform hover:-translate-y-0.5"
                                             style={{
                                                 background: item.background,

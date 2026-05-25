@@ -20,6 +20,9 @@ export const AdminOrdersPage = lazy(() =>
 export const AdminPaymentsPage = lazy(() =>
     import('../features/admin/pages/AdminPaymentsPage')
 );
+export const AdminReviewsPage = lazy(() =>
+    import('../features/admin/pages/AdminReviewsPage')
+);
 export const AdminShipmentsPage = lazy(() =>
     import('../features/admin/pages/AdminShipmentsPage')
 );
@@ -79,6 +82,9 @@ export const ProductListPage = lazy(() =>
 );
 export const ProfilePage = lazy(() =>
     import('../features/profile/pages/ProfilePage')
+);
+export const ProfileReviewsPage = lazy(() =>
+    import('../features/profile/pages/ProfileReviewsPage')
 );
 export const RegisterPage = lazy(() =>
     import('../features/auth/pages/RegisterPage')

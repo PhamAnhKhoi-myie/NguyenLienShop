@@ -59,6 +59,16 @@ module.exports = {
             }
         }
     },
+    "ServiceUnavailable": {
+        "description": "Service Unavailable",
+        "content": {
+            "application/json": {
+                "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                }
+            }
+        }
+    },
     "InternalError": {
         "description": "Internal Server Error",
         "content": {

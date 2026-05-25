@@ -33,8 +33,9 @@ class AnnouncementService {
             : [];
     }
 
-    static isAdmin(user) {
-        return this.normalizeRoles(user).includes('ADMIN');
+    static isAdminOrManager(user) {
+        const roles = this.normalizeRoles(user);
+        return roles.includes('ADMIN') || roles.includes('MANAGER');
     }
 
     static isActive(announcement, now = new Date()) {
@@ -46,7 +47,7 @@ class AnnouncementService {
             return;
         }
 
-        if (target === 'admin' && this.isAdmin(user)) {
+        if (target === 'admin' && this.isAdminOrManager(user)) {
             return;
         }
 
@@ -62,7 +63,7 @@ class AnnouncementService {
     }
 
     static canViewAnnouncement(announcement, user, now = new Date()) {
-        if (this.isAdmin(user)) {
+        if (this.isAdminOrManager(user)) {
             return true;
         }
 
@@ -80,6 +81,10 @@ class AnnouncementService {
 
         if (announcement.target === 'user') {
             return Boolean(user?.id);
+        }
+
+        if (announcement.target === 'admin') {
+            return this.isAdminOrManager(user);
         }
 
         return false;

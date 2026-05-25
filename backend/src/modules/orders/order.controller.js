@@ -117,7 +117,7 @@ const writeReview = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
 
     const { order_id } = req.params;
-    const { item_id, rating, comment } = req.body;
+    const { item_id, rating, title, comment } = req.body;
 
     const order = await OrderService.getOrderById(order_id);
 
@@ -133,6 +133,7 @@ const writeReview = asyncHandler(async (req, res) => {
         order_id,
         item_id,
         rating,
+        title,
         comment,
         user.userId,
         buildAuditMetadata(req)

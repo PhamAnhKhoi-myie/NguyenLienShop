@@ -31,6 +31,7 @@ module.exports = {
                 type: "string",
                 enum: announcementTargetEnum,
                 default: "all",
+                description: "Audience target. admin means ADMIN and MANAGER.",
                 example: "all",
             },
             type: {
@@ -80,6 +81,7 @@ module.exports = {
             target: {
                 type: "string",
                 enum: announcementTargetEnum,
+                description: "Audience target. admin means ADMIN and MANAGER.",
             },
             type: {
                 type: "string",
@@ -144,6 +146,7 @@ module.exports = {
             target: {
                 type: "string",
                 enum: announcementTargetEnum,
+                description: "Audience target. admin means ADMIN and MANAGER.",
                 example: "all",
             },
             type: {

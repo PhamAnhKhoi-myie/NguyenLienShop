@@ -12,6 +12,7 @@ import Badge from '../../../shared/components/Badge';
 import Button from '../../../shared/components/Button';
 import Card, { CardBody, CardHeader } from '../../../shared/components/Card';
 import EmptyState from '../../../shared/components/EmptyState';
+import Input from '../../../shared/components/Input';
 import Loading from '../../../shared/components/Loading';
 import Modal from '../../../shared/components/Modal';
 import Select from '../../../shared/components/Select';
@@ -54,6 +55,13 @@ function getStatusVariant(status) {
 
 function canCancelOrder(status) {
     return ['PENDING', 'PAID', 'PROCESSING'].includes(status);
+}
+
+function canReviewOrderItem(order, item) {
+    return (
+        order?.status === 'DELIVERED' &&
+        String(item?.review_status || 'pending').toLowerCase() !== 'reviewed'
+    );
 }
 
 function formatDateTime(value) {
@@ -111,6 +119,7 @@ export default function OrderDetailPage() {
         resolver: zodResolver(reviewSchema),
         defaultValues: {
             rating: '5',
+            title: '',
             comment: '',
         },
     });
@@ -131,12 +140,12 @@ export default function OrderDetailPage() {
 
     const openReviewModal = (item) => {
         setReviewItem(item);
-        resetReviewForm({ rating: '5', comment: '' });
+        resetReviewForm({ rating: '5', title: '', comment: '' });
     };
 
     const closeReviewModal = () => {
         setReviewItem(null);
-        resetReviewForm({ rating: '5', comment: '' });
+        resetReviewForm({ rating: '5', title: '', comment: '' });
     };
 
     const handleCancelOrder = handleCancelSubmit(async (values) => {
@@ -161,6 +170,7 @@ export default function OrderDetailPage() {
             payload: {
                 item_id: reviewItem.id,
                 rating: values.rating,
+                title: values.title?.trim() || null,
                 comment: values.comment.trim(),
             },
         });
@@ -245,9 +255,7 @@ export default function OrderDetailPage() {
                         </CardHeader>
                         <CardBody className="space-y-4">
                             {(order.items || []).map((item) => {
-                                const canReview =
-                                    order.status === 'DELIVERED' &&
-                                    item.review_status !== 'reviewed';
+                                const canReview = canReviewOrderItem(order, item);
 
                                 return (
                                     <div
@@ -479,6 +487,12 @@ export default function OrderDetailPage() {
                         <option value="2">2 sao</option>
                         <option value="1">1 sao</option>
                     </Select>
+                    <Input
+                        label="Tiêu đề"
+                        placeholder="Tóm tắt trải nghiệm của bạn"
+                        error={reviewErrors.title?.message}
+                        {...registerReview('title')}
+                    />
                     <Textarea
                         label="Nội dung"
                         rows={5}

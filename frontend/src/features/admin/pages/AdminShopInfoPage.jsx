@@ -18,6 +18,7 @@ const dayLabels = {
     fri: 'Thứ 6',
     sat: 'Thứ 7',
     sun: 'Chủ nhật',
+    holiday: 'Ngày lễ',
 };
 
 function InfoLine({ label, value }) {
@@ -177,6 +178,7 @@ export default function AdminShopInfoPage() {
                                 <InfoLine label="Email" value={shopInfo.email} />
                                 <InfoLine label="Điện thoại" value={shopInfo.phone} />
                                 <InfoLine label="Địa chỉ" value={shopInfo.address} />
+                                <InfoLine label="Đối tác vận chuyển" value={shopInfo.shipping_partner} />
                                 <div className="flex justify-between gap-4 py-3">
                                     <span className="text-sm text-[var(--color-text-muted)]">
                                         Trạng thái
@@ -197,7 +199,20 @@ export default function AdminShopInfoPage() {
                                 <InfoLine label="Zalo" value={shopInfo.social_links?.zalo} />
                                 <InfoLine label="Instagram" value={shopInfo.social_links?.instagram} />
                                 <InfoLine label="Shoppe" value={shopInfo.social_links?.shoppe} />
+                                <InfoLine label="TikTok" value={shopInfo.social_links?.tiktok} />
                                 <InfoLine label="Google Map" value={shopInfo.map_embed_url} />
+                                <InfoLine
+                                    label="Bộ Công Thương - đã thông báo"
+                                    value={shopInfo.certification_links?.ministry_notified}
+                                />
+                                <InfoLine
+                                    label="Bộ Công Thương - đã đăng ký"
+                                    value={shopInfo.certification_links?.ministry_registered}
+                                />
+                                <InfoLine
+                                    label="Chứng nhận dự phòng"
+                                    value={shopInfo.certification_links?.extra}
+                                />
                             </div>
 
                             <div className="rounded-lg border border-[var(--color-border)] p-4 lg:col-span-2">

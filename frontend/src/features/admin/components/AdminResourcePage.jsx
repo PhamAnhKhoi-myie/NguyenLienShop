@@ -15,6 +15,7 @@ import {
     useAdminList,
     useAdminMutation,
 } from '../hooks/useAdminResource';
+import { ANNOUNCEMENT_QUERY_KEY } from '../../announcements/hooks/useAnnouncements';
 import {
     getPagination,
     getRows,
@@ -187,6 +188,12 @@ export default function AdminResourcePage({ resource }) {
                 queryKey: ['banners'],
             });
         }
+
+        if (resource.endpoint === '/announcements/admin/all') {
+            await queryClient.invalidateQueries({
+                queryKey: ANNOUNCEMENT_QUERY_KEY,
+            });
+        }
     };
 
     const openCreateForm = () => {
@@ -242,6 +249,12 @@ export default function AdminResourcePage({ resource }) {
         if (resource.endpoint === '/banners') {
             await queryClient.invalidateQueries({
                 queryKey: ['banners'],
+            });
+        }
+
+        if (resource.endpoint === '/announcements/admin/all') {
+            await queryClient.invalidateQueries({
+                queryKey: ANNOUNCEMENT_QUERY_KEY,
             });
         }
 

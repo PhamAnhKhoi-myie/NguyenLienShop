@@ -8,9 +8,18 @@ const {
     isValidTime
 } = require('./shop_info_time.util');
 
+const dayValues = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'holiday'];
+
+const optionalTextSchema = (label, maxLength) =>
+    z.string()
+        .trim()
+        .max(maxLength, `${label} must not exceed ${maxLength} characters`)
+        .nullable()
+        .optional();
+
 const workingHourSchema = z
     .object({
-        day: z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']),
+        day: z.enum(dayValues),
         open: z.string().refine(
             isValidTime,
             'Format must be HH:mm between 00:00 and 23:59'
@@ -44,6 +53,25 @@ const socialLinksSchema = z.object({
     shoppe: z.string().nullable().optional().refine(
         isOptionalHttpUrl,
         'Shoppe URL must be HTTP(S)'
+    ),
+    tiktok: z.string().nullable().optional().refine(
+        isOptionalHttpUrl,
+        'TikTok URL must be HTTP(S)'
+    )
+}).strict();
+
+const certificationLinksSchema = z.object({
+    ministry_notified: z.string().nullable().optional().refine(
+        isOptionalHttpUrl,
+        'Ministry notified URL must be HTTP(S)'
+    ),
+    ministry_registered: z.string().nullable().optional().refine(
+        isOptionalHttpUrl,
+        'Ministry registered URL must be HTTP(S)'
+    ),
+    extra: z.string().nullable().optional().refine(
+        isOptionalHttpUrl,
+        'Certification extra URL must be HTTP(S)'
     )
 }).strict();
 
@@ -68,11 +96,15 @@ const createShopInfoSchema = z.object({
         .min(5, 'Address must be at least 5 characters')
         .max(500, 'Address must not exceed 500 characters'),
 
+    shipping_partner: optionalTextSchema('Shipping partner', 200),
+
     working_hours: z.array(workingHourSchema)
         .min(1, 'At least one working hour entry is required')
-        .max(7, 'Maximum 7 working hour entries allowed'),
+        .max(8, 'Maximum 8 working hour entries allowed'),
 
     social_links: socialLinksSchema.optional(),
+
+    certification_links: certificationLinksSchema.optional(),
 
     map_embed_url: z.string()
         .nullable()
@@ -110,12 +142,16 @@ const updateShopInfoSchema = z.object({
         .max(500, 'Address must not exceed 500 characters')
         .optional(),
 
+    shipping_partner: optionalTextSchema('Shipping partner', 200),
+
     working_hours: z.array(workingHourSchema)
         .min(1, 'At least one working hour entry is required')
-        .max(7, 'Maximum 7 working hour entries allowed')
+        .max(8, 'Maximum 8 working hour entries allowed')
         .optional(),
 
     social_links: socialLinksSchema.optional(),
+
+    certification_links: certificationLinksSchema.optional(),
 
     map_embed_url: z.string()
         .nullable()

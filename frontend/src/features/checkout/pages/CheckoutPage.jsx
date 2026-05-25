@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, CreditCard, MapPin, TicketPercent } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import Button from '../../../shared/components/Button';
@@ -11,6 +11,7 @@ import Input from '../../../shared/components/Input';
 import Loading from '../../../shared/components/Loading';
 import Select from '../../../shared/components/Select';
 import Textarea from '../../../shared/components/Textarea';
+import { ENV } from '../../../shared/config/env';
 import { ROUTES } from '../../../shared/constants/routes';
 import { useProvinces, useWards } from '../../../shared/hooks/useLocations';
 import { formatCurrency } from '../../../shared/utils/formatCurrency';
@@ -116,13 +117,14 @@ function AddressForm({
     onSubmitOrder,
     isSaving,
     isOrdering,
+    isVNPayEnabled,
 }) {
     const {
         register,
         handleSubmit,
         getValues,
         trigger,
-        watch,
+        control,
         setValue,
         formState: { errors },
     } = useForm({
@@ -131,7 +133,10 @@ function AddressForm({
     });
 
     const [paymentMethod, setPaymentMethod] = useState('COD');
-    const selectedProvinceCode = watch('province_code');
+    const selectedProvinceCode = useWatch({
+        control,
+        name: 'province_code',
+    });
     const provincesQuery = useProvinces();
     const wardsQuery = useWards(selectedProvinceCode);
     const provinces = provincesQuery.data?.data || [];
@@ -228,6 +233,11 @@ function AddressForm({
                 <Select
                     label="Thanh toán"
                     error={errors.payment_method?.message}
+                    helperText={
+                        !isVNPayEnabled
+                            ? 'VNPAY đang tạm tắt vì website chưa được phê duyệt. Vui lòng chọn COD.'
+                            : undefined
+                    }
                     {...paymentMethodField}
                     onChange={(event) => {
                         paymentMethodField.onChange(event);
@@ -235,7 +245,9 @@ function AddressForm({
                     }}
                 >
                     <option value="COD">COD</option>
-                    <option value="VNPAY">VNPAY</option>
+                    <option value="VNPAY" disabled={!isVNPayEnabled}>
+                        {isVNPayEnabled ? 'VNPAY' : 'VNPAY (tạm tắt)'}
+                    </option>
                 </Select>
             </div>
 
@@ -247,7 +259,11 @@ function AddressForm({
             />
 
             <div className="flex flex-col gap-3 sm:flex-row">
-                <Button type="submit" isLoading={isOrdering}>
+                <Button
+                    type="submit"
+                    isLoading={isOrdering}
+                    disabled={paymentMethod === 'VNPAY' && !isVNPayEnabled}
+                >
                     {paymentMethod === 'VNPAY'
                         ? 'Thanh toán VNPAY'
                         : 'Đặt hàng COD'}
@@ -389,6 +405,15 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (isVNPay && !ENV.VNPAY_CHECKOUT_ENABLED) {
+            setNotice({
+                type: 'error',
+                message:
+                    'VNPAY đang tạm tắt vì website chưa được phê duyệt. Vui lòng chọn COD.',
+            });
+            return;
+        }
+
         try {
             const validation = await validateCartMutation.mutateAsync();
             if (validation.data?.isValid === false) {
@@ -439,6 +464,15 @@ export default function CheckoutPage() {
                 }
             );
         } catch (error) {
+            if (error.raw?.code === 'VNPAY_CHECKOUT_DISABLED') {
+                setNotice({
+                    type: 'error',
+                    message:
+                        'VNPAY đang tạm tắt vì website chưa được phê duyệt. Vui lòng chọn COD.',
+                });
+                return;
+            }
+
             if (isVNPay) {
                 const params = new URLSearchParams({
                     status: 'failed',
@@ -600,6 +634,7 @@ export default function CheckoutPage() {
                                     updateAddressMutation.isPending
                                 }
                                 isOrdering={isBusy}
+                                isVNPayEnabled={ENV.VNPAY_CHECKOUT_ENABLED}
                             />
                         </CardBody>
                     </Card>
@@ -725,7 +760,9 @@ export default function CheckoutPage() {
                                         COD và VNPAY
                                     </p>
                                     <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                        COD tạo đơn trực tiếp. VNPAY sẽ tạo đơn trước rồi chuyển sang cổng thanh toán do BE trả về.
+                                        {ENV.VNPAY_CHECKOUT_ENABLED
+                                            ? 'COD tạo đơn trực tiếp. VNPAY sẽ tạo đơn trước rồi chuyển sang cổng thanh toán do BE trả về.'
+                                            : 'VNPAY đang tạm tắt vì website chưa được phê duyệt. Vui lòng dùng COD để đặt hàng.'}
                                     </p>
                                 </div>
                             </div>

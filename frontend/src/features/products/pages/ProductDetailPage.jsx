@@ -2,15 +2,20 @@ import {
     ArrowLeft,
     Boxes,
     CheckCircle2,
+    Flag,
     Layers,
+    MessageSquare,
     Minus,
     PackageOpen,
     Plus,
+    RefreshCw,
     Ruler,
     ShieldCheck,
     ShoppingCart,
     Star,
     Tag,
+    ThumbsDown,
+    ThumbsUp,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -19,12 +24,31 @@ import Button from '../../../shared/components/Button';
 import Card, { CardBody, CardHeader } from '../../../shared/components/Card';
 import EmptyState from '../../../shared/components/EmptyState';
 import Loading from '../../../shared/components/Loading';
+import Modal from '../../../shared/components/Modal';
+import Pagination from '../../../shared/components/Pagination';
+import Select from '../../../shared/components/Select';
 import { ROUTES } from '../../../shared/constants/routes';
 import { cn } from '../../../shared/utils/cn';
 import { formatCurrency } from '../../../shared/utils/formatCurrency';
 import { getPrimaryImage } from '../../../shared/utils/getPrimaryImage';
+import { useAuthStore } from '../../auth/store/auth.store';
 import { useAddCartItem } from '../../cart/hooks/useCart';
+import {
+    useFlagReview,
+    useMarkReviewHelpful,
+    useProductReviews,
+} from '../../reviews/hooks/useReviews';
 import { useProductDetail } from '../hooks/useProducts';
+
+const REVIEW_PAGE_SIZE = 5;
+
+const FLAG_REASON_OPTIONS = [
+    { value: 'spam', label: 'Spam hoặc quảng cáo' },
+    { value: 'inappropriate', label: 'Nội dung không phù hợp' },
+    { value: 'fake', label: 'Đánh giá giả mạo' },
+    { value: 'duplicate', label: 'Đánh giá trùng lặp' },
+    { value: 'other', label: 'Lý do khác' },
+];
 
 function formatPriceRange(min, max, currency = 'VND') {
     const start = Number(min || 0);
@@ -65,6 +89,48 @@ function getUnitPricePerItem(tier, packSize, currency) {
     return formatCurrency(tier.unit_price / packSize, currency);
 }
 
+function getReviewRating(review) {
+    return Number(review?.rating?.overall || review?.rating || 0);
+}
+
+function formatReviewDate(value) {
+    if (!value) {
+        return 'Đang cập nhật';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return 'Đang cập nhật';
+    }
+
+    return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    }).format(date);
+}
+
+function RatingStars({ value }) {
+    const rating = Math.round(Number(value) || 0);
+
+    return (
+        <div className="flex items-center gap-1" aria-label={`${rating} sao`}>
+            {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                    key={star}
+                    className={cn(
+                        'h-4 w-4',
+                        star <= rating
+                            ? 'fill-[var(--color-accent)] text-[var(--color-accent)]'
+                            : 'text-[var(--color-border)]'
+                    )}
+                />
+            ))}
+        </div>
+    );
+}
+
 function SpecItem({ icon: Icon, label, value }) {
     return (
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
@@ -81,9 +147,28 @@ function SpecItem({ icon: Icon, label, value }) {
 
 export default function ProductDetailPage() {
     const { productId } = useParams();
+    const accessToken = useAuthStore((state) => state.accessToken);
     const productQuery = useProductDetail(productId, { include_units: true });
+    const [reviewsPage, setReviewsPage] = useState(1);
+    const reviewParams = useMemo(
+        () => ({ page: reviewsPage, limit: REVIEW_PAGE_SIZE }),
+        [reviewsPage]
+    );
+    const reviewsQuery = useProductReviews(productId, reviewParams);
+    const markReviewHelpfulMutation = useMarkReviewHelpful();
+    const flagReviewMutation = useFlagReview();
     const addCartItemMutation = useAddCartItem();
     const product = productQuery.data?.data;
+    const reviews = reviewsQuery.data?.data || [];
+    const reviewsPagination = reviewsQuery.data?.pagination || {};
+    const reviewsTotalPages = Math.max(
+        Number(reviewsPagination.totalPages || reviewsPagination.total_pages) || 1,
+        1
+    );
+    const reviewsTotal = Number(
+        reviewsPagination.total ?? product?.rating_count ?? reviews.length
+    );
+    const ratingAverage = reviewsTotal > 0 ? Number(product?.rating_avg || 0) : 0;
     const variants = useMemo(() => product?.variants || [], [product?.variants]);
     const images = useMemo(() => product?.images || [], [product?.images]);
     const primaryImage = useMemo(() => getPrimaryImage(images), [images]);
@@ -107,6 +192,8 @@ export default function ProductDetailPage() {
     const [selectedUnitId, setSelectedUnitId] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [cartNotice, setCartNotice] = useState(null);
+    const [flaggedReview, setFlaggedReview] = useState(null);
+    const [flagReason, setFlagReason] = useState('spam');
     const selectedUnit = useMemo(
         () =>
             units.find((unit) => unit.id === selectedUnitId) ||
@@ -158,6 +245,42 @@ export default function ProductDetailPage() {
                 type: 'error',
                 message: error.message || 'Không thêm được sản phẩm vào giỏ.',
             });
+        }
+    };
+
+    const handleMarkReviewHelpful = async (reviewId, helpful) => {
+        try {
+            await markReviewHelpfulMutation.mutateAsync({ reviewId, helpful });
+        } catch {
+            return;
+        }
+    };
+
+    const openFlagModal = (review) => {
+        setFlaggedReview(review);
+        setFlagReason('spam');
+        flagReviewMutation.reset();
+    };
+
+    const closeFlagModal = () => {
+        setFlaggedReview(null);
+        setFlagReason('spam');
+        flagReviewMutation.reset();
+    };
+
+    const handleFlagReview = async () => {
+        if (!flaggedReview?.id) {
+            return;
+        }
+
+        try {
+            await flagReviewMutation.mutateAsync({
+                reviewId: flaggedReview.id,
+                reason: flagReason,
+            });
+            closeFlagModal();
+        } catch {
+            return;
         }
     };
 
@@ -532,6 +655,198 @@ export default function ProductDetailPage() {
 
             <Card>
                 <CardHeader>
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-[var(--color-primary)]" />
+                            <h2 className="text-base font-semibold text-[var(--color-text-main)]">
+                                Đánh giá sản phẩm
+                            </h2>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                            <span>Trang {reviewsPage} / {reviewsTotalPages}</span>
+                            <span>{reviewsTotal} đánh giá</span>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardBody className="space-y-5">
+                    <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+                            <p className="text-sm font-medium text-[var(--color-text-muted)]">
+                                Điểm trung bình
+                            </p>
+                            <div className="mt-3 flex items-end gap-2">
+                                <span className="text-4xl font-semibold text-[var(--color-text-main)]">
+                                    {ratingAverage.toFixed(1)}
+                                </span>
+                                <span className="pb-1 text-sm text-[var(--color-text-muted)]">
+                                    / 5
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <RatingStars value={ratingAverage} />
+                            </div>
+                        </div>
+                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+                            <p className="text-sm font-medium text-[var(--color-text-main)]">
+                                {reviewsTotal > 0
+                                    ? `${reviewsTotal} khách hàng đã đánh giá sản phẩm này`
+                                    : 'Sản phẩm này chưa có đánh giá'}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
+                                Review hiển thị ở đây là các đánh giá đã được duyệt.
+                                Khách đã đăng nhập có thể đánh dấu hữu ích hoặc báo
+                                cáo nội dung cần kiểm tra.
+                            </p>
+                        </div>
+                    </div>
+
+                    {markReviewHelpfulMutation.isError && (
+                        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
+                            {markReviewHelpfulMutation.error.message}
+                        </p>
+                    )}
+
+                    {reviewsQuery.isLoading ? (
+                        <Loading label="Đang tải đánh giá..." />
+                    ) : reviewsQuery.isError ? (
+                        <div className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm text-[var(--color-error)]">
+                                {reviewsQuery.error.message}
+                            </p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => reviewsQuery.refetch()}
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                Tải lại
+                            </Button>
+                        </div>
+                    ) : reviews.length === 0 ? (
+                        <EmptyState
+                            icon={MessageSquare}
+                            title="Chưa có đánh giá"
+                            description="Khi khách hàng hoàn tất đơn hàng và đánh giá, nội dung đã duyệt sẽ hiển thị tại đây."
+                        />
+                    ) : (
+                        <div className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
+                            {reviews.map((review) => (
+                                <article
+                                    key={review.id}
+                                    className="space-y-3 p-4"
+                                >
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div className="min-w-0 space-y-2">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <RatingStars
+                                                    value={getReviewRating(review)}
+                                                />
+                                                {review.is_verified_purchase ? (
+                                                    <Badge
+                                                        variant="success"
+                                                        className="gap-1"
+                                                    >
+                                                        <ShieldCheck className="h-3 w-3" />
+                                                        Đã mua hàng
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="muted">
+                                                        Chưa xác minh
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <h3 className="break-words text-sm font-semibold text-[var(--color-text-main)]">
+                                                {review.title || 'Đánh giá sản phẩm'}
+                                            </h3>
+                                        </div>
+                                        <time className="shrink-0 text-sm text-[var(--color-text-muted)]">
+                                            {formatReviewDate(review.created_at)}
+                                        </time>
+                                    </div>
+
+                                    <p className="whitespace-pre-line break-words text-sm leading-6 text-[var(--color-text-main)]">
+                                        {review.content}
+                                    </p>
+
+                                    <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+                                        {accessToken && (
+                                            <>
+                                                <Button
+                                                    className="w-full sm:w-auto"
+                                                    variant={
+                                                        review.user_vote ===
+                                                        'helpful'
+                                                            ? 'secondary'
+                                                            : 'ghost'
+                                                    }
+                                                    size="sm"
+                                                    disabled={
+                                                        markReviewHelpfulMutation.isPending
+                                                    }
+                                                    onClick={() =>
+                                                        handleMarkReviewHelpful(
+                                                            review.id,
+                                                            true
+                                                        )
+                                                    }
+                                                >
+                                                    <ThumbsUp className="h-4 w-4" />
+                                                    Có ích {review.helpful_count || 0}
+                                                </Button>
+                                                <Button
+                                                    className="w-full sm:w-auto"
+                                                    variant={
+                                                        review.user_vote ===
+                                                        'unhelpful'
+                                                            ? 'secondary'
+                                                            : 'ghost'
+                                                    }
+                                                    size="sm"
+                                                    disabled={
+                                                        markReviewHelpfulMutation.isPending
+                                                    }
+                                                    onClick={() =>
+                                                        handleMarkReviewHelpful(
+                                                            review.id,
+                                                            false
+                                                        )
+                                                    }
+                                                >
+                                                    <ThumbsDown className="h-4 w-4" />
+                                                    Chưa hữu ích{' '}
+                                                    {review.unhelpful_count || 0}
+                                                </Button>
+                                                <Button
+                                                    className="w-full sm:w-auto"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        openFlagModal(review)
+                                                    }
+                                                >
+                                                    <Flag className="h-4 w-4" />
+                                                    Báo cáo
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    )}
+
+                    {reviewsTotalPages > 1 && (
+                        <Pagination
+                            page={reviewsPage}
+                            totalPages={reviewsTotalPages}
+                            onPageChange={setReviewsPage}
+                        />
+                    )}
+                </CardBody>
+            </Card>
+
+            <Card>
+                <CardHeader>
                     <div className="flex items-center gap-2">
                         <Tag className="h-4 w-4 text-[var(--color-primary)]" />
                         <h2 className="text-base font-semibold text-[var(--color-text-main)]">
@@ -597,6 +912,47 @@ export default function ProductDetailPage() {
                     )}
                 </CardBody>
             </Card>
+
+            <Modal
+                open={Boolean(flaggedReview)}
+                title="Báo cáo đánh giá"
+                onClose={closeFlagModal}
+                footer={
+                    <>
+                        <Button variant="outline" onClick={closeFlagModal}>
+                            Đóng
+                        </Button>
+                        <Button
+                            isLoading={flagReviewMutation.isPending}
+                            onClick={handleFlagReview}
+                        >
+                            Gửi báo cáo
+                        </Button>
+                    </>
+                }
+            >
+                <div className="space-y-4">
+                    <p className="text-sm leading-6 text-[var(--color-text-muted)]">
+                        Chọn lý do để gửi đánh giá này vào hàng chờ kiểm duyệt.
+                    </p>
+                    <Select
+                        label="Lý do"
+                        value={flagReason}
+                        onChange={(event) => setFlagReason(event.target.value)}
+                    >
+                        {FLAG_REASON_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </Select>
+                    {flagReviewMutation.isError && (
+                        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
+                            {flagReviewMutation.error.message}
+                        </p>
+                    )}
+                </div>
+            </Modal>
         </div>
     );
 }

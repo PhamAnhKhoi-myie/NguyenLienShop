@@ -14,6 +14,11 @@ export const reviewSchema = z.object({
         .int('Số sao không hợp lệ')
         .min(1, 'Số sao tối thiểu là 1')
         .max(5, 'Số sao tối đa là 5'),
+    title: z
+        .string()
+        .trim()
+        .max(200, 'Tiêu đề đánh giá không vượt quá 200 ký tự')
+        .optional(),
     comment: z
         .string()
         .trim()

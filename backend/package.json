@@ -11,6 +11,10 @@
     "seed:categories": "node src/scripts/seedCategories.js",
     "seed:products": "node src/scripts/seedProducts.js",
     "seed:discounts": "node src/scripts/seedDiscounts.js",
+    "seed:shop-info": "node src/scripts/seedShopInfo.js",
+    "seed:announcements": "node src/scripts/seedAnnouncements.js",
+    "seed:reviews:dev": "node src/scripts/seedReviewsDev.js",
+    "db:reset:dev": "node src/scripts/resetDevDatabase.js",
     "test": "jest"
   },
   "keywords": [],
