@@ -462,7 +462,7 @@ export default function AdminVariantsPage() {
                         : 'Thêm biến thể'
                 }
                 onClose={closeVariantForm}
-                panelClassName="max-w-2xl"
+                panelClassName="max-w-4xl"
             >
                 {variantFormState.mode === 'edit' && variantDetailQuery.isLoading ? (
                     <Loading label="Đang tải biến thể..." />
@@ -488,7 +488,7 @@ export default function AdminVariantsPage() {
                         : `Thêm đơn vị bán${selectedVariant ? ` · ${selectedVariant.size}` : ''}`
                 }
                 onClose={closeUnitForm}
-                panelClassName="max-w-3xl"
+                panelClassName="max-w-5xl"
             >
                 {unitFormState.mode === 'edit' && unitDetailQuery.isLoading ? (
                     <Loading label="Đang tải đơn vị bán..." />

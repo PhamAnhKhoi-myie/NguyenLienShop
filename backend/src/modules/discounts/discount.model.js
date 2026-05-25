@@ -208,6 +208,25 @@ const discountSchema = new mongoose.Schema(
             // Example: percent (priority 10) before fixed (priority 5)
         },
 
+        show_on_homepage: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+
+        homepage_priority: {
+            type: Number,
+            default: 0,
+            min: [0, 'Homepage priority cannot be negative'],
+            max: [999, 'Homepage priority must not exceed 999'],
+        },
+
+        requires_claim: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+
         // ===== TIME WINDOW =====
         // ✅ FIX #8: Explicit time range (no status automation)
         started_at: {
@@ -324,6 +343,18 @@ discountSchema.index(
         name: 'stackable_priority_idx',
         partialFilterExpression: {
             is_stackable: true,
+        },
+    }
+);
+
+discountSchema.index(
+    { show_on_homepage: 1, status: 1, homepage_priority: -1, expiry_date: 1 },
+    {
+        name: 'homepage_discounts_idx',
+        partialFilterExpression: {
+            show_on_homepage: true,
+            status: 'active',
+            is_deleted: false,
         },
     }
 );

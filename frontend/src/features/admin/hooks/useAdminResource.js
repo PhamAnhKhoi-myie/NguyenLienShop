@@ -13,8 +13,8 @@ export function useAdminList(endpoint, params = {}, options = {}) {
 
 export function useAdminDetail(endpoint, options = {}) {
     return useQuery({
-        queryKey: [...ADMIN_QUERY_KEY, endpoint],
-        queryFn: () => adminApi.get(endpoint),
+        queryKey: [...ADMIN_QUERY_KEY, endpoint, options.params || {}],
+        queryFn: () => adminApi.get(endpoint, options.params || {}),
         enabled: Boolean(endpoint) && (options.enabled ?? true),
     });
 }

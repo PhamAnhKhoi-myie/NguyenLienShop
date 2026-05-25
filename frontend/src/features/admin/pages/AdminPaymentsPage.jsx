@@ -65,6 +65,15 @@ function buildPaymentParams({ page, filters }) {
         limit: 20,
     };
 
+    return {
+        ...params,
+        ...buildFilterParams(filters),
+    };
+}
+
+function buildFilterParams(filters) {
+    const params = {};
+
     Object.entries(filters).forEach(([key, value]) => {
         if (value !== '' && value !== null && value !== undefined) {
             params[key] = value;
@@ -414,8 +423,14 @@ export default function AdminPaymentsPage() {
         () => buildPaymentParams({ page, filters: appliedFilters }),
         [appliedFilters, page]
     );
+    const statsParams = useMemo(
+        () => buildFilterParams(appliedFilters),
+        [appliedFilters]
+    );
     const paymentsQuery = useAdminList('/payments/admin', queryParams);
-    const statsQuery = useAdminDetail('/payments/admin/stats');
+    const statsQuery = useAdminDetail('/payments/admin/stats', {
+        params: statsParams,
+    });
     const detailEndpoint = selectedPayment
         ? `/payments/${getPaymentId(selectedPayment)}`
         : null;
@@ -637,7 +652,7 @@ export default function AdminPaymentsPage() {
                 open={Boolean(selectedPayment)}
                 title={paymentDetail ? `Payment ${getPaymentId(paymentDetail)}` : 'Chi tiết payment'}
                 onClose={closeDetail}
-                panelClassName="max-w-6xl"
+                panelClassName="max-w-7xl"
             >
                 {detailQuery.isLoading ? (
                     <Loading label="Đang tải chi tiết thanh toán..." />

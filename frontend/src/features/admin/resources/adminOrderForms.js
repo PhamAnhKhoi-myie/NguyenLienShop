@@ -29,6 +29,42 @@ const statusValues = [
     'CANCELED',
 ];
 
+function getManualStatusValues(order = {}) {
+    const currentStatus = order.status || 'PENDING';
+    const paymentMethod = order.payment?.method;
+    const paymentStatus = order.payment?.status;
+
+    if (currentStatus === 'PENDING') {
+        const nextStatuses = ['CANCELED'];
+
+        if (paymentMethod === 'COD') {
+            nextStatuses.push('PROCESSING');
+        }
+
+        if (paymentStatus === 'PAID') {
+            nextStatuses.push('PAID');
+        }
+
+        return [currentStatus, ...nextStatuses];
+    }
+
+    if (currentStatus === 'PAID') {
+        return [currentStatus, 'PROCESSING', 'CANCELED'];
+    }
+
+    if (currentStatus === 'PROCESSING') {
+        return [currentStatus, 'CANCELED'];
+    }
+
+    return [currentStatus];
+}
+
+function getManualStatusOptions(order = {}) {
+    const values = getManualStatusValues(order);
+
+    return orderStatusOptions.filter((option) => values.includes(option.value));
+}
+
 export const orderStatusFormConfig = {
     title: 'trạng thái đơn hàng',
     schema: z.object({
@@ -52,7 +88,7 @@ export const orderStatusFormConfig = {
             name: 'status',
             label: 'Trạng thái',
             type: 'select',
-            options: orderStatusOptions.filter((option) => option.value),
+            options: ({ initialData }) => getManualStatusOptions(initialData),
         },
         {
             name: 'note',

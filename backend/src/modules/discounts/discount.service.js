@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Discount = require('./discount.model');
 const DiscountUsageLog = require('./discount.usage-log.model');
+const UserClaimedDiscount = require('./user_claimed_discount.model');
 const DiscountMapper = require('./discount.mapper');
 const AppError = require('../../utils/appError.util');
 const DiscountAuditLogService = require('../audit_logs/discount_audit_log/discount_log.service');
@@ -157,6 +158,276 @@ class DiscountService {
                 );
             }
         }
+    }
+
+    static discountRequiresClaim(discount) {
+        return Boolean(discount?.requires_claim || discount?.show_on_homepage);
+    }
+
+    static async assertClaimedIfRequired(discount, userId, options = {}) {
+        if (!this.discountRequiresClaim(discount)) {
+            return null;
+        }
+
+        if (!userId) {
+            throw new AppError(
+                'Authentication is required to use this voucher',
+                401,
+                'DISCOUNT_CLAIM_AUTH_REQUIRED'
+            );
+        }
+
+        const claim = await UserClaimedDiscount.findOne({
+            user_id: userId,
+            discount_id: discount._id,
+            status: 'claimed',
+        }).session(options.session || null);
+
+        if (!claim) {
+            throw new AppError(
+                'Please claim this voucher before using it',
+                403,
+                'DISCOUNT_NOT_CLAIMED'
+            );
+        }
+
+        if ((claim.used_count || 0) >= discount.usage_per_user_limit) {
+            throw new AppError(
+                'This claimed voucher has already been used',
+                400,
+                'CLAIMED_DISCOUNT_USED'
+            );
+        }
+
+        return claim;
+    }
+
+    static async claimDiscount(discountId, userId, now = new Date()) {
+        if (!userId) {
+            throw new AppError(
+                'Authentication is required to claim voucher',
+                401,
+                'DISCOUNT_CLAIM_AUTH_REQUIRED'
+            );
+        }
+
+        const discount = await Discount.findById(discountId);
+
+        if (!discount) {
+            throw new AppError('Discount not found', 404, 'DISCOUNT_NOT_FOUND');
+        }
+
+        if (!this.discountRequiresClaim(discount)) {
+            throw new AppError(
+                'This discount is not available for claiming',
+                400,
+                'DISCOUNT_NOT_CLAIMABLE'
+            );
+        }
+
+        if (discount.status !== 'active') {
+            throw new AppError(
+                'Discount is not active',
+                400,
+                'DISCOUNT_INACTIVE'
+            );
+        }
+
+        if (discount.started_at > now) {
+            throw new AppError(
+                'This discount is not yet available',
+                400,
+                'DISCOUNT_NOT_STARTED'
+            );
+        }
+
+        if (discount.expiry_date <= now) {
+            throw new AppError(
+                'This discount has expired',
+                400,
+                'DISCOUNT_EXPIRED'
+            );
+        }
+
+        if (discount.usage_count >= discount.usage_limit) {
+            throw new AppError(
+                'Discount usage limit exceeded',
+                400,
+                'DISCOUNT_LIMIT_EXCEEDED'
+            );
+        }
+
+        const eligibilityContext = await this.getUserEligibilityContext(userId);
+        this.assertUserEligible(discount, userId, eligibilityContext);
+
+        const userUsageCount = await DiscountUsageLog.countDocuments({
+            discount_id: discount._id,
+            user_id: userId,
+        });
+
+        if (userUsageCount >= discount.usage_per_user_limit) {
+            throw new AppError(
+                `You've reached max uses for this discount (${discount.usage_per_user_limit})`,
+                400,
+                'USER_DISCOUNT_LIMIT_EXCEEDED'
+            );
+        }
+
+        const existingClaim = await UserClaimedDiscount.findOne({
+            user_id: userId,
+            discount_id: discount._id,
+        });
+
+        if (existingClaim?.status === 'claimed') {
+            return DiscountMapper.toClaimedDiscountDTO(existingClaim, discount);
+        }
+
+        if (
+            existingClaim?.status === 'used' &&
+            (existingClaim.used_count || 0) >= discount.usage_per_user_limit
+        ) {
+            throw new AppError(
+                'This voucher has already been used',
+                400,
+                'CLAIMED_DISCOUNT_USED'
+            );
+        }
+
+        const claimPayload = {
+            user_id: userId,
+            discount_id: discount._id,
+            discount_code: discount.code,
+            status: 'claimed',
+            claimed_at: existingClaim?.claimed_at || now,
+        };
+
+        let claim;
+
+        if (existingClaim) {
+            claim = await UserClaimedDiscount.findByIdAndUpdate(
+                existingClaim._id,
+                {
+                    ...claimPayload,
+                    updated_at: now,
+                },
+                { new: true, runValidators: true }
+            );
+        } else {
+            try {
+                claim = await UserClaimedDiscount.create(claimPayload);
+            } catch (error) {
+                if (error?.code !== 11000) {
+                    throw error;
+                }
+
+                claim = await UserClaimedDiscount.findOne({
+                    user_id: userId,
+                    discount_id: discount._id,
+                });
+            }
+        }
+
+        return DiscountMapper.toClaimedDiscountDTO(claim, discount);
+    }
+
+    static async getClaimedDiscounts(userId, filters = {}, now = new Date()) {
+        if (!userId) {
+            throw new AppError(
+                'Authentication is required',
+                401,
+                'AUTH_REQUIRED'
+            );
+        }
+
+        const page = Math.max(parseInt(filters.page, 10) || 1, 1);
+        const limit = Math.min(Math.max(parseInt(filters.limit, 10) || 20, 1), 100);
+        const status = filters.status || 'available';
+        const query = { user_id: userId };
+
+        if (!['all', 'available', 'expired'].includes(status)) {
+            query.status = status;
+        }
+
+        const claims = await UserClaimedDiscount.find(query)
+            .populate('discount_id')
+            .sort({ claimed_at: -1 })
+            .lean();
+
+        const mappedClaims = claims
+            .map((claim) => {
+                const discount = claim.discount_id;
+                const claimDoc = {
+                    ...claim,
+                    discount_id: discount?._id || claim.discount_id,
+                };
+
+                return DiscountMapper.toClaimedDiscountDTO(claimDoc, discount);
+            })
+            .filter((claim) => {
+                if (status === 'all') {
+                    return true;
+                }
+
+                if (status === 'available') {
+                    return claim.is_available;
+                }
+
+                if (status === 'expired') {
+                    return claim.effective_status === 'expired';
+                }
+
+                return claim.status === status || claim.effective_status === status;
+            });
+
+        const skip = (page - 1) * limit;
+        const data = mappedClaims.slice(skip, skip + limit);
+
+        return {
+            data,
+            pagination: {
+                page,
+                limit,
+                total: mappedClaims.length,
+                totalPages: Math.ceil(mappedClaims.length / limit),
+            },
+            generated_at: now,
+        };
+    }
+
+    static async markClaimUsage(discount, userId, orderId, options = {}) {
+        if (!this.discountRequiresClaim(discount) || !userId) {
+            return null;
+        }
+
+        const claim = await UserClaimedDiscount.findOne({
+            user_id: userId,
+            discount_id: discount._id,
+            status: 'claimed',
+        }).session(options.session || null);
+
+        if (!claim) {
+            throw new AppError(
+                'Please claim this voucher before using it',
+                403,
+                'DISCOUNT_NOT_CLAIMED'
+            );
+        }
+
+        const nextUsedCount = (claim.used_count || 0) + 1;
+        const now = new Date();
+
+        claim.used_count = nextUsedCount;
+        claim.last_used_at = now;
+        claim.order_id = orderId || null;
+
+        if (nextUsedCount >= discount.usage_per_user_limit) {
+            claim.status = 'used';
+            claim.used_at = now;
+        }
+
+        await claim.save({ session: options.session || null });
+
+        return claim;
     }
 
     // static async validateAndApply(code, cartSubtotal, userId, cartItems = []) {
@@ -340,6 +611,8 @@ class DiscountService {
                 );
             }
         }
+
+        await this.assertClaimedIfRequired(discount, userId);
 
         if (cartSubtotal < discount.min_order_value) {
             throw new AppError(
@@ -541,6 +814,10 @@ class DiscountService {
             }
         }
 
+        await this.assertClaimedIfRequired(discount, userId, {
+            session: options.session || null,
+        });
+
         const previousUsageCount = discount.usage_count;
 
         const updateResult = await Discount.updateOne(
@@ -578,6 +855,8 @@ class DiscountService {
             },
             options
         );
+
+        await this.markClaimUsage(discount, userId, orderId, options);
 
         await this._createDiscountAuditLog({
             action: AUDIT_ACTIONS.REDEEM_DISCOUNT,
@@ -666,6 +945,9 @@ class DiscountService {
                 'usage_count',
                 'is_stackable',
                 'stack_priority',
+                'show_on_homepage',
+                'homepage_priority',
+                'requires_claim',
                 'started_at',
                 'expiry_date',
                 'status',
@@ -731,6 +1013,79 @@ class DiscountService {
                 totalPages: Math.ceil(total / limit),
             },
         };
+    }
+
+    static async getHomepageDiscounts(options = {}, now = new Date()) {
+        const limit = Math.min(Math.max(parseInt(options.limit, 10) || 4, 1), 12);
+        const queryLimit = Math.min(limit * 3, 36);
+
+        const discounts = await Discount.find({
+            show_on_homepage: true,
+            status: 'active',
+            is_deleted: false,
+            started_at: { $lte: now },
+            expiry_date: { $gt: now },
+            $expr: { $lt: ['$usage_count', '$usage_limit'] },
+        })
+            .sort({
+                homepage_priority: -1,
+                expiry_date: 1,
+                created_at: -1,
+            })
+            .limit(queryLimit)
+            .lean();
+
+        const eligibilityContext = options.userId
+            ? await this.getUserEligibilityContext(options.userId)
+            : null;
+        const claimedDiscountIds = options.userId
+            ? new Set(
+                  (
+                      await UserClaimedDiscount.find({
+                          user_id: options.userId,
+                          discount_id: { $in: discounts.map((discount) => discount._id) },
+                          status: 'claimed',
+                      }).select('discount_id')
+                  ).map((claim) => claim.discount_id.toString())
+              )
+            : new Set();
+        const visibleDiscounts = [];
+
+        for (const discount of discounts) {
+            try {
+                this.assertUserEligible(
+                    discount,
+                    options.userId,
+                    eligibilityContext || {}
+                );
+
+                if (options.userId) {
+                    const userUsageCount = await DiscountUsageLog.countDocuments({
+                        discount_id: discount._id,
+                        user_id: options.userId,
+                    });
+
+                    if (userUsageCount >= discount.usage_per_user_limit) {
+                        continue;
+                    }
+                }
+
+                visibleDiscounts.push({
+                    ...DiscountMapper.toCustomerDTO(discount),
+                    is_claimed: claimedDiscountIds.has(discount._id.toString()),
+                });
+            } catch (error) {
+                if (!(error instanceof AppError)) {
+                    throw error;
+                }
+            }
+
+            if (visibleDiscounts.length >= limit) {
+                break;
+            }
+        }
+
+        return visibleDiscounts;
     }
 
     static async updateDiscount(discountId, data, updatedBy, metadata = {}) {
@@ -957,37 +1312,38 @@ class DiscountService {
             ? await this.getUserEligibilityContext(filters.userId)
             : null;
 
-        return discounts
-            .filter((discount) => {
-                if (cartSubtotal < (discount.min_order_value || 0)) {
-                    return false;
-                }
+        const applicableDiscounts = [];
 
-                const applicableItems = this.filterApplicableItems(
-                    cartItems,
-                    discount.applicable_targets
+        for (const discount of discounts) {
+            if (cartSubtotal < (discount.min_order_value || 0)) {
+                continue;
+            }
+
+            const applicableItems = this.filterApplicableItems(
+                cartItems,
+                discount.applicable_targets
+            );
+
+            if (applicableItems.length === 0) {
+                continue;
+            }
+
+            try {
+                this.assertUserEligible(
+                    discount,
+                    filters.userId,
+                    eligibilityContext || {}
                 );
-
-                if (applicableItems.length === 0) {
-                    return false;
-                }
-
-                try {
-                    this.assertUserEligible(
-                        discount,
-                        filters.userId,
-                        eligibilityContext || {}
-                    );
-                    return true;
-                } catch (error) {
-                    if (error instanceof AppError) {
-                        return false;
-                    }
-
+                await this.assertClaimedIfRequired(discount, filters.userId);
+                applicableDiscounts.push(discount);
+            } catch (error) {
+                if (!(error instanceof AppError)) {
                     throw error;
                 }
-            })
-            .map((d) => DiscountMapper.toResponseDTO(d));
+            }
+        }
+
+        return applicableDiscounts;
     }
 
     static async getDiscountsForUser(userId, filters = {}, now = new Date()) {

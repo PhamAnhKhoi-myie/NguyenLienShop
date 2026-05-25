@@ -52,8 +52,8 @@ class OrderMapper {
             status: doc.status,
             status_history: this.transformStatusHistory(doc.status_history || []),
 
-            created_at: doc.created_at,
-            updated_at: doc.updated_at,
+            created_at: this.getCreatedAt(doc),
+            updated_at: this.getUpdatedAt(doc),
         };
     }
 
@@ -83,7 +83,7 @@ class OrderMapper {
 
             payment_status: doc.payment?.status,
 
-            created_at: doc.created_at,
+            created_at: this.getCreatedAt(doc),
             delivered_at: doc.shipment?.delivered_at || null,
         };
     }
@@ -190,10 +190,11 @@ class OrderMapper {
         const doc = order.toObject ? order.toObject() : order;
 
         const addressSnapshot = this.transformAddressSnapshot(doc.address_snapshot);
+        const createdAt = this.getCreatedAt(doc);
 
         return {
             order_code: doc.order_code,
-            order_date: this.formatDate(doc.created_at),
+            order_date: this.formatDate(createdAt),
 
             recipient_name: addressSnapshot?.receiver_name,
             phone: addressSnapshot?.phone,
@@ -214,7 +215,7 @@ class OrderMapper {
 
             payment_method: doc.payment?.method,
 
-            expected_delivery: this.calculateExpectedDelivery(doc.created_at),
+            expected_delivery: this.calculateExpectedDelivery(createdAt),
         };
     }
 
@@ -444,6 +445,14 @@ class OrderMapper {
                 item.pack_size,
             0
         );
+    }
+
+    static getCreatedAt(doc) {
+        return doc?.created_at || doc?.createdAt || null;
+    }
+
+    static getUpdatedAt(doc) {
+        return doc?.updated_at || doc?.updatedAt || null;
     }
 
     static getStatusLabel(status) {

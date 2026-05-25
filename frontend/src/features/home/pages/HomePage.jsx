@@ -3,6 +3,7 @@ import { PackageCheck, ShieldCheck, Truck } from 'lucide-react';
 
 import Card, { CardBody } from '../../../shared/components/Card';
 import HomeBanner from '../../banners/components/HomeBanner';
+import HomeDiscountsSection from '../../discounts/components/HomeDiscountsSection';
 import { ROUTES } from '../../../shared/constants/routes';
 
 const benefits = [
@@ -112,43 +113,7 @@ export default function HomePage() {
                 </div>
             </section>
 
-            <section className="border-y border-[var(--color-border)] py-10">
-                <div className="grid gap-8 md:grid-cols-[0.8fr_1.2fr] md:items-center">
-                    <div>
-                        <h2 className="text-2xl font-bold text-[var(--color-text-main)]">
-                            Ưu đãi cho đơn hàng đầu tiên
-                        </h2>
-
-                        <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]">
-                            Khu vực này có thể dùng để hiển thị mã giảm giá, chương
-                            trình khuyến mãi, thông báo giao hàng hoặc chính sách mua
-                            số lượng lớn.
-                        </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-                        <p className="text-sm font-semibold text-[var(--color-primary)]">
-                            Gợi ý nội dung
-                        </p>
-
-                        <h3 className="mt-2 text-xl font-bold text-[var(--color-text-main)]">
-                            Mua đúng loại túi, tiết kiệm thời gian chăm vườn
-                        </h3>
-
-                        <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
-                            Có thể thay phần này bằng voucher thật khi module discount
-                            đã được nối vào FE.
-                        </p>
-
-                        <Link
-                            to={ROUTES.PRODUCTS}
-                            className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-[var(--color-primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
-                        >
-                            Mua ngay
-                        </Link>
-                    </div>
-                </div>
-            </section>
+            <HomeDiscountsSection />
 
             <section>
                 <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

@@ -74,6 +74,7 @@ router.post(
 router.get(
     '/admin/orders/stats',
     authenticate,
+    validate({ query: getOrdersQuerySchema }),
     OrderController.getOrderStats
 );
 

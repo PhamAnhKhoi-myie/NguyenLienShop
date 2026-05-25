@@ -687,7 +687,7 @@ export default function AdminUsersPage() {
                 open={Boolean(selectedUser)}
                 title={selectedUser?.email || 'Chi tiết người dùng'}
                 onClose={closeDetail}
-                panelClassName="max-w-6xl"
+                panelClassName="max-w-7xl"
             >
                 {selectedUser && (
                     <div className="space-y-4">
@@ -713,7 +713,7 @@ export default function AdminUsersPage() {
                     open={Boolean(actionType)}
                     title={actionTitles[actionType]}
                     onClose={closeAction}
-                    panelClassName="max-w-3xl"
+                    panelClassName="max-w-5xl"
                 >
                     <AdminResourceForm
                         form={actionForm}
@@ -733,7 +733,7 @@ export default function AdminUsersPage() {
                     open={actionType === 'roles'}
                     title={actionTitles.roles}
                     onClose={closeAction}
-                    panelClassName="max-w-2xl"
+                    panelClassName="max-w-4xl"
                 >
                     <UserRolesForm
                         user={selectedUser}

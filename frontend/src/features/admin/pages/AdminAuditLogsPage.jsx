@@ -801,7 +801,7 @@ export default function AdminAuditLogsPage() {
                 open={Boolean(selectedLog)}
                 title={logDetail?.action || 'Chi tiết audit log'}
                 onClose={closeDetail}
-                panelClassName="max-w-6xl"
+                panelClassName="max-w-7xl"
             >
                 {detailQuery.isLoading ? (
                     <Loading label="Đang tải chi tiết audit log..." />

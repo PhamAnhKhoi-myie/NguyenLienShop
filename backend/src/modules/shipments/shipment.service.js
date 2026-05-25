@@ -248,14 +248,9 @@ class ShipmentService {
             query.carrier = filters.carrier;
         }
 
-        if (filters.date_from || filters.date_to) {
-            query.created_at = {};
-            if (filters.date_from) {
-                query.created_at.$gte = new Date(filters.date_from);
-            }
-            if (filters.date_to) {
-                query.created_at.$lte = new Date(filters.date_to);
-            }
+        const createdAtRange = this._buildCreatedAtDateRange(filters);
+        if (createdAtRange) {
+            query.created_at = createdAtRange;
         }
 
         const total = await Shipment.countDocuments(query);
@@ -908,14 +903,9 @@ class ShipmentService {
             query.order_id = filters.order_id;
         }
 
-        if (filters.date_from || filters.date_to) {
-            query.created_at = {};
-            if (filters.date_from) {
-                query.created_at.$gte = new Date(filters.date_from);
-            }
-            if (filters.date_to) {
-                query.created_at.$lte = new Date(filters.date_to);
-            }
+        const createdAtRange = this._buildCreatedAtDateRange(filters);
+        if (createdAtRange) {
+            query.created_at = createdAtRange;
         }
 
         const total = await Shipment.countDocuments(query);
@@ -935,9 +925,36 @@ class ShipmentService {
         };
     }
 
-    static async getShipmentStats() {
+    static async getShipmentStats(filters = {}) {
+        const query = { is_deleted: false };
+
+        if (filters.status) {
+            if (Array.isArray(filters.status)) {
+                query.status = { $in: filters.status };
+            } else {
+                query.status = filters.status;
+            }
+        }
+
+        if (filters.carrier) {
+            query.carrier = filters.carrier;
+        }
+
+        if (filters.user_id) {
+            query.user_id = new mongoose.Types.ObjectId(filters.user_id);
+        }
+
+        if (filters.order_id) {
+            query.order_id = new mongoose.Types.ObjectId(filters.order_id);
+        }
+
+        const createdAtRange = this._buildCreatedAtDateRange(filters);
+        if (createdAtRange) {
+            query.created_at = createdAtRange;
+        }
+
         const stats = await Shipment.aggregate([
-            { $match: { is_deleted: false } },
+            { $match: query },
             {
                 $facet: {
                     totalShipments: [{ $count: 'count' }],
@@ -1038,6 +1055,28 @@ class ShipmentService {
         ]);
 
         return stats[0];
+    }
+
+    static _buildCreatedAtDateRange(filters = {}) {
+        if (!filters.date_from && !filters.date_to) {
+            return null;
+        }
+
+        const range = {};
+
+        if (filters.date_from) {
+            const from = new Date(filters.date_from);
+            from.setHours(0, 0, 0, 0);
+            range.$gte = from;
+        }
+
+        if (filters.date_to) {
+            const to = new Date(filters.date_to);
+            to.setHours(23, 59, 59, 999);
+            range.$lte = to;
+        }
+
+        return range;
     }
 
     static async getPendingRetryShipments() {

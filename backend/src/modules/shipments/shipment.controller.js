@@ -359,7 +359,23 @@ const getShipmentStats = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
     assertRole(user, ['ADMIN']);
 
-    const stats = await ShipmentService.getShipmentStats();
+    const {
+        status,
+        carrier,
+        user_id,
+        order_id,
+        date_from,
+        date_to,
+    } = req.query;
+
+    const stats = await ShipmentService.getShipmentStats({
+        status: status && status.length > 0 ? status : undefined,
+        carrier,
+        user_id,
+        order_id,
+        date_from,
+        date_to,
+    });
 
     res.status(200).json({
         success: true,

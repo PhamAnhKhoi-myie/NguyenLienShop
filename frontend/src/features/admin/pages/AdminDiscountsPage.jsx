@@ -269,6 +269,12 @@ function DiscountDetailPanel({
                         </h2>
                         <StatusBadge value={discount.status} />
                         <StatusBadge value={discount.type} label={discount.type} />
+                        {discount.show_on_homepage && (
+                            <StatusBadge value="active" label="Homepage" />
+                        )}
+                        {discount.requires_claim && (
+                            <StatusBadge value="paused" label="Claim trước" />
+                        )}
                     </div>
                     <p className="mt-2 text-sm text-[var(--color-text-muted)]">
                         {discount.application_strategy_label ||
@@ -417,6 +423,14 @@ function DiscountDetailPanel({
                             {discount.is_stackable
                                 ? `Có · priority ${discount.stack_priority || 0}`
                                 : 'Không'}
+                        </DetailRow>
+                        <DetailRow label="Homepage">
+                            {discount.show_on_homepage
+                                ? `Có · priority ${discount.homepage_priority || 0}`
+                                : 'Không'}
+                        </DetailRow>
+                        <DetailRow label="Claim voucher">
+                            {discount.requires_claim ? 'Bắt buộc claim trước' : 'Không bắt buộc'}
                         </DetailRow>
                     </CardBody>
                 </Card>
@@ -734,6 +748,7 @@ export default function AdminDiscountsPage() {
                                             <th className="px-4 py-3">Loại</th>
                                             <th className="px-4 py-3">Giá trị</th>
                                             <th className="px-4 py-3">Usage</th>
+                                            <th className="px-4 py-3">Homepage</th>
                                             <th className="px-4 py-3">Trạng thái</th>
                                             <th className="px-4 py-3">Còn lại</th>
                                             <th className="px-4 py-3">Ngày tạo</th>
@@ -757,6 +772,27 @@ export default function AdminDiscountsPage() {
                                                 </td>
                                                 <td className="px-4 py-3 text-[var(--color-text-main)]">
                                                     {discount.usage_count || 0}/{discount.usage_limit}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {discount.show_on_homepage ? (
+                                                            <StatusBadge
+                                                                value="active"
+                                                                label={`Có · ${discount.homepage_priority || 0}`}
+                                                            />
+                                                        ) : (
+                                                            <StatusBadge
+                                                                value="inactive"
+                                                                label="Không"
+                                                            />
+                                                        )}
+                                                        {discount.requires_claim && (
+                                                            <StatusBadge
+                                                                value="paused"
+                                                                label="Claim"
+                                                            />
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <StatusBadge value={discount.status} />
@@ -797,7 +833,7 @@ export default function AdminDiscountsPage() {
                 open={Boolean(selectedDiscount)}
                 title={discountDetail?.code || 'Chi tiết mã giảm giá'}
                 onClose={closeDetail}
-                panelClassName="max-w-6xl"
+                panelClassName="max-w-7xl"
             >
                 {detailQuery.isLoading || statsQuery.isLoading ? (
                     <Loading label="Đang tải chi tiết mã giảm giá..." />
@@ -838,7 +874,7 @@ export default function AdminDiscountsPage() {
                     open={Boolean(actionType)}
                     title={actionTitles[actionType]}
                     onClose={closeAction}
-                    panelClassName="max-w-5xl"
+                    panelClassName="max-w-6xl"
                 >
                     <AdminResourceForm
                         form={actionForm}

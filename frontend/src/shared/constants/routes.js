@@ -22,6 +22,7 @@ export const ROUTES = {
     ADMIN_AUDIT_LOGS: '/admin/audit-logs',
     PRODUCTS: '/products',
     BLOGS: '/blogs',
+    STORE_LOCATION: '/store-location',
     CART: '/cart',
     CHECKOUT: '/checkout',
     CHECKOUT_SUCCESS: '/checkout/success',
@@ -32,5 +33,6 @@ export const ROUTES = {
     PROFILE: '/profile',
     ADDRESSES: '/profile/addresses',
     PROFILE_REVIEWS: '/profile/reviews',
+    PROFILE_VOUCHERS: '/profile/vouchers',
     NOTIFICATIONS: '/notifications',
 };

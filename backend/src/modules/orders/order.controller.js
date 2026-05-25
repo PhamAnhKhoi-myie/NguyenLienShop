@@ -99,7 +99,7 @@ const cancelOrder = asyncHandler(async (req, res) => {
         );
     }
 
-    const cancelledOrder = await OrderService.cancelOrder(
+    const cancelledOrder = await OrderService.cancelCustomerOrder(
         order_id,
         reason,
         user.userId,
@@ -285,7 +285,14 @@ const getOrderStats = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
     assertRole(user, ['ADMIN']);
 
-    const stats = await OrderService.getOrderStats();
+    const filters = req.query;
+
+    const stats = await OrderService.getOrderStats({
+        status: filters.status?.length > 0 ? filters.status : undefined,
+        payment_status: filters.payment_status,
+        date_from: filters.date_from,
+        date_to: filters.date_to,
+    });
 
     res.status(200).json({
         success: true,

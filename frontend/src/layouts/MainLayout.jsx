@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 
 import Header from './Header';
 import Footer from './Footer';
+import FloatingActions from '../shared/components/FloatingActions';
 import backgroundImage from '../assets/images/background.png';
 
 function MainLayout() {
@@ -26,6 +27,7 @@ function MainLayout() {
                 </main>
 
                 <Footer />
+                <FloatingActions />
             </div>
         </div>
     );

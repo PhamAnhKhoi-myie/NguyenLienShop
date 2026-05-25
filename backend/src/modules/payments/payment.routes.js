@@ -53,6 +53,7 @@ router.post(
 router.get(
     '/admin/stats',
     authenticate,
+    validate({ query: listPaymentsQuerySchema }),
     PaymentController.getPaymentStats
 );
 

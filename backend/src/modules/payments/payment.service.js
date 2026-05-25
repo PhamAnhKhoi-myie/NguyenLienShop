@@ -1175,14 +1175,9 @@ class PaymentService {
             query.provider = filters.provider;
         }
 
-        if (filters.date_from || filters.date_to) {
-            query.created_at = {};
-            if (filters.date_from) {
-                query.created_at.$gte = new Date(filters.date_from);
-            }
-            if (filters.date_to) {
-                query.created_at.$lte = new Date(filters.date_to);
-            }
+        const createdAtRange = this._buildCreatedAtDateRange(filters);
+        if (createdAtRange) {
+            query.created_at = createdAtRange;
         }
 
         const total = await Payment.countDocuments(query);
@@ -1192,7 +1187,7 @@ class PaymentService {
             .limit(limit);
 
         return {
-            data: payments.map(PaymentMapper.toListDTO),
+            data: payments.map((payment) => PaymentMapper.toListDTO(payment)),
             pagination: {
                 page,
                 limit,
@@ -1222,14 +1217,9 @@ class PaymentService {
             query.provider = filters.provider;
         }
 
-        if (filters.date_from || filters.date_to) {
-            query.created_at = {};
-            if (filters.date_from) {
-                query.created_at.$gte = new Date(filters.date_from);
-            }
-            if (filters.date_to) {
-                query.created_at.$lte = new Date(filters.date_to);
-            }
+        const createdAtRange = this._buildCreatedAtDateRange(filters);
+        if (createdAtRange) {
+            query.created_at = createdAtRange;
         }
 
         const total = await Payment.countDocuments(query);
@@ -1239,7 +1229,7 @@ class PaymentService {
             .limit(limit);
 
         return {
-            data: payments.map(PaymentMapper.toAdminDTO),
+            data: payments.map((payment) => PaymentMapper.toAdminDTO(payment)),
             pagination: {
                 page,
                 limit,
@@ -1249,9 +1239,28 @@ class PaymentService {
         };
     }
 
-    static async getPaymentStats() {
+    static async getPaymentStats(filters = {}) {
+        const query = { is_deleted: false };
+
+        if (filters.status) {
+            if (Array.isArray(filters.status)) {
+                query.status = { $in: filters.status };
+            } else {
+                query.status = filters.status;
+            }
+        }
+
+        if (filters.provider) {
+            query.provider = filters.provider;
+        }
+
+        const createdAtRange = this._buildCreatedAtDateRange(filters);
+        if (createdAtRange) {
+            query.created_at = createdAtRange;
+        }
+
         const stats = await Payment.aggregate([
-            { $match: { is_deleted: false } },
+            { $match: query },
             {
                 $facet: {
                     totalPayments: [{ $count: 'count' }],
@@ -1315,6 +1324,28 @@ class PaymentService {
         ]);
 
         return stats[0];
+    }
+
+    static _buildCreatedAtDateRange(filters = {}) {
+        if (!filters.date_from && !filters.date_to) {
+            return null;
+        }
+
+        const range = {};
+
+        if (filters.date_from) {
+            const from = new Date(filters.date_from);
+            from.setHours(0, 0, 0, 0);
+            range.$gte = from;
+        }
+
+        if (filters.date_to) {
+            const to = new Date(filters.date_to);
+            to.setHours(23, 59, 59, 999);
+            range.$lte = to;
+        }
+
+        return range;
     }
 
     static async auditAdminVerifyPayment(payment, actorId, metadata = {}) {

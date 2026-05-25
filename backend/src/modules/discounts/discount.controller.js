@@ -163,6 +163,49 @@ class DiscountController {
         });
     });
 
+    static getHomepageDiscounts = asyncHandler(async (req, res) => {
+        const discounts = await DiscountService.getHomepageDiscounts({
+            limit: req.query.limit,
+            userId: req.user?.userId,
+        });
+
+        res.status(200).json({
+            success: true,
+            data: discounts
+        });
+    });
+
+    static claimDiscount = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+        const { discountId } = req.params;
+
+        const claimedDiscount = await DiscountService.claimDiscount(
+            discountId,
+            user.userId
+        );
+
+        res.status(201).json({
+            success: true,
+            data: claimedDiscount,
+            message: 'Voucher claimed successfully'
+        });
+    });
+
+    static getMyClaimedDiscounts = asyncHandler(async (req, res) => {
+        const user = assertAuthenticated(req.user);
+
+        const result = await DiscountService.getClaimedDiscounts(
+            user.userId,
+            req.query
+        );
+
+        res.status(200).json({
+            success: true,
+            data: result.data,
+            pagination: result.pagination
+        });
+    });
+
     static duplicateDiscount = asyncHandler(async (req, res) => {
         const user = assertAuthenticated(req.user);
         const { discountId } = req.params;

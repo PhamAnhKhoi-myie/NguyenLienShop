@@ -234,7 +234,7 @@ export default function AdminShopInfoPage() {
                         : 'Tạo thông tin shop'
                 }
                 onClose={closeForm}
-                panelClassName="max-w-4xl"
+                panelClassName="max-w-5xl"
             >
                 <AdminResourceForm
                     form={shopInfoFormConfig}

@@ -5,6 +5,7 @@ import {
     MapPin,
     MessageSquare,
     PackageCheck,
+    TicketPercent,
     UserRound,
 } from 'lucide-react';
 import { ROUTES } from '../../../shared/constants/routes';
@@ -36,6 +37,11 @@ const links = [
         to: ROUTES.PROFILE_REVIEWS,
         label: 'Đánh giá',
         icon: MessageSquare,
+    },
+    {
+        to: ROUTES.PROFILE_VOUCHERS,
+        label: 'Voucher',
+        icon: TicketPercent,
     },
     {
         to: ROUTES.NOTIFICATIONS,

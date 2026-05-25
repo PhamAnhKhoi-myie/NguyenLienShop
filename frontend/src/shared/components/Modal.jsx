@@ -14,33 +14,36 @@ export default function Modal({
         return null;
     }
 
+    const resolvedPanelClassName = panelClassName || 'max-w-3xl';
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-3 py-5 sm:px-6 lg:px-8">
             <div
                 role="dialog"
                 aria-modal="true"
-                className={`max-h-[90vh] w-full max-w-lg overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl ${panelClassName}`}
+                className={`flex max-h-[calc(100vh-2.5rem)] w-full flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl ${resolvedPanelClassName}`}
             >
-                <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
-                    <h2 className="text-lg font-semibold text-[var(--color-text-main)]">
+                <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 sm:px-7">
+                    <h2 className="min-w-0 break-words text-xl font-semibold leading-7 text-[var(--color-text-main)]">
                         {title}
                     </h2>
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={onClose}
+                        className="shrink-0"
                         aria-label="Đóng"
                     >
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
 
-                <div className={`max-h-[calc(90vh-130px)] overflow-y-auto px-5 py-4 ${bodyClassName}`}>
+                <div className={`min-h-0 flex-1 overflow-y-auto px-6 py-6 sm:px-7 ${bodyClassName}`}>
                     {children}
                 </div>
 
                 {footer && (
-                    <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4">
+                    <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 sm:flex-row sm:justify-end sm:px-7">
                         {footer}
                     </div>
                 )}

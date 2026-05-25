@@ -402,6 +402,7 @@ export default function AdminReviewsPage() {
                 open={Boolean(rejectingReview)}
                 title="Từ chối đánh giá"
                 onClose={closeRejectModal}
+                panelClassName="max-w-3xl"
                 footer={
                     <>
                         <Button variant="outline" onClick={closeRejectModal}>

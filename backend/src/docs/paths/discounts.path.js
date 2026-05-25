@@ -40,6 +40,20 @@ const paginationOnlyQueryParams = [
     { in: "query", name: "limit", schema: { type: "integer", minimum: 1, maximum: 100, default: 20 } },
 ];
 
+const claimedDiscountsQueryParams = [
+    { in: "query", name: "page", schema: { type: "integer", minimum: 1, default: 1 } },
+    { in: "query", name: "limit", schema: { type: "integer", minimum: 1, maximum: 100, default: 20 } },
+    {
+        in: "query",
+        name: "status",
+        schema: {
+            type: "string",
+            enum: ["available", "claimed", "used", "expired", "revoked", "all"],
+            default: "available",
+        },
+    },
+];
+
 const jsonBody = (schemaRef) => ({
     required: true,
     content: {
@@ -63,7 +77,7 @@ module.exports = {
         post: {
             tags: ["Discounts"],
             summary: "Validate discount code",
-            security: [],
+            security: [{ bearerAuth: [] }, {}],
             requestBody: jsonBody("#/components/schemas/ValidateDiscountInput"),
             responses: {
                 200: response("OK", "#/components/schemas/ValidateDiscountResponse"),
@@ -87,6 +101,58 @@ module.exports = {
                 400: { $ref: "#/components/responses/BadRequest" },
                 401: { $ref: "#/components/responses/Unauthorized" },
                 403: { $ref: "#/components/responses/Forbidden" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
+    "/discounts/public/homepage": {
+        get: {
+            tags: ["Discounts"],
+            summary: "Get public homepage discounts",
+            security: [{ bearerAuth: [] }, {}],
+            parameters: [
+                {
+                    in: "query",
+                    name: "limit",
+                    schema: { type: "integer", minimum: 1, maximum: 12, default: 4 },
+                },
+            ],
+            responses: {
+                200: response("OK", "#/components/schemas/HomepageDiscountsResponse"),
+                400: { $ref: "#/components/responses/BadRequest" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
+    "/discounts/me/claimed": {
+        get: {
+            tags: ["Discounts"],
+            summary: "Get current user's claimed vouchers",
+            security: [{ bearerAuth: [] }],
+            parameters: claimedDiscountsQueryParams,
+            responses: {
+                200: response("OK", "#/components/schemas/ClaimedDiscountsResponse"),
+                400: { $ref: "#/components/responses/BadRequest" },
+                401: { $ref: "#/components/responses/Unauthorized" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
+    "/discounts/{discountId}/claim": {
+        post: {
+            tags: ["Discounts"],
+            summary: "Claim a voucher",
+            security: [{ bearerAuth: [] }],
+            parameters: [discountIdParam],
+            responses: {
+                201: response("Created", "#/components/schemas/ClaimDiscountResponse"),
+                400: { $ref: "#/components/responses/BadRequest" },
+                401: { $ref: "#/components/responses/Unauthorized" },
+                403: { $ref: "#/components/responses/Forbidden" },
+                404: { $ref: "#/components/responses/NotFound" },
                 500: { $ref: "#/components/responses/InternalError" },
             },
         },

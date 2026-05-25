@@ -44,6 +44,9 @@ export const BlogDetailPage = lazy(() =>
 export const BlogListPage = lazy(() =>
     import('../features/blogs/pages/BlogListPage')
 );
+export const StoreLocationPage = lazy(() =>
+    import('../features/contact/pages/StoreLocationPage')
+);
 export const CartPage = lazy(() => import('../features/cart/pages/CartPage'));
 export const CheckoutPage = lazy(() =>
     import('../features/checkout/pages/CheckoutPage')
@@ -85,6 +88,9 @@ export const ProfilePage = lazy(() =>
 );
 export const ProfileReviewsPage = lazy(() =>
     import('../features/profile/pages/ProfileReviewsPage')
+);
+export const ProfileVouchersPage = lazy(() =>
+    import('../features/profile/pages/ProfileVouchersPage')
 );
 export const RegisterPage = lazy(() =>
     import('../features/auth/pages/RegisterPage')

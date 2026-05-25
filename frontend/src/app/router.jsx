@@ -37,8 +37,10 @@ import {
     ProductListPage,
     ProfilePage,
     ProfileReviewsPage,
+    ProfileVouchersPage,
     RegisterPage,
     ResetPasswordPage,
+    StoreLocationPage,
     RouteSuspense,
 } from './routePages';
 import { ROUTES } from '../shared/constants/routes';
@@ -85,6 +87,10 @@ export const router = createBrowserRouter([
                     {
                         path: 'blogs/:slug',
                         element: routePage(<BlogDetailPage />),
+                    },
+                    {
+                        path: 'store-location',
+                        element: routePage(<StoreLocationPage />),
                     },
                     {
                         path: 'cart',
@@ -187,6 +193,14 @@ export const router = createBrowserRouter([
                         element: (
                             <ProtectedRoute>
                                 {routePage(<ProfileReviewsPage />)}
+                            </ProtectedRoute>
+                        ),
+                    },
+                    {
+                        path: 'profile/vouchers',
+                        element: (
+                            <ProtectedRoute>
+                                {routePage(<ProfileVouchersPage />)}
                             </ProtectedRoute>
                         ),
                     },

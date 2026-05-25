@@ -369,7 +369,14 @@ const getPaymentStats = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
     assertRole(user, ['ADMIN']);
 
-    const stats = await PaymentService.getPaymentStats();
+    const { status, provider, date_from, date_to } = req.query;
+
+    const stats = await PaymentService.getPaymentStats({
+        status: status?.length > 0 ? status : undefined,
+        provider,
+        date_from,
+        date_to,
+    });
 
     return res.status(200).json({
         success: true,

@@ -43,6 +43,9 @@ class DiscountMapper {
             // ===== STACKING =====
             is_stackable: doc.is_stackable,
             stack_priority: doc.stack_priority,
+            show_on_homepage: Boolean(doc.show_on_homepage),
+            homepage_priority: doc.homepage_priority || 0,
+            requires_claim: Boolean(doc.requires_claim || doc.show_on_homepage),
 
             // ===== TIME WINDOW =====
             started_at: doc.started_at,
@@ -119,6 +122,9 @@ class DiscountMapper {
             // ===== STACKING =====
             is_stackable: doc.is_stackable,
             stack_priority: doc.stack_priority,
+            show_on_homepage: Boolean(doc.show_on_homepage),
+            homepage_priority: doc.homepage_priority || 0,
+            requires_claim: Boolean(doc.requires_claim || doc.show_on_homepage),
 
             // ===== TIME WINDOW =====
             started_at: doc.started_at,
@@ -173,6 +179,9 @@ class DiscountMapper {
             status_label: this.getStatusLabel(doc.status),
             is_active: this.isDiscountActive(doc),
             time_remaining: this.getTimeRemaining(doc.expiry_date),
+            show_on_homepage: Boolean(doc.show_on_homepage),
+            homepage_priority: doc.homepage_priority || 0,
+            requires_claim: Boolean(doc.requires_claim || doc.show_on_homepage),
 
             // ===== TIMESTAMPS =====
             created_at: doc.created_at,
@@ -205,16 +214,54 @@ class DiscountMapper {
 
             // ===== APPLICATION =====
             application_strategy: doc.application_strategy,
+            requires_claim: Boolean(doc.requires_claim || doc.show_on_homepage),
 
             // ===== CONSTRAINTS =====
             min_order_value: doc.min_order_value || 0,
 
             // ===== TIME =====
             is_valid: this.isDiscountValid(doc),
+            expiry_date: doc.expiry_date,
             time_remaining: this.getTimeRemaining(doc.expiry_date),
 
             // ===== WARNINGS =====
             warning: this.getCustomerWarning(doc),
+        };
+    }
+
+    static toClaimedDiscountDTO(claim, discount = null) {
+        if (!claim) {
+            return null;
+        }
+
+        const doc = claim.toObject ? claim.toObject() : claim;
+        const discountDoc = discount?.toObject ? discount.toObject() : discount;
+        const isDiscountValid = discountDoc ? this.isDiscountActive(discountDoc) : false;
+        const usageLimit = discountDoc?.usage_per_user_limit || 1;
+        const usedCount = doc.used_count || 0;
+        const remainingUserUses = Math.max(0, usageLimit - usedCount);
+        const effectiveStatus = this.getClaimEffectiveStatus(
+            doc,
+            discountDoc,
+            remainingUserUses
+        );
+
+        return {
+            id: doc._id?.toString(),
+            claim_id: doc._id?.toString(),
+            discount_id: doc.discount_id?.toString(),
+            code: discountDoc?.code || doc.discount_code,
+            status: doc.status,
+            effective_status: effectiveStatus,
+            is_available: effectiveStatus === 'available',
+            used_count: usedCount,
+            remaining_user_uses: remainingUserUses,
+            claimed_at: doc.claimed_at,
+            last_used_at: doc.last_used_at,
+            used_at: doc.used_at,
+            order_id: doc.order_id?.toString?.() || null,
+            discount: discountDoc ? this.toCustomerDTO(discountDoc) : null,
+            is_discount_active: isDiscountValid,
         };
     }
 
@@ -264,6 +311,30 @@ class DiscountMapper {
 
         const mapper = mapperFn || ((d) => this.toResponseDTO(d));
         return discounts.map(mapper);
+    }
+
+    static getClaimEffectiveStatus(claim, discount, remainingUserUses = 0) {
+        if (!claim) {
+            return 'expired';
+        }
+
+        if (claim.status === 'revoked') {
+            return 'revoked';
+        }
+
+        if (claim.status === 'used' || remainingUserUses <= 0) {
+            return 'used';
+        }
+
+        if (claim.status === 'expired') {
+            return 'expired';
+        }
+
+        if (!discount || !this.isDiscountActive(discount)) {
+            return 'expired';
+        }
+
+        return 'available';
     }
 
     static toAdminListDTOList(discounts) {

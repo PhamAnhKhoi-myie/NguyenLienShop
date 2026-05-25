@@ -105,6 +105,10 @@ const navItems = [
         label: 'Blog',
         to: ROUTES.BLOGS,
     },
+    {
+        label: 'Google Map',
+        to: ROUTES.STORE_LOCATION,
+    },
 ];
 
 function Header() {

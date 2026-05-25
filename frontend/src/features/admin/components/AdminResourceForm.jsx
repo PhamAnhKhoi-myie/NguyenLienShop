@@ -14,7 +14,11 @@ function getOptionValue(item) {
     return item.id || item._id;
 }
 
-function buildOptions(field, optionData, currentId) {
+function buildOptions(field, optionData, currentId, context) {
+    if (typeof field.options === 'function') {
+        return field.options(context) || [];
+    }
+
     if (field.options) {
         return field.options;
     }
@@ -80,11 +84,13 @@ function FieldRenderer({
                 {...register(field.name)}
             >
                 {field.emptyLabel && <option value="">{field.emptyLabel}</option>}
-                {buildOptions(field, optionData, currentId).map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
+                {buildOptions(field, optionData, currentId, fieldContext).map(
+                    (option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    )
+                )}
             </Select>
         );
     }
@@ -103,6 +109,7 @@ function FieldRenderer({
                 disabled={disabled}
                 multiple={field.multiple}
                 previewUrl={field.previewUrl?.(initialData)}
+                previewUrls={field.previewUrls?.(initialData) || []}
                 className={field.inputClassName}
                 onChange={(file) => {
                     const eventValue = field.multiple ? file : file ? [file] : [];
@@ -154,8 +161,8 @@ export default function AdminResourceForm({
     const currentId = initialData?.id || initialData?._id;
 
     return (
-        <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
-            <div className="grid gap-4 md:grid-cols-2">
+        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            <div className="grid gap-5 lg:grid-cols-2">
                 {form.fields.map((field) => (
                     <div key={field.name} className={cn(field.className)}>
                         <FieldRenderer
@@ -177,7 +184,7 @@ export default function AdminResourceForm({
                 </p>
             )}
 
-            <div className="flex justify-end gap-2 border-t border-[var(--color-border)] pt-4">
+            <div className="flex flex-col-reverse gap-3 border-t border-[var(--color-border)] pt-5 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={onCancel}>
                     Đóng
                 </Button>

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { uploadApi } from '../../uploads/api/upload.api';
 
 const objectIdSchema = z
     .string()
@@ -17,21 +18,6 @@ const optionalSlugSchema = z
         'Slug chỉ gồm chữ thường, số và dấu gạch ngang'
     );
 
-const imageLinesSchema = z.string().superRefine((value, ctx) => {
-    const lines = splitLines(value);
-
-    lines.forEach((line, index) => {
-        const [url] = splitImageLine(line);
-
-        if (!isValidUrl(url)) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: `Dòng ảnh ${index + 1} không phải URL hợp lệ`,
-            });
-        }
-    });
-});
-
 const keywordsSchema = z.string().superRefine((value, ctx) => {
     const keywords = splitKeywords(value);
 
@@ -43,30 +29,9 @@ const keywordsSchema = z.string().superRefine((value, ctx) => {
     }
 });
 
-function isValidUrl(value) {
-    try {
-        new URL(value);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 function cleanOptional(value) {
     const trimmed = String(value || '').trim();
     return trimmed || undefined;
-}
-
-function splitLines(value) {
-    return String(value || '')
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-}
-
-function splitImageLine(line) {
-    const [url, alt] = line.split('|').map((part) => part.trim());
-    return [url, alt || undefined];
 }
 
 function splitKeywords(value) {
@@ -74,29 +39,6 @@ function splitKeywords(value) {
         .split(/[,\n]/)
         .map((keyword) => keyword.trim())
         .filter(Boolean);
-}
-
-function parseImages(value) {
-    return splitLines(value).map((line, index) => {
-        const [url, alt] = splitImageLine(line);
-
-        return {
-            url,
-            alt,
-            is_primary: index === 0,
-            sort_order: index,
-        };
-    });
-}
-
-function imagesToText(images = []) {
-    if (!Array.isArray(images)) {
-        return '';
-    }
-
-    return images
-        .map((image) => [image.url, image.alt].filter(Boolean).join(' | '))
-        .join('\n');
 }
 
 function keywordsToText(keywords = []) {
@@ -128,7 +70,7 @@ export const productFormSchema = z.object({
         .string()
         .trim()
         .max(2000, 'Mô tả chi tiết không vượt quá 2000 ký tự'),
-    images_text: imageLinesSchema,
+    image_files: z.any().optional(),
     search_keywords_text: keywordsSchema,
     status: z.enum(['ACTIVE', 'INACTIVE']),
 });
@@ -207,7 +149,7 @@ export const productFormConfig = {
         brand: '',
         short_description: '',
         description: '',
-        images_text: '',
+        image_files: [],
         search_keywords_text: '',
         status: 'ACTIVE',
     },
@@ -218,21 +160,39 @@ export const productFormConfig = {
         brand: product.brand || '',
         short_description: product.short_description || '',
         description: product.description || '',
-        images_text: imagesToText(product.images),
+        image_files: [],
         search_keywords_text: keywordsToText(product.search_keywords),
         status: product.status || 'ACTIVE',
     }),
-    toPayload: (values) => ({
-        name: values.name.trim(),
-        slug: cleanOptional(values.slug)?.toLowerCase(),
-        category_id: values.category_id,
-        brand: cleanOptional(values.brand),
-        short_description: cleanOptional(values.short_description),
-        description: cleanOptional(values.description),
-        images: parseImages(values.images_text),
-        search_keywords: splitKeywords(values.search_keywords_text),
-        status: values.status,
-    }),
+    toPayload: async (values, { initialData } = {}) => {
+        let images = Array.isArray(initialData?.images) ? initialData.images : [];
+        const files = Array.isArray(values.image_files) ? values.image_files : [];
+
+        if (files.length > 0) {
+            const uploadedImages = await Promise.all(
+                files.map((file) => uploadApi.uploadProductImage(file))
+            );
+
+            images = uploadedImages.map((image, index) => ({
+                url: image.url,
+                alt: values.name.trim(),
+                is_primary: index === 0,
+                sort_order: index,
+            }));
+        }
+
+        return {
+            name: values.name.trim(),
+            slug: cleanOptional(values.slug)?.toLowerCase(),
+            category_id: values.category_id,
+            brand: cleanOptional(values.brand),
+            short_description: cleanOptional(values.short_description),
+            description: cleanOptional(values.description),
+            images,
+            search_keywords: splitKeywords(values.search_keywords_text),
+            status: values.status,
+        };
+    },
     fields: [
         { name: 'name', label: 'Tên sản phẩm', placeholder: 'Ví dụ: Túi bao trái 16x16' },
         { name: 'slug', label: 'Slug', placeholder: 'tui-bao-trai-16x16' },
@@ -266,10 +226,19 @@ export const productFormConfig = {
             className: 'md:col-span-2',
         },
         {
-            name: 'images_text',
+            name: 'image_files',
             label: 'Ảnh sản phẩm',
-            type: 'textarea',
-            placeholder: 'https://example.com/image.jpg | Túi bao trái 16x16',
+            type: 'file',
+            accept: 'image/*',
+            multiple: true,
+            previewUrls: (product) =>
+                Array.isArray(product?.images)
+                    ? product.images.map((image) => image.url).filter(Boolean)
+                    : [],
+            helperText: ({ mode }) =>
+                mode === 'edit'
+                    ? 'Ảnh hiện tại sẽ được giữ nếu không chọn ảnh mới. Có thể chọn nhiều ảnh.'
+                    : 'Chọn nhiều ảnh sản phẩm từ máy tính.',
             className: 'md:col-span-2',
         },
         {

@@ -92,6 +92,9 @@ const createDiscountBodySchema = z
 
         is_stackable: z.boolean().default(false),
         stack_priority: z.number().int().default(0),
+        show_on_homepage: z.boolean().default(false),
+        homepage_priority: z.number().int().min(0).max(999).default(0),
+        requires_claim: z.boolean().default(false),
 
         started_at: z.coerce.date(),
         expiry_date: z.coerce.date(),
@@ -137,6 +140,9 @@ const updateDiscountBodySchema = z
 
         is_stackable: z.boolean().optional(),
         stack_priority: z.number().int().optional(),
+        show_on_homepage: z.boolean().optional(),
+        homepage_priority: z.number().int().min(0).max(999).optional(),
+        requires_claim: z.boolean().optional(),
 
         started_at: z.coerce.date().optional(),
         expiry_date: z.coerce.date().optional(),
@@ -198,6 +204,9 @@ const bulkDiscountSchema = z
         usage_per_user_limit: z.number().min(1).int(),
         is_stackable: z.boolean().optional(),
         stack_priority: z.number().int().optional(),
+        show_on_homepage: z.boolean().optional(),
+        homepage_priority: z.number().int().min(0).max(999).optional(),
+        requires_claim: z.boolean().optional(),
         started_at: z.coerce.date().optional(),
         expiry_date: z.coerce.date().optional(),
         status: statusSchema.optional(),
@@ -251,6 +260,18 @@ const nearExpiryQuerySchema = z
         limit: q.limit,
     }));
 
+const publicHomepageDiscountsQuerySchema = z.object({
+    limit: z.coerce.number().int().min(1).max(12).default(4),
+});
+
+const claimedDiscountsQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    status: z
+        .enum(['available', 'claimed', 'used', 'expired', 'revoked', 'all'])
+        .default('available'),
+});
+
 /**
  * ===== EXPORT =====
  */
@@ -271,6 +292,8 @@ module.exports = {
     // query
     listDiscountsQuerySchema,
     nearExpiryQuerySchema,
+    publicHomepageDiscountsQuerySchema,
+    claimedDiscountsQuerySchema,
 
     // base
     objectIdSchema,

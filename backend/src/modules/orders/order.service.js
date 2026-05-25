@@ -146,6 +146,10 @@ class OrderService {
                 }
             }
 
+            const paymentExpiresAt = paymentMethod === 'VNPAY'
+                ? new Date(Date.now() + 15 * 60000)
+                : undefined;
+
             const order = new Order({
                 order_code: orderCode,
                 user_id: userId,
@@ -178,7 +182,7 @@ class OrderService {
                 },
 
                 status: 'PENDING',
-                payment_expires_at: new Date(Date.now() + 15 * 60000),
+                payment_expires_at: paymentExpiresAt,
                 customer_notes: shippingData.customer_notes || null,
             });
 
@@ -334,19 +338,17 @@ class OrderService {
             query['payment.status'] = filters.payment_status;
         }
 
-        if (filters.date_from || filters.date_to) {
-            query.created_at = {};
-            if (filters.date_from) {
-                query.created_at.$gte = new Date(filters.date_from);
-            }
-            if (filters.date_to) {
-                query.created_at.$lte = new Date(filters.date_to);
-            }
+        const createdAtRange = this._buildCreatedAtDateRange(filters);
+        if (createdAtRange) {
+            query.$or = [
+                { createdAt: createdAtRange },
+                { created_at: createdAtRange },
+            ];
         }
 
         const total = await Order.countDocuments(query);
         const orders = await Order.find(query)
-            .sort({ created_at: -1 })
+            .sort({ createdAt: -1, created_at: -1 })
             .skip(skip)
             .limit(limit);
 
@@ -477,12 +479,14 @@ class OrderService {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
         }
 
-        if (order.status !== 'PAID') {
-            throw new AppError(
-                'Only PAID orders can be processed',
-                409,
-                'INVALID_ORDER_STATUS'
-            );
+        this._assertValidManualStatusTransition(order, 'PROCESSING');
+
+        if (order.status === 'PROCESSING') {
+            return OrderMapper.toResponseDTO(order);
+        }
+
+        if (order.payment?.method === 'COD') {
+            order.payment_expires_at = undefined;
         }
 
         order.addStatusTransition(
@@ -698,29 +702,46 @@ class OrderService {
         }
 
         const fromStatus = order.status;
+        const fromPaymentStatus = order.payment?.status || null;
         const previousDeliveredAt = order.shipment.delivered_at || null;
         const deliveredAt = new Date();
 
         order.shipment.delivered_at = deliveredAt;
+
+        if (order.payment?.method === 'COD' && order.payment.status !== 'PAID') {
+            order.payment.status = 'PAID';
+            order.payment.paid_at = deliveredAt;
+            order.payment_expires_at = undefined;
+        }
+
         order.addStatusTransition('DELIVERED', actorId, 'Delivery confirmed');
 
         await order.save();
+
+        const changes = {
+            status: {
+                from: fromStatus,
+                to: order.status,
+            },
+            delivered_at: {
+                from: previousDeliveredAt,
+                to: deliveredAt,
+            },
+        };
+
+        if (fromPaymentStatus !== (order.payment?.status || null)) {
+            changes.payment_status = {
+                from: fromPaymentStatus,
+                to: order.payment?.status || null,
+            };
+        }
 
         await this._createOrderAuditLog({
             action: AUDIT_ACTIONS.CONFIRM_ORDER_DELIVERY,
             order,
             actorId,
             metadata,
-            changes: {
-                status: {
-                    from: fromStatus,
-                    to: order.status,
-                },
-                delivered_at: {
-                    from: previousDeliveredAt,
-                    to: deliveredAt,
-                },
-            },
+            changes,
         });
 
         await NotificationEventService.orderStatusChanged(order, 'DELIVERED');
@@ -728,7 +749,21 @@ class OrderService {
         return OrderMapper.toDetailDTO(order);
     }
 
-    static async cancelOrder(orderId, reason, cancelledBy = null, metadata = {}) {
+    static async cancelCustomerOrder(orderId, reason, userId, metadata = {}) {
+        return this.cancelOrder(orderId, reason, userId, metadata, {
+            allowedStatuses: ['PENDING', 'PAID'],
+            invalidStatusMessage: 'Customers can only cancel orders before processing starts',
+            invalidStatusCode: 'CUSTOMER_CANCEL_NOT_ALLOWED',
+        });
+    }
+
+    static async cancelOrder(
+        orderId,
+        reason,
+        cancelledBy = null,
+        metadata = {},
+        options = {}
+    ) {
         const session = await mongoose.startSession();
         session.startTransaction();
 
@@ -739,6 +774,17 @@ class OrderService {
                     'Order not found',
                     404,
                     'ORDER_NOT_FOUND'
+                );
+            }
+
+            if (
+                Array.isArray(options.allowedStatuses) &&
+                !options.allowedStatuses.includes(order.status)
+            ) {
+                throw new AppError(
+                    options.invalidStatusMessage || 'Cannot cancel order in current status',
+                    409,
+                    options.invalidStatusCode || 'CANNOT_CANCEL_ORDER_STATUS'
                 );
             }
 
@@ -754,22 +800,42 @@ class OrderService {
             const fromPaymentStatus = order.payment?.status || null;
             const stockRestored = [];
 
-            if (order.status === 'PENDING' || order.status === 'PAID') {
+            if (['PENDING', 'PAID', 'PROCESSING'].includes(order.status)) {
                 for (const item of order.items) {
-                    const qtyItems =
-                        item.quantity_ordered * item.pack_size;
+                    const quantityOrdered = Number(item.quantity_ordered || 0);
+                    const quantityFulfilled = Number(item.quantity_fulfilled || 0);
+                    const packSize = Number(item.pack_size || 1);
+                    const remainingPacks = Math.max(
+                        quantityOrdered - quantityFulfilled,
+                        0
+                    );
+                    const reservedQty = remainingPacks * packSize;
+                    const soldQty = quantityFulfilled * packSize;
+                    const availableQty = quantityOrdered * packSize;
+                    const stockQuery = {
+                        _id: item.variant_id,
+                    };
+                    const stockUpdate = {
+                        $inc: {},
+                    };
+
+                    if (reservedQty > 0) {
+                        stockQuery['stock.reserved'] = { $gte: reservedQty };
+                        stockUpdate.$inc['stock.reserved'] = -reservedQty;
+                    }
+
+                    if (soldQty > 0) {
+                        stockQuery['stock.sold'] = { $gte: soldQty };
+                        stockUpdate.$inc['stock.sold'] = -soldQty;
+                    }
+
+                    if (availableQty > 0) {
+                        stockUpdate.$inc['stock.available'] = availableQty;
+                    }
 
                     const result = await Variant.updateOne(
-                        {
-                            _id: item.variant_id,
-                            'stock.reserved': { $gte: qtyItems },
-                        },
-                        {
-                            $inc: {
-                                'stock.available': +qtyItems,
-                                'stock.reserved': -qtyItems,
-                            },
-                        },
+                        stockQuery,
+                        stockUpdate,
                         { session }
                     );
 
@@ -784,8 +850,9 @@ class OrderService {
                     stockRestored.push({
                         variant_id: item.variant_id,
                         unit_id: item.unit_id,
-                        available_delta: qtyItems,
-                        reserved_delta: -qtyItems,
+                        available_delta: availableQty,
+                        reserved_delta: -reservedQty,
+                        sold_delta: -soldQty,
                     });
                 }
             }
@@ -844,9 +911,23 @@ class OrderService {
             throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
         }
 
-        this._assertValidOrderStatus(toStatus);
+        this._assertValidManualStatusTransition(order, toStatus);
 
         const fromStatus = order.status;
+
+        if (fromStatus === toStatus) {
+            return OrderMapper.toDetailDTO(order);
+        }
+
+        if (toStatus === 'CANCELED') {
+            return this.cancelOrder(
+                orderId,
+                note || 'Admin cancelled',
+                adminUserId,
+                metadata
+            );
+        }
+
         order.addStatusTransition(toStatus, adminUserId, note);
 
         await order.save();
@@ -885,20 +966,31 @@ class OrderService {
         const changes = {};
 
         if (updateData.status) {
-            this._assertValidOrderStatus(updateData.status);
+            this._assertValidManualStatusTransition(order, updateData.status);
 
             const fromStatus = order.status;
 
-            order.addStatusTransition(
-                updateData.status,
-                adminUserId,
-                'Admin update'
-            );
+            if (fromStatus !== updateData.status && updateData.status === 'CANCELED') {
+                return this.cancelOrder(
+                    orderId,
+                    updateData.admin_notes || 'Admin cancelled',
+                    adminUserId,
+                    metadata
+                );
+            }
 
-            changes.status = {
-                from: fromStatus,
-                to: order.status,
-            };
+            if (fromStatus !== updateData.status) {
+                order.addStatusTransition(
+                    updateData.status,
+                    adminUserId,
+                    'Admin update'
+                );
+
+                changes.status = {
+                    from: fromStatus,
+                    to: order.status,
+                };
+            }
         }
 
         if (Object.prototype.hasOwnProperty.call(updateData, 'admin_notes')) {
@@ -1027,21 +1119,18 @@ class OrderService {
             query.user_id = filters.user_id;
         }
 
-        // Filter by date range
-        if (filters.date_from || filters.date_to) {
-            query.created_at = {};
-            if (filters.date_from) {
-                query.created_at.$gte = new Date(filters.date_from);
-            }
-            if (filters.date_to) {
-                query.created_at.$lte = new Date(filters.date_to);
-            }
+        const createdAtRange = this._buildCreatedAtDateRange(filters);
+        if (createdAtRange) {
+            query.$or = [
+                { createdAt: createdAtRange },
+                { created_at: createdAtRange },
+            ];
         }
 
         // Execute query
         const total = await Order.countDocuments(query);
         const orders = await Order.find(query)
-            .sort({ created_at: -1 })
+            .sort({ createdAt: -1, created_at: -1 })
             .skip(skip)
             .limit(limit);
 
@@ -1056,8 +1145,31 @@ class OrderService {
         };
     }
 
-    static async getOrderStats() {
+    static async getOrderStats(filters = {}) {
+        const query = {};
+
+        if (filters.status) {
+            if (Array.isArray(filters.status)) {
+                query.status = { $in: filters.status };
+            } else {
+                query.status = filters.status;
+            }
+        }
+
+        if (filters.payment_status) {
+            query['payment.status'] = filters.payment_status;
+        }
+
+        const createdAtRange = this._buildCreatedAtDateRange(filters);
+        if (createdAtRange) {
+            query.$or = [
+                { createdAt: createdAtRange },
+                { created_at: createdAtRange },
+            ];
+        }
+
         const stats = await Order.aggregate([
+            { $match: query },
             {
                 $facet: {
                     totalOrders: [{ $count: 'count' }],
@@ -1091,7 +1203,7 @@ class OrderService {
         if (!userId) return null;
 
         const order = await Order.findOne({ user_id: userId })
-            .sort({ created_at: -1 });
+            .sort({ createdAt: -1, created_at: -1 });
 
         if (!order) return null;
 
@@ -1195,6 +1307,100 @@ class OrderService {
                 'INVALID_STATUS'
             );
         }
+    }
+
+    static _buildCreatedAtDateRange(filters = {}) {
+        if (!filters.date_from && !filters.date_to) {
+            return null;
+        }
+
+        const range = {};
+
+        if (filters.date_from) {
+            const from = new Date(filters.date_from);
+            from.setHours(0, 0, 0, 0);
+            range.$gte = from;
+        }
+
+        if (filters.date_to) {
+            const to = new Date(filters.date_to);
+            to.setHours(23, 59, 59, 999);
+            range.$lte = to;
+        }
+
+        return range;
+    }
+
+    static _assertValidManualStatusTransition(order, toStatus) {
+        this._assertValidOrderStatus(toStatus);
+
+        const fromStatus = order.status;
+
+        if (fromStatus === toStatus) {
+            return;
+        }
+
+        const allowedTransitions = this._getAllowedManualStatusTransitions(order);
+
+        if (!allowedTransitions.includes(toStatus)) {
+            throw new AppError(
+                this._buildInvalidTransitionMessage(order, toStatus),
+                409,
+                'INVALID_ORDER_STATUS_TRANSITION'
+            );
+        }
+    }
+
+    static _getAllowedManualStatusTransitions(order) {
+        const status = order.status;
+        const paymentMethod = order.payment?.method;
+        const paymentStatus = order.payment?.status;
+
+        if (status === 'PENDING') {
+            const transitions = ['CANCELED'];
+
+            if (paymentMethod === 'COD') {
+                transitions.push('PROCESSING');
+            }
+
+            if (paymentStatus === 'PAID') {
+                transitions.push('PAID');
+            }
+
+            return transitions;
+        }
+
+        if (status === 'PAID') {
+            return ['PROCESSING', 'CANCELED'];
+        }
+
+        if (status === 'PROCESSING') {
+            return ['CANCELED'];
+        }
+
+        return [];
+    }
+
+    static _buildInvalidTransitionMessage(order, toStatus) {
+        const fromStatus = order.status;
+
+        if (fromStatus === 'PENDING' && toStatus === 'PROCESSING') {
+            return 'Only COD PENDING orders can move directly to PROCESSING';
+        }
+
+        if (toStatus === 'PAID') {
+            return 'Order payment must be PAID before order status can move to PAID';
+        }
+
+        if (toStatus === 'SHIPPED') {
+            return 'Use shipment creation to move an order to SHIPPED';
+        }
+
+        if (toStatus === 'DELIVERED') {
+            return 'Use delivery confirmation to move an order to DELIVERED';
+        }
+
+        return `Invalid order status transition from ${fromStatus} to ${toStatus}`;
     }
 
     static _summarizeStockItems(items = []) {

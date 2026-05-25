@@ -43,6 +43,7 @@ router.post(
 router.get(
     '/admin/stats',
     authenticate,
+    validate({ query: adminListShipmentsQuerySchema }),
     ShipmentController.getShipmentStats
 );
 

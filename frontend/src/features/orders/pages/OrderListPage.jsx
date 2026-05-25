@@ -55,7 +55,7 @@ function getStatusVariant(status) {
 }
 
 function canCancelOrder(status) {
-    return ['PENDING', 'PAID', 'PROCESSING'].includes(status);
+    return ['PENDING', 'PAID'].includes(status);
 }
 
 function formatDateTime(value) {

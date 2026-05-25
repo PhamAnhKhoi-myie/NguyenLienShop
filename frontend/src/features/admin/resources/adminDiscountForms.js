@@ -97,6 +97,13 @@ const discountBaseSchema = z
             .min(1, 'Giới hạn mỗi user phải >= 1'),
         is_stackable: z.enum(['true', 'false']),
         stack_priority: z.coerce.number().int(),
+        show_on_homepage: z.enum(['true', 'false']),
+        requires_claim: z.enum(['true', 'false']),
+        homepage_priority: z.coerce
+            .number()
+            .int()
+            .min(0, 'Ưu tiên homepage không được âm')
+            .max(999, 'Ưu tiên homepage không vượt quá 999'),
         started_at: dateTimeSchema,
         expiry_date: dateTimeSchema,
         status: z.enum(['active', 'inactive', 'paused', 'expired']),
@@ -204,6 +211,9 @@ const bulkDiscountSchema = z.object({
     usage_per_user_limit: z.number().int().min(1),
     is_stackable: z.boolean().optional(),
     stack_priority: z.number().int().optional(),
+    show_on_homepage: z.boolean().optional(),
+    requires_claim: z.boolean().optional(),
+    homepage_priority: z.number().int().min(0).max(999).optional(),
     started_at: z.string().optional(),
     expiry_date: z.string().optional(),
     status: z.enum(['active', 'inactive', 'paused', 'expired']).optional(),
@@ -300,6 +310,13 @@ function buildDiscountPayload(values) {
         is_stackable:
             values.is_stackable === true || values.is_stackable === 'true',
         stack_priority: Number(values.stack_priority || 0),
+        show_on_homepage:
+            values.show_on_homepage === true ||
+            values.show_on_homepage === 'true',
+        requires_claim:
+            values.requires_claim === true ||
+            values.requires_claim === 'true',
+        homepage_priority: Number(values.homepage_priority || 0),
         started_at: toIso(values.started_at),
         expiry_date: toIso(values.expiry_date),
         status: values.status,
@@ -331,6 +348,9 @@ export const discountFormConfig = {
         usage_per_user_limit: 1,
         is_stackable: 'false',
         stack_priority: 0,
+        show_on_homepage: 'false',
+        requires_claim: 'false',
+        homepage_priority: 0,
         started_at: toDateTimeLocal(),
         expiry_date: defaultExpiryDate(),
         status: 'active',
@@ -353,6 +373,9 @@ export const discountFormConfig = {
         usage_per_user_limit: discount.usage_per_user_limit ?? 1,
         is_stackable: discount.is_stackable ? 'true' : 'false',
         stack_priority: discount.stack_priority ?? 0,
+        show_on_homepage: discount.show_on_homepage ? 'true' : 'false',
+        requires_claim: discount.requires_claim ? 'true' : 'false',
+        homepage_priority: discount.homepage_priority ?? 0,
         started_at: discount.started_at
             ? toDateTimeLocal(discount.started_at)
             : toDateTimeLocal(),
@@ -411,6 +434,32 @@ export const discountFormConfig = {
             ],
         },
         { name: 'stack_priority', label: 'Ưu tiên cộng dồn', type: 'number' },
+        {
+            name: 'show_on_homepage',
+            label: 'Hiển thị homepage',
+            type: 'select',
+            options: [
+                { value: 'false', label: 'Không' },
+                { value: 'true', label: 'Có' },
+            ],
+            helperText: 'Chỉ mã bật mục này mới hiện cho khách nhận ở trang chủ.',
+        },
+        {
+            name: 'requires_claim',
+            label: 'Bắt buộc nhận voucher',
+            type: 'select',
+            options: [
+                { value: 'false', label: 'Không' },
+                { value: 'true', label: 'Có' },
+            ],
+            helperText: 'Nếu bật, user phải nhận voucher trước khi nhập mã ở checkout.',
+        },
+        {
+            name: 'homepage_priority',
+            label: 'Ưu tiên homepage',
+            type: 'number',
+            helperText: 'Số lớn hơn hiển thị trước.',
+        },
         { name: 'started_at', label: 'Bắt đầu', type: 'datetime-local' },
         { name: 'expiry_date', label: 'Hết hạn', type: 'datetime-local' },
         {

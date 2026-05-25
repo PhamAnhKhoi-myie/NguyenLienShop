@@ -21,6 +21,8 @@ import {
     useRemoveCartDiscount,
     useValidateCart,
 } from '../../cart/hooks/useCart';
+import { CLAIMED_DISCOUNT_CODE_KEY } from '../../discounts/constants';
+import { useClaimedDiscounts } from '../../discounts/hooks/useHomepageDiscounts';
 import { useCreatePayment } from '../../payments/hooks/usePayments';
 import {
     useAddresses,
@@ -109,6 +111,20 @@ function formatAddress(address) {
             .filter(Boolean)
             .join(', ')
     );
+}
+
+function formatClaimedDiscountValue(claim) {
+    const discount = claim.discount || {};
+
+    if (discount.type === 'percent') {
+        return `${discount.value}%`;
+    }
+
+    if (discount.type === 'fixed') {
+        return formatCurrency(discount.value || 0);
+    }
+
+    return claim.code;
 }
 
 function AddressForm({
@@ -291,17 +307,28 @@ export default function CheckoutPage() {
     const validateCartMutation = useValidateCart();
     const applyDiscountMutation = useApplyCartDiscount();
     const removeDiscountMutation = useRemoveCartDiscount();
+    const claimedDiscountsQuery = useClaimedDiscounts({
+        status: 'available',
+        limit: 20,
+    });
     const createAddressMutation = useCreateAddress();
     const updateAddressMutation = useUpdateAddress();
     const createOrderMutation = useCreateOrder();
     const createPaymentMutation = useCreatePayment();
     const [selectedAddressId, setSelectedAddressId] = useState('');
-    const [discountCode, setDiscountCode] = useState('');
+    const [discountCode, setDiscountCode] = useState(() => {
+        if (typeof window === 'undefined') {
+            return '';
+        }
+
+        return window.localStorage.getItem(CLAIMED_DISCOUNT_CODE_KEY) || '';
+    });
     const [notice, setNotice] = useState(null);
 
     const cart = cartQuery.data?.data;
     const items = cart?.items || [];
     const totals = cart?.totals || {};
+    const claimedDiscounts = claimedDiscountsQuery.data?.data || [];
     const addresses = useMemo(
         () => addressesQuery.data?.data || [],
         [addressesQuery.data?.data]
@@ -323,8 +350,8 @@ export default function CheckoutPage() {
         createOrderMutation.isPending ||
         createPaymentMutation.isPending;
 
-    const handleApplyDiscount = async () => {
-        const code = discountCode.trim().toUpperCase();
+    const applyDiscountCode = async (rawCode) => {
+        const code = String(rawCode || '').trim().toUpperCase();
         setNotice(null);
 
         if (!code) {
@@ -338,6 +365,7 @@ export default function CheckoutPage() {
         try {
             await applyDiscountMutation.mutateAsync({ code });
             setDiscountCode('');
+            window.localStorage.removeItem(CLAIMED_DISCOUNT_CODE_KEY);
             setNotice({
                 type: 'success',
                 message: 'Đã áp dụng mã giảm giá.',
@@ -348,6 +376,10 @@ export default function CheckoutPage() {
                 message: error.message || 'Không áp dụng được mã giảm giá.',
             });
         }
+    };
+
+    const handleApplyDiscount = async () => {
+        await applyDiscountCode(discountCode);
     };
 
     const handleRemoveDiscount = async () => {
@@ -728,21 +760,67 @@ export default function CheckoutPage() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex gap-2">
-                                    <Input
-                                        placeholder="Nhập mã giảm giá"
-                                        value={discountCode}
-                                        onChange={(event) =>
-                                            setDiscountCode(event.target.value)
-                                        }
-                                    />
-                                    <Button
-                                        type="button"
-                                        isLoading={applyDiscountMutation.isPending}
-                                        onClick={handleApplyDiscount}
-                                    >
-                                        Áp dụng
-                                    </Button>
+                                <div className="space-y-4">
+                                    {claimedDiscountsQuery.isLoading ? (
+                                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
+                                            Đang tải voucher của bạn...
+                                        </div>
+                                    ) : claimedDiscounts.length > 0 ? (
+                                        <div className="space-y-2">
+                                            <p className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+                                                Voucher của bạn
+                                            </p>
+                                            <div className="space-y-2">
+                                                {claimedDiscounts.slice(0, 4).map((claim) => (
+                                                    <button
+                                                        key={claim.claim_id || claim.id}
+                                                        type="button"
+                                                        disabled={applyDiscountMutation.isPending}
+                                                        onClick={() => applyDiscountCode(claim.code)}
+                                                        className="flex w-full items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-3 text-left transition-colors hover:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        <span className="min-w-0">
+                                                            <span className="block truncate font-semibold text-[var(--color-text-main)]">
+                                                                {claim.code}
+                                                            </span>
+                                                            <span className="mt-1 block text-xs text-[var(--color-text-muted)]">
+                                                                Giảm {formatClaimedDiscountValue(claim)}
+                                                                {claim.discount?.min_order_value
+                                                                    ? ` · đơn từ ${formatCurrency(claim.discount.min_order_value)}`
+                                                                    : ''}
+                                                            </span>
+                                                        </span>
+                                                        <span className="shrink-0 text-xs font-semibold text-[var(--color-primary-hover)]">
+                                                            Dùng
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <Link
+                                                to={ROUTES.PROFILE_VOUCHERS}
+                                                className="inline-flex text-xs font-semibold text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
+                                            >
+                                                Xem tất cả voucher
+                                            </Link>
+                                        </div>
+                                    ) : null}
+
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Nhập mã giảm giá"
+                                            value={discountCode}
+                                            onChange={(event) =>
+                                                setDiscountCode(event.target.value)
+                                            }
+                                        />
+                                        <Button
+                                            type="button"
+                                            isLoading={applyDiscountMutation.isPending}
+                                            onClick={handleApplyDiscount}
+                                        >
+                                            Áp dụng
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                             <p className="text-xs text-[var(--color-text-muted)]">

@@ -458,7 +458,7 @@ export default function AdminResourcePage({ resource }) {
                             : `Thêm ${resource.form.title}`
                     }
                     onClose={closeForm}
-                    panelClassName="max-w-3xl"
+                    panelClassName="max-w-5xl"
                 >
                     {formState.mode === 'edit' && detailQuery.isLoading ? (
                         <Loading label="Đang tải dữ liệu..." />

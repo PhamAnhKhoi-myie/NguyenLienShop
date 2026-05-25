@@ -23,6 +23,8 @@ const {
     // query
     listDiscountsQuerySchema,
     nearExpiryQuerySchema,
+    publicHomepageDiscountsQuerySchema,
+    claimedDiscountsQuerySchema,
 } = require('./discount.validator');
 
 const router = express.Router();
@@ -31,6 +33,7 @@ const router = express.Router();
 
 router.post(
     '/validate',
+    optionalAuthenticate,
     validate({ body: validateDiscountBodySchema }),
     DiscountController.validateDiscount
 );
@@ -40,6 +43,27 @@ router.post(
     optionalAuthenticate,
     validate({ body: applicableDiscountsBodySchema }),
     DiscountController.getApplicableDiscounts
+);
+
+router.get(
+    '/public/homepage',
+    optionalAuthenticate,
+    validate({ query: publicHomepageDiscountsQuerySchema }),
+    DiscountController.getHomepageDiscounts
+);
+
+router.get(
+    '/me/claimed',
+    authenticate,
+    validate({ query: claimedDiscountsQuerySchema }),
+    DiscountController.getMyClaimedDiscounts
+);
+
+router.post(
+    '/:discountId/claim',
+    authenticate,
+    validate({ params: IdParamSchema }),
+    DiscountController.claimDiscount
 );
 
 // ===== ADMIN =====

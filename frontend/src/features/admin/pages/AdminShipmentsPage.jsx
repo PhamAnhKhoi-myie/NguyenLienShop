@@ -76,6 +76,15 @@ function buildShipmentParams({ page, filters }) {
         limit: 20,
     };
 
+    return {
+        ...params,
+        ...buildFilterParams(filters),
+    };
+}
+
+function buildFilterParams(filters) {
+    const params = {};
+
     Object.entries(filters).forEach(([key, value]) => {
         if (value !== '' && value !== null && value !== undefined) {
             params[key] = value;
@@ -522,8 +531,14 @@ export default function AdminShipmentsPage() {
         () => buildShipmentParams({ page, filters: appliedFilters }),
         [appliedFilters, page]
     );
+    const statsParams = useMemo(
+        () => buildFilterParams(appliedFilters),
+        [appliedFilters]
+    );
     const shipmentsQuery = useAdminList('/shipments/admin', queryParams);
-    const statsQuery = useAdminDetail('/shipments/admin/stats');
+    const statsQuery = useAdminDetail('/shipments/admin/stats', {
+        params: statsParams,
+    });
     const detailEndpoint = selectedShipment
         ? `/shipments/admin/${getShipmentId(selectedShipment)}`
         : null;
@@ -847,7 +862,7 @@ export default function AdminShipmentsPage() {
                 open={Boolean(selectedShipment)}
                 title={shipmentDetail?.tracking_code || 'Chi tiết vận đơn'}
                 onClose={closeDetail}
-                panelClassName="max-w-6xl"
+                panelClassName="max-w-7xl"
             >
                 {detailQuery.isLoading ? (
                     <Loading label="Đang tải chi tiết vận đơn..." />
@@ -875,7 +890,7 @@ export default function AdminShipmentsPage() {
                     open={Boolean(actionType)}
                     title={actionTitles[actionType]}
                     onClose={closeAction}
-                    panelClassName="max-w-3xl"
+                    panelClassName="max-w-5xl"
                 >
                     <AdminResourceForm
                         form={actionForm}
