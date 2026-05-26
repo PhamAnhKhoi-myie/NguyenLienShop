@@ -49,7 +49,10 @@ export default function HomeDiscountsSection() {
     const navigate = useNavigate();
     const location = useLocation();
     const accessToken = useAuthStore((state) => state.accessToken);
-    const discountsQuery = useHomepageDiscounts(4);
+    const discountsQuery = useHomepageDiscounts(
+        4,
+        accessToken ? 'user' : 'guest'
+    );
     const claimMutation = useClaimDiscount();
     const discounts = discountsQuery.data?.data || [];
     const [claimedCode, setClaimedCode] = useState('');
