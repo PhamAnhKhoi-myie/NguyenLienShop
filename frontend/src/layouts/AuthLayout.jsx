@@ -1,13 +1,14 @@
+import { translate } from '../shared/i18n/index';
 import { Leaf } from 'lucide-react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { ROUTES } from '../shared/constants/routes';
 import { cn } from '../shared/utils/cn';
 
 const authTabs = [
-    { label: 'Đăng nhập', to: ROUTES.LOGIN },
-    { label: 'Đăng ký', to: ROUTES.REGISTER },
-    { label: 'Quên mật khẩu', to: ROUTES.FORGOT_PASSWORD },
-    { label: 'Đặt lại', to: ROUTES.RESET_PASSWORD },
+    { label: translate('text.login'), to: ROUTES.LOGIN },
+    { label: translate('text.subscribe_to'), to: ROUTES.REGISTER },
+    { label: translate('text.forgot_password'), to: ROUTES.FORGOT_PASSWORD },
+    { label: translate('text.reset'), to: ROUTES.RESET_PASSWORD },
 ];
 
 const getTabClass = ({ isActive }) =>
@@ -29,9 +30,7 @@ export default function AuthLayout() {
                     <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-secondary)] text-[var(--color-primary-hover)]">
                         <Leaf className="h-6 w-6" />
                     </span>
-                    <span className="text-xl font-semibold text-[var(--color-primary-hover)]">
-                        NguyenLien Shop
-                    </span>
+                    <span className="text-xl font-semibold text-[var(--color-primary-hover)]"> {translate('text.nguyenlien_shop')} </span>
                 </Link>
 
                 <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">

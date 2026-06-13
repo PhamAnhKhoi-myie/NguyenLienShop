@@ -3,73 +3,73 @@ const Category = require("../modules/categories/category.model");
 
 const seedCategoriesData = [
     {
-        name: "Túi bao trái xoài",
+        name: "Mango bag",
         slug: "tui-bao-trai-xoai",
         description:
-            "Các loại túi bao dùng cho xoài, hỗ trợ hạn chế côn trùng, bụi bẩn và bảo vệ vỏ trái trong quá trình phát triển.",
+            "Types of bags used for mangoes, helping to limit insects, dust and protect the fruit peel during the growing process.",
         display_order: 1,
     },
     {
-        name: "Túi bao trái bưởi",
+        name: "Grapefruit bag",
         slug: "tui-bao-trai-buoi",
         description:
-            "Túi bao cho bưởi và các loại trái có kích thước lớn, thường dùng để giảm côn trùng chích hút và bảo vệ bề mặt vỏ.",
+            "Bags for grapefruit and other large fruits, often used to reduce sucking insects and protect the peel surface.",
         display_order: 2,
     },
     {
-        name: "Túi bao trái ổi",
+        name: "Guava bag",
         slug: "tui-bao-trai-oi",
         description:
-            "Túi bao cho trái ổi, phù hợp với nhu cầu bảo vệ trái non khỏi ruồi vàng, sâu bệnh và tác động từ môi trường.",
+            "Bags for guava fruit, suitable for the need to protect young fruit from yellow flies, pests and environmental impacts.",
         display_order: 3,
     },
     {
-        name: "Túi bao trái thanh long",
+        name: "Dragon fruit bag",
         slug: "tui-bao-trai-thanh-long",
         description:
-            "Túi bao dùng cho thanh long, giúp bảo vệ trái trong giai đoạn phát triển và giữ bề mặt trái sạch hơn.",
+            "Bags used for dragon fruit, help protect the fruit during the growing stage and keep the fruit surface cleaner.",
         display_order: 4,
     },
     {
-        name: "Túi bao trái mít",
+        name: "Jackfruit bag",
         slug: "tui-bao-trai-mit",
         description:
-            "Túi bao cho mít và các loại trái lớn, ưu tiên chất liệu bền, thoáng khí và kích thước rộng.",
+            "Bags for jackfruit and other large fruits, prioritize durable, breathable materials and large sizes.",
         display_order: 5,
     },
     {
-        name: "Túi bao trái nho",
+        name: "Grape bag",
         slug: "tui-bao-trai-nho",
         description:
-            "Túi bao cho nho hoặc các chùm trái nhỏ, phù hợp nhóm sản phẩm cần bao theo chùm thay vì từng trái riêng lẻ.",
+            "Bags for grapes or small bunches of fruit, suitable for groups of products that need to be wrapped in bunches instead of individual fruits.",
         display_order: 6,
     },
     {
-        name: "Túi bao nhãn vải",
+        name: "Fabric label bag",
         slug: "tui-bao-nhan-vai",
         description:
-            "Túi bao cho nhãn, vải và các loại trái mọc theo chùm, hỗ trợ hạn chế côn trùng và bụi bẩn.",
+            "Bags for longans, lychees and fruits that grow in clusters, helping to limit insects and dust.",
         display_order: 7,
     },
     {
-        name: "Túi bao trái chuối",
+        name: "Banana bag",
         slug: "tui-bao-trai-chuoi",
         description:
-            "Túi bao cho buồng chuối, thường cần kích thước dài, thoáng khí và dễ cố định trên cây.",
+            "Bags for banana bunches, usually need to be long, breathable and easy to fix on the tree.",
         display_order: 8,
     },
     {
-        name: "Túi bao trái na mãng cầu",
+        name: "Bag of custard apple fruit",
         slug: "tui-bao-trai-na-mang-cau",
         description:
-            "Túi bao cho na, mãng cầu và các loại trái có bề mặt dễ bị côn trùng tấn công trong giai đoạn lớn trái.",
+            "Bags for custard apple, custard apple and other fruits have surfaces that are susceptible to insect attack during the fruit growing stage.",
         display_order: 9,
     },
     {
-        name: "Túi bao rau củ quả dài",
+        name: "Long fruit and vegetable bags",
         slug: "tui-bao-rau-cu-qua-dai",
         description:
-            "Túi bao cho mướp, bầu, bí, khổ qua và các loại quả dáng dài, phù hợp nhóm sản phẩm cần kích thước dài hơn túi trái cây thông thường.",
+            "Bags for luffa, gourd, squash, bitter melon and other long fruits, suitable for product groups that need a longer size than regular fruit bags.",
         display_order: 10,
     },
 ];

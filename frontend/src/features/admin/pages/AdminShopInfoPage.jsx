@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { Pencil, Plus, Power, RefreshCw, Store } from 'lucide-react';
 import { useState } from 'react';
 import Button from '../../../shared/components/Button';
@@ -11,14 +12,14 @@ import { shopInfoFormConfig } from '../resources/adminContentForms';
 import { StatusBadge } from '../utils/adminFormat';
 
 const dayLabels = {
-    mon: 'Thứ 2',
-    tue: 'Thứ 3',
-    wed: 'Thứ 4',
-    thu: 'Thứ 5',
-    fri: 'Thứ 6',
-    sat: 'Thứ 7',
-    sun: 'Chủ nhật',
-    holiday: 'Ngày lễ',
+    mon: translate('text.monday'),
+    tue: translate('text.tuesday'),
+    wed: translate('text.wednesday'),
+    thu: translate('text.thursday'),
+    fri: translate('text.friday'),
+    sat: translate('text.saturday'),
+    sun: translate('text.sunday'),
+    holiday: translate('text.holiday'),
 };
 
 function InfoLine({ label, value }) {
@@ -37,9 +38,7 @@ function InfoLine({ label, value }) {
 function WorkingHours({ hours = [] }) {
     if (!hours.length) {
         return (
-            <p className="text-sm text-[var(--color-text-muted)]">
-                Chưa cấu hình giờ mở cửa.
-            </p>
+            <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.opening_hours_have_not_been_configured')} </p>
         );
     }
 
@@ -116,15 +115,9 @@ export default function AdminShopInfoPage() {
                 <CardHeader>
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                                Admin
-                            </p>
-                            <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]">
-                                Thông tin shop
-                            </h1>
-                            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                                ADMIN/MANAGER quản lý thông tin liên hệ, giờ mở cửa và trạng thái shop.
-                            </p>
+                            <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.admin')} </p>
+                            <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]"> {translate('text.shop_information')} </h1>
+                            <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.admin_manager_manages_contact_information_opening_hours_and_shop_status')} </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             <Button onClick={openForm}>
@@ -133,16 +126,14 @@ export default function AdminShopInfoPage() {
                                 ) : (
                                     <Plus className="h-4 w-4" />
                                 )}
-                                {shopInfo ? 'Sửa thông tin' : 'Tạo thông tin'}
+                                {shopInfo ? translate('text.edit_information') : translate('text.create_information')}
                             </Button>
                             <Button
                                 variant="outline"
                                 isLoading={shopInfoQuery.isFetching}
                                 onClick={() => shopInfoQuery.refetch()}
                             >
-                                <RefreshCw className="h-4 w-4" />
-                                Tải lại
-                            </Button>
+                                <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
                             <Button
                                 variant={shopInfo?.is_active ? 'warning' : 'secondary'}
                                 disabled={!shopInfo}
@@ -150,7 +141,7 @@ export default function AdminShopInfoPage() {
                                 onClick={handleToggleStatus}
                             >
                                 <Power className="h-4 w-4" />
-                                {shopInfo?.is_active ? 'Tắt shop' : 'Bật shop'}
+                                {shopInfo?.is_active ? translate('text.turn_off_shop') : translate('text.turn_on_shop')}
                             </Button>
                         </div>
                     </div>
@@ -158,67 +149,63 @@ export default function AdminShopInfoPage() {
 
                 <CardBody>
                     {shopInfoQuery.isLoading ? (
-                        <Loading label="Đang tải thông tin shop..." />
+                        <Loading label={translate('text.loading_shop_information')} />
                     ) : shopInfoQuery.isError && !isNotFound ? (
                         <EmptyState
                             icon={Store}
-                            title="Không tải được thông tin shop"
+                            title={translate('text.unable_to_download_shop_information')}
                             description={shopInfoQuery.error.message}
                         />
                     ) : !shopInfo ? (
                         <EmptyState
                             icon={Store}
-                            title="Chưa có thông tin shop"
-                            description="Tạo thông tin shop để public contact, social link và giờ mở cửa cho khách."
+                            title={translate('text.no_shop_information_yet')}
+                            description={translate('text.create_shop_information_for_public_contact_social_link_and_opening_hours')}
                         />
                     ) : (
                         <div className="grid gap-6 lg:grid-cols-2">
                             <div className="rounded-lg border border-[var(--color-border)] p-4">
-                                <InfoLine label="Tên shop" value={shopInfo.shop_name} />
-                                <InfoLine label="Email" value={shopInfo.email} />
-                                <InfoLine label="Điện thoại" value={shopInfo.phone} />
-                                <InfoLine label="Địa chỉ" value={shopInfo.address} />
-                                <InfoLine label="Đối tác vận chuyển" value={shopInfo.shipping_partner} />
+                                <InfoLine label={translate('text.shop_name')} value={shopInfo.shop_name} />
+                                <InfoLine label={translate('text.email_84add5b2')} value={shopInfo.email} />
+                                <InfoLine label={translate('text.phone')} value={shopInfo.phone} />
+                                <InfoLine label={translate('text.address')} value={shopInfo.address} />
+                                <InfoLine label={translate('text.shipping_partner')} value={shopInfo.shipping_partner} />
                                 <div className="flex justify-between gap-4 py-3">
-                                    <span className="text-sm text-[var(--color-text-muted)]">
-                                        Trạng thái
-                                    </span>
+                                    <span className="text-sm text-[var(--color-text-muted)]"> {translate('text.status')} </span>
                                     <StatusBadge
                                         value={shopInfo.is_active}
                                         label={
                                             shopInfo.is_active
-                                                ? 'Đang bật'
-                                                : 'Đang tắt'
+                                                ? translate('text.on')
+                                                : translate('text.off')
                                         }
                                     />
                                 </div>
                             </div>
 
                             <div className="rounded-lg border border-[var(--color-border)] p-4">
-                                <InfoLine label="Facebook" value={shopInfo.social_links?.facebook} />
-                                <InfoLine label="Zalo" value={shopInfo.social_links?.zalo} />
-                                <InfoLine label="Instagram" value={shopInfo.social_links?.instagram} />
-                                <InfoLine label="Shoppe" value={shopInfo.social_links?.shoppe} />
-                                <InfoLine label="TikTok" value={shopInfo.social_links?.tiktok} />
-                                <InfoLine label="Google Map" value={shopInfo.map_embed_url} />
+                                <InfoLine label={translate('text.facebook')} value={shopInfo.social_links?.facebook} />
+                                <InfoLine label={translate('text.zalo')} value={shopInfo.social_links?.zalo} />
+                                <InfoLine label={translate('text.instagram')} value={shopInfo.social_links?.instagram} />
+                                <InfoLine label={translate('text.shoppe')} value={shopInfo.social_links?.shoppe} />
+                                <InfoLine label={translate('text.tiktok')} value={shopInfo.social_links?.tiktok} />
+                                <InfoLine label={translate('text.google_map')} value={shopInfo.map_embed_url} />
                                 <InfoLine
-                                    label="Bộ Công Thương - đã thông báo"
+                                    label={translate('text.ministry_of_industry_and_trade_announced')}
                                     value={shopInfo.certification_links?.ministry_notified}
                                 />
                                 <InfoLine
-                                    label="Bộ Công Thương - đã đăng ký"
+                                    label={translate('text.ministry_of_industry_and_trade_registered')}
                                     value={shopInfo.certification_links?.ministry_registered}
                                 />
                                 <InfoLine
-                                    label="Chứng nhận dự phòng"
+                                    label={translate('text.backup_certificate')}
                                     value={shopInfo.certification_links?.extra}
                                 />
                             </div>
 
                             <div className="rounded-lg border border-[var(--color-border)] p-4 lg:col-span-2">
-                                <h2 className="mb-3 text-sm font-semibold text-[var(--color-text-main)]">
-                                    Giờ mở cửa
-                                </h2>
+                                <h2 className="mb-3 text-sm font-semibold text-[var(--color-text-main)]"> {translate('text.opening_hours')} </h2>
                                 <WorkingHours hours={shopInfo.working_hours} />
                             </div>
                         </div>
@@ -230,8 +217,8 @@ export default function AdminShopInfoPage() {
                 open={formOpen}
                 title={
                     formMode === 'edit'
-                        ? 'Sửa thông tin shop'
-                        : 'Tạo thông tin shop'
+                        ? translate('text.edit_shop_information')
+                        : translate('text.create_shop_information')
                 }
                 onClose={closeForm}
                 panelClassName="max-w-5xl"

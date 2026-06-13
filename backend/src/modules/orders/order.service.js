@@ -7,7 +7,7 @@ const NotificationEventService = require('../notifications/notification_event.se
 const { AUDIT_ACTIONS } = require('../../constants/audit');
 const { assertPaymentProviderEnabled } = require('../payments/payment_provider.util');
 
-// Import dependencies
+
 const Variant = require('../products/variant.model');
 const Cart = require('../carts/cart.model');
 const EmailService = require('../emails/email.service');
@@ -17,11 +17,11 @@ const ReviewService = require('../reviews/review.service');
 const LocationProvince = require('../locations/location_province.model');
 const LocationWard = require('../locations/location_ward.model');
 
-/**
- * ============================================
- * ORDER SERVICE
- * ============================================
- */
+
+
+
+
+
 
 class OrderService {
     static async createOrderFromCart(userId, cartId, shippingData, metadata = {}) {
@@ -37,6 +37,10 @@ class OrderService {
 
         if (paymentMethod === 'VNPAY') {
             assertPaymentProviderEnabled('vnpay');
+        }
+
+        if (paymentMethod === 'PAYOS') {
+            assertPaymentProviderEnabled('payos');
         }
 
         const session = await mongoose.startSession();
@@ -146,7 +150,7 @@ class OrderService {
                 }
             }
 
-            const paymentExpiresAt = paymentMethod === 'VNPAY'
+            const paymentExpiresAt = ['VNPAY', 'PAYOS'].includes(paymentMethod)
                 ? new Date(Date.now() + 15 * 60000)
                 : undefined;
 
@@ -223,13 +227,13 @@ class OrderService {
                     to: [user.email],
                     template: 'ORDER_CONFIRMATION',
                     payload: {
-                        user_name: user.full_name || 'Khách hàng',
+                        user_name: user.full_name || "Customer",
                         order_id: order.order_code,
-                        total_amount: order.pricing.total_amount.toLocaleString('vi-VN'),
+                        total_amount: order.pricing.total_amount.toLocaleString('en-US'),
                         items: order.items.map(item => ({
                             name: item.product_name,
                             qty: item.quantity_ordered,
-                            price: item.unit_price.toLocaleString('vi-VN')
+                            price: item.unit_price.toLocaleString('en-US')
                         }))
                     },
                     actorId: userId,
@@ -1100,7 +1104,7 @@ class OrderService {
         const skip = (page - 1) * limit;
         const query = {};
 
-        // Filter by status
+
         if (filters.status) {
             if (Array.isArray(filters.status)) {
                 query.status = { $in: filters.status };
@@ -1109,12 +1113,12 @@ class OrderService {
             }
         }
 
-        // Filter by payment status
+
         if (filters.payment_status) {
             query['payment.status'] = filters.payment_status;
         }
 
-        // Filter by user
+
         if (filters.user_id) {
             query.user_id = filters.user_id;
         }
@@ -1127,7 +1131,7 @@ class OrderService {
             ];
         }
 
-        // Execute query
+
         const total = await Order.countDocuments(query);
         const orders = await Order.find(query)
             .sort({ createdAt: -1, created_at: -1 })

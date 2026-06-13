@@ -1,3 +1,4 @@
+import { getLocale, translate } from '../../../shared/i18n/index';
 import {
     CheckCircle2,
     ExternalLink,
@@ -32,22 +33,22 @@ const PAGE_SIZE = 20;
 const tabs = [
     {
         key: 'pending',
-        label: 'Chờ duyệt',
+        label: translate('text.waiting_for_approval'),
         icon: MessageSquare,
     },
     {
         key: 'flagged',
-        label: 'Bị báo cáo',
+        label: translate('text.reported'),
         icon: Flag,
     },
 ];
 
 const flagReasonLabels = {
-    spam: 'Spam hoặc quảng cáo',
-    inappropriate: 'Nội dung không phù hợp',
-    fake: 'Đánh giá giả mạo',
-    duplicate: 'Đánh giá trùng lặp',
-    other: 'Lý do khác',
+    spam: translate('text.spam_or_advertising'),
+    inappropriate: translate('text.inappropriate_content'),
+    fake: translate('text.fake_review'),
+    duplicate: translate('text.duplicate_review'),
+    other: translate('text.other_reasons'),
 };
 
 function getRating(review) {
@@ -72,7 +73,7 @@ function formatDateTime(value) {
         return '-';
     }
 
-    return date.toLocaleString('vi-VN');
+    return date.toLocaleString(getLocale());
 }
 
 function RatingStars({ value }) {
@@ -112,24 +113,22 @@ function ReviewBadges({ review }) {
     return (
         <div className="flex flex-wrap items-center gap-2">
             {review.is_approved ? (
-                <Badge variant="success">Đã duyệt</Badge>
+                <Badge variant="success">{translate('text.approved')}</Badge>
             ) : review.rejected_at ? (
-                <Badge variant="error">Đã từ chối</Badge>
+                <Badge variant="error">{translate('text.rejected')}</Badge>
             ) : (
-                <Badge variant="warning">Chờ duyệt</Badge>
+                <Badge variant="warning">{translate('text.waiting_for_approval')}</Badge>
             )}
             {review.is_verified_purchase && (
                 <Badge variant="success" className="gap-1">
-                    <ShieldCheck className="h-3 w-3" />
-                    Đã mua hàng
-                </Badge>
+                    <ShieldCheck className="h-3 w-3" /> {translate('text.purchased')} </Badge>
             )}
             {review.is_flagged && (
                 <Badge variant="error" className="gap-1">
                     <Flag className="h-3 w-3" />
                     {flagReasonLabels[review.flag_reason] ||
                         review.flag_reason ||
-                        'Bị báo cáo'}
+                        translate('text.reported')}
                 </Badge>
             )}
         </div>
@@ -154,7 +153,7 @@ function ReviewCard({
                                 <ReviewBadges review={review} />
                             </div>
                             <h2 className="break-words text-base font-semibold text-[var(--color-text-main)]">
-                                {review.title || 'Đánh giá sản phẩm'}
+                                {review.title || translate('text.product_review')}
                             </h2>
                         </div>
                         <p className="shrink-0 text-sm text-[var(--color-text-muted)]">
@@ -167,18 +166,18 @@ function ReviewCard({
                     </p>
 
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        <ReviewMeta label="User" value={review.user_id} />
-                        <ReviewMeta label="Product" value={review.product_id} />
-                        <ReviewMeta label="Variant" value={review.variant_id} />
+                        <ReviewMeta label={translate('text.user')} value={review.user_id} />
+                        <ReviewMeta label={translate('text.product')} value={review.product_id} />
+                        <ReviewMeta label={translate('text.variant_cc91b1ea')} value={review.variant_id} />
                         <ReviewMeta
-                            label="Tương tác"
-                            value={`Có ích ${review.helpful_count || 0} / Chưa hữu ích ${review.unhelpful_count || 0}`}
+                            label={translate('text.interaction')}
+                            value={translate('text.useful_value_not_yet_useful_value', { value0: review.helpful_count || 0, value1: review.unhelpful_count || 0 })}
                         />
                     </div>
 
                     {(review.rejection_reason || review.rejected_at) && (
                         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-[var(--color-error)]">
-                            <p className="font-medium">Lý do từ chối</p>
+                            <p className="font-medium">{translate('text.reason_for_rejection')}</p>
                             <p className="mt-1">
                                 {review.rejection_reason || '-'}
                             </p>
@@ -192,9 +191,7 @@ function ReviewCard({
                             to={`${ROUTES.PRODUCTS}/${review.product_id}`}
                             className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)] sm:w-auto xl:w-full"
                         >
-                            <ExternalLink className="h-4 w-4" />
-                            Sản phẩm
-                        </Link>
+                            <ExternalLink className="h-4 w-4" /> {translate('text.product')} </Link>
                     )}
                     <Button
                         className="w-full sm:w-auto xl:w-full"
@@ -204,9 +201,7 @@ function ReviewCard({
                         disabled={isRejecting}
                         onClick={() => onApprove(review)}
                     >
-                        <CheckCircle2 className="h-4 w-4" />
-                        Duyệt
-                    </Button>
+                        <CheckCircle2 className="h-4 w-4" /> {translate('text.browse')} </Button>
                     <Button
                         className="w-full sm:w-auto xl:w-full"
                         size="sm"
@@ -215,9 +210,7 @@ function ReviewCard({
                         disabled={isApproving}
                         onClick={() => onReject(review)}
                     >
-                        <XCircle className="h-4 w-4" />
-                        Từ chối
-                    </Button>
+                        <XCircle className="h-4 w-4" /> {translate('text.reject')} </Button>
                 </div>
             </div>
         </article>
@@ -295,12 +288,8 @@ export default function AdminReviewsPage() {
                 <CardHeader>
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                         <div>
-                            <h1 className="text-xl font-semibold text-[var(--color-text-main)]">
-                                Duyệt đánh giá
-                            </h1>
-                            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                Kiểm duyệt đánh giá mới và đánh giá bị khách hàng báo cáo.
-                            </p>
+                            <h1 className="text-xl font-semibold text-[var(--color-text-main)]"> {translate('text.browse_reviews')} </h1>
+                            <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.moderate_new_reviews_and_reviews_reported_by_customers')} </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {tabs.map((tab) => {
@@ -326,16 +315,14 @@ export default function AdminReviewsPage() {
                                 isLoading={activeQuery.isFetching}
                                 onClick={handleRefresh}
                             >
-                                <RefreshCw className="h-4 w-4" />
-                                Làm mới
-                            </Button>
+                                <RefreshCw className="h-4 w-4" /> {translate('text.refresh')} </Button>
                         </div>
                     </div>
                 </CardHeader>
 
                 <CardBody className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="muted">{total} đánh giá</Badge>
+                        <Badge variant="muted">{total} {translate('text.reviews')}</Badge>
                         <Badge variant={activeTab === 'pending' ? 'warning' : 'error'}>
                             {tabs.find((tab) => tab.key === activeTab)?.label}
                         </Badge>
@@ -348,7 +335,7 @@ export default function AdminReviewsPage() {
                     )}
 
                     {activeQuery.isLoading ? (
-                        <Loading label="Đang tải đánh giá..." />
+                        <Loading label={translate('text.loading_review')} />
                     ) : activeQuery.isError ? (
                         <div className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm text-[var(--color-error)]">
@@ -359,19 +346,17 @@ export default function AdminReviewsPage() {
                                 size="sm"
                                 onClick={handleRefresh}
                             >
-                                <RefreshCw className="h-4 w-4" />
-                                Tải lại
-                            </Button>
+                                <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
                         </div>
                     ) : reviews.length === 0 ? (
                         <EmptyState
                             icon={activeTab === 'pending' ? MessageSquare : Flag}
                             title={
                                 activeTab === 'pending'
-                                    ? 'Không có đánh giá chờ duyệt'
-                                    : 'Không có đánh giá bị báo cáo'
+                                    ? translate('text.no_reviews_pending')
+                                    : translate('text.no_reviews_reported')
                             }
-                            description="Danh sách sẽ tự cập nhật khi có review cần kiểm duyệt."
+                            description={translate('text.the_list_will_automatically_update_when_there_are_reviews_that_need_to_b')}
                         />
                     ) : (
                         <div className="space-y-4">
@@ -400,31 +385,25 @@ export default function AdminReviewsPage() {
 
             <Modal
                 open={Boolean(rejectingReview)}
-                title="Từ chối đánh giá"
+                title={translate('text.refuse_to_rate')}
                 onClose={closeRejectModal}
                 panelClassName="max-w-3xl"
                 footer={
                     <>
-                        <Button variant="outline" onClick={closeRejectModal}>
-                            Đóng
-                        </Button>
+                        <Button variant="outline" onClick={closeRejectModal}> {translate('text.close')} </Button>
                         <Button
                             variant="danger"
                             disabled={rejectReason.trim().length < 5}
                             isLoading={rejectReviewMutation.isPending}
                             onClick={handleReject}
-                        >
-                            Từ chối
-                        </Button>
+                        > {translate('text.reject')} </Button>
                     </>
                 }
             >
                 <div className="space-y-4">
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Nhập lý do từ chối để lưu vào hồ sơ kiểm duyệt.
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.enter_the_reason_for_rejection_to_save_in_the_moderation_record')} </p>
                     <Textarea
-                        label="Lý do"
+                        label={translate('text.reason')}
                         rows={5}
                         value={rejectReason}
                         onChange={(event) => setRejectReason(event.target.value)}

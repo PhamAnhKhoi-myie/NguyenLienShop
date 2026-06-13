@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import Button from '../../../shared/components/Button';
@@ -19,27 +20,27 @@ import {
 import { getRows, renderAdminCell } from '../utils/adminFormat';
 
 const variantColumns = [
-    { key: 'size', header: 'Kích thước', value: 'size' },
-    { key: 'sku', header: 'SKU', value: 'sku' },
-    { key: 'fabric_type', header: 'Chất liệu', value: 'fabric_type' },
-    { key: 'status', header: 'Trạng thái', value: 'status', type: 'status' },
-    { key: 'stock', header: 'Tồn kho', value: (row) => row.stock?.available ?? row.available_stock },
+    { key: 'size', header: translate('text.size'), value: 'size' },
+    { key: 'sku', header: translate('text.sku'), value: 'sku' },
+    { key: 'fabric_type', header: translate('text.material'), value: 'fabric_type' },
+    { key: 'status', header: translate('text.status'), value: 'status', type: 'status' },
+    { key: 'stock', header: translate('text.inventory'), value: (row) => row.stock?.available ?? row.available_stock },
 ];
 
 const unitColumns = [
-    { key: 'display_name', header: 'Đơn vị', value: 'display_name' },
-    { key: 'pack_size', header: 'Quy cách', value: 'pack_size' },
+    { key: 'display_name', header: translate('text.unit'), value: 'display_name' },
+    { key: 'pack_size', header: translate('text.specification'), value: 'pack_size' },
     {
         key: 'base_price',
-        header: 'Giá thấp nhất',
+        header: translate('text.lowest_price'),
         value: (row) =>
             row.price_tiers?.[0]?.unit_price ||
             row.pricing?.min_price ||
             row.price_range?.min,
         type: 'money',
     },
-    { key: 'is_default', header: 'Mặc định', value: 'is_default', type: 'status' },
-    { key: 'currency', header: 'Tiền tệ', value: 'currency' },
+    { key: 'is_default', header: translate('text.default'), value: 'is_default', type: 'status' },
+    { key: 'currency', header: translate('text.currency'), value: 'currency' },
 ];
 
 function getRowId(row) {
@@ -61,9 +62,7 @@ function AdminMiniTable({ columns, rows, emptyTitle, onEdit, onDelete }) {
                                 {column.header}
                             </th>
                         ))}
-                        <th className="whitespace-nowrap px-4 py-3 text-right">
-                            Tác vụ
-                        </th>
+                        <th className="whitespace-nowrap px-4 py-3 text-right"> {translate('text.task')} </th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border)]">
@@ -84,17 +83,13 @@ function AdminMiniTable({ columns, rows, emptyTitle, onEdit, onDelete }) {
                                         variant="outline"
                                         onClick={() => onEdit(row)}
                                     >
-                                        <Pencil className="h-4 w-4" />
-                                        Sửa
-                                    </Button>
+                                        <Pencil className="h-4 w-4" /> {translate('text.edit_0963749f')} </Button>
                                     <Button
                                         size="sm"
                                         variant="danger"
                                         onClick={() => onDelete(row)}
                                     >
-                                        <Trash2 className="h-4 w-4" />
-                                        Xóa
-                                    </Button>
+                                        <Trash2 className="h-4 w-4" /> {translate('text.delete')} </Button>
                                 </div>
                             </td>
                         </tr>
@@ -279,7 +274,7 @@ export default function AdminVariantsPage() {
     };
 
     const handleDeleteVariant = async (variant) => {
-        const confirmed = window.confirm('Xóa biến thể này?');
+        const confirmed = window.confirm(translate('text.delete_this_variant'));
 
         if (!confirmed) {
             return;
@@ -293,7 +288,7 @@ export default function AdminVariantsPage() {
     };
 
     const handleDeleteUnit = async (unit) => {
-        const confirmed = window.confirm('Xóa đơn vị bán này?');
+        const confirmed = window.confirm(translate('text.delete_this_sales_unit'));
 
         if (!confirmed) {
             return;
@@ -325,27 +320,21 @@ export default function AdminVariantsPage() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                        Admin
-                    </p>
-                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]">
-                        Biến thể và đơn vị bán
-                    </h1>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        ADMIN/MANAGER quản lý variants và variant units theo từng sản phẩm.
-                    </p>
+                    <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.admin')} </p>
+                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]"> {translate('text.variant_and_unit_of_sale')} </h1>
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.admin_manager_manages_variants_and_variant_units_for_each_product')} </p>
                 </CardHeader>
                 <CardBody className="space-y-5">
                     {productQuery.isLoading ? (
-                        <Loading label="Đang tải sản phẩm..." />
+                        <Loading label={translate('text.loading_products')} />
                     ) : products.length === 0 ? (
                         <EmptyState
-                            title="Chưa có sản phẩm"
-                            description="Cần tạo sản phẩm trước khi tạo biến thể."
+                            title={translate('text.no_products_yet')}
+                            description={translate('text.need_to_create_a_product_before_creating_a_variation')}
                         />
                     ) : (
                         <Select
-                            label="Chọn sản phẩm"
+                            label={translate('text.select_product')}
                             value={activeProductId}
                             onChange={(event) => {
                                 setSelectedProductId(event.target.value);
@@ -367,30 +356,25 @@ export default function AdminVariantsPage() {
                     <CardHeader>
                         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div>
-                                <h2 className="font-semibold text-[var(--color-text-main)]">
-                                    Variants {selectedProduct ? `· ${selectedProduct.name}` : ''}
+                                <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.variants')} {selectedProduct ? `· ${selectedProduct.name}` : ''}
                                 </h2>
-                                <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                    Kích thước, chất liệu và trạng thái bán của sản phẩm.
-                                </p>
+                                <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.size_material_and_sales_status_of_the_product')} </p>
                             </div>
                             <Button
                                 disabled={!activeProductId}
                                 onClick={openCreateVariant}
                             >
-                                <Plus className="h-4 w-4" />
-                                Thêm variant
-                            </Button>
+                                <Plus className="h-4 w-4" /> {translate('text.add_variant')} </Button>
                         </div>
                     </CardHeader>
                     <CardBody>
                         {variantQuery.isLoading ? (
-                            <Loading label="Đang tải variants..." />
+                            <Loading label={translate('text.loading_variants')} />
                         ) : (
                             <AdminMiniTable
                                 columns={variantColumns}
                                 rows={variants}
-                                emptyTitle="Sản phẩm chưa có biến thể"
+                                emptyTitle={translate('text.product_has_no_variation_yet')}
                                 onEdit={openEditVariant}
                                 onDelete={handleDeleteVariant}
                             />
@@ -403,25 +387,19 @@ export default function AdminVariantsPage() {
                         <div className="space-y-3">
                             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                                 <div>
-                                    <h2 className="font-semibold text-[var(--color-text-main)]">
-                                        Variant units
-                                    </h2>
-                                    <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                        Quy cách đóng gói, bậc giá và điều kiện đặt hàng.
-                                    </p>
+                                    <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.variant_units')} </h2>
+                                    <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.packaging_specifications_price_tiers_and_ordering_conditions')} </p>
                                 </div>
                                 <Button
                                     disabled={!activeVariantId}
                                     onClick={openCreateUnit}
                                 >
-                                    <Plus className="h-4 w-4" />
-                                    Thêm unit
-                                </Button>
+                                    <Plus className="h-4 w-4" /> {translate('text.add_unit')} </Button>
                             </div>
 
                             {variants.length > 0 && (
                                 <Select
-                                    label="Chọn variant"
+                                    label={translate('text.select_variant')}
                                     value={activeVariantId}
                                     onChange={(event) =>
                                         setSelectedVariantId(event.target.value)
@@ -438,14 +416,14 @@ export default function AdminVariantsPage() {
                     </CardHeader>
                     <CardBody>
                         {!activeVariantId ? (
-                            <EmptyState title="Chọn hoặc tạo variant trước" />
+                            <EmptyState title={translate('text.select_or_create_variant_before')} />
                         ) : unitQuery.isLoading ? (
-                            <Loading label="Đang tải đơn vị bán..." />
+                            <Loading label={translate('text.loading_sales_units')} />
                         ) : (
                             <AdminMiniTable
                                 columns={unitColumns}
                                 rows={units}
-                                emptyTitle="Biến thể chưa có đơn vị bán"
+                                emptyTitle={translate('text.unavailable_variant')}
                                 onEdit={openEditUnit}
                                 onDelete={handleDeleteUnit}
                             />
@@ -458,14 +436,14 @@ export default function AdminVariantsPage() {
                 open={variantFormState.open}
                 title={
                     variantFormState.mode === 'edit'
-                        ? 'Sửa biến thể'
-                        : 'Thêm biến thể'
+                        ? translate('text.fix_variant')
+                        : translate('text.add_variation')
                 }
                 onClose={closeVariantForm}
                 panelClassName="max-w-4xl"
             >
                 {variantFormState.mode === 'edit' && variantDetailQuery.isLoading ? (
-                    <Loading label="Đang tải biến thể..." />
+                    <Loading label={translate('text.loading_variant')} />
                 ) : (
                     <AdminResourceForm
                         form={variantFormConfig}
@@ -484,14 +462,14 @@ export default function AdminVariantsPage() {
                 open={unitFormState.open}
                 title={
                     unitFormState.mode === 'edit'
-                        ? 'Sửa đơn vị bán'
-                        : `Thêm đơn vị bán${selectedVariant ? ` · ${selectedVariant.size}` : ''}`
+                        ? translate('text.edit_sales_unit')
+                        : translate('text.add_sales_unit_value', { value0: selectedVariant ? ` · ${selectedVariant.size}` : '' })
                 }
                 onClose={closeUnitForm}
                 panelClassName="max-w-5xl"
             >
                 {unitFormState.mode === 'edit' && unitDetailQuery.isLoading ? (
-                    <Loading label="Đang tải đơn vị bán..." />
+                    <Loading label={translate('text.loading_sales_units')} />
                 ) : (
                     <AdminResourceForm
                         form={variantUnitFormConfig}

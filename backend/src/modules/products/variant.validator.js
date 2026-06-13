@@ -1,9 +1,9 @@
 const { z } = require('zod');
 const mongoose = require('mongoose');
 
-/**
- * ObjectId
- */
+
+
+
 const objectIdSchema = z.string().refine(
     (val) => mongoose.Types.ObjectId.isValid(val),
     { message: 'Invalid MongoDB ObjectId' }
@@ -11,9 +11,9 @@ const objectIdSchema = z.string().refine(
 
 const objectIdOptionalSchema = objectIdSchema.optional().nullable();
 
-/**
- * PARAMS (BẮT BUỘC CHO ROUTES)
- */
+
+
+
 const variantIdParamSchema = z.object({
     variantId: objectIdSchema
 });
@@ -22,9 +22,9 @@ const productIdParamSchema = z.object({
     productId: objectIdSchema
 });
 
-/**
- * STOCK
- */
+
+
+
 const stockSchema = z.object({
     available: z
         .number()
@@ -45,9 +45,9 @@ const stockSchema = z.object({
         .default(0),
 });
 
-/**
- * CREATE
- */
+
+
+
 const createVariantSchema = z.object({
     size: z
         .string()
@@ -66,9 +66,9 @@ const createVariantSchema = z.object({
     status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });
 
-/**
- * UPDATE
- */
+
+
+
 const updateVariantSchema = z.object({
     size: z
         .string()
@@ -89,9 +89,9 @@ const updateVariantSchema = z.object({
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
 
-/**
- * STOCK ACTIONS
- */
+
+
+
 const reserveStockSchema = z.object({
     qty_items: z
         .number()
@@ -116,9 +116,9 @@ const releaseReservedStockSchema = z.object({
         .max(1000000),
 });
 
-/**
- * QUERY
- */
+
+
+
 const getMaxOrderQtySchema = z.object({
     pack_size: z
         .string()

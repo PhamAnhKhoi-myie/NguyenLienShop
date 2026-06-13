@@ -1,4 +1,4 @@
-// Auto-split from legacy swagger.js.
+
 module.exports = {
     "ErrorResponse": {
         "type": "object",
@@ -44,7 +44,7 @@ module.exports = {
     },
     "PaginatedResponse": {
         "type": "object",
-        "description": "Chuẩn dự kiến cho list (chưa gắn path). `data` = mảng item; khi implement, dùng allOf hoặc schema riêng cho từng resource.",
+        "description": "Expected standard for list (no path attached). `data` = array items; When implementing, use allOf or a separate schema for each resource.",
         "properties": {
             "success": {
                 "type": "boolean",
@@ -58,7 +58,7 @@ module.exports = {
                 "type": "array",
                 "items": {
                     "type": "object",
-                    "description": "Thay bằng $ref tới schema phần tử"
+                    "description": "Replace with $ref to element schema"
                 },
                 "example": []
             },

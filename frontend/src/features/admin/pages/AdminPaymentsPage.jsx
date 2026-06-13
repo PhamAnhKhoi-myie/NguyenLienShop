@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import {
     Eye,
     Filter,
@@ -28,15 +29,16 @@ import {
 } from '../utils/adminFormat';
 
 const paymentStatusOptions = [
-    { value: '', label: 'Tất cả trạng thái' },
-    { value: 'pending', label: 'pending' },
-    { value: 'paid', label: 'paid' },
-    { value: 'failed', label: 'failed' },
+    { value: '', label: translate('text.all_statuses') },
+    { value: 'pending', label: translate('text.pending_e2258693') },
+    { value: 'paid', label: translate('text.paid_9e1f1120') },
+    { value: 'failed', label: translate('text.failed') },
 ];
 
 const providerOptions = [
-    { value: '', label: 'Tất cả provider' },
-    { value: 'vnpay', label: 'vnpay' },
+    { value: '', label: translate('text.all_providers') },
+    { value: 'vnpay', label: translate('text.vnpay') },
+    { value: 'payos', label: translate('text.payos') },
 ];
 
 function getPaymentId(payment) {
@@ -105,9 +107,7 @@ function StatsPanel({ stats }) {
         <div className="grid gap-4 lg:grid-cols-4">
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Tổng payment
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.total_payment')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-text-main)]">
                         {getStatCount(stats?.totalPayments)}
                     </p>
@@ -115,9 +115,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Doanh thu đã thanh toán
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.paid_revenue')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-primary-hover)]">
                         {formatMoney(getRevenue(stats?.totalRevenue))}
                     </p>
@@ -125,9 +123,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Xác thực lỗi
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.error_validation')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-warning)]">
                         {failedVerifications}
                     </p>
@@ -135,9 +131,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Provider
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.provider')} </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                         {providerItems.length ? (
                             providerItems.map((item) => (
@@ -157,9 +151,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card className="lg:col-span-4">
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Trạng thái thanh toán
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.payment_status_4032b469')} </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                         {statusItems.length ? (
                             statusItems.map((item) => (
@@ -190,7 +182,7 @@ function PaymentFilters({
     return (
         <div className="grid gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 lg:grid-cols-5">
             <Select
-                label="Trạng thái"
+                label={translate('text.status')}
                 value={values.status}
                 onChange={(event) => onChange('status', event.target.value)}
             >
@@ -201,7 +193,7 @@ function PaymentFilters({
                 ))}
             </Select>
             <Select
-                label="Provider"
+                label={translate('text.provider')}
                 value={values.provider}
                 onChange={(event) => onChange('provider', event.target.value)}
             >
@@ -212,25 +204,21 @@ function PaymentFilters({
                 ))}
             </Select>
             <Input
-                label="Từ ngày"
+                label={translate('text.from_date')}
                 type="date"
                 value={values.date_from}
                 onChange={(event) => onChange('date_from', event.target.value)}
             />
             <Input
-                label="Đến ngày"
+                label={translate('text.until_date')}
                 type="date"
                 value={values.date_to}
                 onChange={(event) => onChange('date_to', event.target.value)}
             />
             <div className="flex items-end gap-2">
                 <Button type="button" onClick={onApply}>
-                    <Filter className="h-4 w-4" />
-                    Lọc
-                </Button>
-                <Button type="button" variant="outline" onClick={onReset}>
-                    Xóa lọc
-                </Button>
+                    <Filter className="h-4 w-4" /> {translate('text.filter')} </Button>
+                <Button type="button" variant="outline" onClick={onReset}> {translate('text.clear_filter')} </Button>
             </div>
         </div>
     );
@@ -243,9 +231,7 @@ function ProviderDataPanel({ providerData }) {
 
     if (!entries.length) {
         return (
-            <p className="text-sm text-[var(--color-text-muted)]">
-                Chưa có dữ liệu provider.
-            </p>
+            <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.no_provider_data_yet')} </p>
         );
     }
 
@@ -282,11 +268,10 @@ function PaymentDetailPanel({
                         <StatusBadge value={payment.status} />
                         <StatusBadge
                             value={payment.verification_status}
-                            label={`Xác thực: ${payment.verification_status}`}
+                            label={translate('text.authentication_value', { value0: payment.verification_status })}
                         />
                     </div>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        Order {payment.order_id}
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.order')} {payment.order_id}
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -296,65 +281,55 @@ function PaymentDetailPanel({
                         isLoading={isVerifying}
                         onClick={onVerify}
                     >
-                        <ShieldCheck className="h-4 w-4" />
-                        Ghi nhận đối soát
-                    </Button>
+                        <ShieldCheck className="h-4 w-4" /> {translate('text.control_record')} </Button>
                     <Button
                         size="sm"
                         variant="danger"
                         isLoading={isDeleting}
                         onClick={onDelete}
                     >
-                        <Trash2 className="h-4 w-4" />
-                        Xóa mềm
-                    </Button>
+                        <Trash2 className="h-4 w-4" /> {translate('text.soft_delete')} </Button>
                 </div>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3">
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Thanh toán
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.checkout')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3">
-                        <DetailRow label="Số tiền">
+                        <DetailRow label={translate('text.amount')}>
                             {formatMoney(payment.amount)}
                         </DetailRow>
-                        <DetailRow label="Provider" value={payment.provider} />
-                        <DetailRow label="Transaction ref" value={transactionRef} />
+                        <DetailRow label={translate('text.provider')} value={payment.provider} />
+                        <DetailRow label={translate('text.transaction_ref')} value={transactionRef} />
                     </CardBody>
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Liên kết
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.link')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3">
-                        <DetailRow label="Order ID" value={payment.order_id} />
-                        <DetailRow label="User ID" value={payment.user_id} />
+                        <DetailRow label={translate('text.order_id')} value={payment.order_id} />
+                        <DetailRow label={translate('text.user_id')} value={payment.user_id} />
                         <DetailRow
-                            label="Idempotency"
+                            label={translate('text.idempotency')}
                             value={payment.idempotency_key}
                         />
                     </CardBody>
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Thời gian
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.time')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3">
-                        <DetailRow label="Tạo lúc">
+                        <DetailRow label={translate('text.created_at')}>
                             {formatDateTime(payment.created_at)}
                         </DetailRow>
-                        <DetailRow label="Hết hạn">
+                        <DetailRow label={translate('text.expires')}>
                             {formatDateTime(payment.expires_at) || '-'}
                         </DetailRow>
-                        <DetailRow label="Thanh toán lúc">
+                        <DetailRow label={translate('text.payment_at')}>
                             {formatDateTime(payment.paid_at) || '-'}
                         </DetailRow>
                     </CardBody>
@@ -364,23 +339,19 @@ function PaymentDetailPanel({
             {payment.failure && (
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-error)]">
-                            Lỗi thanh toán
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-error)]"> {translate('text.payment_error')} </h3>
                     </CardHeader>
                     <CardBody className="grid gap-3 md:grid-cols-3">
-                        <DetailRow label="Reason" value={payment.failure.reason} />
-                        <DetailRow label="Code" value={payment.failure.code} />
-                        <DetailRow label="Message" value={payment.failure.message} />
+                        <DetailRow label={translate('text.reason')} value={payment.failure.reason} />
+                        <DetailRow label={translate('text.code')} value={payment.failure.code} />
+                        <DetailRow label={translate('text.message')} value={payment.failure.message} />
                     </CardBody>
                 </Card>
             )}
 
             <Card>
                 <CardHeader>
-                    <h3 className="font-semibold text-[var(--color-text-main)]">
-                        Provider data
-                    </h3>
+                    <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.provider_data')} </h3>
                 </CardHeader>
                 <CardBody>
                     <ProviderDataPanel providerData={payment.provider_data} />
@@ -389,19 +360,17 @@ function PaymentDetailPanel({
 
             <Card>
                 <CardHeader>
-                    <h3 className="font-semibold text-[var(--color-text-main)]">
-                        Webhook
-                    </h3>
+                    <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.webhook')} </h3>
                 </CardHeader>
                 <CardBody className="grid gap-3 md:grid-cols-3">
-                    <DetailRow label="Webhook verified">
+                    <DetailRow label={translate('text.webhook_verified')}>
                         {formatDateTime(payment.webhook_verified_at) || '-'}
                     </DetailRow>
-                    <DetailRow label="Raw IPN">
-                        {webhookData.raw_ipn_present ? 'Có' : 'Không'}
+                    <DetailRow label={translate('text.raw_ipn')}>
+                        {webhookData.raw_ipn_present ? translate('text.yes') : translate('text.no')}
                     </DetailRow>
-                    <DetailRow label="Raw return">
-                        {webhookData.raw_return_present ? 'Có' : 'Không'}
+                    <DetailRow label={translate('text.raw_return')}>
+                        {webhookData.raw_return_present ? translate('text.yes') : translate('text.no')}
                     </DetailRow>
                 </CardBody>
             </Card>
@@ -494,7 +463,7 @@ export default function AdminPaymentsPage() {
         }
 
         const confirmed = window.confirm(
-            `Ghi nhận đối soát payment ${getPaymentId(paymentDetail)}?`
+            translate('text.payment_reconciliation_record_value', { value0: getPaymentId(paymentDetail) })
         );
 
         if (!confirmed) {
@@ -513,7 +482,7 @@ export default function AdminPaymentsPage() {
         }
 
         const confirmed = window.confirm(
-            `Xóa mềm payment ${getPaymentId(paymentDetail)}?`
+            translate('text.soft_delete_payment_value', { value0: getPaymentId(paymentDetail) })
         );
 
         if (!confirmed) {
@@ -531,24 +500,16 @@ export default function AdminPaymentsPage() {
         <div className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                        Admin
-                    </p>
-                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]">
-                        Quản lý thanh toán
-                    </h1>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        ADMIN theo dõi payment VNPAY, trạng thái xác thực và đối soát webhook.
-                    </p>
+                    <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.admin')} </p>
+                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]"> {translate('text.payment_management')} </h1>
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.admin_monitors_online_payment_authentication_status_and_webhook_control')} </p>
                 </div>
                 <Button
                     variant="outline"
                     isLoading={paymentsQuery.isFetching || statsQuery.isFetching}
                     onClick={refreshPayments}
                 >
-                    <RefreshCw className="h-4 w-4" />
-                    Tải lại
-                </Button>
+                    <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
             </div>
 
             <StatsPanel stats={statsQuery.data?.data} />
@@ -564,18 +525,18 @@ export default function AdminPaymentsPage() {
                 </CardHeader>
                 <CardBody>
                     {paymentsQuery.isLoading ? (
-                        <Loading label="Đang tải thanh toán..." />
+                        <Loading label={translate('text.loading_payment')} />
                     ) : paymentsQuery.isError ? (
                         <EmptyState
                             icon={Search}
-                            title="Không tải được thanh toán"
+                            title={translate('text.unable_to_load_payment')}
                             description={paymentsQuery.error.message}
                         />
                     ) : payments.length === 0 ? (
                         <EmptyState
                             icon={WalletCards}
-                            title="Chưa có thanh toán"
-                            description="Payment tạo sau checkout VNPAY sẽ hiển thị tại đây."
+                            title={translate('text.no_payment_yet')}
+                            description={translate('text.payment_created_after_online_checkout_will_be_displayed_here')}
                         />
                     ) : (
                         <div className="space-y-4">
@@ -583,14 +544,14 @@ export default function AdminPaymentsPage() {
                                 <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
                                     <thead>
                                         <tr className="bg-[var(--color-background)] text-left text-xs font-semibold uppercase text-[var(--color-text-muted)]">
-                                            <th className="px-4 py-3">Payment</th>
-                                            <th className="px-4 py-3">Order</th>
-                                            <th className="px-4 py-3">Provider</th>
-                                            <th className="px-4 py-3">Số tiền</th>
-                                            <th className="px-4 py-3">Trạng thái</th>
-                                            <th className="px-4 py-3">Xác thực</th>
-                                            <th className="px-4 py-3">Ngày tạo</th>
-                                            <th className="px-4 py-3 text-right">Tác vụ</th>
+                                            <th className="px-4 py-3">{translate('text.payment_b41a92be')}</th>
+                                            <th className="px-4 py-3">{translate('text.order')}</th>
+                                            <th className="px-4 py-3">{translate('text.provider')}</th>
+                                            <th className="px-4 py-3">{translate('text.amount')}</th>
+                                            <th className="px-4 py-3">{translate('text.status')}</th>
+                                            <th className="px-4 py-3">{translate('text.validate')}</th>
+                                            <th className="px-4 py-3">{translate('text.creation_date')}</th>
+                                            <th className="px-4 py-3 text-right">{translate('text.task')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
@@ -628,9 +589,7 @@ export default function AdminPaymentsPage() {
                                                         variant="outline"
                                                         onClick={() => openDetail(payment)}
                                                     >
-                                                        <Eye className="h-4 w-4" />
-                                                        Chi tiết
-                                                    </Button>
+                                                        <Eye className="h-4 w-4" /> {translate('text.details')} </Button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -650,15 +609,15 @@ export default function AdminPaymentsPage() {
 
             <Modal
                 open={Boolean(selectedPayment)}
-                title={paymentDetail ? `Payment ${getPaymentId(paymentDetail)}` : 'Chi tiết payment'}
+                title={paymentDetail ? `Payment ${getPaymentId(paymentDetail)}` : translate('text.payment_details')}
                 onClose={closeDetail}
                 panelClassName="max-w-7xl"
             >
                 {detailQuery.isLoading ? (
-                    <Loading label="Đang tải chi tiết thanh toán..." />
+                    <Loading label={translate('text.loading_payment_details')} />
                 ) : detailQuery.isError ? (
                     <EmptyState
-                        title="Không tải được chi tiết thanh toán"
+                        title={translate('text.unable_to_load_payment_details')}
                         description={detailQuery.error.message}
                     />
                 ) : (

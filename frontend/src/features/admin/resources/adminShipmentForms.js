@@ -1,25 +1,26 @@
+import { translate } from '../../../shared/i18n/index';
 import { z } from 'zod';
 
 export const carrierOptions = [
-    { value: '', label: 'Tất cả đơn vị' },
-    { value: 'GHN', label: 'GHN' },
-    { value: 'GHTK', label: 'GHTK' },
+    { value: '', label: translate('text.all_units') },
+    { value: 'GHN', label: translate('text.ghn') },
+    { value: 'GHTK', label: translate('text.ghtk') },
     { value: 'JT', label: 'J&T' },
-    { value: 'GRAB', label: 'GRAB' },
-    { value: 'BEST', label: 'BEST' },
-    { value: 'OTHER', label: 'OTHER' },
+    { value: 'GRAB', label: translate('text.grab') },
+    { value: 'BEST', label: translate('text.best') },
+    { value: 'OTHER', label: translate('text.other_957c024b') },
 ];
 
 export const shipmentStatusOptions = [
-    { value: '', label: 'Tất cả trạng thái' },
-    { value: 'pending', label: 'pending' },
-    { value: 'picked_up', label: 'picked_up' },
-    { value: 'in_transit', label: 'in_transit' },
-    { value: 'at_destination', label: 'at_destination' },
-    { value: 'delivered', label: 'delivered' },
-    { value: 'failed', label: 'failed' },
-    { value: 'cancelled', label: 'cancelled' },
-    { value: 'returned', label: 'returned' },
+    { value: '', label: translate('text.all_statuses') },
+    { value: 'pending', label: translate('text.pending_e2258693') },
+    { value: 'picked_up', label: translate('text.picked_up_cd46abb7') },
+    { value: 'in_transit', label: translate('text.in_transit') },
+    { value: 'at_destination', label: translate('text.at_destination') },
+    { value: 'delivered', label: translate('text.delivered_f818910a') },
+    { value: 'failed', label: translate('text.failed') },
+    { value: 'cancelled', label: translate('text.cancelled') },
+    { value: 'returned', label: translate('text.returned_1302aeee') },
 ];
 
 const nextStatusByCurrent = {
@@ -30,14 +31,14 @@ const nextStatusByCurrent = {
 };
 
 const failureReasonOptions = [
-    { value: 'address_incorrect', label: 'Địa chỉ sai' },
-    { value: 'recipient_unavailable', label: 'Không gặp người nhận' },
-    { value: 'refused_delivery', label: 'Khách từ chối nhận' },
-    { value: 'damaged_package', label: 'Hàng bị hư hỏng' },
-    { value: 'lost', label: 'Thất lạc' },
-    { value: 'weather_delay', label: 'Trì hoãn do thời tiết' },
-    { value: 'carrier_error', label: 'Lỗi đơn vị vận chuyển' },
-    { value: 'other', label: 'Khác' },
+    { value: 'address_incorrect', label: translate('text.wrong_address') },
+    { value: 'recipient_unavailable', label: translate('text.recipient_not_found') },
+    { value: 'refused_delivery', label: translate('text.customer_refuses_to_receive') },
+    { value: 'damaged_package', label: translate('text.damaged_item') },
+    { value: 'lost', label: translate('text.lost') },
+    { value: 'weather_delay', label: translate('text.delayed_due_to_weather') },
+    { value: 'carrier_error', label: translate('text.shipping_unit_error') },
+    { value: 'other', label: translate('text.other') },
 ];
 
 const carrierValueOptions = carrierOptions.filter((option) => option.value);
@@ -45,9 +46,9 @@ const carrierValueOptions = carrierOptions.filter((option) => option.value);
 const trackingCodeSchema = z
     .string()
     .trim()
-    .min(5, 'Mã vận đơn cần ít nhất 5 ký tự')
-    .max(100, 'Mã vận đơn không vượt quá 100 ký tự')
-    .regex(/^[A-Z0-9\-_]+$/i, 'Mã vận đơn chỉ gồm chữ, số, gạch ngang hoặc gạch dưới');
+    .min(5, translate('text.bill_of_lading_code_must_be_at_least_5_characters'))
+    .max(100, translate('text.bill_of_lading_code_must_not_exceed_100_characters'))
+    .regex(/^[A-Z0-9\-_]+$/i, translate('text.bill_of_lading_code_includes_only_letters_numbers_dashes_or_underlines'));
 
 function getNextStatusOptions(status) {
     return (nextStatusByCurrent[status] || []).map((value) => ({
@@ -61,7 +62,7 @@ export function hasNextShipmentStatus(status) {
 }
 
 export const shipmentInfoFormConfig = {
-    title: 'thông tin vận đơn',
+    title: translate('text.bill_of_lading_information'),
     schema: z
         .object({
             carrier: z.enum(['GHN', 'GHTK', 'JT', 'GRAB', 'BEST', 'OTHER']),
@@ -69,7 +70,7 @@ export const shipmentInfoFormConfig = {
             admin_notes: z
                 .string()
                 .trim()
-                .max(1000, 'Ghi chú nội bộ không vượt quá 1000 ký tự'),
+                .max(1000, translate('text.internal_notes_cannot_exceed_1000_characters')),
         }),
     defaultValues: {
         carrier: 'GHN',
@@ -89,17 +90,17 @@ export const shipmentInfoFormConfig = {
     fields: [
         {
             name: 'carrier',
-            label: 'Đơn vị vận chuyển',
+            label: translate('text.shipping_unit'),
             type: 'select',
             options: carrierValueOptions,
         },
         {
             name: 'tracking_code',
-            label: 'Mã vận đơn',
+            label: translate('text.bill_of_lading_code'),
         },
         {
             name: 'admin_notes',
-            label: 'Ghi chú nội bộ',
+            label: translate('text.internal_notes'),
             type: 'textarea',
             rows: 5,
             className: 'md:col-span-2',
@@ -114,10 +115,10 @@ export function createShipmentStatusFormConfig(shipment = {}) {
         : ['pending'];
 
     return {
-        title: 'trạng thái vận chuyển',
+        title: translate('text.shipping_status_b865dfb7'),
         schema: z.object({
             status: z.enum(statusValues),
-            notes: z.string().trim().max(500, 'Ghi chú không vượt quá 500 ký tự'),
+            notes: z.string().trim().max(500, translate('text.notes_must_not_exceed_500_characters')),
         }),
         defaultValues: {
             status: options[0]?.value || '',
@@ -134,15 +135,15 @@ export function createShipmentStatusFormConfig(shipment = {}) {
         fields: [
             {
                 name: 'status',
-                label: 'Trạng thái tiếp theo',
+                label: translate('text.next_status'),
                 type: 'select',
                 options,
-                emptyLabel: options.length ? undefined : 'Không còn trạng thái hợp lệ',
+                emptyLabel: options.length ? undefined : translate('text.no_longer_valid_status'),
                 disabled: options.length === 0,
             },
             {
                 name: 'notes',
-                label: 'Ghi chú',
+                label: translate('text.note'),
                 type: 'textarea',
                 rows: 4,
                 className: 'md:col-span-2',
@@ -152,7 +153,7 @@ export function createShipmentStatusFormConfig(shipment = {}) {
 }
 
 export const shipmentFailureFormConfig = {
-    title: 'lỗi giao hàng',
+    title: translate('text.delivery_error'),
     schema: z.object({
         failure_reason: z.enum([
             'address_incorrect',
@@ -167,8 +168,8 @@ export const shipmentFailureFormConfig = {
         failure_notes: z
             .string()
             .trim()
-            .min(1, 'Ghi chú lỗi là bắt buộc')
-            .max(500, 'Ghi chú lỗi không vượt quá 500 ký tự'),
+            .min(1, translate('text.error_note_is_required'))
+            .max(500, translate('text.error_note_must_not_exceed_500_characters')),
     }),
     defaultValues: {
         failure_reason: 'carrier_error',
@@ -185,13 +186,13 @@ export const shipmentFailureFormConfig = {
     fields: [
         {
             name: 'failure_reason',
-            label: 'Lý do',
+            label: translate('text.reason'),
             type: 'select',
             options: failureReasonOptions,
         },
         {
             name: 'failure_notes',
-            label: 'Ghi chú lỗi',
+            label: translate('text.error_note'),
             type: 'textarea',
             rows: 5,
             className: 'md:col-span-2',
@@ -200,13 +201,13 @@ export const shipmentFailureFormConfig = {
 };
 
 export const shipmentCancelFormConfig = {
-    title: 'hủy vận đơn',
+    title: translate('text.cancel_bill_of_lading_3d442fc6'),
     schema: z.object({
         reason: z
             .string()
             .trim()
-            .min(5, 'Lý do hủy cần ít nhất 5 ký tự')
-            .max(500, 'Lý do hủy không vượt quá 500 ký tự'),
+            .min(5, translate('text.cancel_reason_needs_at_least_5_characters'))
+            .max(500, translate('text.cancellation_reason_cannot_exceed_500_characters')),
     }),
     defaultValues: {
         reason: '',
@@ -220,7 +221,7 @@ export const shipmentCancelFormConfig = {
     fields: [
         {
             name: 'reason',
-            label: 'Lý do hủy',
+            label: translate('text.cancellation_reason'),
             type: 'textarea',
             rows: 5,
             className: 'md:col-span-2',

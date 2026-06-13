@@ -4,22 +4,23 @@ const { authenticate } = require('../../middlewares/auth.middleware');
 const PaymentController = require('./payment.controller');
 
 const {
-    // params
+
     IdParamSchema,
     OrderIdParamSchema,
 
-    // body
+
     createPaymentBodySchema,
     cancelPaymentBodySchema,
     vnpayWebhookBodySchema,
+    payosWebhookBodySchema,
 
-    // query
+
     listPaymentsQuerySchema,
 } = require('./payment.validator');
 
 const router = express.Router();
 
-// ===== PUBLIC =====
+
 
 router.get(
     '/vnpay-return',
@@ -48,7 +49,19 @@ router.post(
     PaymentController.handlePayPalWebhook
 );
 
-// ===== ADMIN =====
+router.post(
+    '/webhook/payos',
+    validate({ body: payosWebhookBodySchema }),
+    PaymentController.handlePayOSWebhook
+);
+
+router.post(
+    '/payos/webhook',
+    validate({ body: payosWebhookBodySchema }),
+    PaymentController.handlePayOSWebhook
+);
+
+
 
 router.get(
     '/admin/stats',
@@ -78,7 +91,7 @@ router.delete(
     PaymentController.adminDeletePayment
 );
 
-// ===== CUSTOMER =====
+
 
 router.post(
     '/',
@@ -94,7 +107,7 @@ router.get(
     PaymentController.listPayments
 );
 
-// ===== PARAM ROUTES (specific first) =====
+
 
 router.post(
     '/:payment_id/retry',

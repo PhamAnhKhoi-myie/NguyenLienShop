@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { Filter, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -91,12 +92,8 @@ function ResourceFilters({ filters, values, onChange, onApply, onReset }) {
 
             <div className="flex items-end gap-2">
                 <Button type="button" onClick={onApply}>
-                    <Filter className="h-4 w-4" />
-                    Lọc
-                </Button>
-                <Button type="button" variant="outline" onClick={onReset}>
-                    Xóa lọc
-                </Button>
+                    <Filter className="h-4 w-4" /> {translate('text.filter')} </Button>
+                <Button type="button" variant="outline" onClick={onReset}> {translate('text.clear_filter')} </Button>
             </div>
         </div>
     );
@@ -173,7 +170,7 @@ export default function AdminResourcePage({ resource }) {
             return;
         }
 
-        const confirmed = window.confirm(resource.deleteConfirm || 'Xóa mục này?');
+        const confirmed = window.confirm(resource.deleteConfirm || translate('text.delete_this_item'));
 
         if (!confirmed) {
             return;
@@ -275,9 +272,7 @@ export default function AdminResourcePage({ resource }) {
                 <CardHeader>
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                            <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                                Admin
-                            </p>
+                            <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.admin')} </p>
                             <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]">
                                 {resource.title}
                             </h1>
@@ -291,18 +286,14 @@ export default function AdminResourcePage({ resource }) {
                         <div className="flex flex-wrap gap-2">
                             {resource.form && (
                                 <Button onClick={openCreateForm}>
-                                    <Plus className="h-4 w-4" />
-                                    Thêm mới
-                                </Button>
+                                    <Plus className="h-4 w-4" /> {translate('text.add_new')} </Button>
                             )}
                             <Button
                                 variant="outline"
                                 isLoading={listQuery.isFetching}
                                 onClick={() => listQuery.refetch()}
                             >
-                                <RefreshCw className="h-4 w-4" />
-                                Tải lại
-                            </Button>
+                                <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -316,16 +307,16 @@ export default function AdminResourcePage({ resource }) {
                     />
 
                     {listQuery.isLoading ? (
-                        <Loading label={`Đang tải ${resource.title.toLowerCase()}...`} />
+                        <Loading label={translate('text.loading_value', { value0: resource.title.toLowerCase() })} />
                     ) : listQuery.isError ? (
                         <EmptyState
                             icon={Search}
-                            title="Không tải được dữ liệu"
+                            title={translate('text.unable_to_load_data')}
                             description={listQuery.error.message}
                         />
                     ) : rows.length === 0 ? (
                         <EmptyState
-                            title={resource.emptyTitle || 'Chưa có dữ liệu'}
+                            title={resource.emptyTitle || translate('text.no_data_yet')}
                             description={resource.emptyDescription}
                         />
                     ) : (
@@ -344,9 +335,7 @@ export default function AdminResourcePage({ resource }) {
                                         {(resource.form ||
                                             resource.rowActions ||
                                             resource.getDeleteEndpoint) && (
-                                                <th className="whitespace-nowrap px-4 py-3 text-right">
-                                                    Tác vụ
-                                                </th>
+                                                <th className="whitespace-nowrap px-4 py-3 text-right"> {translate('text.task')} </th>
                                             )}
                                     </tr>
                                 </thead>
@@ -386,9 +375,7 @@ export default function AdminResourcePage({ resource }) {
                                                                             )
                                                                         }
                                                                     >
-                                                                        <Pencil className="h-4 w-4" />
-                                                                        Sửa
-                                                                    </Button>
+                                                                        <Pencil className="h-4 w-4" /> {translate('text.edit_0963749f')} </Button>
                                                                 )}
                                                                 {resource.rowActions?.map(
                                                                     (action) => (
@@ -424,9 +411,7 @@ export default function AdminResourcePage({ resource }) {
                                                                             )
                                                                         }
                                                                     >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                        Xóa
-                                                                    </Button>
+                                                                        <Trash2 className="h-4 w-4" /> {translate('text.delete')} </Button>
                                                                 )}
                                                             </div>
                                                         </td>
@@ -454,14 +439,14 @@ export default function AdminResourcePage({ resource }) {
                     open={formState.open}
                     title={
                         formState.mode === 'edit'
-                            ? `Sửa ${resource.form.title}`
-                            : `Thêm ${resource.form.title}`
+                            ? translate('text.edit_value', { value0: resource.form.title })
+                            : translate('text.add_value', { value0: resource.form.title })
                     }
                     onClose={closeForm}
                     panelClassName="max-w-5xl"
                 >
                     {formState.mode === 'edit' && detailQuery.isLoading ? (
-                        <Loading label="Đang tải dữ liệu..." />
+                        <Loading label={translate('text.loading_data')} />
                     ) : (
                         <AdminResourceForm
                             form={resource.form}

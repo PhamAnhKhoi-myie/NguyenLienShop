@@ -19,7 +19,7 @@ class ChatService {
         ]);
 
         if (!session) {
-            throw new AppError('Phiên trò chuyện không tồn tại', 404, 'CHAT_SESSION_NOT_FOUND');
+            throw new AppError("Chat session does not exist", 404, 'CHAT_SESSION_NOT_FOUND');
         }
 
         await ChatMessage.create({
@@ -28,26 +28,24 @@ class ChatService {
             content: messageText
         });
 
-        const lastProduct = session?.last_entities?.product || "Chưa có";
+        const lastProduct = session?.last_entities?.product || "Not yet available";
 
         const historyContext = history.reverse()
             .map(msg => `${msg.role.toUpperCase()}: ${msg.content}`)
             .join('\n');
 
-        const prompt = `
-            Bạn là AI trợ lý bán hàng của NguyenLienShop.
-            Lịch sử 5 tin nhắn gần nhất:
+        const prompt = `You are NguyenLienShop's AI sales assistant.
+            History of 5 most recent messages:
             ${historyContext}
 
-            Sản phẩm khách đang hỏi trước đó: "${lastProduct}"
+            Product the customer was previously asking about: "${lastProduct}"
 
-            Tin nhắn mới của khách: "${messageText}"
+            New guest message: "${messageText}"
 
-            Yêu cầu:
-            - Phân tích intent (GREETING, ASK_PRICE, SEARCH_PRODUCT, ORDER_STATUS, UNKNOWN).
-            - Nếu khách hỏi "đơn hàng của tôi", intent là "ORDER_STATUS".
-            - Trả về DUY NHẤT JSON: {"intent": "...", "product": "...", "confidence": ...}
-        `;
+            Requirements:
+            - Intent analysis (GREETING, ASK_PRICE, SEARCH_PRODUCT, ORDER_STATUS, UNKNOWN).
+            - If the customer asks "my order", the intent is "ORDER_STATUS".
+            - Returns ONLY JSON: {"intent": "...", "product": "...", "confidence": ...}`;
 
         try {
             const result = await Promise.race([
@@ -78,7 +76,7 @@ class ChatService {
             };
         } catch (error) {
             console.error('[AI_ERROR]', { userId, sessionId, error: error.message });
-            throw new AppError('AI không phản hồi, thử lại sau', 503, 'AI_SERVICE_ERROR');
+            throw new AppError("AI not responding, try again later", 503, 'AI_SERVICE_ERROR');
         }
     }
 

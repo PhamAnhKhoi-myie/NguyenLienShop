@@ -9,7 +9,7 @@ const errorHandler = (err, req, res, next) => {
         url: req.originalUrl,
     });
 
-    // Known application error
+
     if (err instanceof AppError) {
         return res.status(err.statusCode).json({
             success: false,
@@ -18,7 +18,7 @@ const errorHandler = (err, req, res, next) => {
         });
     }
 
-    // Unknown system error
+
     return res.status(500).json({
         success: false,
         code: "INTERNAL_SERVER_ERROR",

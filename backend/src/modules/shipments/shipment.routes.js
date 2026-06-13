@@ -24,7 +24,7 @@ const {
 
 const router = express.Router();
 
-// ===== PUBLIC =====
+
 
 router.get(
     '/track/:tracking_code',
@@ -38,7 +38,7 @@ router.post(
     ShipmentController.handleCarrierWebhook
 );
 
-// ===== ADMIN =====
+
 
 router.get(
     '/admin/stats',
@@ -75,7 +75,7 @@ router.delete(
     ShipmentController.deleteShipment
 );
 
-// ===== CUSTOMER =====
+
 
 router.get(
     '/order/:orderId',

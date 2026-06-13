@@ -17,7 +17,7 @@ const { authenticate } = require('../../../middlewares/auth.middleware');
 const { authorize } = require('../../../middlewares/authorize.middleware');
 const { requireInternal } = require('../../../middlewares/internal.middleware');
 
-// ===== PUBLIC =====
+
 
 router.get(
     '/',
@@ -25,7 +25,7 @@ router.get(
     variantController.getVariantsByProduct
 );
 
-// ===== ADMIN =====
+
 
 router.post(
     '/',
@@ -38,7 +38,7 @@ router.post(
     variantController.createVariant
 );
 
-// ===== VARIANT-LEVEL (NO productId dependency) =====
+
 
 router.get(
     '/:variantId/stock',
@@ -80,7 +80,7 @@ router.delete(
     variantController.deleteVariant
 );
 
-// ===== INTERNAL =====
+
 
 router.post(
     '/:variantId/reserve-stock',

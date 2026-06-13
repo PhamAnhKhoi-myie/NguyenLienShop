@@ -4,6 +4,10 @@ const { verifyAccessToken } = require('../../utils/verify.util');
 const AppError = require('../../utils/appError.util');
 
 class AuthService {
+    async requestRegistrationOtp(...args) {
+        return coreService.requestRegistrationOtp(...args);
+    }
+
     async register(...args) { return coreService.register(...args); }
 
     async login(...args) { return coreService.login(...args); }

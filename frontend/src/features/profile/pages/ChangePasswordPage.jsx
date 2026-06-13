@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { KeyRound, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -13,20 +14,20 @@ const changePasswordSchema = z
     .object({
         currentPassword: z
             .string()
-            .min(1, 'Vui lòng nhập mật khẩu hiện tại'),
+            .min(1, translate('text.please_enter_current_password')),
         newPassword: z
             .string()
-            .min(8, 'Mật khẩu mới cần ít nhất 8 ký tự'),
+            .min(8, translate('text.new_password_must_be_at_least_8_characters')),
         confirmPassword: z
             .string()
-            .min(1, 'Vui lòng xác nhận mật khẩu mới'),
+            .min(1, translate('text.please_confirm_new_password')),
     })
     .refine((values) => values.newPassword === values.confirmPassword, {
-        message: 'Mật khẩu xác nhận không khớp',
+        message: translate('text.confirmation_password_does_not_match'),
         path: ['confirmPassword'],
     })
     .refine((values) => values.currentPassword !== values.newPassword, {
-        message: 'Mật khẩu mới không được trùng mật khẩu hiện tại',
+        message: translate('text.new_password_must_not_be_the_same_as_current_password'),
         path: ['newPassword'],
     });
 
@@ -69,9 +70,7 @@ export default function ChangePasswordPage() {
                 <CardHeader>
                     <div className="flex items-center gap-2">
                         <KeyRound className="h-5 w-5 text-[var(--color-primary)]" />
-                        <h1 className="font-semibold text-[var(--color-text-main)]">
-                            Đổi mật khẩu
-                        </h1>
+                        <h1 className="font-semibold text-[var(--color-text-main)]"> {translate('text.change_password')} </h1>
                     </div>
                 </CardHeader>
 
@@ -81,7 +80,7 @@ export default function ChangePasswordPage() {
                         onSubmit={handleSubmit(onSubmit)}
                     >
                         <Input
-                            label="Mật khẩu hiện tại"
+                            label={translate('text.current_password')}
                             type="password"
                             autoComplete="current-password"
                             error={errors.currentPassword?.message}
@@ -89,7 +88,7 @@ export default function ChangePasswordPage() {
                         />
 
                         <Input
-                            label="Mật khẩu mới"
+                            label={translate('text.new_password')}
                             type="password"
                             autoComplete="new-password"
                             error={errors.newPassword?.message}
@@ -97,7 +96,7 @@ export default function ChangePasswordPage() {
                         />
 
                         <Input
-                            label="Xác nhận mật khẩu mới"
+                            label={translate('text.confirm_new_password')}
                             type="password"
                             autoComplete="new-password"
                             error={errors.confirmPassword?.message}
@@ -111,18 +110,14 @@ export default function ChangePasswordPage() {
                         )}
 
                         {changePasswordMutation.isSuccess && (
-                            <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-                                Đã đổi mật khẩu thành công.
-                            </p>
+                            <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700"> {translate('text.password_changed_successfully')} </p>
                         )}
 
                         <Button
                             type="submit"
                             isLoading={changePasswordMutation.isPending}
                         >
-                            <Save className="h-4 w-4" />
-                            Lưu mật khẩu mới
-                        </Button>
+                            <Save className="h-4 w-4" /> {translate('text.save_new_password')} </Button>
                     </form>
                 </CardBody>
             </Card>

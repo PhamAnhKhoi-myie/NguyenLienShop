@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
@@ -6,33 +7,37 @@ import { z } from 'zod';
 import Button from '../../../shared/components/Button';
 import Input from '../../../shared/components/Input';
 import { ROUTES } from '../../../shared/constants/routes';
+import {
+    isValidVietnamPhoneNumber,
+    normalizePhoneNumber,
+} from '../../../shared/utils/phone';
 import AuthPageCard from '../components/AuthPageCard';
 import { useResetPassword } from '../hooks/useResetPassword';
 
 const passwordSchema = z
     .string()
-    .min(6, 'Mật khẩu phải có ít nhất 6 ký tự')
-    .regex(/[a-z]/, 'Mật khẩu phải có ít nhất một chữ thường')
-    .regex(/[0-9]/, 'Mật khẩu phải có ít nhất một số');
+    .min(6, translate('text.password_must_be_at_least_6_characters'))
+    .regex(/[a-z]/, translate('text.password_must_have_at_least_one_lowercase_letter'))
+    .regex(/[0-9]/, translate('text.password_must_contain_at_least_one'));
 
 const resetPasswordSchema = z
     .object({
-        email: z
+        phone_number: z
             .string()
             .trim()
-            .min(1, 'Vui lòng nhập email')
-            .email('Email không hợp lệ'),
+            .min(1, translate('text.please_enter_phone_number'))
+            .refine(isValidVietnamPhoneNumber, translate('text.invalid_phone_number')),
         otp: z
             .string()
             .trim()
-            .length(6, 'OTP phải có 6 chữ số')
-            .regex(/^\d+$/, 'OTP chỉ được chứa số'),
+            .length(6, translate('text.otp_must_have_6_digits'))
+            .regex(/^\d+$/, translate('text.otp_must_only_contain_the_number')),
         newPassword: passwordSchema,
-        confirmPassword: z.string().min(1, 'Vui lòng nhập lại mật khẩu'),
+        confirmPassword: z.string().min(1, translate('text.please_re_enter_password')),
     })
     .refine((values) => values.newPassword === values.confirmPassword, {
         path: ['confirmPassword'],
-        message: 'Mật khẩu nhập lại không khớp',
+        message: translate('text.re_entered_password_does_not_match'),
     });
 
 export default function ResetPasswordPage() {
@@ -45,7 +50,7 @@ export default function ResetPasswordPage() {
     } = useForm({
         resolver: zodResolver(resetPasswordSchema),
         defaultValues: {
-            email: '',
+            phone_number: '',
             otp: '',
             newPassword: '',
             confirmPassword: '',
@@ -54,7 +59,7 @@ export default function ResetPasswordPage() {
 
     const onSubmit = (values) => {
         resetPasswordMutation.mutate({
-            email: values.email.trim(),
+            phone_number: normalizePhoneNumber(values.phone_number),
             otp: values.otp.trim(),
             newPassword: values.newPassword,
         });
@@ -62,54 +67,47 @@ export default function ResetPasswordPage() {
 
     return (
         <AuthPageCard
-            title="Đặt lại mật khẩu"
-            subtitle="Nhập email, mã OTP và mật khẩu mới."
+            title={translate('text.reset_password')}
+            subtitle={translate('text.enter_phone_number_otp_code_and_new_password')}
         >
             <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
                 <Input
-                    label="Email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="Nhập email"
-                    error={errors.email?.message}
-                    {...register('email')}
+                    label={translate('text.phone_number')}
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="0901234567"
+                    error={errors.phone_number?.message}
+                    {...register('phone_number')}
                 />
 
                 <Input
-                    label="OTP"
+                    label={translate('text.otp')}
                     inputMode="numeric"
                     autoComplete="one-time-code"
-                    placeholder="Nhập mã OTP"
+                    placeholder={translate('text.enter_otp_code')}
                     error={errors.otp?.message}
                     {...register('otp')}
                 />
 
                 <Input
-                    label="Mật khẩu mới"
+                    label={translate('text.new_password')}
                     type="password"
                     autoComplete="new-password"
-                    placeholder="Nhập mật khẩu mới"
-                    helperText="Tối thiểu 6 ký tự, có chữ thường và số."
+                    placeholder={translate('text.enter_new_password')}
+                    helperText={translate('text.minimum_6_characters_with_lowercase_letters_and_numbers')}
                     error={errors.newPassword?.message}
                     {...register('newPassword')}
                 />
 
                 <Input
-                    label="Nhập lại mật khẩu mới"
+                    label={translate('text.re_enter_new_password')}
                     type="password"
                     autoComplete="new-password"
-                    placeholder="Nhập lại mật khẩu mới"
-                    helperText="Tối thiểu 6 ký tự, có chữ thường và số."
+                    placeholder={translate('text.re_enter_new_password')}
                     error={errors.confirmPassword?.message}
                     {...register('confirmPassword')}
                 />
-
-                {resetPasswordMutation.isSuccess && (
-                    <p className="text-sm text-[var(--color-primary-hover)]">
-                        {resetPasswordMutation.data.message ||
-                            'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập lại.'}
-                    </p>
-                )}
 
                 {resetPasswordMutation.isError && (
                     <p className="text-sm text-[var(--color-error)]">
@@ -123,16 +121,14 @@ export default function ResetPasswordPage() {
                     isLoading={resetPasswordMutation.isPending}
                 >
                     {resetPasswordMutation.isPending
-                        ? 'Đang cập nhật...'
-                        : 'Cập nhật mật khẩu'}
+                        ? translate('text.updating_9f3d40e5')
+                        : translate('text.update_password')}
                 </Button>
 
                 <Link
                     to={ROUTES.LOGIN}
                     className="block text-center text-sm text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
-                >
-                    Quay lại đăng nhập
-                </Link>
+                > {translate('text.back_to_login')} </Link>
             </form>
         </AuthPageCard>
     );

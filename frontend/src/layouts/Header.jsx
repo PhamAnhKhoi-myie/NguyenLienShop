@@ -1,3 +1,4 @@
+import { translate } from '../shared/i18n/index';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useClickOutside } from '../shared/hooks/useClickOutside';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -18,6 +19,7 @@ import { useUnreadNotificationCount } from '../features/notifications/hooks/useN
 import { ROUTES } from '../shared/constants/routes';
 import { ADMIN_ENTRY_ROLES } from '../shared/constants/roles';
 import { useCartSummary } from '../features/cart/hooks/useCart';
+import LanguageSwitcher from '../shared/components/LanguageSwitcher';
 
 function getUserDisplayName(user) {
     return (
@@ -25,6 +27,7 @@ function getUserDisplayName(user) {
         user?.full_name ||
         user?.fullName ||
         user?.name ||
+        user?.profile?.phone_number ||
         user?.email ||
         null
     );
@@ -93,20 +96,20 @@ function getNavLinkClass({ isActive }) {
 
 const navItems = [
     {
-        label: 'Sản phẩm',
+        label: translate('text.product'),
         to: ROUTES.PRODUCTS,
     },
     {
-        label: 'Trang chủ',
+        label: translate('text.home'),
         to: ROUTES.HOME,
         end: true,
     },
     {
-        label: 'Blog',
+        label: translate('text.blog'),
         to: ROUTES.BLOGS,
     },
     {
-        label: 'Google Map',
+        label: translate('text.google_map'),
         to: ROUTES.STORE_LOCATION,
     },
 ];
@@ -213,8 +216,10 @@ function Header() {
     const isLoggedIn = Boolean(user);
     const canAccessAdmin = hasAdminAccess(user);
     const displayName = getUserDisplayName(user);
-    const accountLabel = isLoggedIn ? displayName || 'Tài khoản' : 'Khách';
-    const initials = getInitials(displayName || user?.email);
+    const accountLabel = isLoggedIn ? displayName || translate('text.account') : translate('text.guest');
+    const initials = getInitials(
+        displayName || user?.profile?.phone_number || user?.email
+    );
     const unreadCount = unreadCountQuery.data?.data?.unread_count || 0;
 
     const cartSummaryQuery = useCartSummary();
@@ -261,7 +266,7 @@ function Header() {
                     <Link to={ROUTES.HOME} className="flex items-center">
                         <img
                             src={logo}
-                            alt="NguyenLien Shop"
+                            alt={translate('text.nguyenlien_shop')}
                             className="h-8 w-auto object-contain sm:h-9"
                         />
                     </Link>
@@ -273,7 +278,7 @@ function Header() {
                         <button
                             type="submit"
                             className="text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
-                            aria-label="Tìm kiếm sản phẩm"
+                            aria-label={translate('text.search_for_product')}
                         >
                             <Search size={18} />
                         </button>
@@ -282,7 +287,7 @@ function Header() {
                             key={searchInputKey}
                             name="search"
                             type="search"
-                            placeholder="Tìm túi bao trái cây..."
+                            placeholder={translate('text.find_fruit_bags')}
                             defaultValue={searchValueFromUrl}
                             className="w-full bg-transparent px-2 py-2 text-sm outline-none"
                         />
@@ -291,7 +296,7 @@ function Header() {
                     <Link
                         to={ROUTES.CART}
                         className="relative rounded-lg border border-[var(--color-border)] p-2 hover:bg-[var(--color-background)]"
-                        aria-label="Giỏ hàng"
+                        aria-label={translate('text.cart')}
                     >
                         <ShoppingCart size={20} />
 
@@ -304,7 +309,7 @@ function Header() {
                         <Link
                             to={ROUTES.NOTIFICATIONS}
                             className="relative rounded-lg border border-[var(--color-border)] p-2 hover:bg-[var(--color-background)]"
-                            aria-label="Thông báo"
+                            aria-label={translate('text.notice')}
                         >
                             <Bell size={20} />
                             {unreadCount > 0 && (
@@ -314,6 +319,8 @@ function Header() {
                             )}
                         </Link>
                     )}
+
+                    <LanguageSwitcher />
 
                     <div ref={accountMenuRef} className="relative">
                         <button
@@ -339,14 +346,13 @@ function Header() {
 
                                                 <div className="min-w-0">
                                                     <p className="truncate text-sm font-semibold text-[var(--color-text-main)]">
-                                                        {displayName || 'Tài khoản'}
+                                                        {displayName || translate('text.account')}
                                                     </p>
 
-                                                    {user?.email ? (
-                                                        <p className="truncate text-xs text-[var(--color-text-muted)]">
-                                                            {user.email}
-                                                        </p>
-                                                    ) : null}
+                                                    <p className="truncate text-xs text-[var(--color-text-muted)]">
+                                                        {user?.profile?.phone_number ||
+                                                            user?.email}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -356,25 +362,19 @@ function Header() {
                                                 to={ROUTES.PROFILE}
                                                 onClick={closeAccountMenu}
                                                 className="block px-4 py-2 text-sm text-[var(--color-text-main)] hover:bg-[var(--color-background)]"
-                                            >
-                                                Thông tin tài khoản
-                                            </Link>
+                                            > {translate('text.account_information')} </Link>
 
                                             <Link
                                                 to={ROUTES.ORDERS}
                                                 onClick={closeAccountMenu}
                                                 className="block px-4 py-2 text-sm text-[var(--color-text-main)] hover:bg-[var(--color-background)]"
-                                            >
-                                                Đơn hàng của tôi
-                                            </Link>
+                                            > {translate('text.my_order')} </Link>
 
                                             <Link
                                                 to={ROUTES.ADDRESSES}
                                                 onClick={closeAccountMenu}
                                                 className="block px-4 py-2 text-sm text-[var(--color-text-main)] hover:bg-[var(--color-background)]"
-                                            >
-                                                Địa chỉ giao hàng
-                                            </Link>
+                                            > {translate('text.delivery_address')} </Link>
 
                                             <button
                                                 type="button"
@@ -384,8 +384,8 @@ function Header() {
                                             >
                                                 <LogOut size={15} />
                                                 {logoutMutation.isPending
-                                                    ? 'Đang đăng xuất...'
-                                                    : 'Đăng xuất'}
+                                                    ? translate('text.signing_out')
+                                                    : translate('text.sign_out')}
                                             </button>
                                         </div>
                                     </>
@@ -395,17 +395,13 @@ function Header() {
                                             to={ROUTES.LOGIN}
                                             onClick={closeAccountMenu}
                                             className="block px-4 py-2 text-sm text-[var(--color-text-main)] hover:bg-[var(--color-background)]"
-                                        >
-                                            Đăng nhập
-                                        </Link>
+                                        > {translate('text.login')} </Link>
 
                                         <Link
                                             to={ROUTES.REGISTER}
                                             onClick={closeAccountMenu}
                                             className="block px-4 py-2 text-sm text-[var(--color-text-main)] hover:bg-[var(--color-background)]"
-                                        >
-                                            Đăng ký
-                                        </Link>
+                                        > {translate('text.subscribe_to')} </Link>
                                     </div>
                                 )}
                             </div>
@@ -424,7 +420,7 @@ function Header() {
                             }
                         >
                             <LayoutDashboard className="h-4 w-4" />
-                            <span>Quản trị</span>
+                            <span>{translate('text.administration')}</span>
                         </NavLink>
                     )}
                 </div>

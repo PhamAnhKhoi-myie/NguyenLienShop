@@ -1,3 +1,4 @@
+import { getLocale, translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
     ArrowLeft,
@@ -28,13 +29,13 @@ import {
 import { cancelOrderSchema, reviewSchema } from '../schemas/orderFormSchemas';
 
 const statusLabels = {
-    PENDING: 'Chờ xử lý',
-    PAID: 'Đã thanh toán',
-    PROCESSING: 'Đang chuẩn bị',
-    SHIPPED: 'Đang giao',
-    DELIVERED: 'Đã giao',
-    CANCELED: 'Đã hủy',
-    FAILED: 'Thất bại',
+    PENDING: translate('text.pending'),
+    PAID: translate('text.paid'),
+    PROCESSING: translate('text.preparing'),
+    SHIPPED: translate('text.delivering'),
+    DELIVERED: translate('text.delivered'),
+    CANCELED: translate('text.canceled'),
+    FAILED: translate('text.failure'),
 };
 
 function getStatusVariant(status) {
@@ -69,7 +70,7 @@ function formatDateTime(value) {
         return '';
     }
 
-    return new Date(value).toLocaleString('vi-VN');
+    return new Date(value).toLocaleString(getLocale());
 }
 
 function InfoRow({ label, value }) {
@@ -178,15 +179,15 @@ export default function OrderDetailPage() {
     });
 
     if (orderQuery.isLoading) {
-        return <Loading label="Đang tải chi tiết đơn hàng..." />;
+        return <Loading label={translate('text.loading_order_details')} />;
     }
 
     if (orderQuery.isError || !order) {
         return (
             <EmptyState
-                title="Không tải được đơn hàng"
-                description={orderQuery.error?.message || 'Đơn hàng không tồn tại.'}
-                actionLabel="Quay lại danh sách"
+                title={translate('text.unable_to_load_order')}
+                description={orderQuery.error?.message || translate('text.order_does_not_exist')}
+                actionLabel={translate('text.return_to_list')}
                 onAction={() => {
                     window.location.href = ROUTES.ORDERS;
                 }}
@@ -202,9 +203,7 @@ export default function OrderDetailPage() {
                 to={ROUTES.ORDERS}
                 className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
             >
-                <ArrowLeft className="h-4 w-4" />
-                Quay lại đơn hàng
-            </Link>
+                <ArrowLeft className="h-4 w-4" /> {translate('text.return_to_order')} </Link>
 
             <Card>
                 <CardBody>
@@ -227,8 +226,7 @@ export default function OrderDetailPage() {
                                     </Badge>
                                 )}
                             </div>
-                            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                                Tạo lúc {formatDateTime(order.created_at)}
+                            <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.created_at')} {formatDateTime(order.created_at)}
                             </p>
                         </div>
 
@@ -237,9 +235,7 @@ export default function OrderDetailPage() {
                                 variant="danger"
                                 onClick={openCancelModal}
                             >
-                                <XCircle className="h-4 w-4" />
-                                Hủy đơn
-                            </Button>
+                                <XCircle className="h-4 w-4" /> {translate('text.cancel_order')} </Button>
                         )}
                     </div>
                 </CardBody>
@@ -249,9 +245,7 @@ export default function OrderDetailPage() {
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <h2 className="font-semibold text-[var(--color-text-main)]">
-                                Sản phẩm
-                            </h2>
+                            <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.product')} </h2>
                         </CardHeader>
                         <CardBody className="space-y-4">
                             {(order.items || []).map((item) => {
@@ -267,10 +261,10 @@ export default function OrderDetailPage() {
                                                 {item.product_name}
                                             </p>
                                             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                                {item.variant_label} · {item.unit_label} · SKU {item.sku}
+                                                {item.variant_label} · {item.unit_label} {translate('text.sku_faa83bbe')} {item.sku}
                                             </p>
                                             <p className="mt-1 text-sm text-[var(--color-text-main)]">
-                                                {item.quantity_ordered} gói x {formatCurrency(item.unit_price || 0)}
+                                                {item.quantity_ordered} {translate('text.package_x')} {formatCurrency(item.unit_price || 0)}
                                             </p>
                                         </div>
                                         <div className="flex flex-col gap-2 md:items-end">
@@ -278,9 +272,7 @@ export default function OrderDetailPage() {
                                                 {formatCurrency(item.line_total || 0)}
                                             </p>
                                             {item.review_status === 'reviewed' ? (
-                                                <Badge variant="success">
-                                                    Đã đánh giá
-                                                </Badge>
+                                                <Badge variant="success"> {translate('text.reviewed')} </Badge>
                                             ) : canReview ? (
                                                 <Button
                                                     size="sm"
@@ -289,9 +281,7 @@ export default function OrderDetailPage() {
                                                         openReviewModal(item)
                                                     }
                                                 >
-                                                    <Star className="h-4 w-4" />
-                                                    Đánh giá
-                                                </Button>
+                                                    <Star className="h-4 w-4" /> {translate('text.review')} </Button>
                                             ) : null}
                                         </div>
                                     </div>
@@ -304,9 +294,7 @@ export default function OrderDetailPage() {
                         <CardHeader>
                             <div className="flex items-center gap-2">
                                 <Truck className="h-4 w-4 text-[var(--color-primary)]" />
-                                <h2 className="font-semibold text-[var(--color-text-main)]">
-                                    Lịch sử trạng thái
-                                </h2>
+                                <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.status_history')} </h2>
                             </div>
                         </CardHeader>
                         <CardBody>
@@ -344,29 +332,27 @@ export default function OrderDetailPage() {
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <h2 className="font-semibold text-[var(--color-text-main)]">
-                                Tổng tiền
-                            </h2>
+                            <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.total_amount')} </h2>
                         </CardHeader>
                         <CardBody>
                             <InfoRow
-                                label="Tạm tính"
+                                label={translate('text.temporary')}
                                 value={formatCurrency(order.pricing?.subtotal || 0)}
                             />
                             <InfoRow
-                                label="Giảm giá"
+                                label={translate('text.discount')}
                                 value={formatCurrency(
                                     order.pricing?.discount_amount || 0
                                 )}
                             />
                             <InfoRow
-                                label="Phí vận chuyển"
+                                label={translate('text.shipping_fee')}
                                 value={formatCurrency(
                                     order.pricing?.shipping_fee || 0
                                 )}
                             />
                             <InfoRow
-                                label="Tổng đơn"
+                                label={translate('text.order_total')}
                                 value={formatCurrency(
                                     order.pricing?.total_amount || 0
                                 )}
@@ -376,24 +362,22 @@ export default function OrderDetailPage() {
 
                     <Card>
                         <CardHeader>
-                            <h2 className="font-semibold text-[var(--color-text-main)]">
-                                Giao hàng
-                            </h2>
+                            <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.delivery')} </h2>
                         </CardHeader>
                         <CardBody>
                             <InfoRow
-                                label="Người nhận"
+                                label={translate('text.recipient')}
                                 value={
                                     order.address_snapshot?.receiver_name ||
                                     order.address_snapshot?.recipient_name
                                 }
                             />
                             <InfoRow
-                                label="Điện thoại"
+                                label={translate('text.phone')}
                                 value={order.address_snapshot?.phone}
                             />
                             <InfoRow
-                                label="Địa chỉ"
+                                label={translate('text.address')}
                                 value={
                                     order.address_snapshot?.full_address ||
                                     [
@@ -415,30 +399,25 @@ export default function OrderDetailPage() {
 
             <Modal
                 open={isCancelOpen}
-                title="Hủy đơn hàng"
+                title={translate('text.cancel_order_c90e1488')}
                 onClose={closeCancelModal}
                 footer={
                     <>
                         <Button
                             variant="outline"
                             onClick={closeCancelModal}
-                        >
-                            Đóng
-                        </Button>
+                        > {translate('text.close')} </Button>
                         <Button
                             variant="danger"
                             disabled={!cancelReason.trim()}
                             isLoading={cancelOrderMutation.isPending}
                             onClick={handleCancelOrder}
-                        >
-                            Hủy đơn
-                        </Button>
+                        > {translate('text.cancel_order')} </Button>
                     </>
                 }
             >
                 <div className="space-y-3">
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Nhập lý do hủy đơn {order.order_code}.
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.enter_reason_for_cancellation')} {order.order_code}.
                     </p>
                     <Textarea
                         rows={4}
@@ -455,20 +434,16 @@ export default function OrderDetailPage() {
 
             <Modal
                 open={Boolean(reviewItem)}
-                title="Đánh giá sản phẩm"
+                title={translate('text.product_review')}
                 onClose={closeReviewModal}
                 footer={
                     <>
-                        <Button variant="outline" onClick={closeReviewModal}>
-                            Đóng
-                        </Button>
+                        <Button variant="outline" onClick={closeReviewModal}> {translate('text.close')} </Button>
                         <Button
                             disabled={reviewComment.trim().length < 10}
                             isLoading={writeReviewMutation.isPending}
                             onClick={handleSubmitReview}
-                        >
-                            Gửi đánh giá
-                        </Button>
+                        > {translate('text.send_review')} </Button>
                     </>
                 }
             >
@@ -477,26 +452,26 @@ export default function OrderDetailPage() {
                         {reviewItem?.product_name}
                     </p>
                     <Select
-                        label="Số sao"
+                        label={translate('text.stars')}
                         error={reviewErrors.rating?.message}
                         {...registerReview('rating')}
                     >
-                        <option value="5">5 sao</option>
-                        <option value="4">4 sao</option>
-                        <option value="3">3 sao</option>
-                        <option value="2">2 sao</option>
-                        <option value="1">1 sao</option>
+                        <option value="5">{translate('text.5_sao')}</option>
+                        <option value="4">{translate('text.4_sao')}</option>
+                        <option value="3">{translate('text.3_sao')}</option>
+                        <option value="2">{translate('text.2_sao')}</option>
+                        <option value="1">{translate('text.1_sao')}</option>
                     </Select>
                     <Input
-                        label="Tiêu đề"
-                        placeholder="Tóm tắt trải nghiệm của bạn"
+                        label={translate('text.title')}
+                        placeholder={translate('text.summary_of_your_experience')}
                         error={reviewErrors.title?.message}
                         {...registerReview('title')}
                     />
                     <Textarea
-                        label="Nội dung"
+                        label={translate('text.content')}
                         rows={5}
-                        placeholder="Chia sẻ cảm nhận sau khi sử dụng sản phẩm..."
+                        placeholder={translate('text.share_your_feelings_after_using_the_product')}
                         error={reviewErrors.comment?.message}
                         {...registerReview('comment')}
                     />

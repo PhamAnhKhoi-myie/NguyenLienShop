@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { Minus, PackageOpen, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import Button from '../../../shared/components/Button';
@@ -46,24 +47,19 @@ export default function CartLineItem({
                     <span>{item.variant_label}</span>
                     <span>{item.display_name}</span>
                     <span>
-                        {packSize ? `${packSize} cái/gói` : 'Quy cách đang cập nhật'}
+                        {packSize ? translate('text.value_piece_pack', { value0: packSize }) : translate('text.specifications_are_being_updated')}
                     </span>
-                    <span>
-                        Tổng túi: {totalItems || 0} cái
-                    </span>
+                    <span> {translate('text.total_bag')} {totalItems || 0} {translate('text.the')} </span>
                 </div>
             </div>
 
             <div className="flex flex-col items-start gap-3 md:items-end">
                 <div className="text-left md:text-right">
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Giá/gói
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.price_package')} </p>
                     <p className="font-semibold text-[var(--color-primary-hover)]">
                         {formatCurrency(item.price_at_added || 0)}
                     </p>
-                    <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                        Thành tiền: {formatCurrency(item.line_total || 0)}
+                    <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.amount_42d6fffe')} {formatCurrency(item.line_total || 0)}
                     </p>
                 </div>
 
@@ -74,7 +70,7 @@ export default function CartLineItem({
                         disabled={!canDecrease}
                         isLoading={isUpdating}
                         onClick={() => onQuantityChange(item.id, quantity - 1)}
-                        aria-label="Giảm số lượng"
+                        aria-label={translate('text.reduce_quantity')}
                     >
                         <Minus className="h-4 w-4" />
                     </Button>
@@ -87,7 +83,7 @@ export default function CartLineItem({
                         disabled={!canIncrease}
                         isLoading={isUpdating}
                         onClick={() => onQuantityChange(item.id, quantity + 1)}
-                        aria-label="Tăng số lượng"
+                        aria-label={translate('text.increase_quantity')}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
@@ -97,7 +93,7 @@ export default function CartLineItem({
                         disabled={isRemoving || isUpdating}
                         isLoading={isRemoving}
                         onClick={() => onRemove(item.id)}
-                        aria-label="Xóa sản phẩm"
+                        aria-label={translate('text.delete_product')}
                     >
                         <Trash2 className="h-4 w-4" />
                     </Button>

@@ -350,7 +350,7 @@ class ShipmentMapper {
         };
     }
 
-    // =========== TIMELINE HELPERS ===========
+
 
     static transformTimelineDetail(timeline) {
         if (!timeline) {
@@ -361,14 +361,12 @@ class ShipmentMapper {
             created_at: {
                 timestamp: timeline.created_at,
                 label: 'Order Confirmed',
-                label_vi: 'Đơn hàng được xác nhận',
                 completed: true,
             },
             picked_up_at: timeline.picked_up_at
                 ? {
                     timestamp: timeline.picked_up_at,
                     label: 'Package Picked Up',
-                    label_vi: 'Đã lấy hàng',
                     completed: true,
                 }
                 : null,
@@ -376,7 +374,6 @@ class ShipmentMapper {
                 ? {
                     timestamp: timeline.in_transit_at,
                     label: 'In Transit',
-                    label_vi: 'Đang vận chuyển',
                     completed: true,
                 }
                 : null,
@@ -384,7 +381,6 @@ class ShipmentMapper {
                 ? {
                     timestamp: timeline.at_destination_at,
                     label: 'At Delivery Hub',
-                    label_vi: 'Đã tới kho giao hàng',
                     completed: true,
                 }
                 : null,
@@ -392,7 +388,6 @@ class ShipmentMapper {
                 ? {
                     timestamp: timeline.delivered_at,
                     label: 'Delivered',
-                    label_vi: 'Đã giao',
                     completed: true,
                 }
                 : null,
@@ -400,7 +395,6 @@ class ShipmentMapper {
                 ? {
                     timestamp: timeline.failed_at,
                     label: 'Delivery Failed',
-                    label_vi: 'Giao hàng thất bại',
                     completed: true,
                 }
                 : null,
@@ -408,7 +402,6 @@ class ShipmentMapper {
                 ? {
                     timestamp: timeline.cancelled_at,
                     label: 'Cancelled',
-                    label_vi: 'Đã hủy',
                     completed: true,
                 }
                 : null,
@@ -416,7 +409,6 @@ class ShipmentMapper {
                 ? {
                     timestamp: timeline.returned_at,
                     label: 'Returned',
-                    label_vi: 'Đã trả lại',
                     completed: true,
                 }
                 : null,
@@ -471,7 +463,7 @@ class ShipmentMapper {
             }));
     }
 
-    // =========== STATUS HELPERS ===========
+
 
     static getStatusLabel(status) {
         const labels = {
@@ -488,21 +480,6 @@ class ShipmentMapper {
         return labels[status] || status;
     }
 
-    static getStatusLabelVi(status) {
-        const labels = {
-            pending: 'Đang chờ',
-            picked_up: 'Đã lấy hàng',
-            in_transit: 'Đang vận chuyển',
-            at_destination: 'Đã tới kho giao',
-            delivered: 'Đã giao',
-            failed: 'Giao thất bại',
-            cancelled: 'Đã hủy',
-            returned: 'Đã trả lại',
-        };
-
-        return labels[status] || status;
-    }
-
     static getFailureReasonLabel(reason) {
         const labels = {
             address_incorrect: 'Address Incorrect/Invalid',
@@ -513,21 +490,6 @@ class ShipmentMapper {
             weather_delay: 'Weather Delay',
             carrier_error: 'Carrier Error',
             other: 'Other Reason',
-        };
-
-        return labels[reason] || reason;
-    }
-
-    static getFailureReasonLabelVi(reason) {
-        const labels = {
-            address_incorrect: 'Địa chỉ sai/không tồn tại',
-            recipient_unavailable: 'Người nhận không có mặt',
-            refused_delivery: 'Khách hàng từ chối',
-            damaged_package: 'Hàng hóa bị hư hỏng',
-            lost: 'Gói hàng bị mất',
-            weather_delay: 'Trì hoãn do thời tiết',
-            carrier_error: 'Lỗi của đơn vị vận chuyển',
-            other: 'Lý do khác',
         };
 
         return labels[reason] || reason;
@@ -565,12 +527,12 @@ class ShipmentMapper {
         return messages[status] || 'Your package is on the way.';
     }
 
-    // =========== CARRIER HELPERS ===========
+
 
     static getCarrierLabel(carrier) {
         const labels = {
-            GHN: 'Giao Hàng Nhanh',
-            GHTK: 'Giao Hàng Tiết Kiệm',
+            GHN: "Fast Delivery",
+            GHTK: "Economy Delivery",
             JT: 'J&T Express',
             GRAB: 'Grab Express',
             BEST: 'BEST Express',
@@ -601,7 +563,7 @@ class ShipmentMapper {
             GHN: 3,
             GHTK: 3,
             JT: 3,
-            GRAB: 1, // Same-day or next-day
+            GRAB: 1,
             BEST: 5,
             OTHER: 7,
         };
@@ -609,7 +571,7 @@ class ShipmentMapper {
         return days[carrier] || 5;
     }
 
-    // =========== ADDRESS HELPERS ===========
+
 
     static formatDestination(district, province) {
         const parts = [district, province].filter(Boolean);
@@ -632,14 +594,14 @@ class ShipmentMapper {
         return parts.join(', ');
     }
 
-    // =========== DATE HELPERS ===========
+
 
     static formatDate(date) {
         if (!date) {
             return null;
         }
 
-        return new Date(date).toLocaleDateString('vi-VN', {
+        return new Date(date).toLocaleDateString('en-US', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -662,9 +624,9 @@ class ShipmentMapper {
         }
 
         const date = new Date(createdDate);
-        date.setDate(date.getDate() + 3); // 3 days from now
+        date.setDate(date.getDate() + 3);
 
-        return date.toLocaleDateString('vi-VN');
+        return date.toLocaleDateString('en-US');
     }
 
     static estimateDeliveryDateText(createdDate, carrier = null) {
@@ -679,13 +641,13 @@ class ShipmentMapper {
         const date = new Date(createdDate);
         date.setDate(date.getDate() + days);
 
-        return `Around ${date.toLocaleDateString('vi-VN', {
+        return `Around ${date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
         })}`;
     }
 
-    // =========== RETRY HELPERS ===========
+
 
     static canBeRetried(shipment) {
         return (
@@ -705,7 +667,7 @@ class ShipmentMapper {
 
     static getNextRetryTime(lastRetryAt) {
         if (!lastRetryAt) {
-            return new Date(); // Can retry immediately
+            return new Date();
         }
 
         const nextRetryTime = new Date(lastRetryAt);
@@ -732,7 +694,7 @@ class ShipmentMapper {
         return `Available in ${diffHours} hours`;
     }
 
-    // =========== VALIDATION HELPERS ===========
+
 
     static validateDTO(shipment) {
         const errors = [];

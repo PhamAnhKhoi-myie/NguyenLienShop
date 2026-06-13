@@ -24,7 +24,7 @@ const chatMessageLimiter = rateLimit({
     },
 });
 
-// Tất cả APIs chat yêu cầu login
+
 router.use(authenticate);
 
 router.post(

@@ -1,3 +1,4 @@
+import { getLocale, translate } from '../../../shared/i18n/index';
 import { Check, Copy, Loader2, ShoppingBag, TicketPercent } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -30,7 +31,7 @@ function formatDate(value) {
         return '';
     }
 
-    return new Intl.DateTimeFormat('vi-VN', {
+    return new Intl.DateTimeFormat(getLocale(), {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -78,7 +79,7 @@ export default function HomeDiscountsSection() {
 
         if (!discountId) {
             setClaimMessageType('error');
-            setClaimMessage('Không thể nhận mã này vì thiếu thông tin voucher.');
+            setClaimMessage(translate('text.cannot_receive_this_code_because_voucher_information_is_missing'));
             return;
         }
 
@@ -92,13 +93,13 @@ export default function HomeDiscountsSection() {
 
             try {
                 await navigator.clipboard?.writeText(code);
-                setClaimMessage(`Đã nhận mã ${code}. Mã đã được copy để dùng ở checkout.`);
+                setClaimMessage(translate('text.received_code_value_the_code_has_been_copied_for_use_at_checkout', { value0: code }));
             } catch {
-                setClaimMessage(`Đã nhận mã ${code}. Mã đã được lưu để dùng ở checkout.`);
+                setClaimMessage(translate('text.received_code_value_the_code_has_been_saved_for_use_at_checkout', { value0: code }));
             }
         } catch (error) {
             setClaimMessageType('error');
-            setClaimMessage(error.message || 'Không nhận được voucher này.');
+            setClaimMessage(error.message || translate('text.did_not_receive_this_voucher'));
         }
     };
 
@@ -110,24 +111,16 @@ export default function HomeDiscountsSection() {
         <section className="border-y border-[var(--color-border)] py-10">
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-sm font-semibold text-[var(--color-primary-hover)]">
-                        Mã giảm giá
-                    </p>
-                    <h2 className="mt-1 text-2xl font-bold text-[var(--color-text-main)]">
-                        Ưu đãi đang mở cho khách hàng
-                    </h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
-                        Nhận mã trước khi mua để tiết kiệm hơn cho đơn hàng phù hợp.
-                    </p>
+                    <p className="text-sm font-semibold text-[var(--color-primary-hover)]"> {translate('text.discount_code')} </p>
+                    <h2 className="mt-1 text-2xl font-bold text-[var(--color-text-main)]"> {translate('text.offer_is_open_for_customers')} </h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]"> {translate('text.get_code_before_buying_to_save_more_on_the_right_order')} </p>
                 </div>
 
                 <Link
                     to={ROUTES.PRODUCTS}
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm font-semibold text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)]"
                 >
-                    <ShoppingBag className="h-4 w-4" />
-                    Mua hàng
-                </Link>
+                    <ShoppingBag className="h-4 w-4" /> {translate('text.purchase')} </Link>
             </div>
 
             {discountsQuery.isLoading ? (
@@ -166,27 +159,24 @@ export default function HomeDiscountsSection() {
                                     </span>
                                 </div>
 
-                                <h3 className="mt-5 text-xl font-bold text-[var(--color-text-main)]">
-                                    Giảm {formatDiscountValue(discount)}
+                                <h3 className="mt-5 text-xl font-bold text-[var(--color-text-main)]"> {translate('text.reduce')} {formatDiscountValue(discount)}
                                 </h3>
 
                                 <div className="mt-3 space-y-1 text-sm text-[var(--color-text-muted)]">
-                                    <p>
-                                        Đơn tối thiểu{' '}
+                                    <p> {translate('text.minimum_order')}{' '}
                                         <span className="font-medium text-[var(--color-text-main)]">
                                             {formatCurrency(discount.min_order_value || 0)}
                                         </span>
                                     </p>
                                     {discount.max_discount_amount ? (
-                                        <p>
-                                            Tối đa{' '}
+                                        <p> {translate('text.maximum')}{' '}
                                             <span className="font-medium text-[var(--color-text-main)]">
                                                 {formatCurrency(discount.max_discount_amount)}
                                             </span>
                                         </p>
                                     ) : null}
                                     {discount.expiry_date ? (
-                                        <p>Hạn dùng đến {formatDate(discount.expiry_date)}</p>
+                                        <p>{translate('text.expires_until')} {formatDate(discount.expiry_date)}</p>
                                     ) : null}
                                 </div>
 
@@ -204,10 +194,10 @@ export default function HomeDiscountsSection() {
                                         <Copy className="h-4 w-4" />
                                     )}
                                     {isClaiming
-                                        ? 'Đang nhận'
+                                        ? translate('text.receiving')
                                         : isClaimed
-                                          ? 'Đã nhận mã'
-                                          : 'Nhận mã'}
+                                          ? translate('text.received_code')
+                                          : translate('text.get_code')}
                                 </button>
                             </article>
                         );

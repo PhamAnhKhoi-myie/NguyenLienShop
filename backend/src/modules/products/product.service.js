@@ -111,17 +111,17 @@ class ProductService {
         const skip = (page - 1) * limit;
         const query = {};
 
-        // Filter by category
+
         if (filters.category_id) {
             query.category_id = filters.category_id;
         }
 
-        // Filter by status
+
         if (filters.status) {
             query.status = filters.status;
         }
 
-        // Filter by price range
+
         if (filters.min_price || filters.max_price) {
             const priceConditions = [];
 
@@ -169,7 +169,7 @@ class ProductService {
             sortBy = { max_price: -1 };
         }
 
-        // Execute query
+
         const total = await Product.countDocuments(query);
         const products = await Product.find(query)
             .skip(skip)
@@ -267,7 +267,7 @@ class ProductService {
                 );
             }
 
-            // ✅ Soft-delete product + variants (cascade)
+
             variantCount = await Variant.countDocuments({
                 product_id: productId,
             }).session(session);
@@ -311,7 +311,7 @@ class ProductService {
             await Product.updatePriceCache(productId);
         } catch (error) {
             console.error(`Failed to update price cache for product ${productId}:`, error);
-            // Don't throw - cache update is non-critical
+
         }
     }
 

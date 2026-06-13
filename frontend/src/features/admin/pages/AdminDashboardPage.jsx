@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import {
     Bell,
     Boxes,
@@ -22,41 +23,41 @@ import { useAuthStore } from '../../auth/store/auth.store';
 
 const dashboardSections = [
     {
-        title: 'Products',
-        description: 'Sản phẩm, danh mục, variants và variant units.',
+        title: translate('text.products'),
+        description: translate('text.products_categories_variants_and_variant_units'),
         links: [
-            { label: 'Products', to: ROUTES.ADMIN_PRODUCTS, icon: Package },
-            { label: 'Categories', to: ROUTES.ADMIN_CATEGORIES, icon: Boxes },
-            { label: 'Variants', to: ROUTES.ADMIN_VARIANTS, icon: Layers3 },
+            { label: translate('text.products'), to: ROUTES.ADMIN_PRODUCTS, icon: Package },
+            { label: translate('text.categories'), to: ROUTES.ADMIN_CATEGORIES, icon: Boxes },
+            { label: translate('text.variants'), to: ROUTES.ADMIN_VARIANTS, icon: Layers3 },
         ],
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        title: 'Content',
-        description: 'Banner và thông tin shop.',
+        title: translate('text.content'),
+        description: translate('text.banner_and_shop_information'),
         links: [
-            { label: 'Banners', to: ROUTES.ADMIN_BANNERS, icon: Bell },
-            { label: 'Shop info', to: ROUTES.ADMIN_SHOP_INFO, icon: Settings },
+            { label: translate('text.banners'), to: ROUTES.ADMIN_BANNERS, icon: Bell },
+            { label: translate('text.shop_info'), to: ROUTES.ADMIN_SHOP_INFO, icon: Settings },
         ],
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        title: 'Operations',
-        description: 'Đơn hàng, vận chuyển, thanh toán và mã giảm giá.',
+        title: translate('text.operations'),
+        description: translate('text.orders_shipping_payments_and_discount_codes'),
         links: [
-            { label: 'Orders', to: ROUTES.ADMIN_ORDERS, icon: ShoppingBag },
-            { label: 'Shipments', to: ROUTES.ADMIN_SHIPMENTS, icon: Truck },
-            { label: 'Payments', to: ROUTES.ADMIN_PAYMENTS, icon: CreditCard },
-            { label: 'Discounts', to: ROUTES.ADMIN_DISCOUNTS, icon: Percent },
+            { label: translate('text.orders'), to: ROUTES.ADMIN_ORDERS, icon: ShoppingBag },
+            { label: translate('text.shipments'), to: ROUTES.ADMIN_SHIPMENTS, icon: Truck },
+            { label: translate('text.payments'), to: ROUTES.ADMIN_PAYMENTS, icon: CreditCard },
+            { label: translate('text.discounts'), to: ROUTES.ADMIN_DISCOUNTS, icon: Percent },
         ],
         roles: ADMIN_ONLY_ROLES,
     },
     {
-        title: 'Security',
-        description: 'Người dùng và audit logs.',
+        title: translate('text.security_f25ce1b8'),
+        description: translate('text.users_and_audit_logs'),
         links: [
-            { label: 'Users', to: ROUTES.ADMIN_USERS, icon: Users },
-            { label: 'Audit logs', to: ROUTES.ADMIN_AUDIT_LOGS, icon: FileClock },
+            { label: translate('text.users'), to: ROUTES.ADMIN_USERS, icon: Users },
+            { label: translate('text.audit_logs'), to: ROUTES.ADMIN_AUDIT_LOGS, icon: FileClock },
         ],
         roles: ADMIN_ONLY_ROLES,
     },
@@ -73,15 +74,9 @@ export default function AdminDashboardPage() {
         <div className="space-y-6">
             <Card>
                 <CardBody>
-                    <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                        Admin
-                    </p>
-                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]">
-                        Tổng quan quản trị
-                    </h1>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        Giao diện admin đang bám theo quyền BE. MANAGER chỉ thấy nhóm nội dung và catalog; ADMIN thấy toàn bộ vận hành nhạy cảm.
-                    </p>
+                    <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.admin')} </p>
+                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]"> {translate('text.administration_overview')} </h1>
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.the_admin_interface_is_tracking_be_permissions_manager_only_sees_content')} </p>
                 </CardBody>
             </Card>
 

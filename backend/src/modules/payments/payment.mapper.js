@@ -301,7 +301,7 @@ class PaymentMapper {
         };
     }
 
-    // ===== HELPERS =====
+
 
     static getTransactionRef(providerData) {
         if (!providerData) {
@@ -312,6 +312,9 @@ class PaymentMapper {
             providerData.vnp_txn_ref ||
             providerData.stripe_pi_id ||
             providerData.paypal_order_id ||
+            providerData.payos_reference ||
+            providerData.payos_payment_link_id ||
+            providerData.payos_order_code ||
             null
         );
     }
@@ -346,6 +349,13 @@ class PaymentMapper {
             filtered.paypal_order_id = providerData.paypal_order_id;
         }
 
+        if (provider === 'payos') {
+            filtered.payos_order_code = providerData.payos_order_code;
+            filtered.payos_payment_link_id = providerData.payos_payment_link_id;
+            filtered.payos_status = providerData.payos_status;
+            filtered.payos_reference = providerData.payos_reference;
+        }
+
         return Object.keys(filtered).length > 0 ? filtered : null;
     }
 
@@ -367,12 +377,23 @@ class PaymentMapper {
         if (provider === 'stripe') {
             filtered.stripe_pi_id = providerData.stripe_pi_id;
             filtered.stripe_status = providerData.stripe_status;
-            filtered.stripe_client_secret = '***'; // Redacted
+            filtered.stripe_client_secret = '***';
         }
 
         if (provider === 'paypal') {
             filtered.paypal_order_id = providerData.paypal_order_id;
             filtered.paypal_payer_id = providerData.paypal_payer_id;
+        }
+
+        if (provider === 'payos') {
+            filtered.payos_order_code = providerData.payos_order_code;
+            filtered.payos_payment_link_id = providerData.payos_payment_link_id;
+            filtered.payos_checkout_url = providerData.payos_checkout_url;
+            filtered.payos_qr_code = providerData.payos_qr_code;
+            filtered.payos_status = providerData.payos_status;
+            filtered.payos_reference = providerData.payos_reference;
+            filtered.payos_transaction_date_time =
+                providerData.payos_transaction_date_time;
         }
 
         return Object.keys(filtered).length > 0 ? filtered : null;
@@ -383,16 +404,6 @@ class PaymentMapper {
             pending: 'Pending',
             paid: 'Paid',
             failed: 'Failed',
-        };
-
-        return labels[status] || status;
-    }
-
-    static getStatusLabelVi(status) {
-        const labels = {
-            pending: 'Đang chờ thanh toán',
-            paid: 'Đã thanh toán',
-            failed: 'Thanh toán thất bại',
         };
 
         return labels[status] || status;
@@ -413,6 +424,7 @@ class PaymentMapper {
             vnpay: 'VNPay',
             stripe: 'Stripe',
             paypal: 'PayPal',
+            payos: 'PayOS',
         };
 
         return labels[provider] || provider;
@@ -451,13 +463,13 @@ class PaymentMapper {
 
     static formatPrice(amount, currency = 'VND') {
         if (currency === 'VND') {
-            return `${amount.toLocaleString('vi-VN')} ₫`;
+            return `${amount.toLocaleString('en-US')} ₫`;
         }
 
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: currency,
-        }).format(amount / 100); // USD in cents
+        }).format(amount / 100);
     }
 
     static formatDate(date) {
@@ -465,7 +477,7 @@ class PaymentMapper {
             return null;
         }
 
-        return new Date(date).toLocaleDateString('vi-VN', {
+        return new Date(date).toLocaleDateString('en-US', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',

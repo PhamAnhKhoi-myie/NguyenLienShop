@@ -347,7 +347,7 @@ class VariantUnitService {
             );
         }
 
-        return unit.max_order_qty || 999; // Default unlimited
+        return unit.max_order_qty || 999;
     }
 
     static async getPriceTierSummary(unitId) {

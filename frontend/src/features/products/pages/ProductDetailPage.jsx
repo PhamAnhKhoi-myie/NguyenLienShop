@@ -1,3 +1,4 @@
+import { getLocale, translate } from '../../../shared/i18n/index';
 import {
     ArrowLeft,
     Boxes,
@@ -43,11 +44,11 @@ import { useProductDetail } from '../hooks/useProducts';
 const REVIEW_PAGE_SIZE = 5;
 
 const FLAG_REASON_OPTIONS = [
-    { value: 'spam', label: 'Spam hoặc quảng cáo' },
-    { value: 'inappropriate', label: 'Nội dung không phù hợp' },
-    { value: 'fake', label: 'Đánh giá giả mạo' },
-    { value: 'duplicate', label: 'Đánh giá trùng lặp' },
-    { value: 'other', label: 'Lý do khác' },
+    { value: 'spam', label: translate('text.spam_or_advertising') },
+    { value: 'inappropriate', label: translate('text.inappropriate_content') },
+    { value: 'fake', label: translate('text.fake_review') },
+    { value: 'duplicate', label: translate('text.duplicate_review') },
+    { value: 'other', label: translate('text.other_reasons') },
 ];
 
 function formatPriceRange(min, max, currency = 'VND') {
@@ -55,7 +56,7 @@ function formatPriceRange(min, max, currency = 'VND') {
     const end = Number(max || 0);
 
     if (!start && !end) {
-        return 'Liên hệ';
+        return translate('text.contact');
     }
 
     if (start === end || !end) {
@@ -67,15 +68,15 @@ function formatPriceRange(min, max, currency = 'VND') {
 
 function formatPackSize(packSize) {
     if (!packSize) {
-        return 'Đang cập nhật';
+        return translate('text.updating');
     }
 
-    return `${packSize} cái`;
+    return translate('text.value_the', { value0: packSize });
 }
 
 function formatTierQuantity(tier) {
     if (!tier?.max_qty) {
-        return `Từ ${tier?.min_qty || 1}`;
+        return translate('text.from_value', { value0: tier?.min_qty || 1 });
     }
 
     return `${tier.min_qty} - ${tier.max_qty}`;
@@ -95,16 +96,16 @@ function getReviewRating(review) {
 
 function formatReviewDate(value) {
     if (!value) {
-        return 'Đang cập nhật';
+        return translate('text.updating');
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return 'Đang cập nhật';
+        return translate('text.updating');
     }
 
-    return new Intl.DateTimeFormat('vi-VN', {
+    return new Intl.DateTimeFormat(getLocale(), {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -139,7 +140,7 @@ function SpecItem({ icon: Icon, label, value }) {
                 {label}
             </div>
             <p className="mt-2 text-base font-semibold text-[var(--color-text-main)]">
-                {value || 'Đang cập nhật'}
+                {value || translate('text.updating')}
             </p>
         </div>
     );
@@ -223,7 +224,7 @@ export default function ProductDetailPage() {
         if (!selectedVariant?.id || !selectedUnit?.id) {
             setCartNotice({
                 type: 'error',
-                message: 'Vui lòng chọn biến thể và đơn vị bán.',
+                message: translate('text.please_select_variant_and_unit_of_sale'),
             });
             return;
         }
@@ -238,12 +239,12 @@ export default function ProductDetailPage() {
 
             setCartNotice({
                 type: 'success',
-                message: 'Đã thêm sản phẩm vào giỏ hàng.',
+                message: translate('text.product_added_to_cart'),
             });
         } catch (error) {
             setCartNotice({
                 type: 'error',
-                message: error.message || 'Không thêm được sản phẩm vào giỏ.',
+                message: error.message || translate('text.unable_to_add_product_to_cart'),
             });
         }
     };
@@ -288,7 +289,7 @@ export default function ProductDetailPage() {
         return (
             <Card>
                 <CardBody>
-                    <Loading label="Đang tải chi tiết sản phẩm..." />
+                    <Loading label={translate('text.loading_product_details')} />
                 </CardBody>
             </Card>
         );
@@ -298,9 +299,9 @@ export default function ProductDetailPage() {
         return (
             <EmptyState
                 icon={PackageOpen}
-                title="Không tải được sản phẩm"
+                title={translate('text.unable_to_download_product')}
                 description={productQuery.error.message}
-                actionLabel="Quay lại catalog"
+                actionLabel={translate('text.back_to_catalog')}
                 onAction={() => window.history.back()}
             />
         );
@@ -310,8 +311,8 @@ export default function ProductDetailPage() {
         return (
             <EmptyState
                 icon={PackageOpen}
-                title="Không tìm thấy sản phẩm"
-                description="Sản phẩm có thể đã ngừng bán hoặc đường dẫn không đúng."
+                title={translate('text.no_product_found')}
+                description={translate('text.the_product_may_have_been_discontinued_or_the_link_may_be_incorrect')}
             />
         );
     }
@@ -322,9 +323,7 @@ export default function ProductDetailPage() {
                 to={ROUTES.PRODUCTS}
                 className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
             >
-                <ArrowLeft className="h-4 w-4" />
-                Quay lại catalog
-            </Link>
+                <ArrowLeft className="h-4 w-4" /> {translate('text.back_to_catalog')} </Link>
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,520px)_1fr]">
                 <div className="space-y-4">
@@ -379,12 +378,12 @@ export default function ProductDetailPage() {
                 <div className="space-y-5">
                     <div>
                         <div className="flex flex-wrap gap-2">
-                            <Badge>Đang bán</Badge>
+                            <Badge>{translate('text.on_sale')}</Badge>
                             {product.brand && (
                                 <Badge variant="muted">{product.brand}</Badge>
                             )}
                             {product.sold_count > 0 && (
-                                <Badge variant="accent">Bán chạy</Badge>
+                                <Badge variant="accent">{translate('text.best_seller')}</Badge>
                             )}
                         </div>
 
@@ -398,7 +397,7 @@ export default function ProductDetailPage() {
                                 {Number(product.rating_avg || 0).toFixed(1)} (
                                 {product.rating_count || 0})
                             </span>
-                            <span>Đã bán {product.sold_count || 0}</span>
+                            <span>{translate('text.sold')} {product.sold_count || 0}</span>
                         </div>
 
                         <p className="mt-4 text-3xl font-semibold text-[var(--color-primary-hover)]">
@@ -418,15 +417,11 @@ export default function ProductDetailPage() {
 
                     <Card>
                         <CardHeader>
-                            <h2 className="text-base font-semibold text-[var(--color-text-main)]">
-                                Biến thể sản phẩm
-                            </h2>
+                            <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.product_variant')} </h2>
                         </CardHeader>
                         <CardBody className="space-y-4">
                             {variants.length === 0 ? (
-                                <p className="text-sm text-[var(--color-text-muted)]">
-                                    Sản phẩm chưa có biến thể.
-                                </p>
+                                <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.product_has_no_variations_yet')} </p>
                             ) : (
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     {variants.map((variant) => (
@@ -445,11 +440,11 @@ export default function ProductDetailPage() {
                                         >
                                             <p className="font-semibold text-[var(--color-text-main)]">
                                                 {variant.size ||
-                                                    'Kích thước đang cập nhật'}
+                                                    translate('text.updating_dimension')}
                                             </p>
                                             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
                                                 {variant.fabric_type ||
-                                                    'Chất liệu đang cập nhật'}
+                                                    translate('text.material_is_updating')}
                                             </p>
                                             <p className="mt-2 text-sm font-medium text-[var(--color-primary-hover)]">
                                                 {formatPriceRange(
@@ -467,15 +462,11 @@ export default function ProductDetailPage() {
 
                     <Card>
                         <CardHeader>
-                            <h2 className="text-base font-semibold text-[var(--color-text-main)]">
-                                Đơn vị bán
-                            </h2>
+                            <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.sales_unit')} </h2>
                         </CardHeader>
                         <CardBody className="space-y-4">
                             {units.length === 0 ? (
-                                <p className="text-sm text-[var(--color-text-muted)]">
-                                    Biến thể này chưa có đơn vị bán.
-                                </p>
+                                <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.this_variant_has_no_units_for_sale_yet')} </p>
                             ) : (
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     {units.map((unit) => (
@@ -498,18 +489,14 @@ export default function ProductDetailPage() {
                                                     <p className="mt-1 text-sm text-[var(--color-text-muted)]">
                                                         {formatPackSize(
                                                             unit.pack_size
-                                                        )}{' '}
-                                                        / gói
-                                                    </p>
+                                                        )}{' '} {translate('text.package')} </p>
                                                 </div>
                                                 {unit.is_default && (
                                                     <CheckCircle2 className="h-5 w-5 text-[var(--color-primary)]" />
                                                 )}
                                             </div>
-                                            <p className="mt-3 text-sm text-[var(--color-text-muted)]">
-                                                Tối thiểu {unit.min_order_qty || 1} gói
-                                                {unit.max_order_qty
-                                                    ? `, tối đa ${unit.max_order_qty} gói`
+                                            <p className="mt-3 text-sm text-[var(--color-text-muted)]"> {translate('text.minimum')} {unit.min_order_qty || 1} {translate('text.package_08ffada9')} {unit.max_order_qty
+                                                    ? translate('text.maximum_value_package', { value0: unit.max_order_qty })
                                                     : ''}
                                             </p>
                                         </button>
@@ -523,13 +510,9 @@ export default function ProductDetailPage() {
                         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-[var(--color-text-main)]">
-                                        Số lượng gói
-                                    </p>
-                                    <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                        Tối thiểu {minOrderQuantity} gói
-                                        {selectedUnit.max_order_qty
-                                            ? `, tối đa ${selectedUnit.max_order_qty} gói`
+                                    <p className="text-sm font-medium text-[var(--color-text-main)]"> {translate('text.number_of_packages')} </p>
+                                    <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.minimum')} {minOrderQuantity} {translate('text.package_08ffada9')} {selectedUnit.max_order_qty
+                                            ? translate('text.maximum_value_package', { value0: selectedUnit.max_order_qty })
                                             : ''}
                                     </p>
                                 </div>
@@ -549,7 +532,7 @@ export default function ProductDetailPage() {
                                                 )
                                             )
                                         }
-                                        aria-label="Giảm số lượng"
+                                        aria-label={translate('text.reduce_quantity')}
                                     >
                                         <Minus className="h-4 w-4" />
                                     </Button>
@@ -571,7 +554,7 @@ export default function ProductDetailPage() {
                                                 )
                                             )
                                         }
-                                        aria-label="Tăng số lượng"
+                                        aria-label={translate('text.increase_quantity')}
                                     >
                                         <Plus className="h-4 w-4" />
                                     </Button>
@@ -593,9 +576,7 @@ export default function ProductDetailPage() {
                                 <Link
                                     to={ROUTES.CART}
                                     className="font-semibold text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
-                                >
-                                    Xem giỏ hàng
-                                </Link>
+                                > {translate('text.view_cart')} </Link>
                             )}
                         </p>
                     )}
@@ -607,46 +588,40 @@ export default function ProductDetailPage() {
                             isLoading={addCartItemMutation.isPending}
                             onClick={handleAddToCart}
                         >
-                            <ShoppingCart className="h-4 w-4" />
-                            Thêm vào giỏ
-                        </Button>
-                        <Button variant="outline" fullWidth>
-                            Liên hệ tư vấn
-                        </Button>
+                            <ShoppingCart className="h-4 w-4" /> {translate('text.add_to_cart')} </Button>
+                        <Button variant="outline" fullWidth> {translate('text.contact_for_consultation')} </Button>
                     </div>
                 </div>
             </div>
 
             <Card>
                 <CardHeader>
-                    <h2 className="text-base font-semibold text-[var(--color-text-main)]">
-                        Thông số kỹ thuật
-                    </h2>
+                    <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.specifications')} </h2>
                 </CardHeader>
                 <CardBody>
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <SpecItem
                             icon={Ruler}
-                            label="Kích thước túi"
+                            label={translate('text.bag_size')}
                             value={selectedVariant?.size}
                         />
                         <SpecItem
                             icon={ShieldCheck}
-                            label="Chất liệu"
+                            label={translate('text.material')}
                             value={selectedVariant?.fabric_type}
                         />
                         <SpecItem
                             icon={Boxes}
-                            label="Số lượng/gói"
+                            label={translate('text.quantity_package')}
                             value={formatPackSize(selectedUnit?.pack_size)}
                         />
                         <SpecItem
                             icon={Layers}
-                            label="Công dụng"
+                            label={translate('text.uses')}
                             value={
                                 product.short_description ||
                                 product.description ||
-                                'Đang cập nhật'
+                                translate('text.updating')
                             }
                         />
                     </div>
@@ -658,22 +633,18 @@ export default function ProductDetailPage() {
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-2">
                             <MessageSquare className="h-4 w-4 text-[var(--color-primary)]" />
-                            <h2 className="text-base font-semibold text-[var(--color-text-main)]">
-                                Đánh giá sản phẩm
-                            </h2>
+                            <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.product_review')} </h2>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
-                            <span>Trang {reviewsPage} / {reviewsTotalPages}</span>
-                            <span>{reviewsTotal} đánh giá</span>
+                            <span>{translate('text.trang')} {reviewsPage} / {reviewsTotalPages}</span>
+                            <span>{reviewsTotal} {translate('text.reviews')}</span>
                         </div>
                     </div>
                 </CardHeader>
                 <CardBody className="space-y-5">
                     <div className="grid gap-4 md:grid-cols-[220px_1fr]">
                         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-                            <p className="text-sm font-medium text-[var(--color-text-muted)]">
-                                Điểm trung bình
-                            </p>
+                            <p className="text-sm font-medium text-[var(--color-text-muted)]"> {translate('text.average_score')} </p>
                             <div className="mt-3 flex items-end gap-2">
                                 <span className="text-4xl font-semibold text-[var(--color-text-main)]">
                                     {ratingAverage.toFixed(1)}
@@ -689,14 +660,10 @@ export default function ProductDetailPage() {
                         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
                             <p className="text-sm font-medium text-[var(--color-text-main)]">
                                 {reviewsTotal > 0
-                                    ? `${reviewsTotal} khách hàng đã đánh giá sản phẩm này`
-                                    : 'Sản phẩm này chưa có đánh giá'}
+                                    ? translate('text.value_customers_rated_this_product', { value0: reviewsTotal })
+                                    : translate('text.this_product_has_no_reviews_yet')}
                             </p>
-                            <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
-                                Review hiển thị ở đây là các đánh giá đã được duyệt.
-                                Khách đã đăng nhập có thể đánh dấu hữu ích hoặc báo
-                                cáo nội dung cần kiểm tra.
-                            </p>
+                            <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]"> {translate('text.reviews_displayed_here_are_approved_reviews_logged_in_guests_can_mark_us')} </p>
                         </div>
                     </div>
 
@@ -707,7 +674,7 @@ export default function ProductDetailPage() {
                     )}
 
                     {reviewsQuery.isLoading ? (
-                        <Loading label="Đang tải đánh giá..." />
+                        <Loading label={translate('text.loading_review')} />
                     ) : reviewsQuery.isError ? (
                         <div className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm text-[var(--color-error)]">
@@ -718,15 +685,13 @@ export default function ProductDetailPage() {
                                 size="sm"
                                 onClick={() => reviewsQuery.refetch()}
                             >
-                                <RefreshCw className="h-4 w-4" />
-                                Tải lại
-                            </Button>
+                                <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
                         </div>
                     ) : reviews.length === 0 ? (
                         <EmptyState
                             icon={MessageSquare}
-                            title="Chưa có đánh giá"
-                            description="Khi khách hàng hoàn tất đơn hàng và đánh giá, nội dung đã duyệt sẽ hiển thị tại đây."
+                            title={translate('text.no_reviews_yet')}
+                            description={translate('text.when_the_customer_completes_the_order_and_reviews_the_approved_content_w')}
                         />
                     ) : (
                         <div className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
@@ -746,17 +711,13 @@ export default function ProductDetailPage() {
                                                         variant="success"
                                                         className="gap-1"
                                                     >
-                                                        <ShieldCheck className="h-3 w-3" />
-                                                        Đã mua hàng
-                                                    </Badge>
+                                                        <ShieldCheck className="h-3 w-3" /> {translate('text.purchased')} </Badge>
                                                 ) : (
-                                                    <Badge variant="muted">
-                                                        Chưa xác minh
-                                                    </Badge>
+                                                    <Badge variant="muted"> {translate('text.unverified')} </Badge>
                                                 )}
                                             </div>
                                             <h3 className="break-words text-sm font-semibold text-[var(--color-text-main)]">
-                                                {review.title || 'Đánh giá sản phẩm'}
+                                                {review.title || translate('text.product_review')}
                                             </h3>
                                         </div>
                                         <time className="shrink-0 text-sm text-[var(--color-text-muted)]">
@@ -790,8 +751,7 @@ export default function ProductDetailPage() {
                                                         )
                                                     }
                                                 >
-                                                    <ThumbsUp className="h-4 w-4" />
-                                                    Có ích {review.helpful_count || 0}
+                                                    <ThumbsUp className="h-4 w-4" /> {translate('text.useful')} {review.helpful_count || 0}
                                                 </Button>
                                                 <Button
                                                     className="w-full sm:w-auto"
@@ -812,8 +772,7 @@ export default function ProductDetailPage() {
                                                         )
                                                     }
                                                 >
-                                                    <ThumbsDown className="h-4 w-4" />
-                                                    Chưa hữu ích{' '}
+                                                    <ThumbsDown className="h-4 w-4" /> {translate('text.not_useful_yet')}{' '}
                                                     {review.unhelpful_count || 0}
                                                 </Button>
                                                 <Button
@@ -824,9 +783,7 @@ export default function ProductDetailPage() {
                                                         openFlagModal(review)
                                                     }
                                                 >
-                                                    <Flag className="h-4 w-4" />
-                                                    Báo cáo
-                                                </Button>
+                                                    <Flag className="h-4 w-4" /> {translate('text.report')} </Button>
                                             </>
                                         )}
                                     </div>
@@ -849,33 +806,21 @@ export default function ProductDetailPage() {
                 <CardHeader>
                     <div className="flex items-center gap-2">
                         <Tag className="h-4 w-4 text-[var(--color-primary)]" />
-                        <h2 className="text-base font-semibold text-[var(--color-text-main)]">
-                            Giá theo số lượng
-                        </h2>
+                        <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.price_based_on_quantity')} </h2>
                     </div>
                 </CardHeader>
                 <CardBody>
                     {priceTiers.length === 0 ? (
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            Đơn vị bán này chưa có bảng giá theo số lượng.
-                        </p>
+                        <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.this_unit_does_not_have_a_price_list_based_on_quantity')} </p>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full min-w-[560px] border-collapse text-left text-sm">
                                 <thead>
                                     <tr className="border-b border-[var(--color-border)] text-[var(--color-text-muted)]">
-                                        <th className="py-3 pr-4 font-medium">
-                                            Số lượng gói
-                                        </th>
-                                        <th className="py-3 pr-4 font-medium">
-                                            Giá/đơn vị bán
-                                        </th>
-                                        <th className="py-3 pr-4 font-medium">
-                                            Giá quy đổi/cái
-                                        </th>
-                                        <th className="py-3 font-medium">
-                                            Quy cách
-                                        </th>
+                                        <th className="py-3 pr-4 font-medium"> {translate('text.number_of_packages')} </th>
+                                        <th className="py-3 pr-4 font-medium"> {translate('text.selling_price_unit')} </th>
+                                        <th className="py-3 pr-4 font-medium"> {translate('text.conversion_price_piece')} </th>
+                                        <th className="py-3 font-medium"> {translate('text.specification')} </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -898,11 +843,11 @@ export default function ProductDetailPage() {
                                                     tier,
                                                     selectedUnit?.pack_size,
                                                     currency
-                                                ) || 'Đang cập nhật'}
+                                                ) || translate('text.updating')}
                                             </td>
                                             <td className="py-3 text-[var(--color-text-muted)]">
                                                 {selectedUnit?.display_name ||
-                                                    'Đang cập nhật'}
+                                                    translate('text.updating')}
                                             </td>
                                         </tr>
                                     ))}
@@ -915,28 +860,22 @@ export default function ProductDetailPage() {
 
             <Modal
                 open={Boolean(flaggedReview)}
-                title="Báo cáo đánh giá"
+                title={translate('text.assessment_report')}
                 onClose={closeFlagModal}
                 footer={
                     <>
-                        <Button variant="outline" onClick={closeFlagModal}>
-                            Đóng
-                        </Button>
+                        <Button variant="outline" onClick={closeFlagModal}> {translate('text.close')} </Button>
                         <Button
                             isLoading={flagReviewMutation.isPending}
                             onClick={handleFlagReview}
-                        >
-                            Gửi báo cáo
-                        </Button>
+                        > {translate('text.send_report')} </Button>
                     </>
                 }
             >
                 <div className="space-y-4">
-                    <p className="text-sm leading-6 text-[var(--color-text-muted)]">
-                        Chọn lý do để gửi đánh giá này vào hàng chờ kiểm duyệt.
-                    </p>
+                    <p className="text-sm leading-6 text-[var(--color-text-muted)]"> {translate('text.select_a_reason_to_send_this_review_to_the_moderation_queue')} </p>
                     <Select
-                        label="Lý do"
+                        label={translate('text.reason')}
                         value={flagReason}
                         onChange={(event) => setFlagReason(event.target.value)}
                     >

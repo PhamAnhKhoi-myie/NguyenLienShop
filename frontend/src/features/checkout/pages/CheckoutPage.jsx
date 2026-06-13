@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, CreditCard, MapPin, TicketPercent } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -32,17 +33,17 @@ import {
 } from '../hooks/useCheckout';
 
 const addressFormSchema = z.object({
-    receiver_name: z.string().trim().min(2, 'Vui lòng nhập tên người nhận'),
+    receiver_name: z.string().trim().min(2, translate('text.please_enter_recipient_name')),
     phone: z
         .string()
         .trim()
-        .regex(/^(0|\+84)[0-9]{9}$/, 'Số điện thoại không hợp lệ'),
-    province_code: z.string().trim().min(1, 'Vui lòng chọn tỉnh/thành'),
-    ward_code: z.string().trim().min(1, 'Vui lòng chọn phường/xã'),
-    detail: z.string().trim().min(5, 'Địa chỉ cụ thể tối thiểu 5 ký tự'),
-    note: z.string().trim().max(500, 'Ghi chú tối đa 500 ký tự').optional(),
-    shipping_fee: z.coerce.number().min(0, 'Phí vận chuyển không hợp lệ'),
-    payment_method: z.enum(['COD', 'VNPAY']),
+        .regex(/^(0|\+84)[0-9]{9}$/, translate('text.invalid_phone_number')),
+    province_code: z.string().trim().min(1, translate('text.please_select_province_city')),
+    ward_code: z.string().trim().min(1, translate('text.please_select_ward_commune')),
+    detail: z.string().trim().min(5, translate('text.specific_address_of_at_least_5_characters')),
+    note: z.string().trim().max(500, translate('text.note_maximum_500_characters')).optional(),
+    shipping_fee: z.coerce.number().min(0, translate('text.invalid_shipping_charge')),
+    payment_method: z.enum(['COD', 'VNPAY', 'PAYOS']),
 });
 
 const emptyAddressValues = {
@@ -54,6 +55,11 @@ const emptyAddressValues = {
     note: '',
     shipping_fee: 0,
     payment_method: 'COD',
+};
+
+const onlinePaymentProviders = {
+    VNPAY: 'vnpay',
+    PAYOS: 'payos',
 };
 
 function toFormValues(address) {
@@ -134,6 +140,7 @@ function AddressForm({
     isSaving,
     isOrdering,
     isVNPayEnabled,
+    isPayOSEnabled,
 }) {
     const {
         register,
@@ -160,6 +167,9 @@ function AddressForm({
     const provinceField = register('province_code');
     const wardField = register('ward_code');
     const paymentMethodField = register('payment_method');
+    const isSelectedPaymentDisabled =
+        (paymentMethod === 'VNPAY' && !isVNPayEnabled) ||
+        (paymentMethod === 'PAYOS' && !isPayOSEnabled);
 
     const handleSave = async () => {
         const isValid = await trigger([
@@ -181,13 +191,13 @@ function AddressForm({
         <form className="space-y-4" onSubmit={handleSubmit(onSubmitOrder)}>
             <div className="grid gap-4 md:grid-cols-2">
                 <Input
-                    label="Người nhận"
-                    placeholder="Nguyễn Văn A"
+                    label={translate('text.recipient')}
+                    placeholder={translate('text.nguyen_van_a')}
                     error={errors.receiver_name?.message}
                     {...register('receiver_name')}
                 />
                 <Input
-                    label="Số điện thoại"
+                    label={translate('text.phone_number')}
                     placeholder="0901234567"
                     error={errors.phone?.message}
                     {...register('phone')}
@@ -196,7 +206,7 @@ function AddressForm({
 
             <div className="grid gap-4 md:grid-cols-2">
                 <Select
-                    label="Tỉnh / Thành phố"
+                    label={translate('text.province_city')}
                     error={errors.province_code?.message}
                     disabled={provincesQuery.isLoading}
                     {...provinceField}
@@ -208,7 +218,7 @@ function AddressForm({
                         });
                     }}
                 >
-                    <option value="">Chọn tỉnh/thành</option>
+                    <option value="">{translate('text.select_province_city')}</option>
                     {provinces.map((province) => (
                         <option key={province.code} value={province.code}>
                             {province.name}
@@ -217,12 +227,12 @@ function AddressForm({
                 </Select>
 
                 <Select
-                    label="Phường / Xã"
+                    label={translate('text.ward_commune')}
                     error={errors.ward_code?.message}
                     disabled={!selectedProvinceCode || wardsQuery.isLoading}
                     {...wardField}
                 >
-                    <option value="">Chọn phường/xã</option>
+                    <option value="">{translate('text.select_ward_commune')}</option>
                     {wards.map((ward) => (
                         <option key={ward.code} value={ward.code}>
                             {ward.name}
@@ -232,26 +242,26 @@ function AddressForm({
             </div>
 
             <Input
-                label="Địa chỉ cụ thể"
-                placeholder="Số nhà, tên đường, hẻm, thôn/ấp"
+                label={translate('text.specific_address')}
+                placeholder={translate('text.house_number_name_of_street_alley_village_hamlet')}
                 error={errors.detail?.message}
                 {...register('detail')}
             />
 
             <div className="grid gap-4 md:grid-cols-2">
                 <Input
-                    label="Phí vận chuyển"
+                    label={translate('text.shipping_fee')}
                     type="number"
                     min="0"
                     error={errors.shipping_fee?.message}
                     {...register('shipping_fee')}
                 />
                 <Select
-                    label="Thanh toán"
+                    label={translate('text.checkout')}
                     error={errors.payment_method?.message}
                     helperText={
-                        !isVNPayEnabled
-                            ? 'VNPAY đang tạm tắt vì website chưa được phê duyệt. Vui lòng chọn COD.'
+                        isSelectedPaymentDisabled
+                            ? translate('text.selected_payment_method_is_temporarily_unavailable')
                             : undefined
                     }
                     {...paymentMethodField}
@@ -260,15 +270,18 @@ function AddressForm({
                         setPaymentMethod(event.target.value);
                     }}
                 >
-                    <option value="COD">COD</option>
+                    <option value="COD">{translate('text.cod')}</option>
                     <option value="VNPAY" disabled={!isVNPayEnabled}>
-                        {isVNPayEnabled ? 'VNPAY' : 'VNPAY (tạm tắt)'}
+                        {isVNPayEnabled ? 'VNPAY' : translate('text.vnpay_temporarily_disabled')}
+                    </option>
+                    <option value="PAYOS" disabled={!isPayOSEnabled}>
+                        {isPayOSEnabled ? 'PayOS' : translate('text.payos_temporarily_disabled')}
                     </option>
                 </Select>
             </div>
 
             <Textarea
-                label="Ghi chú giao hàng"
+                label={translate('text.delivery_notes')}
                 rows={4}
                 error={errors.note?.message}
                 {...register('note')}
@@ -278,11 +291,11 @@ function AddressForm({
                 <Button
                     type="submit"
                     isLoading={isOrdering}
-                    disabled={paymentMethod === 'VNPAY' && !isVNPayEnabled}
+                    disabled={isSelectedPaymentDisabled}
                 >
-                    {paymentMethod === 'VNPAY'
-                        ? 'Thanh toán VNPAY'
-                        : 'Đặt hàng COD'}
+                    {paymentMethod in onlinePaymentProviders
+                        ? translate('text.pay_online')
+                        : translate('text.order_cod')}
                 </Button>
                 <Button
                     type="button"
@@ -290,7 +303,7 @@ function AddressForm({
                     isLoading={isSaving}
                     onClick={handleSave}
                 >
-                    {selectedAddress ? 'Cập nhật địa chỉ' : 'Lưu địa chỉ'}
+                    {selectedAddress ? translate('text.update_address') : translate('text.store_address')}
                 </Button>
             </div>
         </form>
@@ -357,7 +370,7 @@ export default function CheckoutPage() {
         if (!code) {
             setNotice({
                 type: 'error',
-                message: 'Vui lòng nhập mã giảm giá.',
+                message: translate('text.please_enter_discount_code'),
             });
             return;
         }
@@ -368,12 +381,12 @@ export default function CheckoutPage() {
             window.localStorage.removeItem(CLAIMED_DISCOUNT_CODE_KEY);
             setNotice({
                 type: 'success',
-                message: 'Đã áp dụng mã giảm giá.',
+                message: translate('text.discount_code_applied'),
             });
         } catch (error) {
             setNotice({
                 type: 'error',
-                message: error.message || 'Không áp dụng được mã giảm giá.',
+                message: error.message || translate('text.discount_code_cannot_be_applied'),
             });
         }
     };
@@ -389,12 +402,12 @@ export default function CheckoutPage() {
             await removeDiscountMutation.mutateAsync();
             setNotice({
                 type: 'success',
-                message: 'Đã gỡ mã giảm giá.',
+                message: translate('text.discount_code_removed'),
             });
         } catch (error) {
             setNotice({
                 type: 'error',
-                message: error.message || 'Không gỡ được mã giảm giá.',
+                message: error.message || translate('text.unable_to_remove_discount_code'),
             });
         }
     };
@@ -414,12 +427,12 @@ export default function CheckoutPage() {
             setSelectedAddressId(response.data.id);
             setNotice({
                 type: 'success',
-                message: 'Đã lưu địa chỉ giao hàng.',
+                message: translate('text.shipping_address_saved'),
             });
         } catch (error) {
             setNotice({
                 type: 'error',
-                message: error.message || 'Không lưu được địa chỉ.',
+                message: error.message || translate('text.unable_to_save_address'),
             });
         }
     };
@@ -427,21 +440,30 @@ export default function CheckoutPage() {
     const handleSubmitOrder = async (values) => {
         setNotice(null);
         let createdOrder = null;
-        const isVNPay = values.payment_method === 'VNPAY';
+        const selectedProvider = onlinePaymentProviders[values.payment_method];
+        const isOnlinePayment = Boolean(selectedProvider);
 
         if (!cart?.id || items.length === 0) {
             setNotice({
                 type: 'error',
-                message: 'Giỏ hàng đang trống.',
+                message: translate('text.shopping_cart_is_empty'),
             });
             return;
         }
 
-        if (isVNPay && !ENV.VNPAY_CHECKOUT_ENABLED) {
+        if (values.payment_method === 'VNPAY' && !ENV.VNPAY_CHECKOUT_ENABLED) {
             setNotice({
                 type: 'error',
                 message:
-                    'VNPAY đang tạm tắt vì website chưa được phê duyệt. Vui lòng chọn COD.',
+                    translate('text.vnpay_is_temporarily_disabled_because_the_website_has_not_been_approved_'),
+            });
+            return;
+        }
+
+        if (values.payment_method === 'PAYOS' && !ENV.PAYOS_CHECKOUT_ENABLED) {
+            setNotice({
+                type: 'error',
+                message: translate('text.payos_is_temporarily_disabled'),
             });
             return;
         }
@@ -450,7 +472,7 @@ export default function CheckoutPage() {
             const validation = await validateCartMutation.mutateAsync();
             if (validation.data?.isValid === false) {
                 throw new Error(
-                    validation.data.errors?.[0] || 'Giỏ hàng chưa hợp lệ.'
+                    validation.data.errors?.[0] || translate('text.shopping_cart_is_not_valid')
                 );
             }
 
@@ -468,10 +490,10 @@ export default function CheckoutPage() {
             const order = response.data;
             createdOrder = order;
 
-            if (isVNPay) {
+            if (isOnlinePayment) {
                 const paymentResponse = await createPaymentMutation.mutateAsync({
                     order_id: order.id,
-                    provider: 'vnpay',
+                    provider: selectedProvider,
                 });
                 const paymentData = paymentResponse.data;
                 const paymentUrl =
@@ -481,7 +503,7 @@ export default function CheckoutPage() {
                     paymentData?.redirect_url;
 
                 if (!paymentUrl) {
-                    throw new Error('BE chưa trả payment URL VNPAY.');
+                    throw new Error(translate('text.payment_url_was_not_returned'));
                 }
 
                 window.location.assign(paymentUrl);
@@ -500,15 +522,24 @@ export default function CheckoutPage() {
                 setNotice({
                     type: 'error',
                     message:
-                        'VNPAY đang tạm tắt vì website chưa được phê duyệt. Vui lòng chọn COD.',
+                        translate('text.vnpay_is_temporarily_disabled_because_the_website_has_not_been_approved_'),
                 });
                 return;
             }
 
-            if (isVNPay) {
+            if (error.raw?.code === 'PAYOS_CHECKOUT_DISABLED') {
+                setNotice({
+                    type: 'error',
+                    message: translate('text.payos_is_temporarily_disabled'),
+                });
+                return;
+            }
+
+            if (isOnlinePayment) {
                 const params = new URLSearchParams({
                     status: 'failed',
                     code: error.raw?.code || error.status?.toString() || 'CREATE_PAYMENT_FAILED',
+                    provider: selectedProvider,
                 });
 
                 if (createdOrder?.id) {
@@ -520,7 +551,7 @@ export default function CheckoutPage() {
                     state: {
                         message:
                             error.message ||
-                            'Không khởi tạo được thanh toán VNPAY.',
+                            translate('text.unable_to_initiate_online_payment'),
                     },
                 });
                 return;
@@ -529,7 +560,7 @@ export default function CheckoutPage() {
             navigate(ROUTES.CHECKOUT_FAIL, {
                 replace: true,
                 state: {
-                    message: error.message || 'Không tạo được đơn hàng.',
+                    message: error.message || translate('text.unable_to_create_order'),
                 },
             });
         }
@@ -539,7 +570,7 @@ export default function CheckoutPage() {
         return (
             <Card>
                 <CardBody>
-                    <Loading label="Đang tải checkout..." />
+                    <Loading label={translate('text.loading_checkout')} />
                 </CardBody>
             </Card>
         );
@@ -548,9 +579,9 @@ export default function CheckoutPage() {
     if (cartQuery.isError) {
         return (
             <EmptyState
-                title="Không tải được giỏ hàng"
+                title={translate('text.unable_to_load_shopping_cart')}
                 description={cartQuery.error.message}
-                actionLabel="Quay lại giỏ hàng"
+                actionLabel={translate('text.return_to_cart')}
                 onAction={() => navigate(ROUTES.CART)}
             />
         );
@@ -559,9 +590,9 @@ export default function CheckoutPage() {
     if (items.length === 0) {
         return (
             <EmptyState
-                title="Giỏ hàng đang trống"
-                description="Thêm sản phẩm vào giỏ trước khi checkout."
-                actionLabel="Xem sản phẩm"
+                title={translate('text.cart_is_empty')}
+                description={translate('text.add_product_to_cart_before_checkout')}
+                actionLabel={translate('text.view_product')}
                 onAction={() => navigate(ROUTES.PRODUCTS)}
             />
         );
@@ -573,20 +604,12 @@ export default function CheckoutPage() {
                 to={ROUTES.CART}
                 className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
             >
-                <ArrowLeft className="h-4 w-4" />
-                Quay lại giỏ hàng
-            </Link>
+                <ArrowLeft className="h-4 w-4" /> {translate('text.return_to_cart')} </Link>
 
             <div>
-                <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                    Checkout
-                </p>
-                <h1 className="mt-1 text-3xl font-semibold text-[var(--color-text-main)]">
-                    Tạo đơn hàng
-                </h1>
-                <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                    Kiểm tra giỏ hàng, địa chỉ giao hàng, mã giảm giá và phương thức thanh toán trước khi tạo đơn.
-                </p>
+                <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.checkout')} </p>
+                <h1 className="mt-1 text-3xl font-semibold text-[var(--color-text-main)]"> {translate('text.create_order')} </h1>
+                <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.check_your_shopping_cart_shipping_address_discount_code_and_payment_meth')} </p>
             </div>
 
             {notice && (
@@ -608,17 +631,13 @@ export default function CheckoutPage() {
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-[var(--color-primary)]" />
-                                    <h2 className="font-semibold text-[var(--color-text-main)]">
-                                        Địa chỉ giao hàng
-                                    </h2>
+                                    <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.delivery_address')} </h2>
                                 </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setSelectedAddressId('new')}
-                                >
-                                    Nhập địa chỉ mới
-                                </Button>
+                                > {translate('text.enter_new_address')} </Button>
                             </div>
                         </CardHeader>
                         <CardBody className="space-y-5">
@@ -640,9 +659,7 @@ export default function CheckoutPage() {
                                                     {address.receiver_name}
                                                 </p>
                                                 {address.is_default && (
-                                                    <span className="text-xs font-medium text-[var(--color-primary-hover)]">
-                                                        Mặc định
-                                                    </span>
+                                                    <span className="text-xs font-medium text-[var(--color-primary-hover)]"> {translate('text.default')} </span>
                                                 )}
                                             </div>
                                             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
@@ -667,6 +684,7 @@ export default function CheckoutPage() {
                                 }
                                 isOrdering={isBusy}
                                 isVNPayEnabled={ENV.VNPAY_CHECKOUT_ENABLED}
+                                isPayOSEnabled={ENV.PAYOS_CHECKOUT_ENABLED}
                             />
                         </CardBody>
                     </Card>
@@ -675,9 +693,7 @@ export default function CheckoutPage() {
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <h2 className="font-semibold text-[var(--color-text-main)]">
-                                Tóm tắt giỏ hàng
-                            </h2>
+                            <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.cart_summary')} </h2>
                         </CardHeader>
                         <CardBody className="space-y-4">
                             <div className="space-y-3">
@@ -691,7 +707,7 @@ export default function CheckoutPage() {
                                                 {item.product_name}
                                             </p>
                                             <p className="text-[var(--color-text-muted)]">
-                                                {item.quantity_packs || item.quantity || 1} gói x {formatCurrency(item.price_at_added || 0)}
+                                                {item.quantity_packs || item.quantity || 1} {translate('text.package_x')} {formatCurrency(item.price_at_added || 0)}
                                             </p>
                                         </div>
                                         <span className="font-medium text-[var(--color-text-main)]">
@@ -704,21 +720,15 @@ export default function CheckoutPage() {
                             <div className="border-t border-[var(--color-border)] pt-4">
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between gap-4">
-                                        <span className="text-[var(--color-text-muted)]">
-                                            Tạm tính
-                                        </span>
+                                        <span className="text-[var(--color-text-muted)]"> {translate('text.temporary')} </span>
                                         <span>{formatCurrency(totals.subtotal || 0)}</span>
                                     </div>
                                     <div className="flex justify-between gap-4">
-                                        <span className="text-[var(--color-text-muted)]">
-                                            Giảm giá
-                                        </span>
+                                        <span className="text-[var(--color-text-muted)]"> {translate('text.discount')} </span>
                                         <span>{formatCurrency(totals.discount_amount || 0)}</span>
                                     </div>
                                     <div className="flex justify-between gap-4">
-                                        <span className="text-[var(--color-text-muted)]">
-                                            Tổng hiện tại
-                                        </span>
+                                        <span className="text-[var(--color-text-muted)]"> {translate('text.current_total')} </span>
                                         <span className="font-semibold text-[var(--color-primary-hover)]">
                                             {formatCurrency(totals.total || 0)}
                                         </span>
@@ -732,9 +742,7 @@ export default function CheckoutPage() {
                         <CardHeader>
                             <div className="flex items-center gap-2">
                                 <TicketPercent className="h-4 w-4 text-[var(--color-primary)]" />
-                                <h2 className="font-semibold text-[var(--color-text-main)]">
-                                    Mã giảm giá
-                                </h2>
+                                <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.discount_code')} </h2>
                             </div>
                         </CardHeader>
                         <CardBody className="space-y-4">
@@ -745,8 +753,7 @@ export default function CheckoutPage() {
                                             <p className="font-semibold text-[var(--color-text-main)]">
                                                 {cart.discount.code}
                                             </p>
-                                            <p className="text-sm text-[var(--color-text-muted)]">
-                                                Đã giảm {formatCurrency(cart.discount.discount_amount || 0)}
+                                            <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.discounted')} {formatCurrency(cart.discount.discount_amount || 0)}
                                             </p>
                                         </div>
                                         <Button
@@ -754,22 +761,16 @@ export default function CheckoutPage() {
                                             size="sm"
                                             isLoading={removeDiscountMutation.isPending}
                                             onClick={handleRemoveDiscount}
-                                        >
-                                            Gỡ
-                                        </Button>
+                                        > {translate('text.remove')} </Button>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
                                     {claimedDiscountsQuery.isLoading ? (
-                                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
-                                            Đang tải voucher của bạn...
-                                        </div>
+                                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-muted)]"> {translate('text.loading_your_voucher')} </div>
                                     ) : claimedDiscounts.length > 0 ? (
                                         <div className="space-y-2">
-                                            <p className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
-                                                Voucher của bạn
-                                            </p>
+                                            <p className="text-xs font-semibold uppercase text-[var(--color-text-muted)]"> {translate('text.your_voucher')} </p>
                                             <div className="space-y-2">
                                                 {claimedDiscounts.slice(0, 4).map((claim) => (
                                                     <button
@@ -783,31 +784,26 @@ export default function CheckoutPage() {
                                                             <span className="block truncate font-semibold text-[var(--color-text-main)]">
                                                                 {claim.code}
                                                             </span>
-                                                            <span className="mt-1 block text-xs text-[var(--color-text-muted)]">
-                                                                Giảm {formatClaimedDiscountValue(claim)}
+                                                            <span className="mt-1 block text-xs text-[var(--color-text-muted)]"> {translate('text.reduce')} {formatClaimedDiscountValue(claim)}
                                                                 {claim.discount?.min_order_value
-                                                                    ? ` · đơn từ ${formatCurrency(claim.discount.min_order_value)}`
+                                                                    ? translate('text.single_word_value', { value0: formatCurrency(claim.discount.min_order_value) })
                                                                     : ''}
                                                             </span>
                                                         </span>
-                                                        <span className="shrink-0 text-xs font-semibold text-[var(--color-primary-hover)]">
-                                                            Dùng
-                                                        </span>
+                                                        <span className="shrink-0 text-xs font-semibold text-[var(--color-primary-hover)]"> {translate('text.use')} </span>
                                                     </button>
                                                 ))}
                                             </div>
                                             <Link
                                                 to={ROUTES.PROFILE_VOUCHERS}
                                                 className="inline-flex text-xs font-semibold text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
-                                            >
-                                                Xem tất cả voucher
-                                            </Link>
+                                            > {translate('text.view_all_vouchers')} </Link>
                                         </div>
                                     ) : null}
 
                                     <div className="flex gap-2">
                                         <Input
-                                            placeholder="Nhập mã giảm giá"
+                                            placeholder={translate('text.enter_discount_code')}
                                             value={discountCode}
                                             onChange={(event) =>
                                                 setDiscountCode(event.target.value)
@@ -817,15 +813,11 @@ export default function CheckoutPage() {
                                             type="button"
                                             isLoading={applyDiscountMutation.isPending}
                                             onClick={handleApplyDiscount}
-                                        >
-                                            Áp dụng
-                                        </Button>
+                                        > {translate('text.apply')} </Button>
                                     </div>
                                 </div>
                             )}
-                            <p className="text-xs text-[var(--color-text-muted)]">
-                                Giảm giá sẽ được kiểm tra lại khi tạo đơn.
-                            </p>
+                            <p className="text-xs text-[var(--color-text-muted)]"> {translate('text.discount_will_be_checked_again_when_order_is_created')} </p>
                         </CardBody>
                     </Card>
 
@@ -834,13 +826,11 @@ export default function CheckoutPage() {
                             <div className="flex items-start gap-3">
                                 <CreditCard className="mt-0.5 h-5 w-5 text-[var(--color-primary)]" />
                                 <div>
-                                    <p className="font-semibold text-[var(--color-text-main)]">
-                                        COD và VNPAY
-                                    </p>
+                                    <p className="font-semibold text-[var(--color-text-main)]"> {translate('text.cod_and_online_payment')} </p>
                                     <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                        {ENV.VNPAY_CHECKOUT_ENABLED
-                                            ? 'COD tạo đơn trực tiếp. VNPAY sẽ tạo đơn trước rồi chuyển sang cổng thanh toán do BE trả về.'
-                                            : 'VNPAY đang tạm tắt vì website chưa được phê duyệt. Vui lòng dùng COD để đặt hàng.'}
+                                        {ENV.VNPAY_CHECKOUT_ENABLED || ENV.PAYOS_CHECKOUT_ENABLED
+                                            ? translate('text.cod_creates_orders_directly_online_payment_will_redirect_to_the_selected_provider')
+                                            : translate('text.online_payment_is_temporarily_disabled')}
                                     </p>
                                 </div>
                             </div>

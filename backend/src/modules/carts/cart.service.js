@@ -11,11 +11,11 @@ const DiscountService = require('../discounts/discount.service');
 const CartAuditLogService = require('../audit_logs/cart_audit_log/cart_log.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
 
-/**
- * ============================================
- * CART SERVICE
- * ============================================
- */
+
+
+
+
+
 
 class CartService {
     static toDiscountItems(items = []) {

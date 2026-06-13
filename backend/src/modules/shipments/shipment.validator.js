@@ -1,13 +1,13 @@
 const { z } = require('zod');
 
-// ===== BASE =====
+
 const objectIdSchema = z
     .string()
     .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId');
 
 const objectIdOptionalSchema = objectIdSchema.optional().nullable();
 
-// ===== PARAMS =====
+
 const shipmentIdParamSchema = z.object({
     shipmentId: objectIdSchema,
 });
@@ -29,7 +29,7 @@ const carrierParamSchema = z.object({
     carrier: z.enum(['GHN', 'GHTK', 'JT', 'GRAB', 'BEST', 'OTHER']),
 });
 
-// ===== COMMON =====
+
 const vietnamesePhoneSchema = z
     .string()
     .regex(/^(?:0[1-9]\d{8}|0[1-9]\d{9})$/);
@@ -67,7 +67,7 @@ const failureReasonSchema = z.enum([
     'other',
 ]);
 
-// ===== BODY =====
+
 const shippingAddressSchema = z.object({
     recipient_name: z.string().min(2).max(100),
     phone: vietnamesePhoneSchema,
@@ -147,7 +147,7 @@ const carrierWebhookBodySchema = z
         timestamp: z.coerce.number().default(() => Math.floor(Date.now() / 1000)),
     });
 
-// ===== QUERY =====
+
 const listShipmentsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),

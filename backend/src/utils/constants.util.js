@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const JWT_ALGORITHM = "HS256";
 const JWT_ISSUER = process.env.JWT_ISSUER || "your-app";
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "your-client";
-const JWT_CLOCK_TOLERANCE = Number(process.env.JWT_CLOCK_TOLERANCE || 0); // seconds
+const JWT_CLOCK_TOLERANCE = Number(process.env.JWT_CLOCK_TOLERANCE || 0);
 
 const getAccessSecret = () => {
     const secret = process.env.JWT_ACCESS_SECRET;

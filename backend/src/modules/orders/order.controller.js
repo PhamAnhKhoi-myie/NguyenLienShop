@@ -4,7 +4,7 @@ const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const OrderService = require('./order.service');
 const { buildAuditMetadata } = require('../../utils/audit.util');
 
-// ===== PUBLIC ENDPOINTS =====
+
 
 const trackOrder = asyncHandler(async (req, res) => {
     const { order_code } = req.params;
@@ -17,7 +17,7 @@ const trackOrder = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== CUSTOMER ENDPOINTS =====
+
 
 const createOrder = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
@@ -146,7 +146,7 @@ const writeReview = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== ADMIN ENDPOINTS =====
+
 
 const updateOrderStatus = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);

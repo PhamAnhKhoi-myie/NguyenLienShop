@@ -8,7 +8,7 @@ const hasRole = (user, role) =>
     Array.isArray(user?.roles) &&
     user.roles.map((item) => String(item).toUpperCase()).includes(role);
 
-// ===== PUBLIC ENDPOINTS (No Auth) =====
+
 
 const trackShipment = asyncHandler(async (req, res) => {
     const { tracking_code } = req.params;
@@ -82,7 +82,7 @@ const handleCarrierWebhook = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== CUSTOMER ENDPOINTS =====
+
 
 const getShipment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
@@ -199,7 +199,7 @@ const retryShipment = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== ADMIN ENDPOINTS =====
+
 
 const createShipment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);

@@ -10,22 +10,28 @@ const seedUsers = [
         email: "khoiphamvk123@gmail.com",
         password: process.env.SEED_ADMIN_PASSWORD || "Admin@123",
         roles: ["ADMIN"],
-        profile: { full_name: "System Admin" },
+        profile: {
+            full_name: "System Admin",
+            phone_number: "0901000098",
+        },
     },
     {
         email: "anhkhoivk8939@gmail.com",
         password: process.env.SEED_MANAGER_PASSWORD || "Manager@123",
         roles: ["MANAGER"],
-        profile: { full_name: "Manager User" },
+        profile: {
+            full_name: "Manager User",
+            phone_number: "0901000099",
+        },
     },
     {
         email: "nguyenvana.customer@gmail.com",
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Nguyễn Văn An",
+            full_name: "Nguyen Van An",
             phone: "0901000001",
-            address: "Cần Thơ",
+            address: "Can Tho",
         },
     },
     {
@@ -33,9 +39,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Trần Thị Bích",
+            full_name: "Tran Thi Bich",
             phone: "0901000002",
-            address: "Tiền Giang",
+            address: "Tien Giang",
         },
     },
     {
@@ -43,9 +49,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Lê Văn Bình",
+            full_name: "Le Van Binh",
             phone: "0901000003",
-            address: "Vĩnh Long",
+            address: "Vinh Long",
         },
     },
     {
@@ -53,9 +59,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Phạm Thị Cẩm",
+            full_name: "Pham Thi Cam",
             phone: "0901000004",
-            address: "Bến Tre",
+            address: "Ben Tre",
         },
     },
     {
@@ -63,9 +69,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Huỳnh Văn Cường",
+            full_name: "Huynh Van Cuong",
             phone: "0901000005",
-            address: "Đồng Tháp",
+            address: "Dong Thap",
         },
     },
     {
@@ -73,7 +79,7 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Đặng Thị Diễm",
+            full_name: "Dang Thi Diem",
             phone: "0901000006",
             address: "Long An",
         },
@@ -83,7 +89,7 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Bùi Trường Giang",
+            full_name: "Bui Truong Giang",
             phone: "0901000007",
             address: "An Giang",
         },
@@ -93,9 +99,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Võ Thị Hân",
+            full_name: "Vo Thi Han",
             phone: "0901000008",
-            address: "Hậu Giang",
+            address: "Hau Giang",
         },
     },
     {
@@ -103,9 +109,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Ngô Thu Hoài",
+            full_name: "Ngo Thu Hoai",
             phone: "0901000009",
-            address: "Sóc Trăng",
+            address: "Soc Trang",
         },
     },
     {
@@ -113,9 +119,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Đỗ Văn Hùng",
+            full_name: "Do Van Hung",
             phone: "0901000010",
-            address: "Trà Vinh",
+            address: "Tra Vinh",
         },
     },
     {
@@ -123,9 +129,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Nguyễn Thị Lan",
+            full_name: "Nguyen Thi Lan",
             phone: "0901000011",
-            address: "TP. Hồ Chí Minh",
+            address: "City. Ho Chi Minh",
         },
     },
     {
@@ -133,9 +139,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Trần Văn Lộc",
+            full_name: "Tran Van Loc",
             phone: "0901000012",
-            address: "Bình Dương",
+            address: "Binh Duong",
         },
     },
     {
@@ -143,9 +149,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Lê Văn Minh",
+            full_name: "Le Van Minh",
             phone: "0901000013",
-            address: "Đồng Nai",
+            address: "Dong Nai",
         },
     },
     {
@@ -153,9 +159,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Phạm Thị Mai",
+            full_name: "Pham Thi Mai",
             phone: "0901000014",
-            address: "Tây Ninh",
+            address: "Tay Ninh",
         },
     },
     {
@@ -163,9 +169,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Hoàng Văn Nghĩa",
+            full_name: "Hoang Van Nghia",
             phone: "0901000015",
-            address: "Bình Phước",
+            address: "Binh Phuoc",
         },
     },
     {
@@ -173,9 +179,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Phan Thị Oanh",
+            full_name: "Phan Thi Oanh",
             phone: "0901000016",
-            address: "Lâm Đồng",
+            address: "Lam Dong",
         },
     },
     {
@@ -183,9 +189,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Trương Văn Phúc",
+            full_name: "Truong Van Phuc",
             phone: "0901000017",
-            address: "Khánh Hòa",
+            address: "Khanh Hoa",
         },
     },
     {
@@ -193,9 +199,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Mai Thị Quyên",
+            full_name: "Mai Thi Quyen",
             phone: "0901000018",
-            address: "Ninh Thuận",
+            address: "Ninh Thuan",
         },
     },
     {
@@ -203,9 +209,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Cao Văn Sơn",
+            full_name: "Cao Van Son",
             phone: "0901000019",
-            address: "Bình Thuận",
+            address: "Binh Thuan",
         },
     },
     {
@@ -213,9 +219,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Đinh Thị Thảo",
+            full_name: "Dinh Thi Thao",
             phone: "0901000020",
-            address: "Đắk Lắk",
+            address: "Dak Lak",
         },
     },
 ];
@@ -225,8 +231,14 @@ const seedUser = async () => {
 
     for (const user of seedUsers) {
         const email = user.email.trim().toLowerCase();
+        const phoneNumber = user.profile.phone_number || user.profile.phone;
 
-        const existing = await User.findOne({ email }).select("_id");
+        const existing = await User.findOne({
+            $or: [
+                { email },
+                { "profile.phone_number": phoneNumber },
+            ],
+        }).select("_id");
 
         if (existing) {
             console.log(`⊘ Skipped user: ${email}`);
@@ -242,8 +254,13 @@ const seedUser = async () => {
             email,
             password_hash,
             roles: user.roles,
-            profile: user.profile,
+            profile: {
+                full_name: user.profile.full_name,
+                phone_number: phoneNumber,
+            },
             status: "ACTIVE",
+            is_phone_verified: true,
+            phone_verified_at: new Date(),
         });
 
         console.log(`✓ Created user: ${email}`);

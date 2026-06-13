@@ -5,19 +5,19 @@ const blogThumbnailSchema = {
     properties: {
         url: { type: "string", format: "uri", nullable: true, example: "https://res.cloudinary.com/demo/image/upload/blogs/tui-bao.jpg" },
         public_id: { type: "string", nullable: true, example: "nguyen-lien-shop/blogs/tui-bao" },
-        alt: { type: "string", nullable: true, example: "Túi bao trái cây" },
+        alt: { type: "string", nullable: true, example: "Fruit bag" },
     },
 };
 
 const blogSeoSchema = {
     type: "object",
     properties: {
-        meta_title: { type: "string", nullable: true, maxLength: 160, example: "Cách sử dụng túi bao trái cây" },
-        meta_description: { type: "string", nullable: true, maxLength: 300, example: "Hướng dẫn chọn và sử dụng túi bao trái cây đúng cách." },
+        meta_title: { type: "string", nullable: true, maxLength: 160, example: "How to use fruit bags" },
+        meta_description: { type: "string", nullable: true, maxLength: 300, example: "Instructions for choosing and using fruit bags properly." },
         keywords: {
             type: "array",
             items: { type: "string" },
-            example: ["túi bao trái cây", "hướng dẫn"],
+            example: ["fruit bag", "instruction"],
         },
     },
 };
@@ -34,16 +34,16 @@ module.exports = {
         required: ["id", "title", "slug", "excerpt", "content", "status", "author", "view_count", "created_at", "updated_at"],
         properties: {
             id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", example: "507f1f77bcf86cd799439041" },
-            title: { type: "string", example: "Cách sử dụng túi bao trái cây" },
+            title: { type: "string", example: "How to use fruit bags" },
             slug: { type: "string", example: "cach-su-dung-tui-bao-trai-cay" },
-            excerpt: { type: "string", example: "Hướng dẫn chọn kích thước và thời điểm bao trái cây phù hợp." },
-            content: { type: "string", example: "<h2>Chuẩn bị</h2><p>Chọn túi đúng kích thước...</p>" },
+            excerpt: { type: "string", example: "Instructions for choosing the appropriate size and timing for fruit packaging." },
+            content: { type: "string", example: "<h2>Preparation</h2><p>Choose the right size bag...</p>" },
             thumbnail: blogThumbnailSchema,
-            category: { type: "string", nullable: true, example: "Hướng dẫn sử dụng" },
+            category: { type: "string", nullable: true, example: "Instructions for use" },
             tags: {
                 type: "array",
                 items: { type: "string" },
-                example: ["túi bao", "bưởi"],
+                example: ["bag", "grapefruit"],
             },
             status: { $ref: "#/components/schemas/BlogStatus" },
             author: {
@@ -79,17 +79,17 @@ module.exports = {
         type: "object",
         required: ["title", "excerpt", "content"],
         properties: {
-            title: { type: "string", minLength: 3, maxLength: 180, example: "Cách sử dụng túi bao trái cây" },
+            title: { type: "string", minLength: 3, maxLength: 180, example: "How to use fruit bags" },
             slug: { type: "string", example: "cach-su-dung-tui-bao-trai-cay" },
-            excerpt: { type: "string", minLength: 10, maxLength: 500, example: "Hướng dẫn chọn kích thước và thời điểm bao trái cây phù hợp." },
-            content: { type: "string", minLength: 20, example: "<h2>Chuẩn bị</h2><p>Chọn túi đúng kích thước...</p>" },
+            excerpt: { type: "string", minLength: 10, maxLength: 500, example: "Instructions for choosing the appropriate size and timing for fruit packaging." },
+            content: { type: "string", minLength: 20, example: "<h2>Preparation</h2><p>Choose the right size bag...</p>" },
             thumbnail: blogThumbnailSchema,
-            category: { type: "string", maxLength: 100, example: "Hướng dẫn sử dụng" },
+            category: { type: "string", maxLength: 100, example: "Instructions for use" },
             tags: {
                 type: "array",
                 maxItems: 12,
                 items: { type: "string" },
-                example: ["túi bao", "bưởi"],
+                example: ["bag", "grapefruit"],
             },
             status: { $ref: "#/components/schemas/BlogStatus" },
             seo: blogSeoSchema,

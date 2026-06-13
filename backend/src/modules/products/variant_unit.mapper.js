@@ -239,11 +239,11 @@ class VariantUnitMapper {
             if (minPrice === maxPrice) {
                 desc += ` - ${this.formatPrice(minPrice)}`;
             } else {
-                desc += ` - từ ${this.formatPrice(minPrice)} đến ${this.formatPrice(maxPrice)}`;
+                desc += `- from ${this.formatPrice(minPrice)} to ${this.formatPrice(maxPrice)}`;
             }
 
             const firstTier = priceTiers[0];
-            desc += ` (mua ${firstTier.min_qty}-${firstTier.max_qty || '∞'} gói)`;
+            desc += `(buy ${firstTier.min_qty}-${firstTier.max_qty || '∞'} package)`;
         }
 
         return desc;

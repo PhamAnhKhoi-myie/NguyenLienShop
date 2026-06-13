@@ -1,75 +1,69 @@
+import { translate } from '../../../shared/i18n/index';
 import { z } from 'zod';
 
 export const userStatusOptions = [
-    { value: '', label: 'Tất cả trạng thái' },
-    { value: 'ACTIVE', label: 'ACTIVE' },
-    { value: 'INACTIVE', label: 'INACTIVE' },
-    { value: 'SUSPENDED', label: 'SUSPENDED' },
+    { value: '', label: translate('text.all_statuses') },
+    { value: 'ACTIVE', label: translate('text.active') },
+    { value: 'INACTIVE', label: translate('text.inactive') },
+    { value: 'SUSPENDED', label: translate('text.suspended') },
 ];
 
 export const userRoleOptions = [
-    { value: 'CUSTOMER', label: 'CUSTOMER' },
-    { value: 'VIP', label: 'VIP' },
-    { value: 'MANAGER', label: 'MANAGER' },
-    { value: 'ADMIN', label: 'ADMIN' },
+    { value: 'CUSTOMER', label: translate('text.customer_340f7cf7') },
+    { value: 'VIP', label: translate('text.vip') },
+    { value: 'MANAGER', label: translate('text.manager') },
+    { value: 'ADMIN', label: translate('text.admin_b521caa6') },
 ];
 
 export const userTierOptions = [
-    { value: 'bronze', label: 'bronze' },
-    { value: 'silver', label: 'silver' },
-    { value: 'gold', label: 'gold' },
-    { value: 'platinum', label: 'platinum' },
+    { value: 'bronze', label: translate('text.bronze') },
+    { value: 'silver', label: translate('text.silver') },
+    { value: 'gold', label: translate('text.gold') },
+    { value: 'platinum', label: translate('text.platinum') },
 ];
 
 export const userGenderOptions = [
-    { value: 'UNSPECIFIED', label: 'Chưa cập nhật' },
-    { value: 'MALE', label: 'Nam' },
-    { value: 'FEMALE', label: 'Nữ' },
-    { value: 'OTHER', label: 'Khác' },
+    { value: 'UNSPECIFIED', label: translate('text.not_updated_yet') },
+    { value: 'MALE', label: translate('text.nam') },
+    { value: 'FEMALE', label: translate('text.female') },
+    { value: 'OTHER', label: translate('text.other') },
 ];
 
 const optionalUrlSchema = z
     .string()
     .trim()
-    .refine((value) => value === '' || isValidUrl(value), 'URL không hợp lệ');
-
-const optionalPhoneSchema = z
-    .string()
-    .trim()
-    .refine(
-        (value) => value === '' || /^\d{10,}$/.test(value),
-        'Số điện thoại cần ít nhất 10 chữ số'
-    );
+    .refine((value) => value === '' || isValidUrl(value), translate('text.invalid_url'));
 
 export const userProfileFormConfig = {
-    title: 'hồ sơ người dùng',
+    title: translate('text.user_profile'),
     schema: z.object({
         name: z
             .string()
             .trim()
             .refine(
                 (value) => value === '' || value.length >= 2,
-                'Tên cần ít nhất 2 ký tự'
+                translate('text.name_needs_to_be_at_least_2_characters')
             ),
         email: z
             .string()
             .trim()
-            .email('Email không hợp lệ'),
-        phone: optionalPhoneSchema,
+            .refine(
+                (value) =>
+                    value === '' || z.string().email().safeParse(value).success,
+                translate('text.invalid_email')
+            ),
         avatar: optionalUrlSchema,
         gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED']),
     }),
     defaultValues: {
         name: '',
         email: '',
-        phone: '',
         avatar: '',
         gender: 'UNSPECIFIED',
     },
     toFormValues: (user = {}) => ({
         name: user.profile?.full_name || '',
         email: user.email || '',
-        phone: user.profile?.phone_number || '',
         avatar: user.profile?.avatar_url || '',
         gender: user.profile?.gender || 'UNSPECIFIED',
     }),
@@ -82,10 +76,6 @@ export const userProfileFormConfig = {
             payload.name = values.name.trim();
         }
 
-        if (values.phone.trim()) {
-            payload.phone = values.phone.trim();
-        }
-
         if (values.avatar.trim()) {
             payload.avatar = values.avatar.trim();
         }
@@ -95,13 +85,12 @@ export const userProfileFormConfig = {
         return payload;
     },
     fields: [
-        { name: 'name', label: 'Tên', placeholder: 'Nguyễn Văn A' },
-        { name: 'email', label: 'Email', type: 'email' },
-        { name: 'phone', label: 'Số điện thoại' },
-        { name: 'avatar', label: 'Avatar URL', placeholder: 'https://...' },
+        { name: 'name', label: translate('text.name'), placeholder: translate('text.nguyen_van_a') },
+        { name: 'email', label: translate('text.email_84add5b2'), type: 'email' },
+        { name: 'avatar', label: translate('text.avatar_url'), placeholder: 'https://...' },
         {
             name: 'gender',
-            label: 'Giới tính',
+            label: translate('text.gender'),
             type: 'select',
             options: userGenderOptions,
         },
@@ -109,7 +98,7 @@ export const userProfileFormConfig = {
 };
 
 export const userStatusFormConfig = {
-    title: 'trạng thái tài khoản',
+    title: translate('text.account_status'),
     schema: z.object({
         status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']),
     }),
@@ -125,7 +114,7 @@ export const userStatusFormConfig = {
     fields: [
         {
             name: 'status',
-            label: 'Trạng thái',
+            label: translate('text.status'),
             type: 'select',
             options: userStatusOptions.filter((option) => option.value),
         },

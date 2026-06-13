@@ -1,6 +1,6 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
 const paymentStatusEnum = ["pending", "paid", "failed"];
-const providerEnum = ["vnpay", "stripe", "paypal"];
+const providerEnum = ["vnpay", "stripe", "paypal", "payos"];
 
 const paymentIdParam = {
     in: "path",
@@ -168,6 +168,40 @@ module.exports = {
                 { in: "header", name: "paypal-transmission-sig", required: true, schema: { type: "string" } },
             ],
             requestBody: jsonBody("#/components/schemas/PayPalWebhookInput"),
+            responses: {
+                200: ok("#/components/schemas/WebhookResponse"),
+                400: { $ref: "#/components/responses/BadRequest" },
+                401: { $ref: "#/components/responses/Unauthorized" },
+                404: { $ref: "#/components/responses/NotFound" },
+                409: { $ref: "#/components/responses/Conflict" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
+    "/payments/payos/webhook": {
+        post: {
+            tags: ["Payments"],
+            summary: "Handle PayOS webhook",
+            security: [],
+            requestBody: jsonBody("#/components/schemas/PayOSWebhookInput"),
+            responses: {
+                200: ok("#/components/schemas/WebhookResponse"),
+                400: { $ref: "#/components/responses/BadRequest" },
+                401: { $ref: "#/components/responses/Unauthorized" },
+                404: { $ref: "#/components/responses/NotFound" },
+                409: { $ref: "#/components/responses/Conflict" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
+    "/payments/webhook/payos": {
+        post: {
+            tags: ["Payments"],
+            summary: "Handle PayOS webhook",
+            security: [],
+            requestBody: jsonBody("#/components/schemas/PayOSWebhookInput"),
             responses: {
                 200: ok("#/components/schemas/WebhookResponse"),
                 400: { $ref: "#/components/responses/BadRequest" },

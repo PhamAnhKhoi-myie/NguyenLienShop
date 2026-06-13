@@ -11,80 +11,80 @@ const swaggerSpec = {
         {
             name: "Auth",
             description:
-                "Đăng ký, đăng nhập, refresh access token, đăng xuất.",
+                "Register, log in, refresh access token, log out.",
         },
         {
             name: "Users",
             description:
-                "Quản lý thông tin người dùng: lấy profile hiện tại, danh sách user, cập nhật profile, xoá mềm, cập nhật roles.",
+                "Manage user information: retrieve the current profile, list users, update profiles, soft delete users, and update roles.",
         },
         {
             name: "User Addresses",
             description:
-                "Quản lý địa chỉ giao hàng: tạo, lấy danh sách, cập nhật, đặt mặc định, xoá.",
+                "Manage shipping addresses: create, get list, update, set default, delete.",
         },
         {
             name: "Categories",
             description:
-                "Quản lý danh mục sản phẩm: lấy cây phân cấp, danh sách phẳng, tạo, cập nhật, xoá mềm, restore.",
+                "Manage product categories: get hierarchical tree, flat list, create, update, soft delete, restore.",
         },
         {
             name: "Products",
-            description: "Quản lý sản phẩm: lấy danh sách, tìm kiếm, tạo, cập nhật, xoá mềm.",
+            description: "Product management: get list, search, create, update, soft delete.",
         },
         {
             name: "Variants",
-            description: "Quản lý biến thể sản phẩm: lấy danh sách, tạo, cập nhật, xoá mềm, quản lý tồn kho.",
+            description: "Product variation management: get list, create, update, soft delete, inventory management.",
         },
         {
             name: "Variant Units",
-            description: "Quản lý đơn vị bán của biến thể: lấy danh sách, tạo, cập nhật, xoá, tính giá.",
+            description: "Manage variant sales units: get list, create, update, delete, calculate price.",
         },
         {
             name: "Carts",
             description:
-                "Quản lý giỏ hàng: tạo giỏ khách, lấy giỏ, thêm/cập nhật/xoá item, áp dụng discount, merge giỏ, checkout.",
+                "Manage carts: create guest carts, retrieve carts, add, update, or remove items, apply discounts, merge carts, and check out.",
         },
         {
             name: "Orders",
-            description: "Quản lý đơn hàng: tạo từ cart, theo dõi, hủy, review, và quản lý admin.",
+            description: "Order management: create from cart, track, cancel, review, and admin management.",
         },
         {
             name: "Payments",
-            description: "Quản lý thanh toán: tạo payment, xử lý webhook, retry/cancel, lịch sử thanh toán.",
+            description: "Payment management: payment creation, webhook processing, retry/cancel, payment history.",
         },
         {
             name: "Discounts",
             description:
-                "Quản lý mã giảm giá / voucher: tạo, cập nhật, danh sách, validate code, bulk import, thống kê sử dụng.",
+                "Manage discount codes / vouchers: create, update, list, validate code, bulk import, usage statistics.",
         },
         {
             name: "Shipments",
-            description: "Quản lý vận chuyển: tạo, theo dõi, cập nhật trạng thái, và quản lý admin.",
+            description: "Shipping management: create, track, update status, and admin manage.",
         },
         {
             name: "Reviews",
-            description: "Quản lý đánh giá sản phẩm: tạo, cập nhật, xóa review, đánh giá hữu ích, và moderation admin.",
+            description: "Manage product reviews: create, update, delete reviews, helpful reviews, and moderate admin.",
         },
         {
             name: "Banners",
-            description: "Quản lý banner: tạo, cập nhật, xóa, lấy danh sách.",
+            description: "Banner management: create, update, delete, get list.",
         },
         {
             name: "Announcements",
-            description: "Quản lý thông báo: tạo, cập nhật, xóa, lấy danh sách.",
+            description: "Manage notifications: create, update, delete, get list.",
         },
         {
             name: "Shop Info",
-            description: "Quản lý thông tin cửa hàng: contact, giờ hoạt động, social links, trạng thái.",
+            description: "Manage store information: contact, operating hours, social links, status.",
         },
         {
             name: "Notifications",
-            description: "Quản lý thông báo cho người dùng: lấy danh sách, đánh dấu đã đọc, xóa.",
+            description: "Manage notifications for users: get list, mark read, delete.",
         },
         {
             name: "Chats",
-            description: "Chatbot trợ lý AI tích hợp Gemini"
+            description: "Gemini integrated AI assistant chatbot"
         },
     ],
     components: {
@@ -94,14 +94,14 @@ const swaggerSpec = {
                 scheme: "bearer",
                 bearerFormat: "JWT",
                 description:
-                    "JWT access token. Header: `Authorization: Bearer <accessToken>`. Chỉ dùng cho các endpoint backend thực sự kiểm tra Bearer (vd. sau khi bạn gắn authMiddleware).",
+                    "JWT access token. Header: `Authorization: Bearer <accessToken>`. Only used for backend endpoints that actually test the Bearer (e.g. after you attach authMiddleware).",
             },
             refreshTokenCookie: {
                 type: "apiKey",
                 in: "cookie",
                 name: "refreshToken",
                 description:
-                    "Refresh token cookie (httpOnly). Đăng nhập thành công sẽ được server Set-Cookie; Swagger UI → Authorize → nhập giá trị cookie nếu test tay.",
+                    "Refresh token cookie (httpOnly). Successful login will result in Set-Cookie server; Swagger UI → Authorize → enter cookie value if testing manually.",
             },
         },
         responses: {
@@ -170,12 +170,12 @@ const swaggerSpec = {
                     password: {
                         type: "string",
                         minLength: 6,
-                        description: "Khớp Zod register (tối thiểu 6 ký tự).",
+                        description: "Matches Zod register (minimum 6 characters).",
                     },
                     full_name: {
                         type: "string",
                         minLength: 2,
-                        description: "Khớp Zod register (tối thiểu 2 ký tự).",
+                        description: "Matches Zod register (minimum 2 characters).",
                     },
                 },
                 required: ["email", "password"],
@@ -191,7 +191,7 @@ const swaggerSpec = {
                     password: {
                         type: "string",
                         minLength: 1,
-                        description: "Khớp Zod login (bắt buộc, ≥1 ký tự).",
+                        description: "Matches Zod login (required, ≥1 character).",
                     },
                 },
                 required: ["email", "password"],
@@ -202,12 +202,12 @@ const swaggerSpec = {
             },
             UserPublic: {
                 type: "object",
-                description: "Thông tin user trả về cho client (không có password).",
+                description: "User information returned to client (no password).",
                 properties: {
                     id: {
                         type: "string",
                         pattern: "^[a-fA-F0-9]{24}$",
-                        description: "MongoDB ObjectId dạng chuỗi hex 24 ký tự",
+                        description: "MongoDB ObjectId as 24-character hex string",
                         example: "507f1f77bcf86cd799439011",
                     },
                     email: { type: "string", format: "email", example: "user@example.com" },
@@ -229,7 +229,7 @@ const swaggerSpec = {
                     name: {
                         type: "string",
                         minLength: 2,
-                        description: "Tên hiển thị / full name.",
+                        description: "Display name / full name.",
                     },
                     avatar: {
                         type: "string",
@@ -239,11 +239,11 @@ const swaggerSpec = {
                     email: {
                         type: "string",
                         format: "email",
-                        description: "Email mới (nếu cho phép cập nhật).",
+                        description: "New email (if updates are allowed).",
                     },
                     phone: {
                         type: "string",
-                        description: "Số điện thoại.",
+                        description: "Phone number.",
                     },
                 },
                 example: {
@@ -356,7 +356,7 @@ const swaggerSpec = {
                 properties: {
                     success: { type: "boolean", example: false },
                     code: { type: "string", example: "INVALID_CREDENTIALS" },
-                    message: { type: "string", example: "Email hoặc mật khẩu không đúng" },
+                    message: { type: "string", example: "Email or password is incorrect" },
                 },
                 required: ["success", "code", "message"],
                 example: {
@@ -369,7 +369,7 @@ const swaggerSpec = {
                 type: "object",
                 properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Đăng ký thành công" },
+                    message: { type: "string", example: "Registered successfully" },
                     data: {
                         type: "object",
                         properties: {
@@ -381,7 +381,7 @@ const swaggerSpec = {
                 required: ["success", "message", "data"],
                 example: {
                     success: true,
-                    message: "Đăng ký thành công",
+                    message: "Registered successfully",
                     data: {
                         user: {
                             id: "507f1f77bcf86cd799439011",
@@ -396,7 +396,7 @@ const swaggerSpec = {
                 type: "object",
                 properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Đăng nhập thành công" },
+                    message: { type: "string", example: "Successful login" },
                     data: {
                         type: "object",
                         properties: {
@@ -409,7 +409,7 @@ const swaggerSpec = {
                 required: ["success", "message", "data"],
                 example: {
                     success: true,
-                    message: "Đăng nhập thành công",
+                    message: "Successful login",
                     data: {
                         accessToken:
                             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEifQ.signature",
@@ -426,7 +426,7 @@ const swaggerSpec = {
                 type: "object",
                 properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Refresh token thành công" },
+                    message: { type: "string", example: "Refresh token successfully" },
                     data: {
                         type: "object",
                         properties: {
@@ -438,7 +438,7 @@ const swaggerSpec = {
                 required: ["success", "message", "data"],
                 example: {
                     success: true,
-                    message: "Refresh token thành công",
+                    message: "Refresh token successfully",
                     data: {
                         accessToken:
                             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEifQ.newAccess",
@@ -449,18 +449,18 @@ const swaggerSpec = {
                 type: "object",
                 properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Đăng xuất thành công" },
+                    message: { type: "string", example: "Signed out successfully" },
                     data: {
                         type: "object",
                         nullable: true,
-                        description: "Luôn null — cùng envelope với các response có `data`.",
+                        description: "Always null — same envelope as responses with `data`.",
                         example: null,
                     },
                 },
                 required: ["success", "message", "data"],
                 example: {
                     success: true,
-                    message: "Đăng xuất thành công",
+                    message: "Signed out successfully",
                     data: null,
                 },
             },
@@ -476,13 +476,13 @@ const swaggerSpec = {
             PaginatedResponse: {
                 type: "object",
                 description:
-                    "Chuẩn dự kiến cho list (chưa gắn path). `data` = mảng item; khi implement, dùng allOf hoặc schema riêng cho từng resource.",
+                    "Expected standard for list (no path attached). `data` = array items; When implementing, use allOf or a separate schema for each resource.",
                 properties: {
                     success: { type: "boolean", example: true },
                     message: { type: "string", example: "OK" },
                     data: {
                         type: "array",
-                        items: { type: "object", description: "Thay bằng $ref tới schema phần tử" },
+                        items: { type: "object", description: "Replace with $ref to element schema" },
                         example: [],
                     },
                     meta: { $ref: "#/components/schemas/PaginatedMeta" },
@@ -501,47 +501,47 @@ const swaggerSpec = {
                     receiver_name: {
                         type: "string",
                         minLength: 1,
-                        description: "Tên người nhận",
+                        description: "Recipient name",
                         example: "Nguyen Van A",
                     },
                     phone: {
                         type: "string",
                         pattern: "^(0|\\+84)[0-9]{9}$",
-                        description: "Số điện thoại Việt Nam",
+                        description: "Vietnam phone number",
                         example: "0912345678",
                     },
                     address_line_1: {
                         type: "string",
                         minLength: 1,
-                        description: "Địa chỉ dòng 1",
-                        example: "123 Đường Lê Lợi",
+                        description: "Line 1 address",
+                        example: "123 Le Loi Street",
                     },
                     address_line_2: {
                         type: "string",
-                        description: "Địa chỉ dòng 2 (tùy chọn)",
-                        example: "Căn hộ 101",
+                        description: "Line 2 address (optional)",
+                        example: "Apartment 101",
                     },
                     city: {
                         type: "string",
                         minLength: 1,
-                        description: "Thành phố/Tỉnh",
+                        description: "City/Province",
                         example: "Ho Chi Minh",
                     },
                     district: {
                         type: "string",
                         minLength: 1,
-                        description: "Quận/Huyện",
+                        description: "District",
                         example: "District 1",
                     },
                     ward: {
                         type: "string",
                         minLength: 1,
-                        description: "Phường/Xã",
+                        description: "Ward/Commune",
                         example: "Ward 1",
                     },
                     is_default: {
                         type: "boolean",
-                        description: "Địa chỉ mặc định",
+                        description: "Default address",
                         default: false,
                     },
                 },
@@ -549,8 +549,8 @@ const swaggerSpec = {
                 example: {
                     receiver_name: "Nguyen Van A",
                     phone: "0912345678",
-                    address_line_1: "123 Đường Lê Lợi",
-                    address_line_2: "Căn hộ 101",
+                    address_line_1: "123 Le Loi Street",
+                    address_line_2: "Apartment 101",
                     city: "Ho Chi Minh",
                     district: "District 1",
                     ward: "Ward 1",
@@ -591,8 +591,8 @@ const swaggerSpec = {
                     },
                     receiver_name: { type: "string", example: "Nguyen Van A" },
                     phone: { type: "string", example: "0912345678" },
-                    address_line_1: { type: "string", example: "123 Đường Lê Lợi" },
-                    address_line_2: { type: "string", example: "Căn hộ 101" },
+                    address_line_1: { type: "string", example: "123 Le Loi Street" },
+                    address_line_2: { type: "string", example: "Apartment 101" },
                     city: { type: "string", example: "Ho Chi Minh" },
                     district: { type: "string", example: "District 1" },
                     ward: { type: "string", example: "Ward 1" },
@@ -873,7 +873,7 @@ const swaggerSpec = {
                 required: ["success", "message"],
             },
 
-            // ✅ PRODUCT SCHEMAS
+
             CreateProductInput: {
                 type: "object",
                 properties: {
@@ -881,8 +881,8 @@ const swaggerSpec = {
                         type: "string",
                         minLength: 2,
                         maxLength: 200,
-                        description: "Tên sản phẩm",
-                        example: "Khăn giấy ướt",
+                        description: "Product name",
+                        example: "Wet tissue",
                     },
                     slug: {
                         type: "string",
@@ -893,26 +893,26 @@ const swaggerSpec = {
                     category_id: {
                         type: "string",
                         pattern: "^[a-fA-F0-9]{24}$",
-                        description: "ID danh mục",
+                        description: "Category ID",
                         example: "507f1f77bcf86cd799439011",
                     },
                     brand: {
                         type: "string",
                         maxLength: 100,
-                        description: "Thương hiệu",
+                        description: "Brand",
                         example: "ABC Brand",
                     },
                     short_description: {
                         type: "string",
                         maxLength: 500,
-                        description: "Mô tả ngắn",
-                        example: "Khăn giấy ướt chất lượng cao",
+                        description: "Short description",
+                        example: "High quality wet tissue",
                     },
                     description: {
                         type: "string",
                         maxLength: 2000,
-                        description: "Mô tả chi tiết",
-                        example: "Khăn giấy ướt với công nghệ kháng khuẩn...",
+                        description: "Detailed description",
+                        example: "Wet tissue with antibacterial technology...",
                     },
                     images: {
                         type: "array",
@@ -926,20 +926,20 @@ const swaggerSpec = {
                             },
                             required: ["url"],
                         },
-                        description: "Danh sách hình ảnh",
+                        description: "Image list",
                     },
                     search_keywords: {
                         type: "array",
                         items: { type: "string" },
                         maxItems: 10,
-                        description: "Từ khóa tìm kiếm",
-                        example: ["khăn giấy", "ướt", "kháng khuẩn"],
+                        description: "Search keyword",
+                        example: ["tissue", "wet", "antibacterial"],
                     },
                     status: {
                         type: "string",
                         enum: ["ACTIVE", "INACTIVE"],
                         default: "ACTIVE",
-                        description: "Trạng thái sản phẩm",
+                        description: "Product status",
                     },
                 },
                 required: ["name", "category_id"],
@@ -973,7 +973,7 @@ const swaggerSpec = {
                 type: "object",
                 properties: {
                     id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", example: "507f1f77bcf86cd799439011" },
-                    name: { type: "string", example: "Khăn giấy ướt" },
+                    name: { type: "string", example: "Wet tissue" },
                     slug: { type: "string", example: "khan-giay-uot" },
                     category_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", example: "507f1f77bcf86cd799439012" },
                     brand: { type: "string", example: "ABC Brand" },
@@ -981,8 +981,8 @@ const swaggerSpec = {
                     max_price: { type: "number", example: 200000 },
                     min_price_per_unit: { type: "number", example: 1500 },
                     max_price_per_unit: { type: "number", example: 2000 },
-                    description: { type: "string", example: "Khăn giấy ướt chất lượng cao" },
-                    short_description: { type: "string", example: "Khăn giấy ướt với công nghệ kháng khuẩn" },
+                    description: { type: "string", example: "High quality wet tissue" },
+                    short_description: { type: "string", example: "Wet wipes with antibacterial technology" },
                     images: {
                         type: "array",
                         items: {
@@ -1039,7 +1039,7 @@ const swaggerSpec = {
                 ],
             },
 
-            // ✅ VARIANT SCHEMAS
+
             CreateVariantInput: {
                 type: "object",
                 properties: {
@@ -1047,15 +1047,15 @@ const swaggerSpec = {
                         type: "string",
                         minLength: 1,
                         maxLength: 50,
-                        description: "Kích thước",
+                        description: "Size",
                         example: "20x25",
                     },
                     fabric_type: {
                         type: "string",
                         minLength: 1,
                         maxLength: 100,
-                        description: "Loại vải",
-                        example: "Vải Không Dệt",
+                        description: "Fabric type",
+                        example: "Nonwoven Fabric",
                     },
                     stock: {
                         type: "object",
@@ -1096,7 +1096,7 @@ const swaggerSpec = {
                     product_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", example: "507f1f77bcf86cd799439011" },
                     sku: { type: "string", example: "KGU-20x25-VKD" },
                     size: { type: "string", example: "20x25" },
-                    fabric_type: { type: "string", example: "Vải Không Dệt" },
+                    fabric_type: { type: "string", example: "Nonwoven Fabric" },
                     min_price: { type: "number", example: 150000 },
                     max_price: { type: "number", example: 200000 },
                     min_price_per_unit: { type: "number", example: 1500 },
@@ -1130,7 +1130,7 @@ const swaggerSpec = {
                 ],
             },
 
-            // ✅ VARIANT UNIT SCHEMAS
+
             CreateVariantUnitInput: {
                 type: "object",
                 properties: {
@@ -1138,19 +1138,19 @@ const swaggerSpec = {
                         type: "string",
                         enum: ["UNIT", "PACK", "BOX", "CARTON"],
                         default: "PACK",
-                        description: "Loại đơn vị",
+                        description: "Unit type",
                     },
                     display_name: {
                         type: "string",
                         minLength: 1,
                         maxLength: 100,
-                        description: "Tên hiển thị",
-                        example: "Gói 100",
+                        description: "Display name",
+                        example: "Pack of 100",
                     },
                     pack_size: {
                         type: "integer",
                         minimum: 1,
-                        description: "Số lượng trong gói",
+                        description: "Quantity in package",
                         example: 100,
                     },
                     price_tiers: {
@@ -1165,7 +1165,7 @@ const swaggerSpec = {
                             },
                             required: ["min_qty", "unit_price"],
                         },
-                        description: "Bậc giá",
+                        description: "Price tier",
                     },
                     min_order_qty: { type: "integer", minimum: 1, default: 1 },
                     max_order_qty: { type: "integer", minimum: 1, nullable: true },
@@ -1206,7 +1206,7 @@ const swaggerSpec = {
                     id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", example: "507f1f77bcf86cd799439014" },
                     variant_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", example: "507f1f77bcf86cd799439013" },
                     unit_type: { type: "string", enum: ["UNIT", "PACK", "BOX", "CARTON"], example: "PACK" },
-                    display_name: { type: "string", example: "Gói 100" },
+                    display_name: { type: "string", example: "Pack of 100" },
                     pack_size: { type: "integer", example: 100 },
                     price_tiers: {
                         type: "array",
@@ -1235,7 +1235,7 @@ const swaggerSpec = {
                     qty_packs: {
                         type: "integer",
                         minimum: 1,
-                        description: "Số gói muốn mua",
+                        description: "Number of packages you want to buy",
                         example: 3,
                     },
                 },
@@ -1251,7 +1251,7 @@ const swaggerSpec = {
                     price_per_unit: { type: "number", example: 1800 },
                     currency: { type: "string", example: "VND" },
                     pack_size: { type: "integer", example: 100 },
-                    unit_display: { type: "string", example: "Gói 100" },
+                    unit_display: { type: "string", example: "Pack of 100" },
                 },
                 required: ["qty_packs", "unit_price", "total_price", "total_items", "price_per_unit", "currency", "pack_size", "unit_display"],
             },
@@ -1261,14 +1261,14 @@ const swaggerSpec = {
                     qty_items: {
                         type: "integer",
                         minimum: 1,
-                        description: "Số lượng sản phẩm (cái)",
+                        description: "Number of products (pieces)",
                         example: 300,
                     },
                 },
                 required: ["qty_items"],
             },
 
-            // ✅ RESPONSE SCHEMAS
+
             ProductResponse: {
                 type: "object",
                 properties: {
@@ -1376,7 +1376,7 @@ const swaggerSpec = {
                 required: ["success", "message"],
             },
 
-            // ✅ CART SCHEMAS
+
             CartItem: {
                 type: "object",
                 properties: {
@@ -1385,10 +1385,10 @@ const swaggerSpec = {
                     variant_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", example: "507f1f77bcf86cd799439011" },
                     unit_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", example: "507f1f77bcf86cd799439012" },
                     sku: { type: "string", example: "BAG-20X25-POLYESTER" },
-                    variant_label: { type: "string", example: "20x25 - Vải Không Dệt" },
-                    product_name: { type: "string", example: "Túi Bao Trái" },
+                    variant_label: { type: "string", example: "20x25 - Nonwoven Fabric" },
+                    product_name: { type: "string", example: "Left Bag" },
                     product_image: { type: "string", format: "uri", nullable: true },
-                    display_name: { type: "string", example: "Gói 100" },
+                    display_name: { type: "string", example: "Pack of 100" },
                     pack_size: { type: "integer", example: 100 },
                     price_at_added: { type: "number", example: 180000 },
                     quantity: { type: "integer", example: 5 },
@@ -1489,13 +1489,13 @@ const swaggerSpec = {
                         type: "string",
                         minLength: 1,
                         maxLength: 100,
-                        example: "20x25 - Vải Không Dệt",
+                        example: "20x25 - Nonwoven Fabric",
                     },
                     product_name: {
                         type: "string",
                         minLength: 1,
                         maxLength: 200,
-                        example: "Túi Bao Trái",
+                        example: "Left Bag",
                     },
                     product_image: {
                         type: "string",
@@ -1506,7 +1506,7 @@ const swaggerSpec = {
                         type: "string",
                         minLength: 1,
                         maxLength: 50,
-                        example: "Gói 100",
+                        example: "Pack of 100",
                     },
                     pack_size: {
                         type: "integer",
@@ -1649,7 +1649,7 @@ const swaggerSpec = {
                 required: ["id", "items", "totals", "status"],
             },
 
-            // ✅ RESPONSE SCHEMAS
+
             CartResponse: {
                 type: "object",
                 properties: {
@@ -1708,17 +1708,17 @@ const swaggerSpec = {
                 required: ["success", "data", "message"],
             },
 
-            // ✅ ORDER SCHEMAS
+
             OrderAddressSnapshot: {
                 type: "object",
                 properties: {
-                    street: { type: "string", example: "123 Đường Lê Lợi" },
-                    district: { type: "string", example: "Quận 1" },
-                    city: { type: "string", example: "TP. Hồ Chí Minh" },
+                    street: { type: "string", example: "123 Le Loi Street" },
+                    district: { type: "string", example: "District 1" },
+                    city: { type: "string", example: "City. Ho Chi Minh" },
                     postal_code: { type: "string", example: "700000", nullable: true },
                     country: { type: "string", default: "Vietnam", example: "Vietnam" },
                     phone: { type: "string", example: "0912345678" },
-                    recipient_name: { type: "string", example: "Nguyễn Văn A" },
+                    recipient_name: { type: "string", example: "Nguyen Van A" },
                 },
                 required: ["street", "district", "city", "phone", "recipient_name"],
             },
@@ -1731,11 +1731,11 @@ const swaggerSpec = {
                     variant_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
                     unit_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
 
-                    product_name: { type: "string", example: "Túi Bao Trái" },
+                    product_name: { type: "string", example: "Left Bag" },
                     product_image: { type: "string", format: "uri", nullable: true },
-                    variant_label: { type: "string", example: "20x25 - Vải Không Dệt" },
+                    variant_label: { type: "string", example: "20x25 - Nonwoven Fabric" },
                     sku: { type: "string", example: "BAG-20X25-POLYESTER" },
-                    unit_label: { type: "string", example: "Gói 100" },
+                    unit_label: { type: "string", example: "Pack of 100" },
                     pack_size: { type: "integer", example: 100 },
 
                     quantity_ordered: { type: "integer", example: 10 },
@@ -1776,7 +1776,7 @@ const swaggerSpec = {
             OrderPayment: {
                 type: "object",
                 properties: {
-                    method: { type: "string", enum: ["COD", "VNPAY", "MOMO", "CARD"], example: "COD" },
+                    method: { type: "string", enum: ["COD", "VNPAY", "PAYOS", "MOMO", "CARD"], example: "COD" },
                     status: { type: "string", enum: ["PENDING", "PAID", "FAILED", "REFUNDED"], example: "PENDING" },
                     paid_at: { type: "string", format: "date-time", nullable: true },
                     refunded_at: { type: "string", format: "date-time", nullable: true },
@@ -1799,8 +1799,8 @@ const swaggerSpec = {
                 properties: {
                     from: { type: "string", enum: ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "FAILED", "CANCELED"], nullable: true },
                     to: { type: "string", enum: ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "FAILED", "CANCELED"] },
-                    from_label: { type: "string", example: "Đang chờ thanh toán" },
-                    to_label: { type: "string", example: "Đã thanh toán" },
+                    from_label: { type: "string", example: "Awaiting payment" },
+                    to_label: { type: "string", example: "Paid" },
                     changed_at: { type: "string", format: "date-time" },
                     changed_at_formatted: { type: "string", example: "15/04/2024 10:30:00" },
                     changed_by_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", nullable: true },
@@ -1851,7 +1851,7 @@ const swaggerSpec = {
                         items: { $ref: "#/components/schemas/OrderStatusHistoryRecord" },
                     },
 
-                    customer_notes: { type: "string", nullable: true, example: "Giao buổi sáng nếu được" },
+                    customer_notes: { type: "string", nullable: true, example: "Morning delivery if possible" },
 
                     created_at: { type: "string", format: "date-time" },
                     updated_at: { type: "string", format: "date-time" },
@@ -1895,7 +1895,7 @@ const swaggerSpec = {
                 properties: {
                     order_code: { type: "string", example: "ORD-20240415-ABC12" },
                     status: { type: "string", enum: ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "FAILED", "CANCELED"] },
-                    status_label: { type: "string", example: "Đã giao" },
+                    status_label: { type: "string", example: "Delivered" },
                     timeline: {
                         type: "array",
                         items: {
@@ -1946,14 +1946,14 @@ const swaggerSpec = {
                 required: ["totalOrders", "totalRevenue", "statusBreakdown", "paymentBreakdown"],
             },
 
-            // ✅ REQUEST SCHEMAS
+
             CreateOrderInput: {
                 type: "object",
                 properties: {
                     cart_id: {
                         type: "string",
                         pattern: "^[a-fA-F0-9]{24}$",
-                        description: "ID của giỏ hàng cần checkout",
+                        description: "ID of the cart to checkout",
                         example: "507f1f77bcf86cd799439016",
                     },
                     address_snapshot: {
@@ -1964,27 +1964,27 @@ const swaggerSpec = {
                     },
                     payment_method: {
                         type: "string",
-                        enum: ["COD", "VNPAY", "MOMO", "CARD"],
-                        description: "Phương thức thanh toán",
+                        enum: ["COD", "VNPAY", "PAYOS", "MOMO", "CARD"],
+                        description: "Payment method",
                         example: "COD",
                     },
                     customer_notes: {
                         type: "string",
                         maxLength: 500,
-                        description: "Ghi chú từ khách",
-                        example: "Giao buổi sáng nếu được",
+                        description: "Guest note",
+                        example: "Morning delivery if possible",
                     },
                     shipping_fee: {
                         type: "number",
                         minimum: 0,
                         default: 0,
-                        description: "Phí vận chuyển",
+                        description: "Shipping fee",
                     },
                     currency: {
                         type: "string",
                         enum: ["VND", "USD", "EUR"],
                         default: "VND",
-                        description: "Tiền tệ",
+                        description: "Currency",
                     },
                 },
                 required: ["cart_id", "address_snapshot", "payment_method"],
@@ -1996,13 +1996,13 @@ const swaggerSpec = {
                     status: {
                         type: "string",
                         enum: ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "FAILED", "CANCELED"],
-                        description: "Trạng thái mới",
+                        description: "New status",
                         example: "PROCESSING",
                     },
                     note: {
                         type: "string",
                         maxLength: 500,
-                        description: "Ghi chú",
+                        description: "Note",
                         example: "Sent to warehouse for fulfillment",
                     },
                 },
@@ -2015,12 +2015,12 @@ const swaggerSpec = {
                     status: {
                         type: "string",
                         enum: ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "FAILED", "CANCELED"],
-                        description: "Trạng thái mới (tùy chọn)",
+                        description: "New status (optional)",
                     },
                     admin_notes: {
                         type: "string",
                         maxLength: 1000,
-                        description: "Ghi chú admin (tùy chọn)",
+                        description: "Admin note (optional)",
                         example: "Customer requested priority shipping",
                     },
                 },
@@ -2032,14 +2032,14 @@ const swaggerSpec = {
                     item_id: {
                         type: "string",
                         pattern: "^[a-fA-F0-9]{24}$",
-                        description: "ID của item trong order",
+                        description: "ID of the item in order",
                         example: "507f1f77bcf86cd799439021",
                     },
                     quantity_fulfilled: {
                         type: "integer",
                         minimum: 1,
                         maximum: 1000000,
-                        description: "Số gói cần đánh dấu là fulfilled",
+                        description: "Number of packages to mark as fulfilled",
                         example: 10,
                     },
                 },
@@ -2053,14 +2053,14 @@ const swaggerSpec = {
                         type: "string",
                         minLength: 1,
                         maxLength: 50,
-                        description: "Tên công ty vận chuyển",
+                        description: "Shipping company name",
                         example: "GHN",
                     },
                     tracking_code: {
                         type: "string",
                         minLength: 1,
                         maxLength: 100,
-                        description: "Mã tracking từ công ty vận chuyển",
+                        description: "Tracking code from shipping company",
                         example: "100123456789",
                     },
                 },
@@ -2074,8 +2074,8 @@ const swaggerSpec = {
                         type: "string",
                         minLength: 1,
                         maxLength: 500,
-                        description: "Lý do hủy đơn",
-                        example: "Mình đặt nhầm size",
+                        description: "Reason for cancellation",
+                        example: "I ordered the wrong size",
                     },
                 },
                 required: ["reason"],
@@ -2087,27 +2087,27 @@ const swaggerSpec = {
                     item_id: {
                         type: "string",
                         pattern: "^[a-fA-F0-9]{24}$",
-                        description: "ID của item cần review",
+                        description: "ID of the item to review",
                         example: "507f1f77bcf86cd799439021",
                     },
                     rating: {
                         type: "integer",
                         minimum: 1,
                         maximum: 5,
-                        description: "Đánh giá sao (1-5)",
+                        description: "Star rating (1-5)",
                         example: 5,
                     },
                     comment: {
                         type: "string",
                         maxLength: 500,
-                        description: "Bình luận (tùy chọn)",
-                        example: "Sản phẩm chất lượng, giao hàng nhanh",
+                        description: "Comment (optional)",
+                        example: "Quality products, fast delivery",
                     },
                 },
                 required: ["item_id", "rating"],
             },
 
-            // ✅ RESPONSE SCHEMAS
+
             OrderResponse: {
                 type: "object",
                 properties: {
@@ -2184,7 +2184,7 @@ const swaggerSpec = {
                 required: ["success", "data"],
             },
 
-            // ✅ PAYMENT SCHEMAS
+
             Payment: {
                 type: "object",
                 properties: {
@@ -2208,14 +2208,14 @@ const swaggerSpec = {
                     },
                     provider: {
                         type: "string",
-                        enum: ["vnpay", "stripe", "paypal"],
+                        enum: ["vnpay", "stripe", "paypal", "payos"],
                         example: "vnpay",
                         description: "Payment provider",
                     },
                     amount: {
                         type: "integer",
                         example: 1620000,
-                        description: "Payment amount (integer only, VND in đồng, USD in cents)",
+                        description: "Payment amount (integer only, VND in dong, USD in cents)",
                     },
                     currency: {
                         type: "string",
@@ -2321,7 +2321,7 @@ const swaggerSpec = {
                     },
                     provider: {
                         type: "string",
-                        enum: ["vnpay"],
+                        enum: ["vnpay", "payos"],
                         default: "vnpay",
                         description: "Payment provider",
                     },
@@ -2352,7 +2352,7 @@ const swaggerSpec = {
                     id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
                     order_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
                     user_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
-                    provider: { type: "string", enum: ["vnpay", "stripe", "paypal"] },
+                    provider: { type: "string", enum: ["vnpay", "stripe", "paypal", "payos"] },
                     transaction_ref: { type: "string", nullable: true },
                     amount: { type: "integer" },
                     currency: { type: "string", enum: ["VND", "USD"] },
@@ -2512,7 +2512,7 @@ const swaggerSpec = {
                                 items: {
                                     type: "object",
                                     properties: {
-                                        provider: { type: "string", enum: ["vnpay", "stripe", "paypal"] },
+                                        provider: { type: "string", enum: ["vnpay", "stripe", "paypal", "payos"] },
                                         count: { type: "integer" },
                                         revenue: { type: "integer" },
                                     },
@@ -2525,7 +2525,7 @@ const swaggerSpec = {
                 required: ["success", "data"],
             },
 
-            // ===== DISCOUNT SCHEMAS =====
+
             CreateDiscountInput: {
                 type: "object",
                 properties: {
@@ -2535,32 +2535,32 @@ const swaggerSpec = {
                         maxLength: 20,
                         uppercase: true,
                         pattern: "^[A-Z0-9_-]+$",
-                        description: "Mã discount (chữ hoa, ký tự đặc biệt: _ -)",
+                        description: "Discount code (upper case, special characters: _ -)",
                         example: "SALE50",
                     },
                     type: {
                         type: "string",
                         enum: ["percent", "fixed"],
-                        description: "Loại discount",
+                        description: "Discount type",
                         example: "percent",
                     },
                     value: {
                         type: "number",
                         minimum: 0,
-                        description: "Giá trị (percent: 50 = 50%, fixed: 200000 = 200k VND)",
+                        description: "Value (percent: 50 = 50%, fixed: 200000 = 200k VND)",
                         example: 50,
                     },
                     max_discount_amount: {
                         type: "number",
                         minimum: 0,
-                        description: "MANDATORY cho percent: giới hạn tối đa VND",
+                        description: "MANDATORY for percent: maximum limit VND",
                         example: 500000,
                     },
                     application_strategy: {
                         type: "string",
                         enum: ["apply_all", "apply_once", "apply_cheapest", "apply_most_expensive"],
                         default: "apply_all",
-                        description: "Cách áp dụng khi có nhiều items khớp",
+                        description: "How to apply when there are many matching items",
                     },
                     applicable_targets: {
                         type: "object",
@@ -2593,41 +2593,41 @@ const swaggerSpec = {
                     min_order_value: {
                         type: "number",
                         default: 0,
-                        description: "Giá trị đơn hàng tối thiểu để áp dụng",
+                        description: "Minimum order value to apply",
                         example: 500000,
                     },
                     usage_limit: {
                         type: "integer",
                         minimum: 1,
-                        description: "Tổng số lần có thể sử dụng",
+                        description: "Total number of times",
                         example: 1000,
                     },
                     usage_per_user_limit: {
                         type: "integer",
                         minimum: 1,
-                        description: "Số lần tối đa mỗi user có thể sử dụng",
+                        description: "Maximum number of times each user can use",
                         example: 2,
                     },
                     is_stackable: {
                         type: "boolean",
                         default: false,
-                        description: "Có thể kết hợp với discount khác không",
+                        description: "Can be combined with other discounts",
                     },
                     stack_priority: {
                         type: "integer",
                         default: 0,
-                        description: "Độ ưu tiên khi stack (cao hơn = áp dụng trước)",
+                        description: "Stack priority (higher = applies first)",
                     },
                     started_at: {
                         type: "string",
                         format: "date-time",
-                        description: "Ngày bắt đầu có hiệu lực",
+                        description: "Effective start date",
                         example: "2026-04-01T00:00:00Z",
                     },
                     expiry_date: {
                         type: "string",
                         format: "date-time",
-                        description: "Ngày hết hạn",
+                        description: "Expiry date",
                         example: "2026-04-30T23:59:59Z",
                     },
                     status: {
@@ -2685,13 +2685,13 @@ const swaggerSpec = {
                         type: "string",
                         minLength: 1,
                         maxLength: 20,
-                        description: "Mã discount (sẽ auto uppercase + trim)",
+                        description: "Discount code (will auto uppercase + trim)",
                         example: "SALE50",
                     },
                     cartSubtotal: {
                         type: "number",
                         minimum: 0,
-                        description: "Tổng tiền giỏ hàng trước discount",
+                        description: "Total cart amount before discount",
                         example: 10000000,
                     },
                     cartItems: {
@@ -2709,7 +2709,7 @@ const swaggerSpec = {
                                 line_total: { type: "number", minimum: 0 },
                             },
                         },
-                        description: "Danh sách items trong cart (để filter applicable items)",
+                        description: "List of items in cart (to filter applicable items)",
                     },
                 },
                 required: ["code", "cartSubtotal"],
@@ -2791,7 +2791,7 @@ const swaggerSpec = {
                     type: { type: "string", enum: ["percent", "fixed"], example: "percent" },
                     value: {
                         type: "number",
-                        minimum: 0,  // ← ADD THIS LINE
+                        minimum: 0,
                         example: 50
                     },
                     max_discount_amount: {
@@ -2960,7 +2960,7 @@ const swaggerSpec = {
                 },
             },
 
-            // ===== RESPONSE SCHEMAS =====
+
             DiscountResponse: {
                 type: "object",
                 properties: {
@@ -3046,17 +3046,17 @@ const swaggerSpec = {
                 required: ["success", "data"],
             },
 
-            // SHIPMENT ROUTES
+
             ShippingAddress: {
                 type: 'object',
                 required: ['recipient_name', 'phone', 'address', 'ward', 'district', 'province'],
                 properties: {
-                    recipient_name: { type: 'string', example: 'Nguyễn Văn A' },
+                    recipient_name: { type: 'string', example: "Nguyen Van A" },
                     phone: { type: 'string', example: '0912345678' },
-                    address: { type: 'string', example: '123 Đường ABC' },
-                    ward: { type: 'string', example: 'Phường 1' },
-                    district: { type: 'string', example: 'Quận 1' },
-                    province: { type: 'string', example: 'TP. Hồ Chí Minh' },
+                    address: { type: 'string', example: "123 ABC Street" },
+                    ward: { type: 'string', example: "Ward 1" },
+                    district: { type: 'string', example: "District 1" },
+                    province: { type: 'string', example: "City. Ho Chi Minh" },
                     postal_code: { type: 'string', example: '70000' },
                     country: { type: 'string', default: 'Vietnam' },
                 },
@@ -3237,7 +3237,7 @@ const swaggerSpec = {
                 },
             },
 
-            // ===== RESPONSE SCHEMAS =====
+
 
             ShipmentResponse: {
                 type: 'object',
@@ -3351,7 +3351,7 @@ const swaggerSpec = {
                 ],
             },
 
-            // Request/Response schemas
+
             CreateReviewInput: {
                 type: "object",
                 properties: {
@@ -3459,7 +3459,7 @@ const swaggerSpec = {
                 required: ["reason"],
             },
 
-            // Response schemas
+
             ReviewResponse: {
                 type: "object",
                 properties: {
@@ -3513,7 +3513,7 @@ const swaggerSpec = {
                 required: ["success", "data", "pagination"],
             },
 
-            // Banners
+
             BannerImage: {
                 type: 'object',
                 required: ['url'],
@@ -3740,7 +3740,7 @@ const swaggerSpec = {
                 }
             },
 
-            // Announcements
+
             AnnouncementImage: {
                 type: 'object',
                 required: ['url'],
@@ -3787,47 +3787,47 @@ const swaggerSpec = {
                         type: 'string',
                         minLength: 5,
                         maxLength: 200,
-                        example: 'Khuyến mãi Black Friday'
+                        example: "Black Friday Promotion"
                     },
                     content: {
                         type: 'string',
                         minLength: 10,
                         maxLength: 5000,
-                        example: 'Giảm giá lên đến 50% cho tất cả sản phẩm...'
+                        example: "Up to 50% discount on all products..."
                     },
                     priority: {
                         type: 'integer',
                         minimum: 0,
                         maximum: 10,
                         default: 0,
-                        description: 'Độ ưu tiên hiển thị (cao nhất = 10)'
+                        description: "Display priority (highest = 10)"
                     },
                     target: {
                         type: 'string',
                         enum: ['all', 'user', 'admin', 'guest'],
                         default: 'all',
-                        description: 'Ai có thể thấy thông báo'
+                        description: "Who can see the notification"
                     },
                     type: {
                         type: 'string',
                         enum: ['info', 'warning', 'promotion', 'system', 'urgent'],
                         default: 'info',
-                        description: 'Loại thông báo (dùng cho styling UI)'
+                        description: "Notification type (used for UI styling)"
                     },
                     is_dismissible: {
                         type: 'boolean',
                         default: true,
-                        description: 'Người dùng có thể đóng được không'
+                        description: "Can the user close"
                     },
                     start_at: {
                         type: 'string',
                         format: 'date-time',
-                        description: 'Thời gian bắt đầu hiển thị'
+                        description: "Display start time"
                     },
                     end_at: {
                         type: 'string',
                         format: 'date-time',
-                        description: 'Thời gian kết thúc hiển thị (phải > start_at)'
+                        description: "Display end time (right > start_at)"
                     },
                     is_active: {
                         type: 'boolean',
@@ -3845,7 +3845,7 @@ const swaggerSpec = {
                         type: 'string',
                         pattern: '^[a-fA-F0-9]{24}$',
                         nullable: true,
-                        description: 'User ID của người tạo'
+                        description: "User ID of creator"
                     }
                 }
             },
@@ -3859,7 +3859,7 @@ const swaggerSpec = {
                             days_remaining: {
                                 type: 'integer',
                                 nullable: true,
-                                description: 'Số ngày còn lại (nếu chưa hết hạn)'
+                                description: "Number of days remaining (if not expired)"
                             }
                         }
                     }
@@ -3915,8 +3915,8 @@ const swaggerSpec = {
                     }
                 },
                 example: {
-                    title: 'Khuyến mãi Black Friday',
-                    content: 'Giảm giá lên đến 50% cho tất cả sản phẩm trong 24 giờ tới',
+                    title: "Black Friday Promotion",
+                    content: "Up to 50% off all products in the next 24 hours",
                     priority: 10,
                     target: 'all',
                     type: 'promotion',
@@ -4020,7 +4020,7 @@ const swaggerSpec = {
                 }
             },
 
-            // ===== SHOP INFO SCHEMAS =====
+
             ShopInfo: {
                 type: 'object',
                 required: ['id', 'shop_name', 'email', 'phone', 'address', 'working_hours', 'is_active', 'created_at', 'updated_at'],
@@ -4035,7 +4035,7 @@ const swaggerSpec = {
                         type: 'string',
                         minLength: 2,
                         maxLength: 100,
-                        example: 'Nguyễn Liên Shop'
+                        example: "Nguyen Lien Shop"
                     },
                     email: {
                         type: 'string',
@@ -4050,7 +4050,7 @@ const swaggerSpec = {
                     address: {
                         type: 'string',
                         maxLength: 500,
-                        example: '123 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh'
+                        example: "123 Le Loi Street, District 1, City. Ho Chi Minh"
                     },
                     working_hours: {
                         type: 'array',
@@ -4115,14 +4115,14 @@ const swaggerSpec = {
                 type: 'object',
                 required: ['shop_name', 'email', 'phone', 'address'],
                 properties: {
-                    shop_name: { type: 'string', example: 'Nguyễn Liên Shop' },
+                    shop_name: { type: 'string', example: "Nguyen Lien Shop" },
                     email: { type: 'string', format: 'email', example: 'contact@nguyen-lien.com' },
                     phone: {
                         type: 'string',
                         pattern: '^(\\+84|0)[0-9]{9,10}$',
                         example: '0912345678'
                     },
-                    address: { type: 'string', example: '123 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh' },
+                    address: { type: 'string', example: "123 Le Loi Street, District 1, City. Ho Chi Minh" },
                     is_active: { type: 'boolean', example: true }
                 }
             },
@@ -4131,7 +4131,7 @@ const swaggerSpec = {
                 type: 'object',
                 required: ['shop_name', 'working_hours'],
                 properties: {
-                    shop_name: { type: 'string', example: 'Nguyễn Liên Shop' },
+                    shop_name: { type: 'string', example: "Nguyen Lien Shop" },
                     working_hours: {
                         type: 'array',
                         items: {
@@ -4151,7 +4151,7 @@ const swaggerSpec = {
                 type: 'object',
                 required: ['shop_name', 'social_links'],
                 properties: {
-                    shop_name: { type: 'string', example: 'Nguyễn Liên Shop' },
+                    shop_name: { type: 'string', example: "Nguyen Lien Shop" },
                     social_links: {
                         type: 'object',
                         properties: {
@@ -4194,7 +4194,7 @@ const swaggerSpec = {
                         type: 'string',
                         minLength: 2,
                         maxLength: 100,
-                        example: 'Nguyễn Liên Shop'
+                        example: "Nguyen Lien Shop"
                     },
                     email: {
                         type: 'string',
@@ -4209,7 +4209,7 @@ const swaggerSpec = {
                     address: {
                         type: 'string',
                         maxLength: 500,
-                        example: '123 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh'
+                        example: "123 Le Loi Street, District 1, City. Ho Chi Minh"
                     },
                     working_hours: {
                         type: 'array',
@@ -4350,7 +4350,7 @@ const swaggerSpec = {
                 }
             },
 
-            // Notification
+
 
             NotificationData: {
                 type: "object",
@@ -4386,8 +4386,8 @@ const swaggerSpec = {
                         type: "object",
                         properties: {
                             ref_type: { type: "string", enum: ["order", "payment", "discount", "product", null] },
-                            ref_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", nullable: true },  // ✅ ADDED
-                            extra: { type: "object", nullable: true }  // ✅ ADDED
+                            ref_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", nullable: true },
+                            extra: { type: "object", nullable: true }
                         }
                     },
 
@@ -4398,13 +4398,13 @@ const swaggerSpec = {
                     delivered_at: {
                         type: "string",
                         format: "date-time",
-                        nullable: true  // ✅ ADDED
+                        nullable: true
                     },
 
                     expire_at: {
                         type: "string",
                         format: "date-time",
-                        nullable: true  // ✅ ADDED
+                        nullable: true
                     },
 
                     created_at: { type: "string", format: "date-time" }
@@ -4571,7 +4571,7 @@ const swaggerSpec = {
             MarkAllAsReadInput: {
                 type: "object",
                 properties: {
-                    // No parameters needed - mark all user's notifications as read
+
                 },
                 required: []
             },
@@ -4602,7 +4602,7 @@ const swaggerSpec = {
                 required: ["success", "data"]
             },
 
-            //Chatbots
+
             ChatSessionResponse: {
                 type: "object",
                 properties: {
@@ -4637,7 +4637,7 @@ const swaggerSpec = {
     },
     paths: {
 
-        // Auth
+
         "/api/v1/auth/register": {
             post: {
                 tags: ["Auth"],
@@ -4672,7 +4672,7 @@ const swaggerSpec = {
                 summary: "Login",
                 security: [],
                 description:
-                    "Body trả `accessToken` + `user`. Refresh token được **Set-Cookie** tên `refreshToken`: **httpOnly**; **secure=true** khi `NODE_ENV=production`; **sameSite** = `lax` (môi trường thường) hoặc `none` (production, thường dùng kết hợp `secure` cho cross-site).",
+                    "Body returns `accessToken` + `user`. Refresh token is **Set-Cookie** named `refreshToken`: **httpOnly**; **secure=true** when `NODE_ENV=production`; **sameSite** = `lax` (normal environment) or `none` (production, often used in conjunction with `secure` for cross-site).",
                 requestBody: {
                     required: true,
                     content: {
@@ -4703,7 +4703,7 @@ const swaggerSpec = {
                 summary: "Refresh access token",
                 security: [{ refreshTokenCookie: [] }],
                 description:
-                    "Bắt buộc có cookie `refreshToken` (hoặc nhập qua Swagger Authorize). Thành công: body có `accessToken` mới; server có thể Set-Cookie rotate refresh (cùng chính sách httpOnly / secure / sameSite như login).",
+                    "`refreshToken` cookie is required (or entered via Swagger Authorize). Success: body has new `accessToken`; server can Set-Cookie rotate refresh (same httpOnly / secure / sameSite policy as login).",
                 responses: {
                     "200": {
                         description: "OK",
@@ -4725,14 +4725,14 @@ const swaggerSpec = {
                 summary: "Logout",
                 security: [],
                 description:
-                    "Cookie **không** bắt buộc. Nếu có `refreshToken`, server thu hồi (best effort) và **luôn** attempt clear cookie. Không dùng Bearer (trừ khi sau này bạn đổi code).",
+                    "Cookies are **not** required. If there is a `refreshToken`, the server recovers (best effort) and **always** attempts to clear the cookie. Do not use Bearer (unless you change the code later).",
                 parameters: [
                     {
                         in: "cookie",
                         name: "refreshToken",
                         required: false,
                         schema: { type: "string" },
-                        description: "httpOnly cookie; tùy chọn.",
+                        description: "httpOnly cookie; option.",
                     },
                 ],
                 responses: {
@@ -4748,7 +4748,7 @@ const swaggerSpec = {
             },
         },
 
-        // User
+
         "/api/v1/users/me": {
             get: {
                 tags: ["Users"],
@@ -4910,7 +4910,7 @@ const swaggerSpec = {
             },
         },
 
-        // User Address
+
         "/api/v1/user-addresses": {
             post: {
                 tags: ["User Addresses"],
@@ -5056,7 +5056,7 @@ const swaggerSpec = {
             }
         },
 
-        // Category
+
         "/api/v1/categories/tree": {
             get: {
                 tags: ["Categories"],
@@ -5271,7 +5271,7 @@ const swaggerSpec = {
             },
         },
 
-        //PRODUCT PATHS
+
         "/api/v1/products": {
             get: {
                 tags: ["Products"],
@@ -5472,7 +5472,7 @@ const swaggerSpec = {
             },
         },
 
-        // ✅ VARIANT PATHS
+
         "/api/v1/products/{productId}/variants": {
             get: {
                 tags: ["Variants"],
@@ -5754,7 +5754,7 @@ const swaggerSpec = {
             },
         },
 
-        // ✅ VARIANT UNIT PATHS
+
         "/api/v1/variant-units/{unitId}": {
             get: {
                 tags: ["Variant Units"],
@@ -6063,13 +6063,13 @@ const swaggerSpec = {
             },
         },
 
-        // ✅ CART PATHS
+
         "/api/v1/carts/guest": {
             post: {
                 tags: ["Carts"],
                 summary: "Create guest cart",
                 security: [],
-                description: "Tạo giỏ hàng cho khách (không đăng nhập). Client gửi session_key (UUID v4).",
+                description: "Create a shopping cart for customers (no login). Client sends session_key (UUID v4).",
                 requestBody: {
                     required: true,
                     content: {
@@ -6192,13 +6192,13 @@ const swaggerSpec = {
                 tags: ["Carts"],
                 summary: "Add item to cart",
                 security: [{ bearerAuth: [] }, {}],
-                description: "Thêm sản phẩm vào giỏ hàng. Có thể dùng JWT hoặc ?session_key=UUID (cho khách).",
+                description: "Add product to cart. Can use JWT or ?session_key=UUID (for clients).",
                 parameters: [
                     {
                         in: "query",
                         name: "session_key",
                         schema: { type: "string", format: "uuid" },
-                        description: "Session key cho giỏ khách (nếu không có JWT)",
+                        description: "Session key for client cart (if no JWT)",
                     },
                 ],
                 requestBody: {
@@ -6354,7 +6354,7 @@ const swaggerSpec = {
                 tags: ["Carts"],
                 summary: "Merge guest cart to user cart",
                 security: [{ bearerAuth: [] }],
-                description: "Gọi sau khi đăng nhập để merge giỏ khách vào giỏ người dùng.",
+                description: "Called after login to merge the customer cart into the user cart.",
                 requestBody: {
                     required: true,
                     content: {
@@ -6403,7 +6403,7 @@ const swaggerSpec = {
                 tags: ["Carts"],
                 summary: "Validate cart and create order snapshot",
                 security: [{ bearerAuth: [] }],
-                description: "Kiểm tra giỏ hàng, xác nhận stock, trả về snapshot để tạo order.",
+                description: "Check cart, confirm stock, return snapshot to create order.",
                 responses: {
                     "200": {
                         description: "OK",
@@ -6425,7 +6425,7 @@ const swaggerSpec = {
                 tags: ["Carts"],
                 summary: "Validate cart (dry-run)",
                 security: [{ bearerAuth: [] }],
-                description: "Kiểm tra giỏ hàng mà không lưu thay đổi (dry-run checkout).",
+                description: "Check out the cart without saving changes (dry-run checkout).",
                 responses: {
                     "200": {
                         description: "OK",
@@ -6475,14 +6475,14 @@ const swaggerSpec = {
             },
         },
 
-        // ===== PUBLIC ENDPOINTS =====
+
 
         "/api/v1/orders/track/{order_code}": {
             get: {
                 tags: ["Orders"],
                 summary: "Public order tracking",
                 security: [],
-                description: "Theo dõi đơn hàng công khai (không cần xác thực). Trả về status, timeline, shipment info.",
+                description: "Public order tracking (no authentication required). Returns status, timeline, shipment information.",
                 parameters: [
                     {
                         in: "path",
@@ -6507,14 +6507,14 @@ const swaggerSpec = {
             },
         },
 
-        // ===== CUSTOMER ENDPOINTS =====
+
 
         "/api/v1/orders": {
             post: {
                 tags: ["Orders"],
                 summary: "Create order from cart",
                 security: [{ bearerAuth: [] }],
-                description: "Tạo đơn hàng từ giỏ hàng (checkout). Deduction stock ATOMIC tại đây.",
+                description: "Create an order from the shopping cart (checkout). Deduction stock ATOMIC here.",
                 requestBody: {
                     required: true,
                     content: {
@@ -6543,7 +6543,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Get user's order history",
                 security: [{ bearerAuth: [] }],
-                description: "Lấy lịch sử đơn hàng của người dùng (pagination + filtering)",
+                description: "Get user's order history (pagination + filtering)",
                 parameters: [
                     {
                         in: "query",
@@ -6555,7 +6555,7 @@ const swaggerSpec = {
                         in: "query",
                         name: "limit",
                         schema: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-                        description: "Số item mỗi trang (max 100)",
+                        description: "Number of items per page (max 100)",
                     },
                     {
                         in: "query",
@@ -6573,13 +6573,13 @@ const swaggerSpec = {
                         in: "query",
                         name: "date_from",
                         schema: { type: "string", format: "date" },
-                        description: "Từ ngày (ISO date)",
+                        description: "From date (ISO date)",
                     },
                     {
                         in: "query",
                         name: "date_to",
                         schema: { type: "string", format: "date" },
-                        description: "Đến ngày (ISO date)",
+                        description: "To date (ISO date)",
                     },
                 ],
                 responses: {
@@ -6602,7 +6602,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Get order detail",
                 security: [{ bearerAuth: [] }],
-                description: "Lấy chi tiết đơn hàng (customer view - ẩn dữ liệu admin).",
+                description: "Get order details (customer view - hide admin data).",
                 parameters: [
                     {
                         in: "path",
@@ -6634,7 +6634,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Cancel order",
                 security: [{ bearerAuth: [] }],
-                description: "Hủy đơn hàng (khách tự hủy). Chỉ có thể hủy PENDING/PAID. Restores stock.",
+                description: "Cancel order (customer cancels himself). Only PENDING/PAID can be canceled. Restores stock.",
                 parameters: [
                     {
                         in: "path",
@@ -6675,7 +6675,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Write review for order item",
                 security: [{ bearerAuth: [] }],
-                description: "Viết review cho sản phẩm trong đơn hàng. Chỉ có thể review DELIVERED orders.",
+                description: "Write a review for the product in the order. Only DELIVERED orders can be reviewed.",
                 parameters: [
                     {
                         in: "path",
@@ -6711,14 +6711,14 @@ const swaggerSpec = {
             },
         },
 
-        // ===== ADMIN ENDPOINTS =====
+
 
         "/api/v1/admin/orders": {
             get: {
                 tags: ["Orders"],
                 summary: "Get all orders (admin)",
                 security: [{ bearerAuth: [] }],
-                description: "Lấy tất cả đơn hàng (admin dashboard với full transparency).",
+                description: "Get all orders (admin dashboard with full transparency).",
                 parameters: [
                     {
                         in: "query",
@@ -6779,7 +6779,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Get order statistics",
                 security: [{ bearerAuth: [] }],
-                description: "Lấy thống kê đơn hàng cho dashboard (total, revenue, breakdown).",
+                description: "Get order statistics for dashboard (total, revenue, breakdown).",
                 responses: {
                     "200": {
                         description: "OK",
@@ -6801,7 +6801,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Get order detail (admin)",
                 security: [{ bearerAuth: [] }],
-                description: "Lấy chi tiết đơn hàng (admin view - full data)",
+                description: "Get order details (admin view - full data)",
                 parameters: [
                     {
                         in: "path",
@@ -6870,7 +6870,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Update order status",
                 security: [{ bearerAuth: [] }],
-                description: "Cập nhật trạng thái đơn hàng (admin action).",
+                description: "Update order status (admin action).",
                 parameters: [
                     {
                         in: "path",
@@ -6911,7 +6911,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Update order details (admin)",
                 security: [{ bearerAuth: [] }],
-                description: "Cập nhật chi tiết đơn hàng (status, notes).",
+                description: "Update order details (status, notes).",
                 parameters: [
                     {
                         in: "path",
@@ -6951,7 +6951,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Fulfill order items",
                 security: [{ bearerAuth: [] }],
-                description: "Đánh dấu items là fulfilled (warehouse action). Deducts từ reserved → sold ATOMIC.",
+                description: "Mark items as fulfilled (warehouse action). Deducts from reserved → sold ATOMIC.",
                 parameters: [
                     {
                         in: "path",
@@ -6992,7 +6992,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Record shipment",
                 security: [{ bearerAuth: [] }],
-                description: "Ghi nhận shipment info (carrier + tracking code). Transitions PROCESSING → SHIPPED.",
+                description: "Record shipment information (carrier + tracking code). Transitions PROCESSING → SHIPPED.",
                 parameters: [
                     {
                         in: "path",
@@ -7033,7 +7033,7 @@ const swaggerSpec = {
                 tags: ["Orders"],
                 summary: "Confirm delivery",
                 security: [{ bearerAuth: [] }],
-                description: "Xác nhận giao hàng. Transitions SHIPPED → DELIVERED.",
+                description: "Delivery confirmation. Transitions SHIPPED → DELIVERED.",
                 parameters: [
                     {
                         in: "path",
@@ -7060,7 +7060,7 @@ const swaggerSpec = {
             },
         },
 
-        // ===== PAYMENT WEBHOOKS =====
+
 
         "/api/v1/payments/vnpay-return": {
             get: {
@@ -7106,7 +7106,7 @@ const swaggerSpec = {
                 tags: ["Payments"],
                 summary: "VNPay IPN webhook",
                 security: [],
-                description: "VNPay IPN webhook nhận thông báo thanh toán. Không cần auth. Verify bằng HMAC-SHA256.",
+                description: "VNPay IPN webhook receives payment notification. No authentication required. Verify using HMAC-SHA256.",
                 requestBody: {
                     required: true,
                     content: {
@@ -7239,7 +7239,7 @@ const swaggerSpec = {
                 tags: ["Payments"],
                 summary: "Create payment",
                 security: [{ bearerAuth: [] }],
-                description: "Khởi tạo thanh toán cho đơn hàng. Số tiền lấy từ order.total_amount, không cho client sửa.",
+                description: "Initiate payment for the order. Amount taken from order.total_amount, cannot be edited by the client.",
                 requestBody: {
                     required: true,
                     content: {
@@ -7267,7 +7267,7 @@ const swaggerSpec = {
                 tags: ["Payments"],
                 summary: "List payments",
                 security: [{ bearerAuth: [] }],
-                description: "Lấy lịch sử thanh toán của user hoặc admin. Hỗ trợ filter theo trạng thái, provider, thời gian.",
+                description: "Get the payment history of the user or admin. Supports filtering by status, provider, and time.",
                 parameters: [
                     {
                         in: "query",
@@ -7288,7 +7288,7 @@ const swaggerSpec = {
                     {
                         in: "query",
                         name: "provider",
-                        schema: { type: "string", enum: ["vnpay", "stripe", "paypal"] },
+                        schema: { type: "string", enum: ["vnpay", "stripe", "paypal", "payos"] },
                         description: "Filter by payment provider",
                     },
                     {
@@ -7385,7 +7385,7 @@ const swaggerSpec = {
                 tags: ["Payments"],
                 summary: "Retry failed payment",
                 security: [{ bearerAuth: [] }],
-                description: "thử lại thanh toán thất bại. Reset trạng thái về pending và tạo payment URL mới.",
+                description: "failed payment retry. Reset the status to pending and create a new payment URL.",
                 parameters: [
                     {
                         in: "path",
@@ -7416,7 +7416,7 @@ const swaggerSpec = {
                 tags: ["Payments"],
                 summary: "Cancel pending payment",
                 security: [{ bearerAuth: [] }],
-                description: "hủy thanh toán đang pending. Hoàn lại tồn kho nếu cần.",
+                description: "cancels pending payment. Return inventory if necessary.",
                 parameters: [
                     {
                         in: "path",
@@ -7482,7 +7482,7 @@ const swaggerSpec = {
                     {
                         in: "query",
                         name: "provider",
-                        schema: { type: "string", enum: ["vnpay", "stripe", "paypal"] },
+                        schema: { type: "string", enum: ["vnpay", "stripe", "paypal", "payos"] },
                     },
                     {
                         in: "query",
@@ -7516,7 +7516,7 @@ const swaggerSpec = {
                 tags: ["Payments"],
                 summary: "Admin: Payment statistics",
                 security: [{ bearerAuth: [] }],
-                description: "Admin: thống kê thanh toán (doanh thu, breakdown theo trạng thái, provider).",
+                description: "Admin: payment statistics (revenue, breakdown by status, provider).",
                 responses: {
                     "200": {
                         description: "OK",
@@ -7583,7 +7583,7 @@ const swaggerSpec = {
                 tags: ["Payments"],
                 summary: "Admin: Soft-delete payment",
                 security: [{ bearerAuth: [] }],
-                description: "Admin: soft-delete payment (giữ audit trail, không xóa cứng).",
+                description: "Admin: soft-delete payment (keep audit trail, do not delete hard).",
                 parameters: [
                     {
                         in: "path",
@@ -7614,7 +7614,7 @@ const swaggerSpec = {
                 tags: ["Discounts"],
                 summary: "Validate discount code at checkout",
                 security: [],
-                description: "Validate và tính toán discount amount (public endpoint, không cần auth).",
+                description: "Validate and calculate discount amount (public endpoint, no auth required).",
                 requestBody: {
                     required: true,
                     content: {
@@ -7644,7 +7644,7 @@ const swaggerSpec = {
                 tags: ["Discounts"],
                 summary: "Get applicable discounts for cart",
                 security: [],
-                description: "Get danh sách discount có thể áp dụng cho giỏ hàng - applicable for cart items",
+                description: "Get list of discounts applicable to cart items - applicable for cart items",
                 requestBody: {
                     required: true,
                     content: {
@@ -7911,7 +7911,7 @@ const swaggerSpec = {
                 tags: ["Discounts"],
                 summary: "Bulk create discounts",
                 security: [{ bearerAuth: [] }],
-                description: "Import nhiều discount từ mảng / CSV bulk. Trả về created vs failed.",
+                description: "Import multiple discounts from array / CSV bulk. Returns created vs failed.",
                 requestBody: {
                     required: true,
                     content: {
@@ -7984,12 +7984,12 @@ const swaggerSpec = {
             },
         },
 
-        // SHIPMENT ROUTES
+
         "/api/v1/shipments/track/{tracking_code}": {
             get: {
                 tags: ['Shipments'],
                 summary: 'Track shipment by tracking code',
-                description: 'Track shipment công khai (không cần xác thực). Lấy thông tin vận chuyển theo tracking code.',
+                description: "Track shipments publicly (no authentication required). Get shipping information by tracking code.",
                 security: [],
                 parameters: [
                     {
@@ -8006,7 +8006,7 @@ const swaggerSpec = {
                         content: {
                             'application/json': {
                                 schema: {
-                                    $ref: '#/components/schemas/TrackingDTO'  // ← Change from TrackingResponse
+                                    $ref: '#/components/schemas/TrackingDTO'
                                 }
                             }
                         }
@@ -8020,7 +8020,7 @@ const swaggerSpec = {
             post: {
                 tags: ['Shipments'],
                 summary: 'Carrier webhook for status updates',
-                description: 'Carrier webhook để nhận cập nhật vận chuyển. Không cần xác thực.',  // ← ADD THIS
+                description: "Carrier webhook to receive shipping updates. No authentication required.",
                 security: [],
                 parameters: [
                     {
@@ -8089,7 +8089,7 @@ const swaggerSpec = {
                         content: {
                             'application/json': {
                                 schema: {
-                                    $ref: '#/components/schemas/ShipmentResponse'  // ← Use $ref directly
+                                    $ref: '#/components/schemas/ShipmentResponse'
                                 }
                             }
                         }
@@ -8119,7 +8119,7 @@ const swaggerSpec = {
                         content: {
                             'application/json': {
                                 schema: {
-                                    $ref: '#/components/schemas/ShipmentsListResponse'  // ← Use $ref directly
+                                    $ref: '#/components/schemas/ShipmentsListResponse'
                                 }
                             }
                         }
@@ -8173,7 +8173,7 @@ const swaggerSpec = {
                         content: {
                             'application/json': {
                                 schema: {
-                                    $ref: '#/components/schemas/ShipmentsListResponse'  // ← Use $ref directly
+                                    $ref: '#/components/schemas/ShipmentsListResponse'
                                 }
                             }
                         }
@@ -8190,7 +8190,7 @@ const swaggerSpec = {
                     content: {
                         'application/json': {
                             schema: {
-                                $ref: '#/components/schemas/CreateShipmentInput'  // ← Use $ref directly
+                                $ref: '#/components/schemas/CreateShipmentInput'
                             }
                         }
                     }
@@ -8201,7 +8201,7 @@ const swaggerSpec = {
                         content: {
                             'application/json': {
                                 schema: {
-                                    $ref: '#/components/schemas/ShipmentResponse'  // ← Use $ref directly
+                                    $ref: '#/components/schemas/ShipmentResponse'
                                 }
                             }
                         }
@@ -8230,7 +8230,7 @@ const swaggerSpec = {
                     content: {
                         'application/json': {
                             schema: {
-                                $ref: '#/components/schemas/UpdateShipmentStatusInput'  // ← Use $ref directly
+                                $ref: '#/components/schemas/UpdateShipmentStatusInput'
                             }
                         }
                     }
@@ -8271,7 +8271,7 @@ const swaggerSpec = {
                     content: {
                         'application/json': {
                             schema: {
-                                $ref: '#/components/schemas/RecordShipmentFailureInput'  // ← Use $ref directly
+                                $ref: '#/components/schemas/RecordShipmentFailureInput'
                             }
                         }
                     }
@@ -8341,7 +8341,7 @@ const swaggerSpec = {
                     content: {
                         'application/json': {
                             schema: {
-                                $ref: '#/components/schemas/CancelShipmentInput'  // ← Use $ref directly
+                                $ref: '#/components/schemas/CancelShipmentInput'
                             }
                         }
                     }
@@ -8482,13 +8482,13 @@ const swaggerSpec = {
             }
         },
 
-        // Review routes
+
         "/api/v1/reviews/product/{productId}": {
             get: {
                 tags: ["Reviews"],
                 summary: "Get product reviews (public)",
                 security: [],
-                description: "Lấy danh sách review cho sản phẩm (chỉ approved reviews). Sắp xếp theo helpful_count rồi created_at.",
+                description: "Get the list of reviews for the product (only approved reviews). Sort by helpful_count then created_at.",
                 parameters: [
                     {
                         in: "path",
@@ -8528,7 +8528,7 @@ const swaggerSpec = {
                 tags: ["Reviews"],
                 summary: "Get variant reviews (public)",
                 security: [],
-                description: "Lấy danh sách review cho variant (chỉ approved reviews).",
+                description: "Gets the list of reviews for the variant (approved reviews only).",
                 parameters: [
                     {
                         in: "path",
@@ -8593,7 +8593,7 @@ const swaggerSpec = {
                 tags: ["Reviews"],
                 summary: "Update own review",
                 security: [{ bearerAuth: [] }],
-                description: "Cập nhật review của chính mình. Edit sẽ reset approval status.",
+                description: "Update your own review. Edit will reset approval status.",
                 parameters: [
                     {
                         in: "path",
@@ -8668,7 +8668,7 @@ const swaggerSpec = {
                 tags: ["Reviews"],
                 summary: "Create review",
                 security: [{ bearerAuth: [] }],
-                description: "Tạo review cho sản phẩm từ đơn hàng đã hoàn thành. Chỉ verified purchases được phép. Ban đầu pending approval.",
+                description: "Create a review for a product from a completed order. Only verified purchases are allowed. Initial approval pending.",
                 requestBody: {
                     required: true,
                     content: {
@@ -8818,7 +8818,7 @@ const swaggerSpec = {
                 tags: ["Reviews"],
                 summary: "Get pending reviews (admin)",
                 security: [{ bearerAuth: [] }],
-                description: "Lấy danh sách review đang chờ duyệt. Admin moderation endpoint.",
+                description: "Get the list of pending reviews. Admin moderation endpoint.",
                 parameters: [
                     {
                         in: "query",
@@ -8952,7 +8952,7 @@ const swaggerSpec = {
             },
         },
 
-        // Banners
+
         "/api/v1/banners/location/{location}": {
             get: {
                 tags: ["Banners"],
@@ -9210,12 +9210,12 @@ const swaggerSpec = {
             }
         },
 
-        // Announcements
+
         '/api/v1/announcements': {
             get: {
                 tags: ['Announcements'],
-                summary: 'Lấy thông báo hoạt động',
-                description: "public: retrieve active announcements (đang hoạt động, start_at ≤ now < end_at), sắp xếp theo priority",
+                summary: "Get activity notification",
+                description: "Public: retrieve active announcements where start_at is less than or equal to now and now is before end_at, sorted by priority.",
                 parameters: [
                     {
                         in: 'query',
@@ -9224,12 +9224,12 @@ const swaggerSpec = {
                             type: 'string',
                             enum: ['all', 'user', 'admin', 'guest']
                         },
-                        description: 'Lọc theo đối tượng mục tiêu (tùy chọn)'
+                        description: "Filter by target audience (optional)"
                     }
                 ],
                 responses: {
                     200: {
-                        description: 'Danh sách thông báo hoạt động',
+                        description: "Activity notification list",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9245,8 +9245,8 @@ const swaggerSpec = {
             },
             post: {
                 tags: ['Announcements'],
-                summary: 'Tạo thông báo',
-                description: 'Admin/Manager: Tạo thông báo mới',
+                summary: "Create notification",
+                description: "Admin/Manager: Create new notification",
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
@@ -9260,7 +9260,7 @@ const swaggerSpec = {
                 },
                 responses: {
                     201: {
-                        description: 'Thông báo được tạo thành công',
+                        description: "Notification successfully created",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9288,8 +9288,8 @@ const swaggerSpec = {
         '/api/v1/announcements/{id}': {
             get: {
                 tags: ['Announcements'],
-                summary: 'Lấy thông báo theo ID',
-                description: 'Public: Lấy chi tiết thông báo (active hoặc không)',
+                summary: "Get notification by ID",
+                description: "Public: Get notification details (active or not)",
                 parameters: [
                     {
                         in: 'path',
@@ -9304,7 +9304,7 @@ const swaggerSpec = {
                 ],
                 responses: {
                     200: {
-                        description: 'Chi tiết thông báo',
+                        description: "Announcement details",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9323,8 +9323,8 @@ const swaggerSpec = {
             },
             put: {
                 tags: ['Announcements'],
-                summary: 'Cập nhật thông báo',
-                description: 'Admin/Manager: Cập nhật thông báo (hỗ trợ partial update)',
+                summary: "Update notification",
+                description: "Admin/Manager: Update notification (supports partial update)",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9349,7 +9349,7 @@ const swaggerSpec = {
                 },
                 responses: {
                     200: {
-                        description: 'Thông báo được cập nhật',
+                        description: "Updated notification",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9377,8 +9377,8 @@ const swaggerSpec = {
             },
             delete: {
                 tags: ['Announcements'],
-                summary: 'Xóa thông báo',
-                description: 'Admin/Manager: Soft delete thông báo (có thể restore lại)',
+                summary: "Clear message",
+                description: "Admin/Manager: Soft delete notification (can be restored)",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9393,7 +9393,7 @@ const swaggerSpec = {
                 ],
                 responses: {
                     200: {
-                        description: 'Thông báo được xóa',
+                        description: "Notice removed",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9431,8 +9431,8 @@ const swaggerSpec = {
         '/api/v1/announcements/admin/all': {
             get: {
                 tags: ['Announcements'],
-                summary: 'Lấy tất cả thông báo',
-                description: 'Admin/Manager: Lấy tất cả thông báo (active + scheduled)',
+                summary: "Get all notifications",
+                description: "Admin/Manager: Get all notifications (active + scheduled)",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9442,7 +9442,7 @@ const swaggerSpec = {
                             type: 'string',
                             enum: ['all', 'user', 'admin', 'guest']
                         },
-                        description: 'Lọc theo target (tùy chọn)'
+                        description: "Filter by target (optional)"
                     },
                     {
                         in: 'query',
@@ -9451,7 +9451,7 @@ const swaggerSpec = {
                             type: 'string',
                             enum: ['info', 'warning', 'promotion', 'system', 'urgent']
                         },
-                        description: 'Lọc theo type (tùy chọn)'
+                        description: "Filter by type (optional)"
                     },
                     {
                         in: 'query',
@@ -9460,7 +9460,7 @@ const swaggerSpec = {
                             type: 'boolean',
                             default: false
                         },
-                        description: 'Chỉ lấy thông báo đang hoạt động (tùy chọn)'
+                        description: "Get only active notifications (optional)"
                     },
                     {
                         in: 'query',
@@ -9484,7 +9484,7 @@ const swaggerSpec = {
                 ],
                 responses: {
                     200: {
-                        description: 'Danh sách tất cả thông báo',
+                        description: "List of all notifications",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9509,8 +9509,8 @@ const swaggerSpec = {
         '/api/v1/announcements/admin/scheduled': {
             get: {
                 tags: ['Announcements'],
-                summary: 'Lấy thông báo scheduled',
-                description: 'Admin/Manager: Lấy thông báo chưa bắt đầu (start_at > now)',
+                summary: "Get scheduled notification",
+                description: "Admin/Manager: Get notification that has not started yet (start_at > now)",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9535,7 +9535,7 @@ const swaggerSpec = {
                 ],
                 responses: {
                     200: {
-                        description: 'Danh sách thông báo scheduled',
+                        description: "List of scheduled notifications",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9560,8 +9560,8 @@ const swaggerSpec = {
         '/api/v1/announcements/admin/expired': {
             get: {
                 tags: ['Announcements'],
-                summary: 'Lấy thông báo expired',
-                description: 'Admin/Manager: Lấy thông báo đã kết thúc (end_at <= now)',
+                summary: "Get expired notification",
+                description: "Admin/Manager: Get end notification (end_at <= now)",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9586,7 +9586,7 @@ const swaggerSpec = {
                 ],
                 responses: {
                     200: {
-                        description: 'Danh sách thông báo expired',
+                        description: "List of expired notifications",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9611,12 +9611,12 @@ const swaggerSpec = {
         '/api/v1/announcements/admin/deleted': {
             get: {
                 tags: ['Announcements'],
-                summary: 'Lấy thông báo đã xóa',
-                description: 'Admin/Manager: Lấy danh sách thông báo đã xóa (để recover)',
+                summary: "Get deleted notification",
+                description: "Admin/Manager: Get list of deleted notifications (to recover)",
                 security: [{ bearerAuth: [] }],
                 responses: {
                     200: {
-                        description: 'Danh sách thông báo đã xóa',
+                        description: "List of deleted notifications",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9641,8 +9641,8 @@ const swaggerSpec = {
         '/api/v1/announcements/{id}/restore': {
             post: {
                 tags: ['Announcements'],
-                summary: 'Khôi phục thông báo',
-                description: 'Admin/Manager: Khôi phục thông báo đã xóa',
+                summary: "Restore message",
+                description: "Admin/Manager: Restore deleted notification",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -9657,7 +9657,7 @@ const swaggerSpec = {
                 ],
                 responses: {
                     200: {
-                        description: 'Thông báo được khôi phục',
+                        description: "Restored message",
                         content: {
                             'application/json': {
                                 schema: {
@@ -9695,7 +9695,7 @@ const swaggerSpec = {
             }
         },
 
-        // ===== SHOP INFO PATHS =====
+
         '/api/v1/shop-info': {
             get: {
                 tags: ['Shop Info'],
@@ -9912,12 +9912,12 @@ const swaggerSpec = {
             }
         },
 
-        // Notifications
+
         "/api/v1/notifications/unread-count": {
             get: {
                 tags: ["Notifications"],
                 summary: "Get unread notification count",
-                description: "Lấy số lượng thông báo chưa đọc của người dùng",
+                description: "Get the number of unread notifications for user",
                 security: [{ bearerAuth: [] }],
                 responses: {
                     "200": {
@@ -9938,7 +9938,7 @@ const swaggerSpec = {
             patch: {
                 tags: ["Notifications"],
                 summary: "Mark all notifications as read",
-                description: "Đánh dấu tất cả thông báo của người dùng là đã đọc",
+                description: "Mark all user notifications as read",
                 security: [{ bearerAuth: [] }],
                 responses: {
                     "200": {
@@ -9959,7 +9959,7 @@ const swaggerSpec = {
             patch: {
                 tags: ["Notifications"],
                 summary: "Mark multiple notifications as read",
-                description: "Đánh dấu bulk thông báo (danh sách nhiều) là đã đọc",
+                description: "Mark bulk notifications (list of many) as read",
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
@@ -9989,7 +9989,7 @@ const swaggerSpec = {
             get: {
                 tags: ["Notifications"],
                 summary: "Get paginated notifications",
-                description: "Lấy danh sách thông báo với pagination, hỗ trợ lọc theo type/priority",
+                description: "Get notification list with pagination, support filtering by type/priority",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -10034,7 +10034,7 @@ const swaggerSpec = {
             delete: {
                 tags: ["Notifications"],
                 summary: "Delete all notifications",
-                description: "xóa tất cả thông báo của người dùng (soft delete)",
+                description: "clears all user notifications (soft delete)",
                 security: [{ bearerAuth: [] }],
                 responses: {
                     "200": {
@@ -10066,7 +10066,7 @@ const swaggerSpec = {
             get: {
                 tags: ["Notifications"],
                 summary: "Get single notification by ID",
-                description: "Lấy chi tiết một thông báo theo ID",
+                description: "Get details of a notification by ID",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -10093,7 +10093,7 @@ const swaggerSpec = {
             delete: {
                 tags: ["Notifications"],
                 summary: "Delete single notification",
-                description: "xóa một thông báo",
+                description: "clears a message",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -10129,7 +10129,7 @@ const swaggerSpec = {
             patch: {
                 tags: ["Notifications"],
                 summary: "Mark single notification as read",
-                description: "Đánh dấu một thông báo là đã đọc",
+                description: "Mark a notification as read",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     {
@@ -10155,11 +10155,11 @@ const swaggerSpec = {
             }
         },
 
-        // Chatbots
+
         "/api/v1/chats/sessions": {
             post: {
                 tags: ["Chats"],
-                summary: "Tạo phiên chat mới",
+                summary: "Create new chat session",
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     content: {
@@ -10167,7 +10167,7 @@ const swaggerSpec = {
                             schema: {
                                 type: "object",
                                 properties: {
-                                    title: { type: "string", minLength: 1, maxLength: 100, example: "Tư vấn túi lưới" }
+                                    title: { type: "string", minLength: 1, maxLength: 100, example: "Mesh bag consultation" }
                                 }
                             }
                         }
@@ -10175,7 +10175,7 @@ const swaggerSpec = {
                 },
                 responses: {
                     201: {
-                        description: "Tạo session thành công",
+                        description: "Successfully created session",
                         content: {
                             "application/json": {
                                 schema: { $ref: "#/components/schemas/ChatSessionResponse" }
@@ -10190,7 +10190,7 @@ const swaggerSpec = {
         "/api/v1/chats/message": {
             post: {
                 tags: ["Chats"],
-                summary: "Gửi tin nhắn cho AI trợ lý",
+                summary: "Send message to AI assistant",
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
@@ -10200,7 +10200,7 @@ const swaggerSpec = {
                                 type: "object",
                                 required: ["message", "session_id"],
                                 properties: {
-                                    message: { type: "string", minLength: 1, maxLength: 1000, example: "Túi bọc trái na giá bao nhiêu?" },
+                                    message: { type: "string", minLength: 1, maxLength: 1000, example: "How much does a bag of custard apples cost?" },
                                     session_id: { type: "string", pattern: "^[a-fA-F0-9]{24}$" }
                                 }
                             }
@@ -10209,7 +10209,7 @@ const swaggerSpec = {
                 },
                 responses: {
                     200: {
-                        description: "AI phản hồi thành công",
+                        description: "AI successfully responded to",
                         content: {
                             "application/json": {
                                 schema: { $ref: "#/components/schemas/ChatMessageResponse" }

@@ -1,3 +1,4 @@
+import { getLocale, translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, PackageCheck, XCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -18,24 +19,24 @@ import { useCancelOrder, useOrders } from '../hooks/useOrders';
 import { cancelOrderSchema } from '../schemas/orderFormSchemas';
 
 const orderStatusOptions = [
-    { value: '', label: 'Tất cả' },
-    { value: 'PENDING', label: 'Chờ xử lý' },
-    { value: 'PAID', label: 'Đã thanh toán' },
-    { value: 'PROCESSING', label: 'Đang chuẩn bị' },
-    { value: 'SHIPPED', label: 'Đang giao' },
-    { value: 'DELIVERED', label: 'Đã giao' },
-    { value: 'CANCELED', label: 'Đã hủy' },
-    { value: 'FAILED', label: 'Thất bại' },
+    { value: '', label: translate('text.all') },
+    { value: 'PENDING', label: translate('text.pending') },
+    { value: 'PAID', label: translate('text.paid') },
+    { value: 'PROCESSING', label: translate('text.preparing') },
+    { value: 'SHIPPED', label: translate('text.delivering') },
+    { value: 'DELIVERED', label: translate('text.delivered') },
+    { value: 'CANCELED', label: translate('text.canceled') },
+    { value: 'FAILED', label: translate('text.failure') },
 ];
 
 const statusLabels = {
-    PENDING: 'Chờ xử lý',
-    PAID: 'Đã thanh toán',
-    PROCESSING: 'Đang chuẩn bị',
-    SHIPPED: 'Đang giao',
-    DELIVERED: 'Đã giao',
-    CANCELED: 'Đã hủy',
-    FAILED: 'Thất bại',
+    PENDING: translate('text.pending'),
+    PAID: translate('text.paid'),
+    PROCESSING: translate('text.preparing'),
+    SHIPPED: translate('text.delivering'),
+    DELIVERED: translate('text.delivered'),
+    CANCELED: translate('text.canceled'),
+    FAILED: translate('text.failure'),
 };
 
 function getStatusVariant(status) {
@@ -63,7 +64,7 @@ function formatDateTime(value) {
         return '';
     }
 
-    return new Date(value).toLocaleString('vi-VN');
+    return new Date(value).toLocaleString(getLocale());
 }
 
 export default function OrderListPage() {
@@ -131,12 +132,8 @@ export default function OrderListPage() {
                 <CardHeader>
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                            <h1 className="text-xl font-semibold text-[var(--color-text-main)]">
-                                Đơn hàng của tôi
-                            </h1>
-                            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                Theo dõi trạng thái, hủy đơn và đánh giá sản phẩm sau khi nhận hàng.
-                            </p>
+                            <h1 className="text-xl font-semibold text-[var(--color-text-main)]"> {translate('text.my_order')} </h1>
+                            <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.track_status_cancel_orders_and_evaluate_products_after_receiving_goods')} </p>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
@@ -160,13 +157,13 @@ export default function OrderListPage() {
 
                 <CardBody>
                     {ordersQuery.isLoading ? (
-                        <Loading label="Đang tải đơn hàng..." />
+                        <Loading label={translate('text.loading_orders')} />
                     ) : orders.length === 0 ? (
                         <EmptyState
                             icon={PackageCheck}
-                            title="Chưa có đơn hàng"
-                            description="Các đơn hàng đã tạo sẽ hiển thị tại đây."
-                            actionLabel="Mua sản phẩm"
+                            title={translate('text.no_orders_yet')}
+                            description={translate('text.created_orders_will_be_displayed_here')}
+                            actionLabel={translate('text.buy_product')}
                             onAction={() => {
                                 window.location.href = ROUTES.PRODUCTS;
                             }}
@@ -206,8 +203,7 @@ export default function OrderListPage() {
                                                 {formatDateTime(order.created_at)}
                                             </p>
                                             <p className="mt-2 text-sm text-[var(--color-text-main)]">
-                                                {order.item_count || 0} dòng sản phẩm · {order.total_items || 0} sản phẩm
-                                            </p>
+                                                {order.item_count || 0} {translate('text.product_line')} {order.total_items || 0} {translate('text.product_4e46ed68')} </p>
                                         </div>
 
                                         <div className="flex flex-col gap-3 md:items-end">
@@ -219,9 +215,7 @@ export default function OrderListPage() {
                                                     to={`${ROUTES.ORDERS}/${order.id}`}
                                                     className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)]"
                                                 >
-                                                    <Eye className="h-4 w-4" />
-                                                    Chi tiết
-                                                </Link>
+                                                    <Eye className="h-4 w-4" /> {translate('text.details')} </Link>
                                                 {canCancelOrder(order.status) && (
                                                     <Button
                                                         variant="danger"
@@ -230,9 +224,7 @@ export default function OrderListPage() {
                                                             openCancelModal(order)
                                                         }
                                                     >
-                                                        <XCircle className="h-4 w-4" />
-                                                        Hủy đơn
-                                                    </Button>
+                                                        <XCircle className="h-4 w-4" /> {translate('text.cancel_order')} </Button>
                                                 )}
                                             </div>
                                         </div>
@@ -252,31 +244,26 @@ export default function OrderListPage() {
 
             <Modal
                 open={Boolean(cancelOrder)}
-                title="Hủy đơn hàng"
+                title={translate('text.cancel_order_c90e1488')}
                 onClose={closeCancelModal}
                 footer={
                     <>
-                        <Button variant="outline" onClick={closeCancelModal}>
-                            Đóng
-                        </Button>
+                        <Button variant="outline" onClick={closeCancelModal}> {translate('text.close')} </Button>
                         <Button
                             variant="danger"
                             disabled={!cancelReason.trim()}
                             isLoading={cancelOrderMutation.isPending}
                             onClick={handleCancelOrder}
-                        >
-                            Hủy đơn
-                        </Button>
+                        > {translate('text.cancel_order')} </Button>
                     </>
                 }
             >
                 <div className="space-y-3">
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Nhập lý do hủy đơn {cancelOrder?.order_code}.
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.enter_reason_for_cancellation')} {cancelOrder?.order_code}.
                     </p>
                     <Textarea
                         rows={4}
-                        placeholder="Ví dụ: muốn đổi địa chỉ giao hàng..."
+                        placeholder={translate('text.for_example_want_to_change_shipping_address')}
                         error={errors.reason?.message}
                         {...register('reason')}
                     />

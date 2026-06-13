@@ -4,7 +4,7 @@ const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const VariantUnitService = require('./variant_unit.service');
 const { buildAuditMetadata } = require('../../utils/audit.util');
 
-// ===== PUBLIC =====
+
 
 const getVariantUnitById = asyncHandler(async (req, res) => {
     const { unitId } = req.params;
@@ -87,7 +87,7 @@ const getMaxOrderableQty = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== ADMIN =====
+
 
 const createVariantUnit = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);

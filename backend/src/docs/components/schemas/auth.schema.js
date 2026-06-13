@@ -3,13 +3,18 @@ module.exports = {
         type: "object",
         properties: {
             id: { type: "string", example: "507f1f77bcf86cd799439011" },
-            email: { type: "string", format: "email", example: "user@example.com" },
+            email: {
+                type: "string",
+                format: "email",
+                nullable: true,
+                example: "user@example.com",
+            },
             profile: {
                 type: "object",
                 properties: {
                     full_name: { type: "string", nullable: true, example: "Nguyen Van A" },
                     avatar_url: { type: "string", nullable: true, example: null },
-                    phone_number: { type: "string", nullable: true, example: null },
+                    phone_number: { type: "string", example: "0901234567" },
                     gender: {
                         type: "string",
                         enum: ["MALE", "FEMALE", "OTHER", "UNSPECIFIED"],
@@ -31,6 +36,12 @@ module.exports = {
                 nullable: true,
                 example: null,
             },
+            is_phone_verified: { type: "boolean", example: true },
+            phone_verified_at: {
+                type: "string",
+                format: "date-time",
+                nullable: true,
+            },
             last_login_at: {
                 type: "string",
                 format: "date-time",
@@ -42,11 +53,47 @@ module.exports = {
         },
     },
 
+    RequestRegistrationOtpInput: {
+        type: "object",
+        required: ["phone_number"],
+        properties: {
+            phone_number: { type: "string", example: "0901234567" },
+        },
+    },
+
+    OtpDelivery: {
+        type: "object",
+        properties: {
+            phone_number: { type: "string", example: "0901234567" },
+            expiresIn: { type: "integer", example: 300 },
+            resendAfter: { type: "integer", example: 60 },
+            provider: { type: "string", example: "mock" },
+            mockOtp: {
+                type: "string",
+                nullable: true,
+                example: "123456",
+            },
+        },
+    },
+
     RegisterInput: {
         type: "object",
-        required: ["email", "password"],
+        required: ["phone_number", "otp", "password"],
         properties: {
-            email: { type: "string", format: "email", example: "new.user@example.com" },
+            phone_number: { type: "string", example: "0901234567" },
+            otp: {
+                type: "string",
+                minLength: 6,
+                maxLength: 6,
+                pattern: "^\\d{6}$",
+                example: "123456",
+            },
+            email: {
+                type: "string",
+                format: "email",
+                nullable: true,
+                example: "new.user@example.com",
+            },
             password: {
                 type: "string",
                 minLength: 6,
@@ -59,9 +106,9 @@ module.exports = {
 
     LoginInput: {
         type: "object",
-        required: ["email", "password"],
+        required: ["phone_number", "password"],
         properties: {
-            email: { type: "string", format: "email", example: "user@example.com" },
+            phone_number: { type: "string", example: "0901234567" },
             password: { type: "string", minLength: 1, example: "abc123" },
         },
     },
@@ -82,17 +129,17 @@ module.exports = {
 
     ForgotPasswordInput: {
         type: "object",
-        required: ["email"],
+        required: ["phone_number"],
         properties: {
-            email: { type: "string", format: "email", example: "user@example.com" },
+            phone_number: { type: "string", example: "0901234567" },
         },
     },
 
     ResetPasswordInput: {
         type: "object",
-        required: ["email", "otp", "newPassword"],
+        required: ["phone_number", "otp", "newPassword"],
         properties: {
-            email: { type: "string", format: "email", example: "user@example.com" },
+            phone_number: { type: "string", example: "0901234567" },
             otp: {
                 type: "string",
                 minLength: 6,

@@ -25,7 +25,7 @@ const cartItemSchema = new mongoose.Schema(
             ref: 'Category',
         },
 
-        // ===== PRODUCT INFO (DENORMALIZED) =====
+
         sku: {
             type: String,
             required: [true, 'SKU is required'],
@@ -61,14 +61,14 @@ const cartItemSchema = new mongoose.Schema(
             min: [1, 'Pack size must be at least 1'],
         },
 
-        // ===== PRICING (SNAPSHOT at add time) =====
+
         price_at_added: {
             type: Number,
             required: [true, 'Price at added is required'],
             min: [0, 'Price cannot be negative'],
         },
 
-        // ===== QUANTITY =====
+
         quantity: {
             type: Number,
             required: [true, 'Quantity is required'],
@@ -76,7 +76,7 @@ const cartItemSchema = new mongoose.Schema(
             max: [999, 'Quantity cannot exceed 999'],
         },
 
-        // ===== TIMESTAMPS =====
+
         added_at: {
             type: Date,
             default: Date.now,
@@ -120,7 +120,7 @@ const discountSchema = new mongoose.Schema(
             min: [0, 'Discount amount cannot be negative'],
         },
 
-        // ===== CONSTRAINTS =====
+
         min_purchase: {
             type: Number,
             default: 0,
@@ -133,7 +133,7 @@ const discountSchema = new mongoose.Schema(
             min: [0, 'Max discount cannot be negative'],
         },
 
-        // ===== SCOPE =====
+
         apply_scope: {
             type: String,
             enum: {
@@ -143,7 +143,7 @@ const discountSchema = new mongoose.Schema(
             default: 'CART',
         },
 
-        // ===== TIMESTAMPS =====
+
         applied_at: {
             type: Date,
             default: Date.now,
@@ -158,7 +158,7 @@ const discountSchema = new mongoose.Schema(
 
 const cartSchema = new mongoose.Schema(
     {
-        // ===== IDENTITY =====
+
         user_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
@@ -168,7 +168,7 @@ const cartSchema = new mongoose.Schema(
             type: String,
         },
 
-        // ===== ITEMS =====
+
         items: {
             type: [cartItemSchema],
             default: [],
@@ -180,13 +180,13 @@ const cartSchema = new mongoose.Schema(
             },
         },
 
-        // ===== DISCOUNT =====
+
         discount: {
             type: discountSchema,
             default: null,
         },
 
-        // ===== STATUS =====
+
         status: {
             type: String,
             enum: {
@@ -196,14 +196,14 @@ const cartSchema = new mongoose.Schema(
             default: 'ACTIVE',
         },
 
-        // ===== EXPIRY =====
+
         expired_at: {
             type: Date,
             required: true,
-            // index: true,
+
         },
 
-        // ===== TRACKING =====
+
         viewed_at: {
             type: Date,
         },
@@ -220,7 +220,7 @@ const cartSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES (Production Optimized) =====
+
 
 cartSchema.index(
     { user_id: 1 },
@@ -270,7 +270,7 @@ cartSchema.index(
     }
 );
 
-// ===== MIDDLEWARE: Auto-Filter Active & Non-Expired =====
+
 const excludeExpired = function (next) {
     const options = this.getOptions?.() || {};
     const filter = this.getFilter?.() || {};
@@ -310,7 +310,7 @@ cartSchema.pre('aggregate', function (next) {
     next();
 });
 
-// ===== MIDDLEWARE: Update Timestamp on Save =====
+
 
 cartSchema.pre('save', function (next) {
     if (this.isNew && !this.expired_at) {
@@ -323,7 +323,7 @@ cartSchema.pre('save', function (next) {
     next();
 });
 
-// ===== STATIC METHODS =====
+
 
 cartSchema.statics.getOrCreateUserCart = async function (userId) {
     let cart = await this.findOne(
@@ -607,7 +607,7 @@ cartSchema.statics.extendExpiry = async function (cartId, daysToAdd = 7) {
     );
 };
 
-// ===== RESPONSE SANITIZATION =====
+
 
 const sanitizeTransform = (_, ret) => {
     delete ret.__v;

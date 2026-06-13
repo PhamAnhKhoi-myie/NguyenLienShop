@@ -1,38 +1,39 @@
+import { translate } from '../../../shared/i18n/index';
 import { z } from 'zod';
 
 export const discountStatusOptions = [
-    { value: '', label: 'Tất cả trạng thái' },
-    { value: 'active', label: 'active' },
-    { value: 'inactive', label: 'inactive' },
-    { value: 'paused', label: 'paused' },
-    { value: 'expired', label: 'expired' },
+    { value: '', label: translate('text.all_statuses') },
+    { value: 'active', label: translate('text.active_2bb6b986') },
+    { value: 'inactive', label: translate('text.inactive_d436a3f4') },
+    { value: 'paused', label: translate('text.paused') },
+    { value: 'expired', label: translate('text.expired') },
 ];
 
 export const discountTypeOptions = [
-    { value: '', label: 'Tất cả loại' },
-    { value: 'percent', label: 'percent' },
-    { value: 'fixed', label: 'fixed' },
+    { value: '', label: translate('text.all_types') },
+    { value: 'percent', label: translate('text.percent') },
+    { value: 'fixed', label: translate('text.fixed') },
 ];
 
 export const discountSortOptions = [
-    { value: '-created_at', label: 'Mới nhất' },
-    { value: 'created_at', label: 'Cũ nhất' },
-    { value: 'expiry_date', label: 'Sắp hết hạn' },
-    { value: '-expiry_date', label: 'Hết hạn muộn' },
-    { value: '-usage_count', label: 'Dùng nhiều nhất' },
-    { value: 'usage_count', label: 'Dùng ít nhất' },
+    { value: '-created_at', label: translate('text.latest') },
+    { value: 'created_at', label: translate('text.oldest') },
+    { value: 'expiry_date', label: translate('text.expiring_soon') },
+    { value: '-expiry_date', label: translate('text.late_expiration') },
+    { value: '-usage_count', label: translate('text.most_used') },
+    { value: 'usage_count', label: translate('text.use_at_least') },
 ];
 
 const codeSchema = z
     .string()
     .trim()
-    .min(3, 'Mã cần ít nhất 3 ký tự')
-    .max(20, 'Mã không vượt quá 20 ký tự')
-    .regex(/^[A-Z0-9_-]+$/i, 'Mã chỉ gồm chữ, số, gạch ngang hoặc gạch dưới');
+    .min(3, translate('text.code_needs_at_least_3_characters'))
+    .max(20, translate('text.code_must_not_exceed_20_characters'))
+    .regex(/^[A-Z0-9_-]+$/i, translate('text.code_must_contain_only_letters_numbers_dashes_or_underlines'));
 
 const objectIdSchema = z
     .string()
-    .regex(/^[0-9a-fA-F]{24}$/, 'ObjectId không hợp lệ');
+    .regex(/^[0-9a-fA-F]{24}$/, translate('text.invalid_objectid'));
 
 const optionalIdsTextSchema = z.string().superRefine((value, ctx) => {
     splitIds(value).forEach((id) => {
@@ -41,7 +42,7 @@ const optionalIdsTextSchema = z.string().superRefine((value, ctx) => {
         if (!result.success) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `ObjectId không hợp lệ: ${id}`,
+                message: translate('text.invalid_objectid_value', { value0: id }),
             });
         }
     });
@@ -53,18 +54,18 @@ const nullableNumberSchema = z.preprocess((value) => {
     }
 
     return Number(value);
-}, z.number().min(0, 'Giá trị không được âm').nullable());
+}, z.number().min(0, translate('text.value_cannot_be_negative')).nullable());
 
-const dateTimeSchema = z.string().min(1, 'Vui lòng chọn thời gian').refine(
+const dateTimeSchema = z.string().min(1, translate('text.please_select_time')).refine(
     (value) => !Number.isNaN(new Date(value).getTime()),
-    'Thời gian không hợp lệ'
+    translate('text.invalid_time')
 );
 
 const discountBaseSchema = z
     .object({
         code: codeSchema,
         type: z.enum(['percent', 'fixed']),
-        value: z.coerce.number().min(0, 'Giá trị không được âm'),
+        value: z.coerce.number().min(0, translate('text.value_cannot_be_negative')),
         max_discount_amount: nullableNumberSchema,
         application_strategy: z.enum([
             'apply_all',
@@ -89,12 +90,12 @@ const discountBaseSchema = z
         ]),
         user_ids_text: optionalIdsTextSchema,
         min_user_tier: z.enum(['', 'bronze', 'silver', 'gold', 'platinum']),
-        min_order_value: z.coerce.number().min(0, 'Đơn tối thiểu không được âm'),
-        usage_limit: z.coerce.number().int().min(1, 'Giới hạn dùng phải >= 1'),
+        min_order_value: z.coerce.number().min(0, translate('text.minimum_order_cannot_be_negative')),
+        usage_limit: z.coerce.number().int().min(1, translate('text.usage_limit_must_be_1')),
         usage_per_user_limit: z.coerce
             .number()
             .int()
-            .min(1, 'Giới hạn mỗi user phải >= 1'),
+            .min(1, translate('text.limit_each_user_to_1')),
         is_stackable: z.enum(['true', 'false']),
         stack_priority: z.coerce.number().int(),
         show_on_homepage: z.enum(['true', 'false']),
@@ -102,8 +103,8 @@ const discountBaseSchema = z
         homepage_priority: z.coerce
             .number()
             .int()
-            .min(0, 'Ưu tiên homepage không được âm')
-            .max(999, 'Ưu tiên homepage không vượt quá 999'),
+            .min(0, translate('text.homepage_priority_cannot_be_negative'))
+            .max(999, translate('text.homepage_priority_does_not_exceed_999')),
         started_at: dateTimeSchema,
         expiry_date: dateTimeSchema,
         status: z.enum(['active', 'inactive', 'paused', 'expired']),
@@ -113,7 +114,7 @@ const discountBaseSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['max_discount_amount'],
-                message: 'Giảm theo phần trăm cần mức giảm tối đa',
+                message: translate('text.percentage_reduction_requires_maximum_reduction'),
             });
         }
 
@@ -121,7 +122,7 @@ const discountBaseSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['value'],
-                message: 'Phần trăm giảm không được vượt quá 100',
+                message: translate('text.the_reduction_percentage_cannot_exceed_100'),
             });
         }
 
@@ -133,7 +134,7 @@ const discountBaseSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['max_discount_amount'],
-                message: 'Mức giảm tối đa không được nhỏ hơn giá trị giảm',
+                message: translate('text.the_maximum_reduction_cannot_be_less_than_the_reduction_value'),
             });
         }
 
@@ -141,7 +142,7 @@ const discountBaseSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['expiry_date'],
-                message: 'Ngày hết hạn phải sau ngày bắt đầu',
+                message: translate('text.expiration_date_must_be_after_start_date'),
             });
         }
 
@@ -149,7 +150,7 @@ const discountBaseSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['usage_limit'],
-                message: 'Tổng lượt dùng phải >= lượt dùng mỗi user',
+                message: translate('text.total_usage_must_be_usage_per_user'),
             });
         }
 
@@ -160,7 +161,7 @@ const discountBaseSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['product_ids_text'],
-                message: 'Cần nhập product IDs',
+                message: translate('text.need_to_enter_product_ids'),
             });
         }
 
@@ -171,7 +172,7 @@ const discountBaseSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['category_ids_text'],
-                message: 'Cần nhập category IDs',
+                message: translate('text.need_to_enter_category_ids'),
             });
         }
 
@@ -182,7 +183,7 @@ const discountBaseSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['variant_ids_text'],
-                message: 'Cần nhập variant IDs',
+                message: translate('text.need_to_enter_variant_ids'),
             });
         }
 
@@ -193,7 +194,7 @@ const discountBaseSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['user_ids_text'],
-                message: 'Cần nhập user IDs',
+                message: translate('text.need_to_enter_user_ids'),
             });
         }
     });
@@ -328,7 +329,7 @@ function parseBulkDiscounts(value) {
 }
 
 export const discountFormConfig = {
-    title: 'mã giảm giá',
+    title: translate('text.discount_code_20b1cc35'),
     schema: discountBaseSchema,
     defaultValues: {
         code: '',
@@ -386,140 +387,140 @@ export const discountFormConfig = {
     }),
     toPayload: buildDiscountPayload,
     fields: [
-        { name: 'code', label: 'Mã giảm giá', placeholder: 'VD: BAOTRAI10' },
+        { name: 'code', label: translate('text.discount_code'), placeholder: translate('text.vd_baotrai10') },
         {
             name: 'status',
-            label: 'Trạng thái',
+            label: translate('text.status'),
             type: 'select',
             options: discountStatusOptions.filter((option) => option.value),
         },
         {
             name: 'type',
-            label: 'Loại giảm',
+            label: translate('text.reduction_type'),
             type: 'select',
             options: discountTypeOptions.filter((option) => option.value),
         },
-        { name: 'value', label: 'Giá trị', type: 'number' },
+        { name: 'value', label: translate('text.value'), type: 'number' },
         {
             name: 'max_discount_amount',
-            label: 'Mức giảm tối đa',
+            label: translate('text.maximum_reduction'),
             type: 'number',
-            helperText: 'Bắt buộc với percent, tùy chọn với fixed.',
+            helperText: translate('text.required_with_percent_optional_with_fixed'),
         },
-        { name: 'min_order_value', label: 'Đơn tối thiểu', type: 'number' },
-        { name: 'usage_limit', label: 'Tổng lượt dùng', type: 'number' },
+        { name: 'min_order_value', label: translate('text.minimum_order'), type: 'number' },
+        { name: 'usage_limit', label: translate('text.total_uses'), type: 'number' },
         {
             name: 'usage_per_user_limit',
-            label: 'Lượt dùng mỗi user',
+            label: translate('text.number_of_uses_per_user'),
             type: 'number',
         },
         {
             name: 'application_strategy',
-            label: 'Cách áp dụng',
+            label: translate('text.how_to_apply'),
             type: 'select',
             options: [
-                { value: 'apply_all', label: 'apply_all' },
-                { value: 'apply_once', label: 'apply_once' },
-                { value: 'apply_cheapest', label: 'apply_cheapest' },
-                { value: 'apply_most_expensive', label: 'apply_most_expensive' },
+                { value: 'apply_all', label: translate('text.apply_all') },
+                { value: 'apply_once', label: translate('text.apply_once') },
+                { value: 'apply_cheapest', label: translate('text.apply_cheapest') },
+                { value: 'apply_most_expensive', label: translate('text.apply_most_expensive') },
             ],
         },
         {
             name: 'is_stackable',
-            label: 'Cho phép cộng dồn',
+            label: translate('text.allows_accumulation_of'),
             type: 'select',
             options: [
-                { value: 'false', label: 'Không' },
-                { value: 'true', label: 'Có' },
+                { value: 'false', label: translate('text.no') },
+                { value: 'true', label: translate('text.yes') },
             ],
         },
-        { name: 'stack_priority', label: 'Ưu tiên cộng dồn', type: 'number' },
+        { name: 'stack_priority', label: translate('text.cumulative_priority'), type: 'number' },
         {
             name: 'show_on_homepage',
-            label: 'Hiển thị homepage',
+            label: translate('text.display_homepage'),
             type: 'select',
             options: [
-                { value: 'false', label: 'Không' },
-                { value: 'true', label: 'Có' },
+                { value: 'false', label: translate('text.no') },
+                { value: 'true', label: translate('text.yes') },
             ],
-            helperText: 'Chỉ mã bật mục này mới hiện cho khách nhận ở trang chủ.',
+            helperText: translate('text.only_the_code_that_enables_this_item_will_be_shown_to_the_recipient_on_t'),
         },
         {
             name: 'requires_claim',
-            label: 'Bắt buộc nhận voucher',
+            label: translate('text.required_to_receive_voucher'),
             type: 'select',
             options: [
-                { value: 'false', label: 'Không' },
-                { value: 'true', label: 'Có' },
+                { value: 'false', label: translate('text.no') },
+                { value: 'true', label: translate('text.yes') },
             ],
-            helperText: 'Nếu bật, user phải nhận voucher trước khi nhập mã ở checkout.',
+            helperText: translate('text.if_enabled_the_user_must_receive_the_voucher_before_entering_the_code_at'),
         },
         {
             name: 'homepage_priority',
-            label: 'Ưu tiên homepage',
+            label: translate('text.priority_homepage'),
             type: 'number',
-            helperText: 'Số lớn hơn hiển thị trước.',
+            helperText: translate('text.larger_numbers_are_displayed_first'),
         },
-        { name: 'started_at', label: 'Bắt đầu', type: 'datetime-local' },
-        { name: 'expiry_date', label: 'Hết hạn', type: 'datetime-local' },
+        { name: 'started_at', label: translate('text.start'), type: 'datetime-local' },
+        { name: 'expiry_date', label: translate('text.expires'), type: 'datetime-local' },
         {
             name: 'applicable_targets_type',
-            label: 'Phạm vi sản phẩm',
+            label: translate('text.product_range'),
             type: 'select',
             options: [
-                { value: 'all', label: 'all' },
-                { value: 'specific_products', label: 'specific_products' },
-                { value: 'specific_categories', label: 'specific_categories' },
-                { value: 'specific_variants', label: 'specific_variants' },
+                { value: 'all', label: translate('text.all_d87c4480') },
+                { value: 'specific_products', label: translate('text.specific_products') },
+                { value: 'specific_categories', label: translate('text.specific_categories') },
+                { value: 'specific_variants', label: translate('text.specific_variants') },
             ],
         },
         {
             name: 'user_eligibility_type',
-            label: 'Điều kiện user',
+            label: translate('text.user_condition'),
             type: 'select',
             options: [
-                { value: 'all', label: 'all' },
-                { value: 'first_time_only', label: 'first_time_only' },
-                { value: 'specific_users', label: 'specific_users' },
-                { value: 'vip_users', label: 'vip_users' },
+                { value: 'all', label: translate('text.all_d87c4480') },
+                { value: 'first_time_only', label: translate('text.first_time_only') },
+                { value: 'specific_users', label: translate('text.specific_users') },
+                { value: 'vip_users', label: translate('text.vip_users') },
             ],
         },
         {
             name: 'min_user_tier',
-            label: 'Tier tối thiểu',
+            label: translate('text.minimum_tier'),
             type: 'select',
-            emptyLabel: 'Không yêu cầu tier',
+            emptyLabel: translate('text.does_not_require_tier'),
             options: [
-                { value: 'bronze', label: 'bronze' },
-                { value: 'silver', label: 'silver' },
-                { value: 'gold', label: 'gold' },
-                { value: 'platinum', label: 'platinum' },
+                { value: 'bronze', label: translate('text.bronze') },
+                { value: 'silver', label: translate('text.silver') },
+                { value: 'gold', label: translate('text.gold') },
+                { value: 'platinum', label: translate('text.platinum') },
             ],
         },
         {
             name: 'product_ids_text',
-            label: 'Product IDs',
+            label: translate('text.product_ids'),
             type: 'textarea',
             rows: 3,
             className: 'md:col-span-2',
         },
         {
             name: 'category_ids_text',
-            label: 'Category IDs',
+            label: translate('text.category_ids'),
             type: 'textarea',
             rows: 3,
             className: 'md:col-span-2',
         },
         {
             name: 'variant_ids_text',
-            label: 'Variant IDs',
+            label: translate('text.variant_ids'),
             type: 'textarea',
             rows: 3,
             className: 'md:col-span-2',
         },
         {
             name: 'user_ids_text',
-            label: 'User IDs',
+            label: translate('text.user_ids'),
             type: 'textarea',
             rows: 3,
             className: 'md:col-span-2',
@@ -528,7 +529,7 @@ export const discountFormConfig = {
 };
 
 export const duplicateDiscountFormConfig = {
-    title: 'nhân bản mã giảm giá',
+    title: translate('text.duplicate_discount_code_ecbce673'),
     schema: z.object({
         newCode: codeSchema,
     }),
@@ -544,14 +545,14 @@ export const duplicateDiscountFormConfig = {
     fields: [
         {
             name: 'newCode',
-            label: 'Mã mới',
-            placeholder: 'VD: BAOTRAI10_COPY',
+            label: translate('text.new_code'),
+            placeholder: translate('text.vd_baotrai10_copy'),
         },
     ],
 };
 
 export const bulkDiscountsFormConfig = {
-    title: 'import mã giảm giá',
+    title: translate('text.import_discount_code_5bf15ec5'),
     schema: z.object({
         discounts_json: z.string().superRefine((value, ctx) => {
             let parsed;
@@ -561,7 +562,7 @@ export const bulkDiscountsFormConfig = {
             } catch {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    message: 'JSON không hợp lệ',
+                    message: translate('text.invalid_json'),
                 });
                 return;
             }
@@ -573,7 +574,7 @@ export const bulkDiscountsFormConfig = {
                     code: z.ZodIssueCode.custom,
                     message:
                         result.error.issues[0]?.message ||
-                        'Danh sách discount không hợp lệ',
+                        translate('text.invalid_discount_list'),
                 });
             }
         }),
@@ -590,7 +591,7 @@ export const bulkDiscountsFormConfig = {
     fields: [
         {
             name: 'discounts_json',
-            label: 'Discount JSON',
+            label: translate('text.discount_json'),
             type: 'textarea',
             rows: 14,
             className: 'md:col-span-2',

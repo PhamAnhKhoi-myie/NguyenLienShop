@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
     Eye,
@@ -40,9 +41,9 @@ import {
 } from '../utils/adminFormat';
 
 const actionTitles = {
-    profile: 'Cập nhật hồ sơ',
-    status: 'Cập nhật trạng thái',
-    roles: 'Cập nhật vai trò',
+    profile: translate('text.update_profile'),
+    status: translate('text.status_update'),
+    roles: translate('text.update_role'),
 };
 
 const genderLabels = Object.fromEntries(
@@ -125,9 +126,7 @@ function StatsPanel({
         <div className="grid gap-4 lg:grid-cols-4">
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Tổng user
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.total_users')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-text-main)]">
                         {total}
                     </p>
@@ -135,9 +134,7 @@ function StatsPanel({
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Active trên trang
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.active_on_page')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-primary-hover)]">
                         {activeOnPage}
                     </p>
@@ -145,9 +142,7 @@ function StatsPanel({
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Suspended trên trang
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.suspended_on_page')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-warning)]">
                         {suspendedOnPage}
                     </p>
@@ -155,9 +150,7 @@ function StatsPanel({
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Admin trên trang
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.admin_on_page')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-text-main)]">
                         {adminOnPage}
                     </p>
@@ -176,13 +169,13 @@ function UserFilters({
     return (
         <div className="grid gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 lg:grid-cols-3">
             <Input
-                label="Tìm kiếm"
+                label={translate('text.search')}
                 value={values.search}
-                placeholder="Email hoặc tên..."
+                placeholder={translate('text.phone_number_email_or_name')}
                 onChange={(event) => onChange('search', event.target.value)}
             />
             <Select
-                label="Trạng thái"
+                label={translate('text.status')}
                 value={values.status}
                 onChange={(event) => onChange('status', event.target.value)}
             >
@@ -194,12 +187,8 @@ function UserFilters({
             </Select>
             <div className="flex items-end gap-2">
                 <Button type="button" onClick={onApply}>
-                    <Filter className="h-4 w-4" />
-                    Lọc
-                </Button>
-                <Button type="button" variant="outline" onClick={onReset}>
-                    Xóa lọc
-                </Button>
+                    <Filter className="h-4 w-4" /> {translate('text.filter')} </Button>
+                <Button type="button" variant="outline" onClick={onReset}> {translate('text.clear_filter')} </Button>
             </div>
         </div>
     );
@@ -262,13 +251,9 @@ function UserRolesForm({
             )}
 
             <div className="flex justify-end gap-2 border-t border-[var(--color-border)] pt-4">
-                <Button type="button" variant="outline" onClick={onCancel}>
-                    Đóng
-                </Button>
+                <Button type="button" variant="outline" onClick={onCancel}> {translate('text.close')} </Button>
                 <Button type="submit" isLoading={isLoading}>
-                    <Save className="h-4 w-4" />
-                    Lưu thay đổi
-                </Button>
+                    <Save className="h-4 w-4" /> {translate('text.save_changes')} </Button>
             </div>
         </form>
     );
@@ -287,15 +272,17 @@ function UserDetailPanel({
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-xl font-semibold text-[var(--color-text-main)]">
-                            {user.profile?.full_name || user.email}
+                            {user.profile?.full_name ||
+                                user.profile?.phone_number ||
+                                user.email}
                         </h2>
                         <StatusBadge value={user.status} />
                         {isCurrentUser && (
-                            <StatusBadge value="verified" label="Tài khoản hiện tại" />
+                            <StatusBadge value="verified" label={translate('text.current_account')} />
                         )}
                     </div>
                     <p className="mt-2 break-all text-sm text-[var(--color-text-muted)]">
-                        {user.email}
+                        {user.profile?.phone_number || user.email || '-'}
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -304,27 +291,21 @@ function UserDetailPanel({
                         variant="outline"
                         onClick={() => onOpenAction('profile')}
                     >
-                        <UserCog className="h-4 w-4" />
-                        Hồ sơ
-                    </Button>
+                        <UserCog className="h-4 w-4" /> {translate('text.profile')} </Button>
                     <Button
                         size="sm"
                         variant="outline"
                         disabled={isCurrentUser}
                         onClick={() => onOpenAction('roles')}
                     >
-                        <Shield className="h-4 w-4" />
-                        Vai trò
-                    </Button>
+                        <Shield className="h-4 w-4" /> {translate('text.role')} </Button>
                     <Button
                         size="sm"
                         variant="outline"
                         disabled={isCurrentUser}
                         onClick={() => onOpenAction('status')}
                     >
-                        <UserCog className="h-4 w-4" />
-                        Trạng thái
-                    </Button>
+                        <UserCog className="h-4 w-4" /> {translate('text.status')} </Button>
                     <Button
                         size="sm"
                         variant="danger"
@@ -332,69 +313,61 @@ function UserDetailPanel({
                         isLoading={isDeleting}
                         onClick={onDelete}
                     >
-                        <Trash2 className="h-4 w-4" />
-                        Xóa mềm
-                    </Button>
+                        <Trash2 className="h-4 w-4" /> {translate('text.soft_delete')} </Button>
                 </div>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3">
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Hồ sơ
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.profile')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3">
                         <DetailRow
-                            label="Tên"
+                            label={translate('text.name')}
                             value={user.profile?.full_name}
                         />
                         <DetailRow
-                            label="Điện thoại"
+                            label={translate('text.phone')}
                             value={user.profile?.phone_number}
                         />
                         <DetailRow
-                            label="Giới tính"
+                            label={translate('text.gender')}
                             value={formatGender(user.profile?.gender)}
                         />
                         <DetailRow
-                            label="Avatar"
+                            label={translate('text.avatar')}
                             value={user.profile?.avatar_url}
                         />
                     </CardBody>
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Quyền
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.permission')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3">
-                        <DetailRow label="Roles">
+                        <DetailRow label={translate('text.roles')}>
                             <RoleBadges roles={user.roles || []} />
                         </DetailRow>
-                        <DetailRow label="Tier" value={user.tier} />
-                        <DetailRow label="Email verified">
-                            {user.is_email_verified ? 'Có' : 'Không'}
+                        <DetailRow label={translate('text.tier')} value={user.tier} />
+                        <DetailRow label={translate('text.verified_phone_number')}>
+                            {user.is_phone_verified ? translate('text.yes') : translate('text.no')}
                         </DetailRow>
                     </CardBody>
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Thời gian
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.time')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3">
-                        <DetailRow label="Tạo lúc">
+                        <DetailRow label={translate('text.created_at')}>
                             {formatDateTime(user.created_at)}
                         </DetailRow>
-                        <DetailRow label="Đăng nhập cuối">
+                        <DetailRow label={translate('text.last_login')}>
                             {formatDateTime(user.last_login_at) || '-'}
                         </DetailRow>
-                        <DetailRow label="Xác thực email">
-                            {formatDateTime(user.email_verified_at) || '-'}
+                        <DetailRow label={translate('text.verify_phone_number')}>
+                            {formatDateTime(user.phone_verified_at) || '-'}
                         </DetailRow>
                     </CardBody>
                 </Card>
@@ -553,7 +526,11 @@ export default function AdminUsersPage() {
             return;
         }
 
-        const confirmed = window.confirm(`Xóa mềm user ${selectedUser.email}?`);
+        const confirmed = window.confirm(
+            translate('text.soft_delete_user_value', { value0: selectedUser.profile?.phone_number ||
+                selectedUser.email ||
+                selectedUser.id })
+        );
 
         if (!confirmed) {
             return;
@@ -570,24 +547,16 @@ export default function AdminUsersPage() {
         <div className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                        Admin
-                    </p>
-                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]">
-                        Quản lý người dùng
-                    </h1>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        ADMIN quản lý hồ sơ, trạng thái tài khoản và vai trò hệ thống.
-                    </p>
+                    <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.admin')} </p>
+                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]"> {translate('text.user_management')} </h1>
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.admin_manages_profiles_account_statuses_and_system_roles')} </p>
                 </div>
                 <Button
                     variant="outline"
                     isLoading={usersQuery.isFetching}
                     onClick={refreshUsers}
                 >
-                    <RefreshCw className="h-4 w-4" />
-                    Tải lại
-                </Button>
+                    <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
             </div>
 
             <StatsPanel
@@ -608,18 +577,18 @@ export default function AdminUsersPage() {
                 </CardHeader>
                 <CardBody>
                     {usersQuery.isLoading ? (
-                        <Loading label="Đang tải người dùng..." />
+                        <Loading label={translate('text.loading_users')} />
                     ) : usersQuery.isError ? (
                         <EmptyState
                             icon={Search}
-                            title="Không tải được người dùng"
+                            title={translate('text.failed_to_load_user')}
                             description={usersQuery.error.message}
                         />
                     ) : users.length === 0 ? (
                         <EmptyState
                             icon={Users}
-                            title="Chưa có người dùng"
-                            description="User đăng ký hoặc seed sẽ hiển thị tại đây."
+                            title={translate('text.no_users_yet')}
+                            description={translate('text.registered_user_or_seed_will_be_displayed_here')}
                         />
                     ) : (
                         <div className="space-y-4">
@@ -627,13 +596,13 @@ export default function AdminUsersPage() {
                                 <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
                                     <thead>
                                         <tr className="bg-[var(--color-background)] text-left text-xs font-semibold uppercase text-[var(--color-text-muted)]">
-                                            <th className="px-4 py-3">User</th>
-                                            <th className="px-4 py-3">Email</th>
-                                            <th className="px-4 py-3">Roles</th>
-                                            <th className="px-4 py-3">Tier</th>
-                                            <th className="px-4 py-3">Trạng thái</th>
-                                            <th className="px-4 py-3">Đăng nhập cuối</th>
-                                            <th className="px-4 py-3 text-right">Tác vụ</th>
+                                            <th className="px-4 py-3">{translate('text.user')}</th>
+                                            <th className="px-4 py-3">{translate('text.phone_number')}</th>
+                                            <th className="px-4 py-3">{translate('text.roles')}</th>
+                                            <th className="px-4 py-3">{translate('text.tier')}</th>
+                                            <th className="px-4 py-3">{translate('text.status')}</th>
+                                            <th className="px-4 py-3">{translate('text.last_login')}</th>
+                                            <th className="px-4 py-3 text-right">{translate('text.task')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
@@ -643,7 +612,7 @@ export default function AdminUsersPage() {
                                                     {user.profile?.full_name || '-'}
                                                 </td>
                                                 <td className="max-w-64 break-all px-4 py-3 text-[var(--color-text-main)]">
-                                                    {user.email}
+                                                    {user.profile?.phone_number || '-'}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <RoleBadges roles={user.roles || []} />
@@ -663,9 +632,7 @@ export default function AdminUsersPage() {
                                                         variant="outline"
                                                         onClick={() => openDetail(user)}
                                                     >
-                                                        <Eye className="h-4 w-4" />
-                                                        Chi tiết
-                                                    </Button>
+                                                        <Eye className="h-4 w-4" /> {translate('text.details')} </Button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -685,7 +652,11 @@ export default function AdminUsersPage() {
 
             <Modal
                 open={Boolean(selectedUser)}
-                title={selectedUser?.email || 'Chi tiết người dùng'}
+                title={
+                    selectedUser?.profile?.phone_number ||
+                    selectedUser?.email ||
+                    translate('text.user_details')
+                }
                 onClose={closeDetail}
                 panelClassName="max-w-7xl"
             >

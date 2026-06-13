@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import {
     CheckCircle2,
     ClipboardEdit,
@@ -38,10 +39,10 @@ import {
 } from '../utils/adminFormat';
 
 const actionTitles = {
-    status: 'Cập nhật trạng thái',
-    notes: 'Ghi chú nội bộ',
-    fulfill: 'Fulfill sản phẩm',
-    shipment: 'Tạo vận đơn',
+    status: translate('text.status_update'),
+    notes: translate('text.internal_notes'),
+    fulfill: translate('text.fulfill_product'),
+    shipment: translate('text.create_bill_of_lading'),
 };
 
 function getOrderId(order) {
@@ -122,9 +123,7 @@ function StatsPanel({ stats }) {
         <div className="grid gap-4 md:grid-cols-3">
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Tổng đơn
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.order_total')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-text-main)]">
                         {getStatTotal(stats?.totalOrders)}
                     </p>
@@ -132,9 +131,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Tổng doanh thu
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.total_revenue')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-primary-hover)]">
                         {formatMoney(getRevenue(stats))}
                     </p>
@@ -142,9 +139,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Trạng thái
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.status')} </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                         {statusItems.length ? (
                             statusItems.map((item) => (
@@ -175,7 +170,7 @@ function OrderFilters({
     return (
         <div className="grid gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 lg:grid-cols-5">
             <Select
-                label="Trạng thái đơn"
+                label={translate('text.single_status')}
                 value={values.status}
                 onChange={(event) => onChange('status', event.target.value)}
             >
@@ -186,7 +181,7 @@ function OrderFilters({
                 ))}
             </Select>
             <Select
-                label="Thanh toán"
+                label={translate('text.checkout')}
                 value={values.payment_status}
                 onChange={(event) =>
                     onChange('payment_status', event.target.value)
@@ -199,25 +194,21 @@ function OrderFilters({
                 ))}
             </Select>
             <Input
-                label="Từ ngày"
+                label={translate('text.from_date')}
                 type="date"
                 value={values.date_from}
                 onChange={(event) => onChange('date_from', event.target.value)}
             />
             <Input
-                label="Đến ngày"
+                label={translate('text.until_date')}
                 type="date"
                 value={values.date_to}
                 onChange={(event) => onChange('date_to', event.target.value)}
             />
             <div className="flex items-end gap-2">
                 <Button type="button" onClick={onApply}>
-                    <Filter className="h-4 w-4" />
-                    Lọc
-                </Button>
-                <Button type="button" variant="outline" onClick={onReset}>
-                    Xóa lọc
-                </Button>
+                    <Filter className="h-4 w-4" /> {translate('text.filter')} </Button>
+                <Button type="button" variant="outline" onClick={onReset}> {translate('text.clear_filter')} </Button>
             </div>
         </div>
     );
@@ -229,13 +220,13 @@ function OrderItemsTable({ order, onOpenFulfill }) {
             <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
                 <thead>
                     <tr className="bg-[var(--color-background)] text-left text-xs font-semibold uppercase text-[var(--color-text-muted)]">
-                        <th className="px-4 py-3">Sản phẩm</th>
-                        <th className="px-4 py-3">SKU</th>
-                        <th className="px-4 py-3">Đặt</th>
-                        <th className="px-4 py-3">Đã fulfill</th>
-                        <th className="px-4 py-3">Thành tiền</th>
+                        <th className="px-4 py-3">{translate('text.product')}</th>
+                        <th className="px-4 py-3">{translate('text.sku')}</th>
+                        <th className="px-4 py-3">{translate('text.set')}</th>
+                        <th className="px-4 py-3">{translate('text.fulfilled')}</th>
+                        <th className="px-4 py-3">{translate('text.amount_7d7d7f4e')}</th>
                         {order.status === 'PROCESSING' && (
-                            <th className="px-4 py-3 text-right">Tác vụ</th>
+                            <th className="px-4 py-3 text-right">{translate('text.task')}</th>
                         )}
                     </tr>
                 </thead>
@@ -252,8 +243,7 @@ function OrderItemsTable({ order, onOpenFulfill }) {
                                         {item.product_name}
                                     </p>
                                     <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                                        {item.variant_label} · {item.unit_label} · {item.pack_size} túi/gói
-                                    </p>
+                                        {item.variant_label} · {item.unit_label} · {item.pack_size} {translate('text.bag_package')} </p>
                                 </td>
                                 <td className="px-4 py-3 align-top text-[var(--color-text-main)]">
                                     {item.sku}
@@ -275,9 +265,7 @@ function OrderItemsTable({ order, onOpenFulfill }) {
                                                 variant="outline"
                                                 onClick={onOpenFulfill}
                                             >
-                                                <PackageCheck className="h-4 w-4" />
-                                                Fulfill
-                                            </Button>
+                                                <PackageCheck className="h-4 w-4" /> {translate('text.fulfill')} </Button>
                                         )}
                                     </td>
                                 )}
@@ -312,11 +300,10 @@ function OrderDetailPanel({
                         <StatusBadge value={order.status} />
                         <StatusBadge
                             value={order.payment?.status}
-                            label={`Thanh toán: ${order.payment?.status}`}
+                            label={translate('text.payment_value', { value0: order.payment?.status })}
                         />
                     </div>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        Tạo lúc {formatDateTime(order.created_at)}
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.created_at')} {formatDateTime(order.created_at)}
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -325,26 +312,20 @@ function OrderDetailPanel({
                         variant="outline"
                         onClick={() => onOpenAction('status')}
                     >
-                        <ClipboardEdit className="h-4 w-4" />
-                        Trạng thái
-                    </Button>
+                        <ClipboardEdit className="h-4 w-4" /> {translate('text.status')} </Button>
                     <Button
                         size="sm"
                         variant="outline"
                         onClick={() => onOpenAction('notes')}
                     >
-                        <ClipboardEdit className="h-4 w-4" />
-                        Ghi chú
-                    </Button>
+                        <ClipboardEdit className="h-4 w-4" /> {translate('text.note')} </Button>
                     {canFulfill && (
                         <Button
                             size="sm"
                             variant="outline"
                             onClick={() => onOpenAction('fulfill')}
                         >
-                            <PackageCheck className="h-4 w-4" />
-                            Fulfill
-                        </Button>
+                            <PackageCheck className="h-4 w-4" /> {translate('text.fulfill')} </Button>
                     )}
                     {canRecordShipment && (
                         <Button
@@ -352,9 +333,7 @@ function OrderDetailPanel({
                             variant="outline"
                             onClick={() => onOpenAction('shipment')}
                         >
-                            <Truck className="h-4 w-4" />
-                            Vận đơn
-                        </Button>
+                            <Truck className="h-4 w-4" /> {translate('text.bill_of_lading')} </Button>
                     )}
                     {canDeliver && (
                         <Button
@@ -362,9 +341,7 @@ function OrderDetailPanel({
                             isLoading={isDelivering}
                             onClick={onConfirmDelivery}
                         >
-                            <CheckCircle2 className="h-4 w-4" />
-                            Đã giao
-                        </Button>
+                            <CheckCircle2 className="h-4 w-4" /> {translate('text.delivered')} </Button>
                     )}
                 </div>
             </div>
@@ -372,9 +349,7 @@ function OrderDetailPanel({
             <div className="grid gap-4 lg:grid-cols-3">
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Người nhận
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.recipient')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-2 text-sm">
                         <p className="font-medium text-[var(--color-text-main)]">
@@ -398,31 +373,23 @@ function OrderDetailPanel({
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Thanh toán
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.checkout')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-2 text-sm">
                         <div className="flex justify-between gap-3">
-                            <span className="text-[var(--color-text-muted)]">
-                                Phương thức
-                            </span>
+                            <span className="text-[var(--color-text-muted)]"> {translate('text.method')} </span>
                             <span className="font-medium text-[var(--color-text-main)]">
                                 {order.payment?.method || '-'}
                             </span>
                         </div>
                         <div className="flex justify-between gap-3">
-                            <span className="text-[var(--color-text-muted)]">
-                                Tổng tiền
-                            </span>
+                            <span className="text-[var(--color-text-muted)]"> {translate('text.total_amount')} </span>
                             <span className="font-semibold text-[var(--color-primary-hover)]">
                                 {formatMoney(order.pricing?.total_amount || 0)}
                             </span>
                         </div>
                         <div className="flex justify-between gap-3">
-                            <span className="text-[var(--color-text-muted)]">
-                                Giảm giá
-                            </span>
+                            <span className="text-[var(--color-text-muted)]"> {translate('text.discount')} </span>
                             <span className="font-medium text-[var(--color-text-main)]">
                                 {formatMoney(order.pricing?.discount_amount || 0)}
                             </span>
@@ -431,9 +398,7 @@ function OrderDetailPanel({
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Vận chuyển
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.shipping')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-2 text-sm">
                         <p className="text-[var(--color-text-main)]">
@@ -445,7 +410,7 @@ function OrderDetailPanel({
                         <p className="text-[var(--color-text-muted)]">
                             {order.shipment?.shipped_at
                                 ? formatDateTime(order.shipment.shipped_at)
-                                : 'Chưa giao vận'}
+                                : translate('text.not_yet_delivered')}
                         </p>
                     </CardBody>
                 </Card>
@@ -453,9 +418,7 @@ function OrderDetailPanel({
 
             <Card>
                 <CardHeader>
-                    <h3 className="font-semibold text-[var(--color-text-main)]">
-                        Sản phẩm
-                    </h3>
+                    <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.product')} </h3>
                 </CardHeader>
                 <CardBody>
                     <OrderItemsTable
@@ -468,23 +431,17 @@ function OrderDetailPanel({
             <div className="grid gap-4 lg:grid-cols-2">
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Ghi chú
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.note')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-4 text-sm">
                         <div>
-                            <p className="font-medium text-[var(--color-text-main)]">
-                                Khách hàng
-                            </p>
+                            <p className="font-medium text-[var(--color-text-main)]"> {translate('text.customer')} </p>
                             <p className="mt-1 text-[var(--color-text-muted)]">
                                 {order.customer_notes || '-'}
                             </p>
                         </div>
                         <div>
-                            <p className="font-medium text-[var(--color-text-main)]">
-                                Nội bộ
-                            </p>
+                            <p className="font-medium text-[var(--color-text-main)]"> {translate('text.internal')} </p>
                             <p className="mt-1 text-[var(--color-text-muted)]">
                                 {order.admin_notes || '-'}
                             </p>
@@ -494,9 +451,7 @@ function OrderDetailPanel({
 
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Lịch sử trạng thái
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.status_history')} </h3>
                     </CardHeader>
                     <CardBody>
                         <div className="space-y-3">
@@ -704,7 +659,7 @@ export default function AdminOrdersPage() {
             return;
         }
 
-        const confirmed = window.confirm(`Xác nhận đơn ${orderDetail.order_code} đã giao?`);
+        const confirmed = window.confirm(translate('text.confirm_order_value_has_been_delivered', { value0: orderDetail.order_code }));
 
         if (!confirmed) {
             return;
@@ -720,24 +675,16 @@ export default function AdminOrdersPage() {
         <div className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                        Admin
-                    </p>
-                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]">
-                        Quản lý đơn hàng
-                    </h1>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        ADMIN xử lý trạng thái, fulfillment, vận đơn và ghi chú nội bộ.
-                    </p>
+                    <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.admin')} </p>
+                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]"> {translate('text.order_management')} </h1>
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.admin_handles_status_fulfillment_bills_of_lading_and_internal_notes')} </p>
                 </div>
                 <Button
                     variant="outline"
                     isLoading={ordersQuery.isFetching || statsQuery.isFetching}
                     onClick={refreshOrders}
                 >
-                    <RefreshCw className="h-4 w-4" />
-                    Tải lại
-                </Button>
+                    <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
             </div>
 
             <StatsPanel stats={statsQuery.data?.data} />
@@ -753,18 +700,18 @@ export default function AdminOrdersPage() {
                 </CardHeader>
                 <CardBody>
                     {ordersQuery.isLoading ? (
-                        <Loading label="Đang tải đơn hàng..." />
+                        <Loading label={translate('text.loading_orders')} />
                     ) : ordersQuery.isError ? (
                         <EmptyState
                             icon={Search}
-                            title="Không tải được đơn hàng"
+                            title={translate('text.unable_to_load_order')}
                             description={ordersQuery.error.message}
                         />
                     ) : orders.length === 0 ? (
                         <EmptyState
                             icon={PackageCheck}
-                            title="Chưa có đơn hàng"
-                            description="Các đơn hàng mới sẽ hiển thị tại đây."
+                            title={translate('text.no_orders_yet')}
+                            description={translate('text.new_orders_will_display_here')}
                         />
                     ) : (
                         <div className="space-y-4">
@@ -772,13 +719,13 @@ export default function AdminOrdersPage() {
                                 <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
                                     <thead>
                                         <tr className="bg-[var(--color-background)] text-left text-xs font-semibold uppercase text-[var(--color-text-muted)]">
-                                            <th className="px-4 py-3">Mã đơn</th>
-                                            <th className="px-4 py-3">Trạng thái</th>
-                                            <th className="px-4 py-3">Thanh toán</th>
-                                            <th className="px-4 py-3">Tổng tiền</th>
-                                            <th className="px-4 py-3">Số lượng</th>
-                                            <th className="px-4 py-3">Ngày tạo</th>
-                                            <th className="px-4 py-3 text-right">Tác vụ</th>
+                                            <th className="px-4 py-3">{translate('text.item_code')}</th>
+                                            <th className="px-4 py-3">{translate('text.status')}</th>
+                                            <th className="px-4 py-3">{translate('text.checkout')}</th>
+                                            <th className="px-4 py-3">{translate('text.total_amount')}</th>
+                                            <th className="px-4 py-3">{translate('text.quantity')}</th>
+                                            <th className="px-4 py-3">{translate('text.creation_date')}</th>
+                                            <th className="px-4 py-3 text-right">{translate('text.task')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
@@ -808,9 +755,7 @@ export default function AdminOrdersPage() {
                                                         variant="outline"
                                                         onClick={() => openDetail(order)}
                                                     >
-                                                        <Eye className="h-4 w-4" />
-                                                        Chi tiết
-                                                    </Button>
+                                                        <Eye className="h-4 w-4" /> {translate('text.details')} </Button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -830,15 +775,15 @@ export default function AdminOrdersPage() {
 
             <Modal
                 open={Boolean(selectedOrder)}
-                title={orderDetail?.order_code || 'Chi tiết đơn hàng'}
+                title={orderDetail?.order_code || translate('text.order_details')}
                 onClose={closeDetail}
                 panelClassName="max-w-7xl"
             >
                 {detailQuery.isLoading ? (
-                    <Loading label="Đang tải chi tiết đơn hàng..." />
+                    <Loading label={translate('text.loading_order_details')} />
                 ) : detailQuery.isError ? (
                     <EmptyState
-                        title="Không tải được chi tiết đơn"
+                        title={translate('text.unable_to_load_single_item')}
                         description={detailQuery.error.message}
                     />
                 ) : (

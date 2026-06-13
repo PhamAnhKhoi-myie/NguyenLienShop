@@ -22,7 +22,7 @@ const {
     clearCartQuerySchema,
 } = require('./cart.validator');
 
-// ===== PUBLIC =====
+
 
 router.post(
     '/guest',
@@ -47,7 +47,7 @@ router.get(
     CartController.getGuestCart
 );
 
-// ===== AUTH =====
+
 
 router.get(
     '/',
@@ -125,7 +125,7 @@ router.get(
     CartController.validateCart
 );
 
-// ===== ADMIN =====
+
 
 router.get(
     '/admin/abandoned',

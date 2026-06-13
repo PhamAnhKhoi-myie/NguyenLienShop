@@ -26,7 +26,7 @@ const {
 
 const router = express.Router();
 
-// ===== CREATE ADDRESS =====
+
 router.post(
     '/',
     authenticate,
@@ -34,7 +34,7 @@ router.post(
     createAddress
 );
 
-// ===== ADMIN =====
+
 router.get(
     '/user/:userId',
     authenticate,
@@ -43,14 +43,14 @@ router.get(
     getUserAddressesByAdmin
 );
 
-// ===== OWN ADDRESSES =====
+
 router.get(
     '/',
     authenticate,
     getMyAddresses
 );
 
-// ===== SET DEFAULT =====
+
 router.patch(
     '/:addressId/set-default',
     authenticate,
@@ -58,7 +58,7 @@ router.patch(
     setDefaultAddress
 );
 
-// ===== UPDATE =====
+
 router.patch(
     '/:addressId',
     authenticate,
@@ -66,7 +66,7 @@ router.patch(
     updateAddress
 );
 
-// ===== DELETE =====
+
 router.delete(
     '/:addressId',
     authenticate,

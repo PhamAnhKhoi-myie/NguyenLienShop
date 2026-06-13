@@ -1,9 +1,10 @@
+import { getLocale } from '../../../shared/i18n/index';
 export function formatBlogDate(value) {
     if (!value) {
         return '';
     }
 
-    return new Intl.DateTimeFormat('vi-VN', {
+    return new Intl.DateTimeFormat(getLocale(), {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',

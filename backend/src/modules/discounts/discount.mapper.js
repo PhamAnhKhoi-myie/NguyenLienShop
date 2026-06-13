@@ -10,28 +10,28 @@ class DiscountMapper {
             id: doc._id?.toString(),
             code: doc.code,
 
-            // ===== DISCOUNT VALUE =====
+
             type: doc.type,
             value: doc.value,
             max_discount_amount: doc.max_discount_amount || null,
 
-            // ===== APPLICATION STRATEGY =====
+
             application_strategy: doc.application_strategy,
 
-            // ===== TARGETS =====
+
             applicable_targets: this.transformApplicableTargets(
                 doc.applicable_targets
             ),
 
-            // ===== USER ELIGIBILITY =====
+
             user_eligibility: this.transformUserEligibility(
                 doc.user_eligibility
             ),
 
-            // ===== CONSTRAINTS =====
+
             min_order_value: doc.min_order_value || 0,
 
-            // ===== USAGE INFO =====
+
             usage_limit: doc.usage_limit,
             usage_per_user_limit: doc.usage_per_user_limit,
             usage_count: doc.usage_count,
@@ -40,24 +40,24 @@ class DiscountMapper {
                 doc.usage_limit
             ),
 
-            // ===== STACKING =====
+
             is_stackable: doc.is_stackable,
             stack_priority: doc.stack_priority,
             show_on_homepage: Boolean(doc.show_on_homepage),
             homepage_priority: doc.homepage_priority || 0,
             requires_claim: Boolean(doc.requires_claim || doc.show_on_homepage),
 
-            // ===== TIME WINDOW =====
+
             started_at: doc.started_at,
             expiry_date: doc.expiry_date,
             is_active: this.isDiscountActive(doc),
             time_remaining: this.getTimeRemaining(doc.expiry_date),
 
-            // ===== STATUS =====
+
             status: doc.status,
             status_label: this.getStatusLabel(doc.status),
 
-            // ===== TIMESTAMPS =====
+
             created_at: doc.created_at,
             updated_at: doc.updated_at,
         };
@@ -74,18 +74,18 @@ class DiscountMapper {
             id: doc._id?.toString(),
             code: doc.code,
 
-            // ===== DISCOUNT VALUE =====
+
             type: doc.type,
             value: doc.value,
             max_discount_amount: doc.max_discount_amount || null,
 
-            // ===== APPLICATION STRATEGY =====
+
             application_strategy: doc.application_strategy,
             application_strategy_label: this.getApplicationStrategyLabel(
                 doc.application_strategy
             ),
 
-            // ===== TARGETS (FULL) =====
+
             applicable_targets: {
                 type: doc.applicable_targets?.type || 'all',
                 type_label: this.getApplicableTargetTypeLabel(
@@ -96,7 +96,7 @@ class DiscountMapper {
                 variant_ids: doc.applicable_targets?.variant_ids || [],
             },
 
-            // ===== USER ELIGIBILITY (FULL) =====
+
             user_eligibility: {
                 type: doc.user_eligibility?.type || 'all',
                 type_label: this.getUserEligibilityTypeLabel(
@@ -106,10 +106,10 @@ class DiscountMapper {
                 min_user_tier: doc.user_eligibility?.min_user_tier || null,
             },
 
-            // ===== CONSTRAINTS =====
+
             min_order_value: doc.min_order_value || 0,
 
-            // ===== USAGE INFO =====
+
             usage_limit: doc.usage_limit,
             usage_per_user_limit: doc.usage_per_user_limit,
             usage_count: doc.usage_count,
@@ -119,25 +119,25 @@ class DiscountMapper {
             ),
             remaining_uses: Math.max(0, doc.usage_limit - doc.usage_count),
 
-            // ===== STACKING =====
+
             is_stackable: doc.is_stackable,
             stack_priority: doc.stack_priority,
             show_on_homepage: Boolean(doc.show_on_homepage),
             homepage_priority: doc.homepage_priority || 0,
             requires_claim: Boolean(doc.requires_claim || doc.show_on_homepage),
 
-            // ===== TIME WINDOW =====
+
             started_at: doc.started_at,
             expiry_date: doc.expiry_date,
             is_active: this.isDiscountActive(doc),
             time_remaining: this.getTimeRemaining(doc.expiry_date),
             days_until_expiry: this.getDaysUntilExpiry(doc.expiry_date),
 
-            // ===== STATUS =====
+
             status: doc.status,
             status_label: this.getStatusLabel(doc.status),
 
-            // ===== AUDIT TRAIL =====
+
             created_by: doc.created_by?.toString() || null,
             created_at: doc.created_at,
             updated_by: doc.updated_by?.toString() || null,
@@ -156,17 +156,17 @@ class DiscountMapper {
             id: doc._id?.toString(),
             code: doc.code,
 
-            // ===== VALUE =====
+
             type: doc.type,
             type_label: this.getTypeLabel(doc.type),
             value: doc.value,
             display_value: this.formatDiscountValue(doc.type, doc.value),
 
-            // ===== TARGETS =====
+
             applicable_targets_type: doc.applicable_targets?.type || 'all',
             targets_count: this.countTargets(doc.applicable_targets),
 
-            // ===== USAGE =====
+
             usage_count: doc.usage_count,
             usage_limit: doc.usage_limit,
             usage_percentage: this.calculateUsagePercentage(
@@ -174,7 +174,7 @@ class DiscountMapper {
                 doc.usage_limit
             ),
 
-            // ===== TIME =====
+
             status: doc.status,
             status_label: this.getStatusLabel(doc.status),
             is_active: this.isDiscountActive(doc),
@@ -183,11 +183,11 @@ class DiscountMapper {
             homepage_priority: doc.homepage_priority || 0,
             requires_claim: Boolean(doc.requires_claim || doc.show_on_homepage),
 
-            // ===== TIMESTAMPS =====
+
             created_at: doc.created_at,
             updated_at: doc.updated_at,
 
-            // ===== ACTIONS =====
+
             can_edit: doc.status !== 'expired' && !doc.is_deleted,
             can_delete: !doc.is_deleted,
             can_activate: doc.status === 'inactive' && !doc.is_deleted,
@@ -206,25 +206,25 @@ class DiscountMapper {
             id: doc._id?.toString(),
             code: doc.code,
 
-            // ===== DISCOUNT VALUE =====
+
             type: doc.type,
             value: doc.value,
             max_discount_amount: doc.max_discount_amount || null,
             display_value: this.formatDiscountValue(doc.type, doc.value),
 
-            // ===== APPLICATION =====
+
             application_strategy: doc.application_strategy,
             requires_claim: Boolean(doc.requires_claim || doc.show_on_homepage),
 
-            // ===== CONSTRAINTS =====
+
             min_order_value: doc.min_order_value || 0,
 
-            // ===== TIME =====
+
             is_valid: this.isDiscountValid(doc),
             expiry_date: doc.expiry_date,
             time_remaining: this.getTimeRemaining(doc.expiry_date),
 
-            // ===== WARNINGS =====
+
             warning: this.getCustomerWarning(doc),
         };
     }
@@ -274,7 +274,7 @@ class DiscountMapper {
             discount_id: validationResult.discount_id?.toString?.(),
             code: validationResult.code,
 
-            // ===== DISCOUNT VALUE =====
+
             type: validationResult.type,
             original_value: validationResult.original_value,
             display_value: this.formatDiscountValue(
@@ -282,21 +282,21 @@ class DiscountMapper {
                 validationResult.original_value
             ),
 
-            // ===== CALCULATED AMOUNT =====
+
             discount_amount: validationResult.discount_amount,
             discount_amount_formatted: this.formatPrice(
                 validationResult.discount_amount
             ),
 
-            // ===== FINAL TOTAL =====
+
             final_total: validationResult.final_total,
             final_total_formatted: this.formatPrice(validationResult.final_total),
 
-            // ===== APPLICABLE ITEMS =====
+
             applicable_item_count: validationResult.applicable_item_ids?.length || 0,
             applicable_item_ids: validationResult.applicable_item_ids || [],
 
-            // ===== SAVINGS =====
+
             you_save: validationResult.discount_amount,
             you_save_formatted: this.formatPrice(
                 validationResult.discount_amount
@@ -372,7 +372,7 @@ class DiscountMapper {
         };
     }
 
-    // ===== HELPERS =====
+
 
     static transformApplicableTargets(targets) {
         if (!targets) {
@@ -478,7 +478,7 @@ class DiscountMapper {
             return '0 ₫';
         }
 
-        return new Intl.NumberFormat('vi-VN', {
+        return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'VND',
             minimumFractionDigits: 0,
@@ -588,13 +588,13 @@ class DiscountMapper {
             return 'This discount has reached its usage limit';
         }
 
-        // Low usage remaining (less than 10%)
+
         const remaining = discount.usage_limit - discount.usage_count;
         if (remaining < Math.ceil(discount.usage_limit * 0.1) && remaining > 0) {
             return `Only ${remaining} use${remaining > 1 ? 's' : ''} left`;
         }
 
-        // Expiring soon (within 3 days)
+
         const daysUntilExpiry = this.getDaysUntilExpiry(discount.expiry_date);
         if (daysUntilExpiry && daysUntilExpiry <= 3 && daysUntilExpiry > 0) {
             return `Expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}`;
@@ -640,7 +640,7 @@ class DiscountMapper {
         const obj = discount.toObject ? discount.toObject() : discount;
 
         delete obj.__v;
-        delete obj.raw_data; // If any raw webhook data exists
+        delete obj.raw_data;
 
         return obj;
     }

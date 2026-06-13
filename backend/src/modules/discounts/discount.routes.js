@@ -8,11 +8,11 @@ const { authorize } = require('../../middlewares/authorize.middleware');
 const DiscountController = require('./discount.controller');
 
 const {
-    // params
+
     IdParamSchema,
     UserIdParamSchema,
 
-    // body
+
     createDiscountBodySchema,
     updateDiscountBodySchema,
     validateDiscountBodySchema,
@@ -20,7 +20,7 @@ const {
     bulkCreateBodySchema,
     duplicateDiscountBodySchema,
 
-    // query
+
     listDiscountsQuerySchema,
     nearExpiryQuerySchema,
     publicHomepageDiscountsQuerySchema,
@@ -29,7 +29,7 @@ const {
 
 const router = express.Router();
 
-// ===== PUBLIC =====
+
 
 router.post(
     '/validate',
@@ -66,7 +66,7 @@ router.post(
     DiscountController.claimDiscount
 );
 
-// ===== ADMIN =====
+
 
 router.post(
     '/',
@@ -111,7 +111,7 @@ router.get(
     DiscountController.getDiscountsForUser
 );
 
-// ===== PARAM ROUTES (specific first) =====
+
 
 router.post(
     '/:discountId/revoke',

@@ -8,6 +8,21 @@ const isTruthy = (value) =>
 const isVNPayCheckoutEnabled = () =>
     isTruthy(process.env.VNPAY_CHECKOUT_ENABLED);
 
+const hasPayOSConfig = () =>
+    Boolean(
+        process.env.PAYOS_CLIENT_ID &&
+        process.env.PAYOS_API_KEY &&
+        process.env.PAYOS_CHECKSUM_KEY
+    );
+
+const isPayOSCheckoutEnabled = () => {
+    if (process.env.PAYOS_CHECKOUT_ENABLED !== undefined) {
+        return isTruthy(process.env.PAYOS_CHECKOUT_ENABLED) && hasPayOSConfig();
+    }
+
+    return hasPayOSConfig();
+};
+
 const assertPaymentProviderEnabled = (provider) => {
     const normalizedProvider = String(provider || '').trim().toLowerCase();
 
@@ -23,6 +38,26 @@ const assertPaymentProviderEnabled = (provider) => {
         );
     }
 
+    if (normalizedProvider === 'payos') {
+        if (!hasPayOSConfig()) {
+            throw new AppError(
+                'PayOS config is missing',
+                500,
+                'PAYOS_CONFIG_MISSING'
+            );
+        }
+
+        if (isPayOSCheckoutEnabled()) {
+            return;
+        }
+
+        throw new AppError(
+            'PayOS checkout is temporarily disabled',
+            503,
+            'PAYOS_CHECKOUT_DISABLED'
+        );
+    }
+
     throw new AppError(
         'Payment provider is not enabled',
         400,
@@ -32,5 +67,7 @@ const assertPaymentProviderEnabled = (provider) => {
 
 module.exports = {
     assertPaymentProviderEnabled,
+    hasPayOSConfig,
+    isPayOSCheckoutEnabled,
     isVNPayCheckoutEnabled,
 };

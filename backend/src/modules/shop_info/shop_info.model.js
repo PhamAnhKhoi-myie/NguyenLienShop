@@ -203,13 +203,13 @@ const shopInfoSchema = new mongoose.Schema(
             }
         },
 
-        // ===== STATUS =====
+
         is_active: {
             type: Boolean,
             default: true,
         },
 
-        // ===== TIMESTAMPS =====
+
         created_at: {
             type: Date,
             default: Date.now,
@@ -228,10 +228,10 @@ const shopInfoSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES =====
+
 shopInfoSchema.index({ shop_name: 1 });
 
-// ===== MIDDLEWARE =====
+
 shopInfoSchema.pre('save', function (next) {
     this.updated_at = new Date();
     next();

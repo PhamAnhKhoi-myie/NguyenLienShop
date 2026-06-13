@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CategoryTreeMenu from '../../categories/components/CategoryTreeMenu';
@@ -92,16 +93,12 @@ export default function ProductListPage() {
         <div className="space-y-6">
             <div>
 
-                <h1 className="mt-1 text-3xl font-semibold text-[var(--color-text-main)]">
-                    Túi bao trái cây
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-muted)]">
-                    Chọn đúng kích thước, chất liệu và quy cách đóng gói để bảo
-                    vệ trái cây tốt hơn trong vườn.
-                </p>
+                <h1 className="mt-1 text-3xl font-semibold text-[var(--color-text-main)]"> {translate('text.fruit_bag')} </h1>
+                <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-muted)]"> {translate('text.choose_the_right_size_material_and_packaging_to_better_protect_fruit_in_')} </p>
             </div>
 
             <ProductFilter
+                key={filters.search}
                 filters={filters}
                 onChange={updateFilters}
                 onReset={resetFilters}
@@ -110,9 +107,7 @@ export default function ProductListPage() {
             <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
                 <Card className="h-fit">
                     <CardHeader>
-                        <h2 className="font-semibold text-[var(--color-text-main)]">
-                            Danh mục
-                        </h2>
+                        <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.category')} </h2>
                     </CardHeader>
                     <CardBody>
                         <CategoryTreeMenu
@@ -131,15 +126,15 @@ export default function ProductListPage() {
                     <div className="flex items-center justify-between gap-4">
                         <p className="text-sm text-[var(--color-text-muted)]">
                             {productsQuery.isFetching
-                                ? 'Đang cập nhật...'
-                                : `${pagination.total_items || 0} sản phẩm`}
+                                ? translate('text.updating_9f3d40e5')
+                                : translate('text.value_product', { value0: pagination.total_items || 0 })}
                         </p>
                     </div>
 
                     {productsQuery.isLoading && (
                         <Card>
                             <CardBody>
-                                <Loading label="Đang tải sản phẩm..." />
+                                <Loading label={translate('text.loading_products')} />
                             </CardBody>
                         </Card>
                     )}
@@ -158,8 +153,8 @@ export default function ProductListPage() {
                         !productsQuery.isError &&
                         products.length === 0 && (
                             <EmptyState
-                                title="Không tìm thấy sản phẩm"
-                                description="Thử đổi từ khóa, danh mục hoặc khoảng giá để xem thêm sản phẩm."
+                                title={translate('text.no_product_found')}
+                                description={translate('text.try_changing_keywords_categories_or_price_ranges_to_see_more_products')}
                             />
                         )}
 

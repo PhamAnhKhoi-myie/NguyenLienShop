@@ -6,7 +6,7 @@ const { buildAuditMetadata } = require('../../utils/audit.util');
 const CartService = require('./cart.service');
 const CartMapper = require('./cart.mapper');
 
-// ===== PUBLIC =====
+
 
 const GUEST_CART_COOKIE_NAME = 'guest_cart_session';
 const UUID_PATTERN =
@@ -91,7 +91,7 @@ const getGuestCart = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== AUTH =====
+
 
 const getUserCart = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
@@ -342,7 +342,7 @@ const validateCart = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== ADMIN =====
+
 
 const getAbandonedCarts = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);

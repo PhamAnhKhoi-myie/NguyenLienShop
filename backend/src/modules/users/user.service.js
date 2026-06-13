@@ -28,6 +28,7 @@ class UserService {
             filter.$or = [
                 { email: { $regex: search, $options: 'i' } },
                 { 'profile.full_name': { $regex: search, $options: 'i' } },
+                { 'profile.phone_number': { $regex: search, $options: 'i' } },
             ];
         }
 
@@ -61,14 +62,14 @@ class UserService {
             );
         }
 
-        // ===== GET CURRENT USER =====
+
         const existingUser = await User.findById(userId);
 
         if (!existingUser) {
             throw new AppError('User not found', 404, 'USER_NOT_FOUND');
         }
 
-        // ===== MAP OLD DATA =====
+
         const oldData = {
             email: existingUser.email,
             full_name: existingUser.profile?.full_name || null,
@@ -77,7 +78,7 @@ class UserService {
             gender: existingUser.profile?.gender || 'UNSPECIFIED',
         };
 
-        // ===== MAP NEW DATA =====
+
         const newData = {
             email: updateData.email ?? oldData.email,
             full_name: updateData["profile.full_name"] ?? oldData.full_name,
@@ -86,7 +87,7 @@ class UserService {
             gender: updateData["profile.gender"] ?? oldData.gender,
         };
 
-        // ===== BUILD CHANGES =====
+
         const changes = {};
 
         for (const key in newData) {
@@ -98,19 +99,19 @@ class UserService {
             }
         }
 
-        // ===== NO CHANGE =====
+
         if (Object.keys(changes).length === 0) {
             throw new AppError('No change detected', 400, 'NO_CHANGE');
         }
 
-        // ===== UPDATE =====
+
         const updated = await User.findByIdAndUpdate(
             userId,
             { $set: updateData },
             { new: true, runValidators: true }
         );
 
-        // ===== AUDIT LOG =====
+
         try {
             await UserAuditLogService.createLog({
                 actor_id: actorId,
@@ -129,14 +130,14 @@ class UserService {
 
     static async deleteUser(userId, actorId, metadata = {}) {
 
-        // ===== GET CURRENT USER =====
+
         const existingUser = await User.findById(userId);
 
         if (!existingUser) {
             throw new AppError('User not found', 404, 'USER_NOT_FOUND');
         }
 
-        // ===== ALREADY DELETED =====
+
         if (existingUser.deleted_at) {
             throw new AppError(
                 'User already deleted',
@@ -147,7 +148,7 @@ class UserService {
 
         const now = new Date();
 
-        // ===== UPDATE =====
+
         const deleted = await User.findOneAndUpdate(
             {
                 _id: userId,
@@ -170,7 +171,7 @@ class UserService {
             );
         }
 
-        // ===== AUDIT LOG =====
+
         try {
             await UserAuditLogService.createLog({
                 actor_id: actorId,
@@ -194,7 +195,7 @@ class UserService {
 
     static async updateUserRoles(userId, roles, adminId, metadata = {}) {
 
-        // ===== VALIDATE INPUT =====
+
         if (!Array.isArray(roles) || roles.length === 0) {
             throw new AppError(
                 'Roles must be a non-empty array',
@@ -215,7 +216,7 @@ class UserService {
             );
         }
 
-        // ===== GET CURRENT USER =====
+
         roles = [...new Set(roles)];
 
         const existingUser = await User.findOne({
@@ -251,7 +252,7 @@ class UserService {
         }
 
 
-        // ===== ADMIN SAFETY CHECK =====
+
         const currentlyAdmin = oldRoles.includes('ADMIN');
         const willRemainAdmin = roles.includes('ADMIN');
 
@@ -270,7 +271,7 @@ class UserService {
             }
         }
 
-        // ===== UPDATE =====
+
         const updated = await User.findOneAndUpdate(
             {
                 _id: userId,
@@ -294,7 +295,7 @@ class UserService {
             );
         }
 
-        // ===== AUDIT LOG =====
+
         try {
             await UserAuditLogService.createLog({
                 actor_id: adminId,
@@ -318,7 +319,7 @@ class UserService {
 
     static async updateUserStatus(userId, status, actorId, metadata = {}) {
 
-        // ===== VALIDATE =====
+
         const ALLOWED_STATUS = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
 
         if (!ALLOWED_STATUS.includes(status)) {
@@ -329,7 +330,7 @@ class UserService {
             );
         }
 
-        // ===== GET CURRENT USER =====
+
         const existingUser = await User.findOne({
             _id: userId,
             deleted_at: null,
@@ -341,7 +342,7 @@ class UserService {
 
         const oldStatus = existingUser.status;
 
-        // ===== NO CHANGE =====
+
         if (oldStatus === status) {
             throw new AppError(
                 'Status unchanged',
@@ -350,7 +351,7 @@ class UserService {
             );
         }
 
-        // ===== UPDATE =====
+
         const updated = await User.findOneAndUpdate(
             {
                 _id: userId,
@@ -365,7 +366,7 @@ class UserService {
             }
         );
 
-        // ===== AUDIT LOG =====
+
         try {
             await UserAuditLogService.createLog({
                 actor_id: actorId,

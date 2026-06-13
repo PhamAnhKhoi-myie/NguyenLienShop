@@ -1,9 +1,10 @@
+import { translate } from '../i18n/index';
 import { PackageSearch } from 'lucide-react';
 import Button from './Button';
 
 export default function EmptyState({
     icon: Icon = PackageSearch,
-    title = 'Không có dữ liệu',
+    title = translate('text.no_data'),
     description,
     actionLabel,
     onAction,

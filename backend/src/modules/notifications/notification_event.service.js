@@ -3,28 +3,28 @@ const logger = require('../../utils/logger.util');
 
 const ORDER_STATUS_NOTIFICATIONS = {
     PROCESSING: {
-        title: 'Đơn hàng đang được xử lý',
+        title: "Order is being processed",
         event: 'ORDER_PROCESSING',
         priority: 'medium',
-        message: (label) => `${label} đang được xử lý.`,
+        message: (label) => `${label} is being processed.`,
     },
     SHIPPED: {
-        title: 'Đơn hàng đang giao',
+        title: "Order is being delivered",
         event: 'ORDER_SHIPPED',
         priority: 'medium',
-        message: (label) => `${label} đang được giao.`,
+        message: (label) => `${label} is being delivered.`,
     },
     DELIVERED: {
-        title: 'Giao hàng thành công',
+        title: "Successfully delivered",
         event: 'ORDER_DELIVERED',
         priority: 'medium',
-        message: (label) => `${label} đã được giao thành công.`,
+        message: (label) => `${label} has been delivered successfully.`,
     },
     CANCELED: {
-        title: 'Đơn hàng đã bị hủy',
+        title: "Order has been canceled",
         event: 'ORDER_CANCELED',
         priority: 'high',
-        message: (label) => `${label} đã bị hủy.`,
+        message: (label) => `${label} has been cancelled.`,
     },
 };
 
@@ -69,7 +69,7 @@ function getOrderCode(order) {
 
 function getOrderLabel(order) {
     const orderCode = getOrderCode(order);
-    return orderCode ? `Đơn hàng ${orderCode}` : 'Đơn hàng của bạn';
+    return orderCode ? `Order ${orderCode}` : "Your order";
 }
 
 function getUserDisplayName(user) {
@@ -79,7 +79,8 @@ function getUserDisplayName(user) {
         doc?.full_name ||
         doc?.name ||
         doc?.email ||
-        'bạn'
+        doc?.profile?.phone_number ||
+        "you"
     );
 }
 
@@ -129,8 +130,8 @@ class NotificationEventService {
         return this._create('REGISTER_SUCCESS', {
             user_id: getUserId(user),
             type: 'system',
-            title: 'Tạo tài khoản thành công',
-            message: `Chào mừng ${displayName} đã tạo tài khoản thành công.`,
+            title: "Account created successfully",
+            message: `Welcome ${displayName} has successfully created an account.`,
             priority: 'low',
             data: {
                 ref_type: null,
@@ -146,8 +147,8 @@ class NotificationEventService {
         return this._create('PASSWORD_CHANGED', {
             user_id: getUserId(user),
             type: 'system',
-            title: 'Đổi mật khẩu thành công',
-            message: 'Mật khẩu tài khoản của bạn đã được thay đổi thành công.',
+            title: "Password changed successfully",
+            message: "Your account password has been changed successfully.",
             priority: 'low',
             data: {
                 ref_type: null,
@@ -165,8 +166,8 @@ class NotificationEventService {
         return this._create('ORDER_CREATED', {
             user_id: getOrderUserId(order),
             type: 'order',
-            title: 'Đặt hàng thành công',
-            message: `${label} đã được tạo thành công.`,
+            title: "Order successful",
+            message: `${label} was created successfully.`,
             priority: 'low',
             data: getOrderData(order, 'ORDER_CREATED', {
                 status: 'PENDING',
@@ -180,8 +181,8 @@ class NotificationEventService {
         return this._create('PAYMENT_SUCCESS', {
             user_id: getOrderUserId(order, payment),
             type: 'order',
-            title: 'Thanh toán thành công',
-            message: `Thanh toán cho ${label.toLowerCase()} đã thành công.`,
+            title: "Successful payment",
+            message: `Payment for ${label.toLowerCase()} was successful.`,
             priority: 'medium',
             data: getOrderData(order, 'PAYMENT_SUCCESS', {
                 status: 'PAID',
@@ -197,8 +198,8 @@ class NotificationEventService {
         return this._create('PAYMENT_FAILED', {
             user_id: getOrderUserId(order, payment),
             type: 'order',
-            title: 'Thanh toán thất bại',
-            message: `Thanh toán cho ${label.toLowerCase()} thất bại. Vui lòng thử lại hoặc chọn phương thức khác.`,
+            title: "Payment failed",
+            message: `Payment for ${label.toLowerCase()} failed. Please try again or choose another method.`,
             priority: 'high',
             data: getOrderData(order, 'PAYMENT_FAILED', {
                 status: 'FAILED',

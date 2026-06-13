@@ -1,3 +1,4 @@
+import { getLocale, translate } from '../../../shared/i18n/index';
 import {
     AlertTriangle,
     ArrowLeft,
@@ -23,33 +24,61 @@ import {
 const statusConfig = {
     success: {
         icon: CheckCircle2,
-        title: 'Đã nhận kết quả VNPAY',
+        title: translate('text.payment_results_received'),
         description:
-            'FE đã nhận redirect từ VNPAY và đang đối chiếu lại trạng thái đơn hàng với BE.',
+            translate('text.payment_provider_returned_the_result_and_the_order_status_is_being_checked'),
         iconClass: 'bg-green-100 text-green-700',
     },
     failed: {
         icon: XCircle,
-        title: 'Thanh toán VNPAY thất bại',
+        title: translate('text.payment_failed'),
         description:
-            'Giao dịch chưa hoàn tất. Bạn có thể kiểm tra lại đơn hàng hoặc thử thanh toán lại nếu BE cho phép.',
+            translate('text.transaction_not_completed_you_can_check_your_order_again_or_try_payment_'),
         iconClass: 'bg-red-100 text-red-700',
     },
     invalid: {
         icon: AlertTriangle,
-        title: 'Không xác thực được kết quả thanh toán',
+        title: translate('text.unable_to_authenticate_payment_results'),
         description:
-            'Return URL thiếu dữ liệu hoặc chữ ký không hợp lệ. Vui lòng kiểm tra lại trạng thái đơn hàng.',
+            translate('text.return_url_missing_data_or_invalid_signature_please_check_your_order_sta'),
         iconClass: 'bg-amber-100 text-amber-700',
     },
     pending: {
         icon: Clock3,
-        title: 'Đang chờ BE xác nhận',
+        title: translate('text.waiting_for_be_to_confirm'),
         description:
-            'VNPAY đã trả kết quả, nhưng trạng thái payment/order vẫn cần được refetch từ BE.',
+            translate('text.payment_provider_returned_the_result_but_the_payment_order_status_still_needs_to_be_refetched'),
         iconClass: 'bg-amber-100 text-amber-700',
     },
 };
+
+function normalizeReturnStatus({ provider, rawStatus, cancel, code }) {
+    if (provider !== 'payos') {
+        return rawStatus || 'invalid';
+    }
+
+    if (['success', 'failed', 'invalid', 'pending'].includes(rawStatus)) {
+        return rawStatus;
+    }
+
+    if (cancel === 'true' || rawStatus === 'CANCELLED') {
+        return 'failed';
+    }
+
+    if (rawStatus === 'PAID') {
+        return 'success';
+    }
+
+    if (['PENDING', 'PROCESSING'].includes(rawStatus)) {
+        return 'pending';
+    }
+
+    if (code && code !== '00') {
+        return 'invalid';
+    }
+
+    return 'pending';
+}
 
 function getBadgeVariant(status) {
     if (['paid', 'PAID'].includes(status)) {
@@ -72,7 +101,7 @@ function formatDateTime(value) {
         return null;
     }
 
-    return new Date(value).toLocaleString('vi-VN');
+    return new Date(value).toLocaleString(getLocale());
 }
 
 function InfoRow({ label, value }) {
@@ -98,8 +127,17 @@ export default function PaymentReturnPage() {
     const orderId = searchParams.get('order_id');
     const paymentId = searchParams.get('payment_id');
     const txnRef = searchParams.get('txn_ref');
+    const paymentLinkId = searchParams.get('id');
+    const provider = searchParams.get('provider') ||
+        (searchParams.has('orderCode') || searchParams.has('cancel') ? 'payos' : 'vnpay');
+    const providerOrderCode = searchParams.get('orderCode');
     const code = searchParams.get('code');
-    const returnStatus = searchParams.get('status') || 'invalid';
+    const returnStatus = normalizeReturnStatus({
+        provider,
+        rawStatus: searchParams.get('status'),
+        cancel: searchParams.get('cancel'),
+        code,
+    });
     const stateMessage = location.state?.message;
 
     const orderQuery = useOrder(orderId, {
@@ -135,6 +173,8 @@ export default function PaymentReturnPage() {
     const isLoading = orderQuery.isLoading || activePaymentQuery.isLoading;
     const paymentError = activePaymentQuery.error?.message;
     const orderError = orderQuery.error?.message;
+    const providerFallbackLabel = provider === 'payos' ? 'PayOS' : 'VNPAY';
+    const providerTransactionRef = txnRef || paymentLinkId || providerOrderCode;
 
     const handleRefetch = () => {
         if (orderId) {
@@ -169,9 +209,7 @@ export default function PaymentReturnPage() {
                 to={ROUTES.ORDERS}
                 className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
             >
-                <ArrowLeft className="h-4 w-4" />
-                Quay lại đơn hàng
-            </Link>
+                <ArrowLeft className="h-4 w-4" /> {translate('text.return_to_order')} </Link>
 
             <Card>
                 <CardBody className="mx-auto max-w-3xl py-10 text-center">
@@ -190,7 +228,7 @@ export default function PaymentReturnPage() {
 
                     {isLoading && (
                         <div className="mt-6">
-                            <Loading label="Đang kiểm tra trạng thái thanh toán..." />
+                            <Loading label={translate('text.checking_payment_status')} />
                         </div>
                     )}
 
@@ -204,26 +242,20 @@ export default function PaymentReturnPage() {
                                 activePaymentQuery.isFetching
                             }
                         >
-                            <RefreshCw className="h-4 w-4" />
-                            Kiểm tra lại
-                        </Button>
+                            <RefreshCw className="h-4 w-4" /> {translate('text.check_again')} </Button>
 
                         {payment?.can_retry && (
                             <Button
                                 type="button"
                                 isLoading={retryPaymentMutation.isPending}
                                 onClick={handleRetryPayment}
-                            >
-                                Thanh toán lại
-                            </Button>
+                            > {translate('text.repayment')} </Button>
                         )}
 
                         <Link
                             to={ROUTES.PRODUCTS}
                             className="inline-flex h-10 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)]"
-                        >
-                            Tiếp tục mua hàng
-                        </Link>
+                        > {translate('text.continue_shopping')} </Link>
                     </div>
                 </CardBody>
             </Card>
@@ -231,16 +263,15 @@ export default function PaymentReturnPage() {
             <div className="grid gap-6 lg:grid-cols-2">
                 <Card>
                     <CardHeader>
-                        <h2 className="font-semibold text-[var(--color-text-main)]">
-                            Thông tin thanh toán
-                        </h2>
+                        <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.payment_information')} </h2>
                     </CardHeader>
                     <CardBody>
-                        <InfoRow label="Mã giao dịch VNPAY" value={txnRef} />
-                        <InfoRow label="Mã payment" value={payment?.id || paymentId} />
-                        <InfoRow label="Provider" value={payment?.provider_label || payment?.provider || 'VNPAY'} />
+                        <InfoRow label={translate('text.provider_transaction_reference')} value={providerTransactionRef} />
+                        <InfoRow label={translate('text.payos_order_code')} value={provider === 'payos' ? providerOrderCode : null} />
+                        <InfoRow label={translate('text.payment_code')} value={payment?.id || paymentId} />
+                        <InfoRow label={translate('text.provider')} value={payment?.provider_label || payment?.provider || providerFallbackLabel} />
                         <InfoRow
-                            label="Trạng thái payment"
+                            label={translate('text.payment_status')}
                             value={
                                 payment?.status ? (
                                     <Badge variant={getBadgeVariant(payment.status)}>
@@ -250,16 +281,16 @@ export default function PaymentReturnPage() {
                             }
                         />
                         <InfoRow
-                            label="Số tiền"
+                            label={translate('text.amount')}
                             value={
                                 payment?.amount !== undefined
                                     ? formatCurrency(payment.amount)
                                     : null
                             }
                         />
-                        <InfoRow label="Mã phản hồi" value={code} />
-                        <InfoRow label="Tạo lúc" value={formatDateTime(payment?.created_at)} />
-                        <InfoRow label="Thanh toán lúc" value={formatDateTime(payment?.paid_at)} />
+                        <InfoRow label={translate('text.response_code')} value={code} />
+                        <InfoRow label={translate('text.created_at')} value={formatDateTime(payment?.created_at)} />
+                        <InfoRow label={translate('text.payment_at')} value={formatDateTime(payment?.paid_at)} />
                         {paymentError && (
                             <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
                                 {paymentError}
@@ -270,15 +301,13 @@ export default function PaymentReturnPage() {
 
                 <Card>
                     <CardHeader>
-                        <h2 className="font-semibold text-[var(--color-text-main)]">
-                            Thông tin đơn hàng
-                        </h2>
+                        <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.order_information')} </h2>
                     </CardHeader>
                     <CardBody>
-                        <InfoRow label="Mã đơn" value={order?.order_code} />
-                        <InfoRow label="Mã order" value={order?.id || orderId} />
+                        <InfoRow label={translate('text.item_code')} value={order?.order_code} />
+                        <InfoRow label={translate('text.order_code')} value={order?.id || orderId} />
                         <InfoRow
-                            label="Trạng thái đơn"
+                            label={translate('text.single_status')}
                             value={
                                 order?.status ? (
                                     <Badge variant={getBadgeVariant(order.status)}>
@@ -288,7 +317,7 @@ export default function PaymentReturnPage() {
                             }
                         />
                         <InfoRow
-                            label="Trạng thái thanh toán"
+                            label={translate('text.payment_status_4032b469')}
                             value={
                                 order?.payment?.status ? (
                                     <Badge
@@ -302,14 +331,14 @@ export default function PaymentReturnPage() {
                             }
                         />
                         <InfoRow
-                            label="Tổng đơn"
+                            label={translate('text.order_total')}
                             value={
                                 order?.pricing?.total_amount !== undefined
                                     ? formatCurrency(order.pricing.total_amount)
                                     : null
                             }
                         />
-                        <InfoRow label="Ngày tạo" value={formatDateTime(order?.created_at)} />
+                        <InfoRow label={translate('text.creation_date')} value={formatDateTime(order?.created_at)} />
                         {orderError && (
                             <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
                                 {orderError}

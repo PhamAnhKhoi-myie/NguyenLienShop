@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import PagePlaceholder from '../../../shared/components/PagePlaceholder';
 
 export default function AdminSectionPage({ title, description }) {
@@ -6,7 +7,7 @@ export default function AdminSectionPage({ title, description }) {
             title={title}
             description={
                 description ||
-                'Khu vực quản trị này sẽ được nối API và bảng dữ liệu ở các giai đoạn sau.'
+                translate('text.this_admin_area_will_be_hooked_up_to_apis_and_data_tables_in_later_stage')
             }
         />
     );

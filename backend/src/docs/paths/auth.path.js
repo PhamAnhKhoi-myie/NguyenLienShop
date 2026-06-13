@@ -1,4 +1,44 @@
 module.exports = {
+    "/auth/register/request-otp": {
+        post: {
+            tags: ["Auth"],
+            summary: "Request registration OTP",
+            security: [],
+            requestBody: {
+                required: true,
+                content: {
+                    "application/json": {
+                        schema: {
+                            $ref: "#/components/schemas/RequestRegistrationOtpInput",
+                        },
+                    },
+                },
+            },
+            responses: {
+                200: {
+                    description: "OTP sent",
+                    content: {
+                        "application/json": {
+                            schema: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean" },
+                                    message: { type: "string" },
+                                    data: {
+                                        $ref: "#/components/schemas/OtpDelivery",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                400: { $ref: "#/components/responses/BadRequest" },
+                429: { $ref: "#/components/responses/TooManyRequests" },
+                503: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
     "/auth/register": {
         post: {
             tags: ["Auth"],
@@ -125,7 +165,7 @@ module.exports = {
     "/auth/forgot-password": {
         post: {
             tags: ["Auth"],
-            summary: "Request password reset OTP",
+            summary: "Request password reset OTP by phone",
             security: [],
             requestBody: {
                 required: true,
@@ -154,7 +194,7 @@ module.exports = {
     "/auth/reset-password": {
         post: {
             tags: ["Auth"],
-            summary: "Reset password with OTP",
+            summary: "Reset password with phone OTP",
             security: [],
             requestBody: {
                 required: true,

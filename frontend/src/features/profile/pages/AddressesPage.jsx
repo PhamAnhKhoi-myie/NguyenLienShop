@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Edit3, MapPin, Plus, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -23,15 +24,15 @@ import {
 } from '../hooks/useProfile';
 
 const addressSchema = z.object({
-    receiver_name: z.string().trim().min(1, 'Vui lòng nhập người nhận'),
+    receiver_name: z.string().trim().min(1, translate('text.please_enter_recipient')),
     phone: z
         .string()
         .trim()
-        .regex(/^(0|\+84)[0-9]{9}$/, 'Số điện thoại không hợp lệ'),
-    province_code: z.string().trim().min(1, 'Vui lòng chọn tỉnh/thành'),
-    ward_code: z.string().trim().min(1, 'Vui lòng chọn phường/xã'),
-    detail: z.string().trim().min(5, 'Địa chỉ cụ thể tối thiểu 5 ký tự'),
-    note: z.string().trim().max(500, 'Ghi chú tối đa 500 ký tự').optional(),
+        .regex(/^(0|\+84)[0-9]{9}$/, translate('text.invalid_phone_number')),
+    province_code: z.string().trim().min(1, translate('text.please_select_province_city')),
+    ward_code: z.string().trim().min(1, translate('text.please_select_ward_commune')),
+    detail: z.string().trim().min(5, translate('text.specific_address_of_at_least_5_characters')),
+    note: z.string().trim().max(500, translate('text.note_maximum_500_characters')).optional(),
     is_default: z.boolean().default(false),
 });
 
@@ -115,12 +116,12 @@ function AddressForm({ address, isSaving, onSubmit }) {
         <form className="space-y-4" onSubmit={handleSubmit(submit)}>
             <div className="grid gap-4 md:grid-cols-2">
                 <Input
-                    label="Người nhận"
+                    label={translate('text.recipient')}
                     error={errors.receiver_name?.message}
                     {...register('receiver_name')}
                 />
                 <Input
-                    label="Số điện thoại"
+                    label={translate('text.phone_number')}
                     placeholder="0901234567"
                     error={errors.phone?.message}
                     {...register('phone')}
@@ -129,7 +130,7 @@ function AddressForm({ address, isSaving, onSubmit }) {
 
             <div className="grid gap-4 md:grid-cols-2">
                 <Select
-                    label="Tỉnh / Thành phố"
+                    label={translate('text.province_city')}
                     error={errors.province_code?.message}
                     disabled={provincesQuery.isLoading}
                     {...provinceField}
@@ -141,7 +142,7 @@ function AddressForm({ address, isSaving, onSubmit }) {
                         });
                     }}
                 >
-                    <option value="">Chọn tỉnh/thành</option>
+                    <option value="">{translate('text.select_province_city')}</option>
                     {provinces.map((province) => (
                         <option key={province.code} value={province.code}>
                             {province.name}
@@ -150,12 +151,12 @@ function AddressForm({ address, isSaving, onSubmit }) {
                 </Select>
 
                 <Select
-                    label="Phường / Xã"
+                    label={translate('text.ward_commune')}
                     error={errors.ward_code?.message}
                     disabled={!selectedProvinceCode || wardsQuery.isLoading}
                     {...wardField}
                 >
-                    <option value="">Chọn phường/xã</option>
+                    <option value="">{translate('text.select_ward_commune')}</option>
                     {wards.map((ward) => (
                         <option key={ward.code} value={ward.code}>
                             {ward.name}
@@ -165,14 +166,14 @@ function AddressForm({ address, isSaving, onSubmit }) {
             </div>
 
             <Input
-                label="Địa chỉ cụ thể"
-                placeholder="Số nhà, tên đường, hẻm, thôn/ấp"
+                label={translate('text.specific_address')}
+                placeholder={translate('text.house_number_name_of_street_alley_village_hamlet')}
                 error={errors.detail?.message}
                 {...register('detail')}
             />
 
             <Textarea
-                label="Ghi chú giao hàng"
+                label={translate('text.delivery_notes')}
                 rows={3}
                 error={errors.note?.message}
                 {...register('note')}
@@ -183,12 +184,10 @@ function AddressForm({ address, isSaving, onSubmit }) {
                     type="checkbox"
                     className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)]"
                     {...register('is_default')}
-                />
-                Đặt làm địa chỉ mặc định
-            </label>
+                /> {translate('text.set_as_default_address')} </label>
 
             <Button type="submit" isLoading={isSaving}>
-                {address ? 'Cập nhật địa chỉ' : 'Thêm địa chỉ'}
+                {address ? translate('text.update_address') : translate('text.add_address')}
             </Button>
         </form>
     );
@@ -233,7 +232,7 @@ export default function AddressesPage() {
     };
 
     const handleDelete = async (address) => {
-        const confirmed = window.confirm('Xóa địa chỉ này?');
+        const confirmed = window.confirm(translate('text.delete_this_address'));
 
         if (!confirmed) {
             return;
@@ -250,30 +249,24 @@ export default function AddressesPage() {
                 <CardHeader>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h1 className="text-xl font-semibold text-[var(--color-text-main)]">
-                                Quản lý địa chỉ giao hàng
-                            </h1>
-                            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                Địa chỉ sẽ được dùng để đặt hàng và nhận hàng.
-                            </p>
+                            <h1 className="text-xl font-semibold text-[var(--color-text-main)]"> {translate('text.manage_delivery_address')} </h1>
+                            <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.address_will_be_used_for_ordering_and_receiving_goods')} </p>
                         </div>
                         {!addressesQuery.isLoading && addresses.length > 0 && (
                             <Button onClick={openCreateModal}>
-                                <Plus className="h-4 w-4" />
-                                Thêm địa chỉ
-                            </Button>
+                                <Plus className="h-4 w-4" /> {translate('text.add_address')} </Button>
                         )}
                     </div>
                 </CardHeader>
                 <CardBody>
                     {addressesQuery.isLoading ? (
-                        <Loading label="Đang tải địa chỉ..." />
+                        <Loading label={translate('text.loading_address')} />
                     ) : addresses.length === 0 ? (
                         <EmptyState
                             icon={MapPin}
-                            title="Chưa có địa chỉ"
-                            description="Thêm địa chỉ giao hàng để checkout nhanh hơn."
-                            actionLabel="Thêm địa chỉ"
+                            title={translate('text.no_address_yet')}
+                            description={translate('text.add_shipping_address_for_faster_checkout')}
+                            actionLabel={translate('text.add_address')}
                             onAction={openCreateModal}
                         />
                     ) : (
@@ -290,7 +283,7 @@ export default function AddressesPage() {
                                                     {address.receiver_name}
                                                 </h2>
                                                 {address.is_default && (
-                                                    <Badge> Mặc định </Badge>
+                                                    <Badge> {translate('text.default')} </Badge>
                                                 )}
                                             </div>
                                             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
@@ -316,27 +309,21 @@ export default function AddressesPage() {
                                                     )
                                                 }
                                             >
-                                                <Star className="h-4 w-4" />
-                                                Mặc định
-                                            </Button>
+                                                <Star className="h-4 w-4" /> {translate('text.default')} </Button>
                                         )}
                                         <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={() => openEditModal(address)}
                                         >
-                                            <Edit3 className="h-4 w-4" />
-                                            Sửa
-                                        </Button>
+                                            <Edit3 className="h-4 w-4" /> {translate('text.edit_0963749f')} </Button>
                                         <Button
                                             variant="danger"
                                             size="sm"
                                             isLoading={deleteAddressMutation.isPending}
                                             onClick={() => handleDelete(address)}
                                         >
-                                            <Trash2 className="h-4 w-4" />
-                                            Xóa
-                                        </Button>
+                                            <Trash2 className="h-4 w-4" /> {translate('text.delete')} </Button>
                                     </div>
                                 </div>
                             ))}
@@ -347,7 +334,7 @@ export default function AddressesPage() {
 
             <Modal
                 open={isModalOpen}
-                title={editingAddress ? 'Sửa địa chỉ' : 'Thêm địa chỉ'}
+                title={editingAddress ? translate('text.edit_address') : translate('text.add_address')}
                 onClose={closeModal}
             >
                 <AddressForm

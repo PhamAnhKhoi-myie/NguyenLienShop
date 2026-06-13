@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
 import { useEffect } from 'react';
@@ -185,12 +186,10 @@ export default function AdminResourceForm({
             )}
 
             <div className="flex flex-col-reverse gap-3 border-t border-[var(--color-border)] pt-5 sm:flex-row sm:justify-end">
-                <Button type="button" variant="outline" onClick={onCancel}>
-                    Đóng
-                </Button>
+                <Button type="button" variant="outline" onClick={onCancel}> {translate('text.close')} </Button>
                 <Button type="submit" isLoading={isLoading}>
                     <Save className="h-4 w-4" />
-                    {mode === 'edit' ? 'Lưu thay đổi' : 'Tạo mới'}
+                    {mode === 'edit' ? translate('text.save_changes') : translate('text.create_new')}
                 </Button>
             </div>
         </form>

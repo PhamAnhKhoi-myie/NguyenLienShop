@@ -1,12 +1,13 @@
+import { translate } from '../i18n/index';
 import Button from './Button';
 import Modal from './Modal';
 
 export default function ConfirmDialog({
     open,
-    title = 'Xác nhận thao tác',
+    title = translate('text.confirm_operation'),
     description,
-    confirmLabel = 'Xác nhận',
-    cancelLabel = 'Hủy',
+    confirmLabel = translate('text.confirm'),
+    cancelLabel = translate('text.cancel'),
     confirmVariant = 'danger',
     isLoading = false,
     onConfirm,

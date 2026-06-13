@@ -29,6 +29,8 @@ export const ROUTES = {
     CHECKOUT_FAIL: '/checkout/fail',
     PAYMENT_RETURN: '/payment-return',
     VNPAY_RETURN: '/payment/vnpay-return',
+    PAYOS_SUCCESS: '/payment/success',
+    PAYOS_CANCEL: '/payment/cancel',
     ORDERS: '/orders',
     PROFILE: '/profile',
     ADDRESSES: '/profile/addresses',

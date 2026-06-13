@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -9,25 +10,28 @@ import Button from '../../../shared/components/Button';
 import Input from '../../../shared/components/Input';
 import { useLogin } from '../hooks/useLogin';
 import { ROUTES } from '../../../shared/constants/routes';
+import {
+    isValidVietnamPhoneNumber,
+    normalizePhoneNumber,
+} from '../../../shared/utils/phone';
 
 const loginSchema = z.object({
-    email: z
+    phone_number: z
         .string()
-        .min(1, 'Vui lòng nhập email')
-        .email('Email không hợp lệ'),
-    password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
+        .trim()
+        .min(1, translate('text.please_enter_phone_number'))
+        .refine(isValidVietnamPhoneNumber, translate('text.invalid_phone_number')),
+    password: z.string().min(1, translate('text.please_enter_password')),
 });
 
 function LoginPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const [countdown, setCountdown] = useState(null);
-
     const from = location.state?.from;
     const redirectTo = from
         ? `${from.pathname}${from.search || ''}`
         : ROUTES.HOME;
-
     const loginMutation = useLogin();
 
     const {
@@ -37,7 +41,7 @@ function LoginPage() {
     } = useForm({
         resolver: zodResolver(loginSchema),
         defaultValues: {
-            email: '',
+            phone_number: '',
             password: '',
         },
     });
@@ -57,24 +61,27 @@ function LoginPage() {
         return () => clearTimeout(timerId);
     }, [countdown, navigate, redirectTo]);
 
-    const apiError =
-        loginMutation.error?.response?.data?.message ||
-        loginMutation.error?.message;
-
+    const apiError = loginMutation.error?.message;
     const isLocked = loginMutation.isPending || countdown !== null;
 
     const onSubmit = (values) => {
-        loginMutation.mutate(values, {
-            onSuccess: () => {
-                setCountdown(3);
+        loginMutation.mutate(
+            {
+                phone_number: normalizePhoneNumber(values.phone_number),
+                password: values.password,
             },
-        });
+            {
+                onSuccess: () => {
+                    setCountdown(3);
+                },
+            }
+        );
     };
 
     return (
         <AuthPageCard
-            title="Đăng nhập"
-            subtitle="Đăng nhập để quản lý tài khoản và đơn hàng."
+            title={translate('text.login')}
+            subtitle={translate('text.log_in_with_phone_number_and_password')}
         >
             <form
                 className="space-y-4"
@@ -82,22 +89,31 @@ function LoginPage() {
                 noValidate
             >
                 <Input
-                    label="Email"
-                    type="email"
-                    placeholder="Nhập email"
+                    label={translate('text.phone_number')}
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="0901234567"
                     disabled={isLocked}
-                    error={errors.email?.message}
-                    {...register('email')}
+                    error={errors.phone_number?.message}
+                    {...register('phone_number')}
                 />
 
                 <Input
-                    label="Mật khẩu"
+                    label={translate('text.password')}
                     type="password"
-                    placeholder="Nhập mật khẩu"
+                    autoComplete="current-password"
+                    placeholder={translate('text.enter_password')}
                     disabled={isLocked}
                     error={errors.password?.message}
                     {...register('password')}
                 />
+
+                {location.state?.message && countdown === null && (
+                    <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                        {location.state.message}
+                    </p>
+                )}
 
                 {apiError && countdown === null && (
                     <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
@@ -106,8 +122,7 @@ function LoginPage() {
                 )}
 
                 {countdown !== null && (
-                    <div className="w-full cursor-not-allowed rounded-md border border-green-200 bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700">
-                        Đăng nhập thành công {countdown}s.
+                    <div className="w-full cursor-not-allowed rounded-md border border-green-200 bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700"> {translate('text.successful_login')} {countdown}s.
                     </div>
                 )}
 
@@ -117,25 +132,23 @@ function LoginPage() {
                     isLoading={loginMutation.isPending}
                     disabled={countdown !== null}
                 >
-                    {loginMutation.isPending ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                    {loginMutation.isPending ? translate('text.logging_in') : translate('text.login')}
                 </Button>
 
                 <div className="flex items-center justify-between text-sm">
                     <Link
                         to={ROUTES.FORGOT_PASSWORD}
-                        className={`text-[var(--color-text)] hover:text-[var(--color-primary)] ${isLocked ? 'pointer-events-none opacity-50' : ''
-                            }`}
-                    >
-                        Quên mật khẩu?
-                    </Link>
+                        className={`text-[var(--color-text)] hover:text-[var(--color-primary)] ${
+                            isLocked ? 'pointer-events-none opacity-50' : ''
+                        }`}
+                    > {translate('text.forgot_password_1630fc02')} </Link>
 
                     <Link
                         to={ROUTES.REGISTER}
-                        className={`text-[var(--color-text)] hover:text-[var(--color-primary)] ${isLocked ? 'pointer-events-none opacity-50' : ''
-                            }`}
-                    >
-                        Tạo tài khoản
-                    </Link>
+                        className={`text-[var(--color-text)] hover:text-[var(--color-primary)] ${
+                            isLocked ? 'pointer-events-none opacity-50' : ''
+                        }`}
+                    > {translate('text.create_account')} </Link>
                 </div>
             </form>
         </AuthPageCard>

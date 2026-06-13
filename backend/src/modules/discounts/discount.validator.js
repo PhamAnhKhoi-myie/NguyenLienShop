@@ -1,8 +1,8 @@
 const { z } = require('zod');
 
-/**
- * ===== BASE SCHEMAS =====
- */
+
+
+
 
 const objectIdSchema = z
     .string()
@@ -16,9 +16,9 @@ const UserIdParamSchema = z.object({
     userId: objectIdSchema,
 });
 
-/**
- * ===== BASE FIELD SCHEMAS =====
- */
+
+
+
 
 const codeSchema = z
     .string()
@@ -52,9 +52,9 @@ const userEligibilityTypeSchema = z.enum([
 
 const statusSchema = z.enum(['active', 'inactive', 'paused', 'expired']);
 
-/**
- * ===== NESTED =====
- */
+
+
+
 
 const applicableTargetsSchema = z.object({
     type: applicableTargetsTypeSchema.default('all'),
@@ -69,9 +69,9 @@ const userEligibilitySchema = z.object({
     min_user_tier: z.enum(['bronze', 'silver', 'gold', 'platinum']).optional().nullable(),
 });
 
-/**
- * ===== BODY SCHEMAS =====
- */
+
+
+
 
 const createDiscountBodySchema = z
     .object({
@@ -228,9 +228,9 @@ const duplicateDiscountBodySchema = z.object({
     newCode: codeSchema,
 });
 
-/**
- * ===== QUERY SCHEMAS =====
- */
+
+
+
 
 const listDiscountsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
@@ -272,16 +272,16 @@ const claimedDiscountsQuerySchema = z.object({
         .default('available'),
 });
 
-/**
- * ===== EXPORT =====
- */
+
+
+
 
 module.exports = {
-    // params
+
     IdParamSchema,
     UserIdParamSchema,
 
-    // body
+
     createDiscountBodySchema,
     updateDiscountBodySchema,
     validateDiscountBodySchema,
@@ -289,13 +289,13 @@ module.exports = {
     bulkCreateBodySchema,
     duplicateDiscountBodySchema,
 
-    // query
+
     listDiscountsQuerySchema,
     nearExpiryQuerySchema,
     publicHomepageDiscountsQuerySchema,
     claimedDiscountsQuerySchema,
 
-    // base
+
     objectIdSchema,
     codeSchema,
     typeSchema,

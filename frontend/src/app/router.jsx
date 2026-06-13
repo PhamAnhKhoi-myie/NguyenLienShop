@@ -157,6 +157,22 @@ export const router = createBrowserRouter([
                         ),
                     },
                     {
+                        path: 'payment/success',
+                        element: (
+                            <ProtectedRoute>
+                                {routePage(<PaymentReturnPage />)}
+                            </ProtectedRoute>
+                        ),
+                    },
+                    {
+                        path: 'payment/cancel',
+                        element: (
+                            <ProtectedRoute>
+                                {routePage(<PaymentReturnPage />)}
+                            </ProtectedRoute>
+                        ),
+                    },
+                    {
                         path: 'orders',
                         element: (
                             <ProtectedRoute>

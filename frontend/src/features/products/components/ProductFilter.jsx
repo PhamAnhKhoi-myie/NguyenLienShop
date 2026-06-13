@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Button from '../../../shared/components/Button';
@@ -6,20 +7,16 @@ import Select from '../../../shared/components/Select';
 import useDebounce from '../../../shared/hooks/useDebounce';
 
 const sortOptions = [
-    { value: 'newest', label: 'Mới nhất' },
-    { value: 'popular', label: 'Bán chạy' },
-    { value: 'rating', label: 'Đánh giá cao' },
-    { value: 'price_asc', label: 'Giá tăng dần' },
-    { value: 'price_desc', label: 'Giá giảm dần' },
+    { value: 'newest', label: translate('text.latest') },
+    { value: 'popular', label: translate('text.best_seller') },
+    { value: 'rating', label: translate('text.appreciate') },
+    { value: 'price_asc', label: translate('text.price_increasing') },
+    { value: 'price_desc', label: translate('text.price_decreasing') },
 ];
 
 export default function ProductFilter({ filters, onChange, onReset }) {
     const [search, setSearch] = useState(filters.search || '');
     const debouncedSearch = useDebounce(search, 350);
-
-    useEffect(() => {
-        setSearch(filters.search || '');
-    }, [filters.search]);
 
     useEffect(() => {
         const nextSearch = debouncedSearch || null;
@@ -36,9 +33,7 @@ export default function ProductFilter({ filters, onChange, onReset }) {
     return (
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-main)]">
-                <SlidersHorizontal className="h-4 w-4 text-[var(--color-primary)]" />
-                Bộ lọc sản phẩm
-            </div>
+                <SlidersHorizontal className="h-4 w-4 text-[var(--color-primary)]" /> {translate('text.product_filter')} </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_150px_150px_auto]">
                 <div className="relative">
@@ -46,7 +41,7 @@ export default function ProductFilter({ filters, onChange, onReset }) {
                     <input
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Tìm theo tên sản phẩm..."
+                        placeholder={translate('text.search_by_product_name')}
                         className="h-10 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]"
                     />
                 </div>
@@ -67,7 +62,7 @@ export default function ProductFilter({ filters, onChange, onReset }) {
                 <Input
                     type="number"
                     min="0"
-                    placeholder="Giá từ"
+                    placeholder={translate('text.price_from')}
                     value={filters.min_price || ''}
                     onChange={(event) =>
                         onChange({
@@ -80,7 +75,7 @@ export default function ProductFilter({ filters, onChange, onReset }) {
                 <Input
                     type="number"
                     min="0"
-                    placeholder="Giá đến"
+                    placeholder={translate('text.price_to')}
                     value={filters.max_price || ''}
                     onChange={(event) =>
                         onChange({
@@ -97,9 +92,7 @@ export default function ProductFilter({ filters, onChange, onReset }) {
                         onReset();
                     }}
                 >
-                    <X className="h-4 w-4" />
-                    Xóa lọc
-                </Button>
+                    <X className="h-4 w-4" /> {translate('text.clear_filter')} </Button>
             </div>
         </div>
     );

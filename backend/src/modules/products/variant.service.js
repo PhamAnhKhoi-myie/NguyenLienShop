@@ -105,7 +105,7 @@ class VariantService {
 
         const units = await VariantUnit.find({
             variant_id: variantId,
-            // is_deleted: false (nếu có)
+
         }).lean();
 
         return VariantMapper.toDetailDTO(variant, units);
@@ -127,7 +127,7 @@ class VariantService {
                         {
                             $match: {
                                 $expr: { $eq: ['$variant_id', '$$variantId'] },
-                                is_deleted: false // nếu có field này
+                                is_deleted: false
                             }
                         }
                     ],
@@ -271,7 +271,7 @@ class VariantService {
         const variant = await Variant.findOneAndUpdate(
             {
                 _id: variantId,
-                'stock.available': { $gte: qty_items }, // check đủ hàng
+                'stock.available': { $gte: qty_items },
             },
             {
                 $inc: {
@@ -416,7 +416,7 @@ class VariantService {
 
         try {
             await Variant.updatePriceCache(variantId);
-            // Also update product cache
+
             await ProductService.recalcuatePriceCache(variant.product_id);
         } catch (error) {
             console.error(

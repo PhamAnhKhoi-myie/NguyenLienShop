@@ -311,13 +311,13 @@ class EmailService {
     static _getSubject(job) {
         const orderId = this._sanitizeSubjectValue(job.payload.order_id);
         const subjects = {
-            ORDER_CONFIRMATION: `Xác nhận đơn hàng #${orderId}`,
-            ORDER_DELIVERED: `Đơn hàng #${orderId} đã được giao`,
-            REGISTER_SUCCESS: 'Chào mừng bạn đến với NguyenLien Shop',
-            FORGOT_PASSWORD_OTP: 'Mã xác nhận đặt lại mật khẩu',
-            RESET_PASSWORD_LINK: 'Yêu cầu đặt lại mật khẩu'
+            ORDER_CONFIRMATION: `Order confirmation #${orderId}`,
+            ORDER_DELIVERED: `Order #${orderId} has been delivered`,
+            REGISTER_SUCCESS: "Welcome to NguyenLien Shop",
+            FORGOT_PASSWORD_OTP: "Password reset confirmation code",
+            RESET_PASSWORD_LINK: "Password reset request"
         };
-        return subjects[job.template] || 'Thông báo từ NguyenLien Shop';
+        return subjects[job.template] || "Notice from NguyenLien Shop";
     }
 
     static _renderHtml(job) {
@@ -326,29 +326,25 @@ class EmailService {
             const userName = this._escapeHtml(payload.user_name);
             const orderId = this._escapeHtml(payload.order_id);
             const totalAmount = this._escapeHtml(payload.total_amount);
-            return `<h1>Chào ${userName}</h1><p>Đơn hàng <b>${orderId}</b> trị giá <b>${totalAmount}đ</b> đã đặt thành công!</p>`;
+            return `<h1>Hello ${userName}</h1><p>Order <b>${orderId}</b> totaling <b>${totalAmount} VND</b> was placed successfully.</p>`;
         }
         if (job.template === 'RESET_PASSWORD_LINK') {
             const resetUrl = this._escapeHtml(this._normalizeHttpUrl(payload.reset_url));
-            return `
-        <p>Click vào link bên dưới để đặt lại mật khẩu:</p>
-        <a href="${resetUrl}">Reset Password</a>
-    `;
+            return `<p>Click on the link below to reset your password:</p>
+        <a href="${resetUrl}">Reset Password</a>`;
         }
         if (job.template === 'FORGOT_PASSWORD_OTP') {
             const email = this._escapeHtml(payload.email);
             const otp = this._escapeHtml(payload.otp);
             const expiresIn = this._escapeHtml(payload.expires_in);
-            return `
-        <h2>Đặt lại mật khẩu</h2>
-        <p>Chào ${email},</p>
-        <p>Mã OTP của bạn là:</p>
+            return `<h2>Reset password</h2>
+        <p>Hello ${email},</p>
+        <p>Your OTP code is:</p>
 <h1>${otp}</h1>
-        <p>Mã có hiệu lực trong ${expiresIn} phút.</p>
-        <p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>
-    `;
+        <p>The code is valid for ${expiresIn} minutes.</p>
+        <p>If you did not request it, please ignore this email.</p>`;
         }
-        return `<h3>Thông báo từ hệ thống</h3><p>Payload: ${this._escapeHtml(JSON.stringify(payload))}</p>`;
+        return `<h3>Notification from the system</h3><p>Payload: ${this._escapeHtml(JSON.stringify(payload))}</p>`;
     }
 
     static _maskEmail(value) {

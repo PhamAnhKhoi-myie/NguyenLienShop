@@ -4,7 +4,7 @@ const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const ProductService = require('./product.service');
 const { buildAuditMetadata } = require('../../utils/audit.util');
 
-// ===== PUBLIC ENDPOINTS =====
+
 
 const getAllProducts = asyncHandler(async (req, res) => {
     const filters = req.query;
@@ -83,7 +83,7 @@ const getProductById = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== ADMIN ENDPOINTS =====
+
 
 const createProduct = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);

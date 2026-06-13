@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { ChevronRight, Leaf } from 'lucide-react';
 import EmptyState from '../../../shared/components/EmptyState';
 import Loading from '../../../shared/components/Loading';
@@ -48,7 +49,7 @@ export default function CategoryTreeMenu({ selectedId, onSelect }) {
     const categories = categoryTreeQuery.data?.data || [];
 
     if (categoryTreeQuery.isLoading) {
-        return <Loading label="Đang tải danh mục..." />;
+        return <Loading label={translate('text.loading_categories')} />;
     }
 
     if (categoryTreeQuery.isError) {
@@ -63,8 +64,8 @@ export default function CategoryTreeMenu({ selectedId, onSelect }) {
         return (
             <EmptyState
                 icon={Leaf}
-                title="Chưa có danh mục"
-                description="Danh mục sản phẩm sẽ hiển thị tại đây."
+                title={translate('text.no_category_yet')}
+                description={translate('text.product_categories_will_be_displayed_here')}
             />
         );
     }
@@ -80,9 +81,7 @@ export default function CategoryTreeMenu({ selectedId, onSelect }) {
                         : 'text-[var(--color-text-main)] hover:bg-[var(--color-background)]'
                 )}
                 onClick={() => onSelect(null)}
-            >
-                Tất cả sản phẩm
-            </button>
+            > {translate('text.all_products')} </button>
 
             {categories.map((category) => (
                 <CategoryNode

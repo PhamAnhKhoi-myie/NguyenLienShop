@@ -1,3 +1,4 @@
+import { getLocale, translate } from '../../../shared/i18n/index';
 import { createElement } from 'react';
 import Badge from '../../../shared/components/Badge';
 import { formatCurrency } from '../../../shared/utils/formatCurrency';
@@ -35,7 +36,7 @@ export function formatDateTime(value) {
         return '';
     }
 
-    return new Date(value).toLocaleString('vi-VN');
+    return new Date(value).toLocaleString(getLocale());
 }
 
 export function formatMoney(value) {
@@ -151,7 +152,7 @@ export function renderAdminCell(row, column) {
     if (typeof rawValue === 'boolean') {
         return createElement(StatusBadge, {
             value: rawValue,
-            label: rawValue ? 'Có' : 'Không',
+            label: rawValue ? translate('text.yes') : translate('text.no'),
         });
     }
 

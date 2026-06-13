@@ -52,7 +52,7 @@ class BlogService {
     }
 
     static normalizeSlug(slug, title) {
-        return (slug || slugify(title, { lower: true, strict: true, locale: 'vi' }))
+        return (slug || slugify(title, { lower: true, strict: true, locale: 'en' }))
             .trim()
             .toLowerCase();
     }

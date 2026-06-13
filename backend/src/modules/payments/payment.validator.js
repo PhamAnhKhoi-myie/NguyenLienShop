@@ -1,9 +1,9 @@
 const { z } = require('zod');
 const mongoose = require('mongoose');
 
-/**
- * ===== BASE =====
- */
+
+
+
 
 const objectIdSchema = z.string().refine(
     (val) => mongoose.Types.ObjectId.isValid(val),
@@ -20,12 +20,12 @@ const OrderIdParamSchema = z.object({
     order_id: objectIdSchema,
 });
 
-/**
- * ===== COMMON =====
- */
 
-const providerSchema = z.enum(['vnpay', 'stripe', 'paypal']).default('vnpay');
-const createPaymentProviderSchema = z.enum(['vnpay']).default('vnpay');
+
+
+
+const providerSchema = z.enum(['vnpay', 'stripe', 'paypal', 'payos']).default('vnpay');
+const createPaymentProviderSchema = z.enum(['vnpay', 'payos']).default('vnpay');
 
 const paymentStatusSchema = z.enum(['pending', 'paid', 'failed']);
 
@@ -39,9 +39,9 @@ const bankCodeSchema = z
     .optional()
     .nullable();
 
-/**
- * ===== BODY =====
- */
+
+
+
 
 const createPaymentBodySchema = z.object({
     order_id: objectIdSchema,
@@ -71,9 +71,9 @@ const validateDiscountBodySchema = z.object({
     ).optional().default([]),
 });
 
-/**
- * ===== WEBHOOK BODY =====
- */
+
+
+
 
 const vnpayWebhookBodySchema = z.object({
     vnp_Amount: z.union([z.number(), z.string().transform(v => parseInt(v, 10))])
@@ -158,9 +158,34 @@ const paypalWebhookBodySchema = z.object({
     ).optional(),
 });
 
-/**
- * ===== QUERY =====
- */
+const payosWebhookBodySchema = z.object({
+    code: z.string().min(1),
+    desc: z.string().min(1),
+    success: z.boolean(),
+    data: z.object({
+        orderCode: z.coerce.number().int().nonnegative(),
+        amount: z.coerce.number().int().positive(),
+        description: z.string().min(1),
+        accountNumber: z.string().optional().nullable(),
+        reference: z.string().optional().nullable(),
+        transactionDateTime: z.string().optional().nullable(),
+        currency: z.string().optional().default('VND'),
+        paymentLinkId: z.string().min(1),
+        code: z.string().min(1),
+        desc: z.string().min(1),
+        counterAccountBankId: z.string().optional().nullable(),
+        counterAccountBankName: z.string().optional().nullable(),
+        counterAccountName: z.string().optional().nullable(),
+        counterAccountNumber: z.string().optional().nullable(),
+        virtualAccountName: z.string().optional().nullable(),
+        virtualAccountNumber: z.string().optional().nullable(),
+    }).passthrough(),
+    signature: z.string().min(1),
+}).passthrough();
+
+
+
+
 
 const listPaymentsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
@@ -186,26 +211,27 @@ const listPaymentsQuerySchema = z.object({
         .optional(),
 });
 
-/**
- * ===== EXPORT =====
- */
+
+
+
 
 module.exports = {
-    // params
+
     IdParamSchema,
     OrderIdParamSchema,
 
-    // body
+
     createPaymentBodySchema,
     cancelPaymentBodySchema,
     vnpayWebhookBodySchema,
     stripeWebhookBodySchema,
     paypalWebhookBodySchema,
+    payosWebhookBodySchema,
 
-    // query
+
     listPaymentsQuerySchema,
 
-    // base
+
     objectIdSchema,
     objectIdOptionalSchema,
     providerSchema,

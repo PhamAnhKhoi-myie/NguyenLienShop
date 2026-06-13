@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { NavLink } from 'react-router-dom';
 import {
     Bell,
@@ -14,38 +15,38 @@ import { cn } from '../../../shared/utils/cn';
 const links = [
     {
         to: ROUTES.PROFILE,
-        label: 'Hồ sơ',
+        label: translate('text.profile'),
         icon: UserRound,
         end: true,
     },
     {
         to: ROUTES.ADDRESSES,
-        label: 'Địa chỉ',
+        label: translate('text.address'),
         icon: MapPin,
     },
     {
         to: ROUTES.CHANGE_PASSWORD,
-        label: 'Mật khẩu',
+        label: translate('text.password'),
         icon: KeyRound,
     },
     {
         to: ROUTES.ORDERS,
-        label: 'Đơn hàng',
+        label: translate('text.order_0aba562f'),
         icon: PackageCheck,
     },
     {
         to: ROUTES.PROFILE_REVIEWS,
-        label: 'Đánh giá',
+        label: translate('text.review'),
         icon: MessageSquare,
     },
     {
         to: ROUTES.PROFILE_VOUCHERS,
-        label: 'Voucher',
+        label: translate('text.voucher'),
         icon: TicketPercent,
     },
     {
         to: ROUTES.NOTIFICATIONS,
-        label: 'Thông báo',
+        label: translate('text.notice'),
         icon: Bell,
     },
 ];

@@ -1,3 +1,4 @@
+import { getLocale, translate } from '../../../shared/i18n/index';
 import {
     ExternalLink,
     MessageSquare,
@@ -26,16 +27,16 @@ function getReviewRating(review) {
 
 function formatDateTime(value) {
     if (!value) {
-        return 'Đang cập nhật';
+        return translate('text.updating');
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return 'Đang cập nhật';
+        return translate('text.updating');
     }
 
-    return date.toLocaleString('vi-VN');
+    return date.toLocaleString(getLocale());
 }
 
 function RatingStars({ value }) {
@@ -60,10 +61,10 @@ function RatingStars({ value }) {
 
 function ReviewStatusBadge({ review }) {
     if (review.is_approved) {
-        return <Badge variant="success">Đã duyệt</Badge>;
+        return <Badge variant="success">{translate('text.approved')}</Badge>;
     }
 
-    return <Badge variant="warning">Chờ duyệt</Badge>;
+    return <Badge variant="warning">{translate('text.waiting_for_approval')}</Badge>;
 }
 
 export default function ProfileReviewsPage() {
@@ -89,20 +90,16 @@ export default function ProfileReviewsPage() {
                 <CardHeader>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h1 className="text-xl font-semibold text-[var(--color-text-main)]">
-                                Đánh giá của tôi
-                            </h1>
-                            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                Xem lại các đánh giá đã gửi sau khi đơn hàng hoàn tất.
-                            </p>
+                            <h1 className="text-xl font-semibold text-[var(--color-text-main)]"> {translate('text.my_review')} </h1>
+                            <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.review_submitted_reviews_after_your_order_is_complete')} </p>
                         </div>
-                        <Badge variant="muted">{total} đánh giá</Badge>
+                        <Badge variant="muted">{total} {translate('text.reviews')}</Badge>
                     </div>
                 </CardHeader>
 
                 <CardBody>
                     {reviewsQuery.isLoading ? (
-                        <Loading label="Đang tải đánh giá của bạn..." />
+                        <Loading label={translate('text.loading_your_review')} />
                     ) : reviewsQuery.isError ? (
                         <div className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm text-[var(--color-error)]">
@@ -113,16 +110,14 @@ export default function ProfileReviewsPage() {
                                 size="sm"
                                 onClick={() => reviewsQuery.refetch()}
                             >
-                                <RefreshCw className="h-4 w-4" />
-                                Tải lại
-                            </Button>
+                                <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
                         </div>
                     ) : reviews.length === 0 ? (
                         <EmptyState
                             icon={MessageSquare}
-                            title="Bạn chưa có đánh giá"
-                            description="Sau khi đơn hàng được giao, bạn có thể đánh giá sản phẩm trong chi tiết đơn hàng."
-                            actionLabel="Xem đơn hàng"
+                            title={translate('text.you_have_no_reviews_yet')}
+                            description={translate('text.once_your_order_has_been_shipped_you_can_rate_the_product_in_the_order_d')}
+                            actionLabel={translate('text.view_order')}
                             onAction={() => {
                                 window.location.href = ROUTES.ORDERS;
                             }}
@@ -146,23 +141,21 @@ export default function ProfileReviewsPage() {
                                                         variant="success"
                                                         className="gap-1"
                                                     >
-                                                        <ShieldCheck className="h-3 w-3" />
-                                                        Đã mua hàng
-                                                    </Badge>
+                                                        <ShieldCheck className="h-3 w-3" /> {translate('text.purchased')} </Badge>
                                                 )}
                                             </div>
 
                                             <div>
                                                 <h2 className="break-words text-base font-semibold text-[var(--color-text-main)]">
                                                     {review.title ||
-                                                        'Đánh giá sản phẩm'}
+                                                        translate('text.product_review')}
                                                 </h2>
                                                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                                                     {formatDateTime(
                                                         review.created_at
                                                     )}
                                                     {review.edited_at
-                                                        ? ` · Đã sửa ${formatDateTime(review.edited_at)}`
+                                                        ? translate('text.fixed_value', { value0: formatDateTime(review.edited_at) })
                                                         : ''}
                                                 </p>
                                             </div>
@@ -172,12 +165,10 @@ export default function ProfileReviewsPage() {
                                             </p>
 
                                             <div className="flex flex-wrap gap-2 text-xs text-[var(--color-text-muted)]">
-                                                <span>
-                                                    Có ích:{' '}
+                                                <span> {translate('text.useful_7938ab5c')}{' '}
                                                     {review.helpful_count || 0}
                                                 </span>
-                                                <span>
-                                                    Chưa hữu ích:{' '}
+                                                <span> {translate('text.not_yet_useful')}{' '}
                                                     {review.unhelpful_count || 0}
                                                 </span>
                                             </div>
@@ -188,9 +179,7 @@ export default function ProfileReviewsPage() {
                                                 to={`${ROUTES.PRODUCTS}/${review.product_id}`}
                                                 className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)] sm:w-auto"
                                             >
-                                                <ExternalLink className="h-4 w-4" />
-                                                Xem sản phẩm
-                                            </Link>
+                                                <ExternalLink className="h-4 w-4" /> {translate('text.view_product')} </Link>
                                         )}
                                     </div>
                                 </article>

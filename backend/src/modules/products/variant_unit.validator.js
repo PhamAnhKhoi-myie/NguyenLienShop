@@ -1,9 +1,9 @@
 const { z } = require('zod');
 const mongoose = require('mongoose');
 
-/**
- * ObjectId
- */
+
+
+
 const objectIdSchema = z.string().refine(
     (val) => mongoose.Types.ObjectId.isValid(val),
     { message: 'Invalid MongoDB ObjectId' }
@@ -11,9 +11,9 @@ const objectIdSchema = z.string().refine(
 
 const objectIdOptionalSchema = objectIdSchema.optional().nullable();
 
-/**
- * PARAMS (BẮT BUỘC CHO ROUTES)
- */
+
+
+
 const variantIdParamSchema = z.object({
     variantId: objectIdSchema
 });
@@ -22,18 +22,18 @@ const unitIdParamSchema = z.object({
     unitId: objectIdSchema
 });
 
-/**
- * PRICE TIERS
- */
+
+
+
 const priceTierSchema = z.object({
     min_qty: z.number().int().positive(),
     max_qty: z.number().int().positive().nullable().optional(),
     unit_price: z.number().positive(),
 });
 
-/**
- * CREATE
- */
+
+
+
 const createVariantUnitSchema = z.object({
     unit_type: z.enum(['UNIT', 'PACK', 'BOX', 'CARTON']).default('PACK'),
 
@@ -94,9 +94,9 @@ const createVariantUnitSchema = z.object({
     }
 );
 
-/**
- * UPDATE
- */
+
+
+
 const updateVariantUnitSchema = z.object({
     unit_type: z.enum(['UNIT', 'PACK', 'BOX', 'CARTON']).optional(),
 
@@ -157,9 +157,9 @@ const updateVariantUnitSchema = z.object({
     }
 );
 
-/**
- * ACTIONS
- */
+
+
+
 const calculatePriceSchema = z.object({
     qty_packs: z.number().int().positive().max(1000000),
 });
@@ -168,9 +168,9 @@ const validatePriceTiersSchema = z.object({
     price_tiers: z.array(priceTierSchema).min(1),
 });
 
-/**
- * EXPORT
- */
+
+
+
 module.exports = {
     createVariantUnitSchema,
     updateVariantUnitSchema,

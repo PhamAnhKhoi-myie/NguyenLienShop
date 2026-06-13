@@ -47,6 +47,21 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.get("/", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "NguyenLienShop API is running",
+        data: {
+            api: "/api/v1",
+            docs: "/api-docs",
+        },
+    });
+});
+
+app.get("/favicon.ico", (req, res) => {
+    res.status(204).end();
+});
+
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 300,

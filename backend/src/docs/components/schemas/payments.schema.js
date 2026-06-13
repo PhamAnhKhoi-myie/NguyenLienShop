@@ -1,5 +1,5 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
-const providerEnum = ["vnpay", "stripe", "paypal"];
+const providerEnum = ["vnpay", "stripe", "paypal", "payos"];
 const paymentStatusEnum = ["pending", "paid", "failed"];
 const verificationStatusEnum = ["pending", "verified", "failed"];
 
@@ -18,6 +18,13 @@ module.exports = {
             stripe_client_secret: { type: "string", nullable: true, example: "***" },
             paypal_order_id: { type: "string", nullable: true, example: "EC-123456789" },
             paypal_payer_id: { type: "string", nullable: true, example: "PAYER123" },
+            payos_order_code: { type: "integer", nullable: true, example: 123456789012 },
+            payos_payment_link_id: { type: "string", nullable: true, example: "124c33293c934a85be5b7f8761a27a07" },
+            payos_checkout_url: { type: "string", nullable: true, example: "https://pay.payos.vn/web/124c33293c934a85be5b7f8761a27a07" },
+            payos_qr_code: { type: "string", nullable: true },
+            payos_status: { type: "string", nullable: true, example: "PENDING" },
+            payos_reference: { type: "string", nullable: true, example: "TF230204212323" },
+            payos_transaction_date_time: { type: "string", nullable: true, example: "2023-02-04 18:25:00" },
         },
     },
 
@@ -190,7 +197,7 @@ module.exports = {
         required: ["order_id"],
         properties: {
             order_id: { type: "string", pattern: objectIdPattern, example: "507f1f77bcf86cd799439020" },
-            provider: { type: "string", enum: ["vnpay"], default: "vnpay", example: "vnpay" },
+            provider: { type: "string", enum: ["vnpay", "payos"], default: "vnpay", example: "payos" },
         },
     },
 
@@ -207,7 +214,7 @@ module.exports = {
         properties: {
             paymentId: { type: "string", pattern: objectIdPattern, example: "507f1f77bcf86cd799439030" },
             payment: { $ref: "#/components/schemas/Payment" },
-            paymentUrl: { type: "string", format: "uri", example: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?..." },
+            paymentUrl: { type: "string", format: "uri", example: "https://pay.payos.vn/web/124c33293c934a85be5b7f8761a27a07" },
         },
     },
 
@@ -451,6 +458,33 @@ module.exports = {
                     },
                 },
             },
+        },
+    },
+
+    PayOSWebhookInput: {
+        type: "object",
+        required: ["code", "desc", "success", "data", "signature"],
+        properties: {
+            code: { type: "string", example: "00" },
+            desc: { type: "string", example: "success" },
+            success: { type: "boolean", example: true },
+            data: {
+                type: "object",
+                required: ["orderCode", "amount", "description", "currency", "paymentLinkId", "code", "desc"],
+                properties: {
+                    orderCode: { type: "integer", example: 123456789012 },
+                    amount: { type: "integer", example: 1650000 },
+                    description: { type: "string", example: "NLS789012" },
+                    accountNumber: { type: "string", nullable: true, example: "12345678" },
+                    reference: { type: "string", nullable: true, example: "TF230204212323" },
+                    transactionDateTime: { type: "string", nullable: true, example: "2023-02-04 18:25:00" },
+                    currency: { type: "string", example: "VND" },
+                    paymentLinkId: { type: "string", example: "124c33293c934a85be5b7f8761a27a07" },
+                    code: { type: "string", example: "00" },
+                    desc: { type: "string", example: "success" },
+                },
+            },
+            signature: { type: "string", example: "8d8640d802576397a1ce45ebda7f835055768ac7ad2e0bfb77f9b8f12cca4c7f" },
         },
     },
 

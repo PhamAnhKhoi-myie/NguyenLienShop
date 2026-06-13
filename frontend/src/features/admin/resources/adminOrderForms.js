@@ -1,22 +1,23 @@
+import { translate } from '../../../shared/i18n/index';
 import { z } from 'zod';
 
 export const orderStatusOptions = [
-    { value: '', label: 'Tất cả trạng thái' },
-    { value: 'PENDING', label: 'PENDING' },
-    { value: 'PAID', label: 'PAID' },
-    { value: 'PROCESSING', label: 'PROCESSING' },
-    { value: 'SHIPPED', label: 'SHIPPED' },
-    { value: 'DELIVERED', label: 'DELIVERED' },
-    { value: 'FAILED', label: 'FAILED' },
-    { value: 'CANCELED', label: 'CANCELED' },
+    { value: '', label: translate('text.all_statuses') },
+    { value: 'PENDING', label: translate('text.pending_0a7b38b7') },
+    { value: 'PAID', label: translate('text.paid_f3534db5') },
+    { value: 'PROCESSING', label: translate('text.processing') },
+    { value: 'SHIPPED', label: translate('text.shipped') },
+    { value: 'DELIVERED', label: translate('text.delivered_1bd2e76f') },
+    { value: 'FAILED', label: translate('text.failed_8d33f306') },
+    { value: 'CANCELED', label: translate('text.canceled_30b6a2af') },
 ];
 
 export const paymentStatusOptions = [
-    { value: '', label: 'Tất cả thanh toán' },
-    { value: 'PENDING', label: 'PENDING' },
-    { value: 'PAID', label: 'PAID' },
-    { value: 'FAILED', label: 'FAILED' },
-    { value: 'REFUNDED', label: 'REFUNDED' },
+    { value: '', label: translate('text.all_payments') },
+    { value: 'PENDING', label: translate('text.pending_0a7b38b7') },
+    { value: 'PAID', label: translate('text.paid_f3534db5') },
+    { value: 'FAILED', label: translate('text.failed_8d33f306') },
+    { value: 'REFUNDED', label: translate('text.refunded') },
 ];
 
 const statusValues = [
@@ -66,10 +67,10 @@ function getManualStatusOptions(order = {}) {
 }
 
 export const orderStatusFormConfig = {
-    title: 'trạng thái đơn hàng',
+    title: translate('text.order_status'),
     schema: z.object({
         status: z.enum(statusValues),
-        note: z.string().trim().max(500, 'Ghi chú không vượt quá 500 ký tự'),
+        note: z.string().trim().max(500, translate('text.notes_must_not_exceed_500_characters')),
     }),
     defaultValues: {
         status: 'PENDING',
@@ -86,13 +87,13 @@ export const orderStatusFormConfig = {
     fields: [
         {
             name: 'status',
-            label: 'Trạng thái',
+            label: translate('text.status'),
             type: 'select',
             options: ({ initialData }) => getManualStatusOptions(initialData),
         },
         {
             name: 'note',
-            label: 'Ghi chú',
+            label: translate('text.note'),
             type: 'textarea',
             rows: 4,
             className: 'md:col-span-2',
@@ -101,12 +102,12 @@ export const orderStatusFormConfig = {
 };
 
 export const orderNotesFormConfig = {
-    title: 'ghi chú nội bộ',
+    title: translate('text.internal_note'),
     schema: z.object({
         admin_notes: z
             .string()
             .trim()
-            .max(1000, 'Ghi chú nội bộ không vượt quá 1000 ký tự'),
+            .max(1000, translate('text.internal_notes_cannot_exceed_1000_characters')),
     }),
     defaultValues: {
         admin_notes: '',
@@ -120,7 +121,7 @@ export const orderNotesFormConfig = {
     fields: [
         {
             name: 'admin_notes',
-            label: 'Ghi chú nội bộ',
+            label: translate('text.internal_notes'),
             type: 'textarea',
             rows: 6,
             className: 'md:col-span-2',
@@ -129,10 +130,10 @@ export const orderNotesFormConfig = {
 };
 
 export const shipmentFormConfig = {
-    title: 'vận đơn',
+    title: translate('text.bill_of_lading_f4a566af'),
     schema: z.object({
-        carrier: z.string().trim().min(1, 'Đơn vị vận chuyển là bắt buộc').max(50),
-        tracking_code: z.string().trim().min(1, 'Mã vận đơn là bắt buộc').max(100),
+        carrier: z.string().trim().min(1, translate('text.shipping_unit_is_required')).max(50),
+        tracking_code: z.string().trim().min(1, translate('text.waybill_code_is_required')).max(100),
     }),
     defaultValues: {
         carrier: '',
@@ -147,8 +148,8 @@ export const shipmentFormConfig = {
         tracking_code: values.tracking_code.trim(),
     }),
     fields: [
-        { name: 'carrier', label: 'Đơn vị vận chuyển', placeholder: 'GHN, VIETTEL, GRAB...' },
-        { name: 'tracking_code', label: 'Mã vận đơn' },
+        { name: 'carrier', label: translate('text.shipping_unit'), placeholder: translate('text.ghn_viettel_grab') },
+        { name: 'tracking_code', label: translate('text.bill_of_lading_code') },
     ],
 };
 
@@ -164,20 +165,20 @@ export function createFulfillmentFormConfig(order = {}) {
     const pendingItems = getPendingItems(order);
     const itemOptions = pendingItems.map((item) => ({
         value: item.id,
-        label: `${item.product_name} - còn ${Number(item.quantity_ordered || 0) - Number(item.quantity_fulfilled || 0)} ${item.unit_label || 'đơn vị'}`,
+        label: translate('text.value_also_value_value', { value0: item.product_name, value1: Number(item.quantity_ordered || 0) - Number(item.quantity_fulfilled || 0), value2: item.unit_label || translate('text.unit') }),
     }));
     const defaultItemId = itemOptions[0]?.value || '';
 
     return {
-        title: 'fulfill sản phẩm',
+        title: translate('text.fulfill_product_05c12e9e'),
         schema: z
             .object({
-                item_id: z.string().min(1, 'Vui lòng chọn sản phẩm'),
+                item_id: z.string().min(1, translate('text.please_select_product')),
                 quantity_fulfilled: z.coerce
                     .number()
-                    .int('Số lượng phải là số nguyên')
-                    .positive('Số lượng phải lớn hơn 0')
-                    .max(1000000, 'Số lượng quá lớn'),
+                    .int(translate('text.quantity_must_be_an_integer'))
+                    .positive(translate('text.quantity_must_be_greater_than_0'))
+                    .max(1000000, translate('text.quantity_too_large')),
             })
             .superRefine((values, ctx) => {
                 const item = pendingItems.find(
@@ -196,7 +197,7 @@ export function createFulfillmentFormConfig(order = {}) {
                     ctx.addIssue({
                         code: z.ZodIssueCode.custom,
                         path: ['quantity_fulfilled'],
-                        message: `Số lượng tối đa còn lại là ${remaining}`,
+                        message: translate('text.maximum_remaining_quantity_is_value', { value0: remaining }),
                     });
                 }
             }),
@@ -215,15 +216,15 @@ export function createFulfillmentFormConfig(order = {}) {
         fields: [
             {
                 name: 'item_id',
-                label: 'Sản phẩm',
+                label: translate('text.product'),
                 type: 'select',
                 options: itemOptions,
-                emptyLabel: itemOptions.length ? undefined : 'Không còn sản phẩm cần fulfill',
+                emptyLabel: itemOptions.length ? undefined : translate('text.no_more_products_to_fulfill'),
                 disabled: itemOptions.length === 0,
             },
             {
                 name: 'quantity_fulfilled',
-                label: 'Số gói fulfill thêm',
+                label: translate('text.number_of_additional_fulfillment_packages'),
                 type: 'number',
             },
         ],

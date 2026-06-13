@@ -3,12 +3,12 @@ module.exports = {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "JWT access token. Header: `Authorization: Bearer <accessToken>`. Chỉ dùng cho các endpoint backend thực sự kiểm tra Bearer (vd. sau khi bạn gắn authMiddleware)."
+        "description": "JWT access token. Header: `Authorization: Bearer <accessToken>`. Only used for backend endpoints that actually test the Bearer (e.g. after you attach authMiddleware)."
     },
     "refreshTokenCookie": {
         "type": "apiKey",
         "in": "cookie",
         "name": "refreshToken",
-        "description": "Refresh token cookie (httpOnly). Đăng nhập thành công sẽ được server Set-Cookie; Swagger UI → Authorize → nhập giá trị cookie nếu test tay."
+        "description": "Refresh token cookie (httpOnly). Successful login will result in Set-Cookie server; Swagger UI → Authorize → enter cookie value if testing manually."
     }
 };

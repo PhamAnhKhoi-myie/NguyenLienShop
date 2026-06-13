@@ -12,11 +12,7 @@ class UserMapper {
         }
 
         if (data.email !== undefined) {
-            update.email = data.email;
-        }
-
-        if (data.phone !== undefined) {
-            update["profile.phone_number"] = data.phone;
+            update.email = data.email || null;
         }
 
         if (data.gender !== undefined) {
@@ -33,7 +29,7 @@ class UserMapper {
 
         return {
             id: doc._id?.toString(),
-            email: doc.email,
+            email: doc.email || null,
             profile: {
                 full_name: doc.profile?.full_name || null,
                 avatar_url: doc.profile?.avatar_url || null,
@@ -45,6 +41,8 @@ class UserMapper {
             status: doc.status,
             is_email_verified: doc.is_email_verified,
             email_verified_at: doc.email_verified_at,
+            is_phone_verified: doc.is_phone_verified,
+            phone_verified_at: doc.phone_verified_at,
             last_login_at: doc.last_login_at,
             created_at: doc.created_at,
             updated_at: doc.updated_at,

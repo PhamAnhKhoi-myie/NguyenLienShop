@@ -158,7 +158,7 @@ class CategoryService {
                 throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
             }
 
-            // ====== 🔴 CAPTURE OLD DATA ======
+
             const oldData = {
                 name: category.name,
                 slug: category.slug,
@@ -167,7 +167,7 @@ class CategoryService {
                 display_order: category.display_order,
             };
 
-            // Kiểm tra slug
+
             if (data.slug && data.slug !== category.slug) {
                 const existingSlug = await Category.findOne(
                     {
@@ -182,7 +182,7 @@ class CategoryService {
                 }
             }
 
-            // ====== HANDLE PARENT CHANGE ======
+
             let pathChanged = false;
             const oldPath = [...category.path];
 
@@ -197,7 +197,7 @@ class CategoryService {
                 pathChanged = true;
             }
 
-            // ====== UPDATE FIELDS ======
+
             if (data.name !== undefined) category.name = data.name;
             if (data.slug !== undefined) category.slug = data.slug;
             if (data.description !== undefined) category.description = data.description;
@@ -208,7 +208,7 @@ class CategoryService {
 
             await category.save({ session });
 
-            // ====== UPDATE DESCENDANTS ======
+
             if (pathChanged) {
                 const descendants = await Category.find(
                     { path: categoryId },
@@ -230,7 +230,7 @@ class CategoryService {
 
             const updated = await Category.findById(categoryId);
 
-            // ====== 🟢 BUILD CHANGES ======
+
             const newData = {
                 name: updated.name,
                 slug: updated.slug,
@@ -250,7 +250,7 @@ class CategoryService {
                 }
             }
 
-            // ====== 🟢 AUDIT LOG (SAU COMMIT) ======
+
             if (Object.keys(changes).length > 0) {
                 await CategoryAuditLogService.createLog({
                     actor_id: metadata.actorId,
@@ -282,17 +282,17 @@ class CategoryService {
                 throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
             }
 
-            // 🔴 CAPTURE OLD STATE
+
             const oldState = {
                 is_deleted: category.is_deleted || false,
             };
 
-            // Soft delete category + descendants
+
             await Category.softDelete(categoryId, session);
 
             await session.commitTransaction();
 
-            // 🟢 AUDIT LOG (SAU COMMIT)
+
             await CategoryAuditLogService.createLog({
                 actor_id: metadata.actorId,
                 action: AUDIT_ACTIONS.DELETE_CATEGORY_SOFT,
@@ -330,7 +330,7 @@ class CategoryService {
                 throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
             }
 
-            // Hard delete category + descendants
+
             const result = await Category.hardDeleteWithDescendants(categoryId, session);
 
             await session.commitTransaction();
@@ -386,7 +386,7 @@ class CategoryService {
                 throw new AppError('Category is not deleted', 400, 'CATEGORY_NOT_DELETED');
             }
 
-            // ✅ Restore category + descendants
+
             await Category.restore(categoryId, session);
 
             await session.commitTransaction();

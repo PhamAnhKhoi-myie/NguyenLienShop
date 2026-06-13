@@ -1,7 +1,7 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
 const orderStatusEnum = ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "FAILED", "CANCELED"];
 const paymentStatusEnum = ["PENDING", "PAID", "FAILED", "REFUNDED"];
-const paymentMethodEnum = ["COD", "VNPAY", "MOMO", "CARD"];
+const paymentMethodEnum = ["COD", "VNPAY", "PAYOS", "MOMO", "CARD"];
 
 module.exports = {
     OrderAddressSnapshot: {
@@ -24,12 +24,12 @@ module.exports = {
                 example: "0912345678",
             },
             province_code: { type: "string", pattern: "^\\d{2}$", example: "79" },
-            province_name: { type: "string", example: "Thành phố Hồ Chí Minh" },
+            province_name: { type: "string", example: "Ho Chi Minh City" },
             ward_code: { type: "string", pattern: "^\\d{5}$", example: "26743" },
-            ward_name: { type: "string", example: "Phường Bến Thành" },
+            ward_name: { type: "string", example: "Ben Thanh Ward" },
             detail: { type: "string", minLength: 5, maxLength: 255, example: "123 Nguyen Trai" },
-            full_address: { type: "string", example: "123 Nguyen Trai, Phường Bến Thành, Thành phố Hồ Chí Minh" },
-            note: { type: "string", maxLength: 500, nullable: true, example: "Giao giờ hành chính" },
+            full_address: { type: "string", example: "123 Nguyen Trai, Ben Thanh Ward, Ho Chi Minh City" },
+            note: { type: "string", maxLength: 500, nullable: true, example: "Assigned office hours" },
         },
     },
 
@@ -46,7 +46,7 @@ module.exports = {
             province_code: { type: "string", pattern: "^\\d{2}$", example: "79" },
             ward_code: { type: "string", pattern: "^\\d{5}$", example: "26743" },
             detail: { type: "string", minLength: 5, maxLength: 255, example: "123 Nguyen Trai" },
-            note: { type: "string", maxLength: 500, nullable: true, example: "Giao giờ hành chính" },
+            note: { type: "string", maxLength: 500, nullable: true, example: "Assigned office hours" },
         },
     },
 
@@ -361,7 +361,7 @@ module.exports = {
         properties: {
             item_id: { type: "string", pattern: objectIdPattern, example: "507f1f77bcf86cd799439021" },
             rating: { type: "integer", minimum: 1, maximum: 5, example: 5 },
-            title: { type: "string", maxLength: 200, nullable: true, example: "Sản phẩm đúng kỳ vọng" },
+            title: { type: "string", maxLength: 200, nullable: true, example: "Product meets expectations" },
             comment: { type: "string", minLength: 10, maxLength: 500, example: "Product quality is good and delivery was fast." },
         },
     },

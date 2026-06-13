@@ -1,3 +1,4 @@
+import { getLocale, translate } from '../../../shared/i18n/index';
 import { Bell, CheckCheck, ExternalLink, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -19,9 +20,9 @@ import {
 } from '../hooks/useNotifications';
 
 const typeLabels = {
-    order: 'Đơn hàng',
-    system: 'Hệ thống',
-    promotion: 'Khuyến mãi',
+    order: translate('text.order_0aba562f'),
+    system: translate('text.system'),
+    promotion: translate('text.promotion'),
 };
 
 const priorityVariants = {
@@ -35,7 +36,7 @@ function formatDateTime(value) {
         return '';
     }
 
-    return new Date(value).toLocaleString('vi-VN');
+    return new Date(value).toLocaleString(getLocale());
 }
 
 function getReferenceLink(notification) {
@@ -84,18 +85,13 @@ export default function NotificationsPage() {
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <div className="flex items-center gap-2">
-                                <h1 className="text-xl font-semibold text-[var(--color-text-main)]">
-                                    Thông báo
-                                </h1>
+                                <h1 className="text-xl font-semibold text-[var(--color-text-main)]"> {translate('text.notice')} </h1>
                                 {unreadCount > 0 && (
                                     <Badge variant="warning">
-                                        {unreadCount} chưa đọc
-                                    </Badge>
+                                        {unreadCount} {translate('text.unread_89cf356e')} </Badge>
                                 )}
                             </div>
-                            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                Theo dõi cập nhật đơn hàng, hệ thống và khuyến mãi.
-                            </p>
+                            <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.track_updates_to_orders_systems_and_promotions')} </p>
                         </div>
 
                         <div className="flex flex-col gap-2 sm:flex-row">
@@ -108,10 +104,10 @@ export default function NotificationsPage() {
                                 }
                                 className="sm:w-40"
                             >
-                                <option value="">Tất cả loại</option>
-                                <option value="order">Đơn hàng</option>
-                                <option value="system">Hệ thống</option>
-                                <option value="promotion">Khuyến mãi</option>
+                                <option value="">{translate('text.all_types')}</option>
+                                <option value="order">{translate('text.order_0aba562f')}</option>
+                                <option value="system">{translate('text.system')}</option>
+                                <option value="promotion">{translate('text.promotion')}</option>
                             </Select>
                             <Button
                                 variant={unreadOnly ? 'primary' : 'outline'}
@@ -120,29 +116,25 @@ export default function NotificationsPage() {
                                         setUnreadOnly((current) => !current)
                                     )
                                 }
-                            >
-                                Chưa đọc
-                            </Button>
+                            > {translate('text.unread')} </Button>
                             <Button
                                 variant="outline"
                                 isLoading={markAllReadMutation.isPending}
                                 onClick={() => markAllReadMutation.mutate()}
                             >
-                                <CheckCheck className="h-4 w-4" />
-                                Đọc tất cả
-                            </Button>
+                                <CheckCheck className="h-4 w-4" /> {translate('text.read_all')} </Button>
                         </div>
                     </div>
                 </CardHeader>
 
                 <CardBody>
                     {notificationsQuery.isLoading ? (
-                        <Loading label="Đang tải thông báo..." />
+                        <Loading label={translate('text.loading_notification')} />
                     ) : notifications.length === 0 ? (
                         <EmptyState
                             icon={Bell}
-                            title="Chưa có thông báo"
-                            description="Thông báo mới sẽ hiển thị tại đây."
+                            title={translate('text.no_announcement_yet')}
+                            description={translate('text.new_notifications_will_display_here')}
                         />
                     ) : (
                         <div className="space-y-4">
@@ -196,9 +188,7 @@ export default function NotificationsPage() {
                                                         to={referenceLink}
                                                         className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)]"
                                                     >
-                                                        <ExternalLink className="h-4 w-4" />
-                                                        Xem
-                                                    </Link>
+                                                        <ExternalLink className="h-4 w-4" /> {translate('text.xem')} </Link>
                                                 )}
                                                 {!notification.is_read && (
                                                     <Button
@@ -213,9 +203,7 @@ export default function NotificationsPage() {
                                                             )
                                                         }
                                                     >
-                                                        <CheckCheck className="h-4 w-4" />
-                                                        Đã đọc
-                                                    </Button>
+                                                        <CheckCheck className="h-4 w-4" /> {translate('text.read')} </Button>
                                                 )}
                                                 <Button
                                                     size="sm"
@@ -229,9 +217,7 @@ export default function NotificationsPage() {
                                                         )
                                                     }
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
-                                                    Xóa
-                                                </Button>
+                                                    <Trash2 className="h-4 w-4" /> {translate('text.delete')} </Button>
                                             </div>
                                         </div>
                                     </div>

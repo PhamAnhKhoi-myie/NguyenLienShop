@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { ArrowLeft, CalendarDays, Eye } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import Badge from '../../../shared/components/Badge';
@@ -14,15 +15,15 @@ export default function BlogDetailPage() {
     const blog = blogQuery.data?.data;
 
     if (blogQuery.isLoading) {
-        return <Loading label="Đang tải bài viết..." />;
+        return <Loading label={translate('text.loading_article')} />;
     }
 
     if (blogQuery.isError) {
         return (
             <EmptyState
-                title="Không tìm thấy bài viết"
+                title={translate('text.no_article_found')}
                 description={blogQuery.error.message}
-                actionLabel="Quay lại blog"
+                actionLabel={translate('text.back_to_blog')}
                 onAction={() => window.location.assign(ROUTES.BLOGS)}
             />
         );
@@ -34,9 +35,7 @@ export default function BlogDetailPage() {
                 to={ROUTES.BLOGS}
                 className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
             >
-                <ArrowLeft className="h-4 w-4" />
-                Quay lại blog
-            </Link>
+                <ArrowLeft className="h-4 w-4" /> {translate('text.back_to_blog')} </Link>
 
             <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2">

@@ -1,3 +1,4 @@
+import { translate } from '../shared/i18n/index';
 import {
     BadgeDollarSign,
     Camera,
@@ -21,38 +22,45 @@ import { useShopInfo } from '../features/shopInfo/hooks/useShopInfo';
 import { ROUTES } from '../shared/constants/routes';
 
 const infoLinks = [
-    { label: 'Chính sách vận chuyển', href: '#' },
-    { label: 'Chính sách đổi trả', href: '#' },
-    { label: 'Quy định đặt hàng', href: '#' },
-    { label: 'Bảo hành', href: '#' },
-    { label: 'FAQ', href: '#' },
-    { label: 'Liên hệ', href: '#' },
+    { label: translate('text.shipping_policy'), href: '#' },
+    { label: translate('text.return_policy'), href: '#' },
+    { label: translate('text.ordering_regulations'), href: '#' },
+    { label: translate('text.warranty'), href: '#' },
+    { label: translate('text.faq'), href: '#' },
+    { label: translate('text.contact'), href: '#' },
 ];
 
 const paymentMethods = [
     {
-        label: 'COD',
+        label: translate('text.cod'),
         icon: BadgeDollarSign,
         color: '#007A3D',
         background: '#EAF8F0',
         border: '#9EDBB9',
     },
     {
-        label: 'VNPay',
+        label: translate('text.vnpay_a219ad16'),
         icon: CreditCard,
         color: '#005BAA',
         background: 'linear-gradient(135deg, #EEF7FF 0%, #FFF1F1 100%)',
         border: '#A9D2F5',
     },
     {
-        label: 'MoMo',
+        label: translate('text.payos'),
+        icon: CreditCard,
+        color: '#0A7C66',
+        background: 'linear-gradient(135deg, #E9FBF6 0%, #F1FFF9 100%)',
+        border: '#8FDAC7',
+    },
+    {
+        label: translate('text.momo'),
         icon: Wallet,
         color: '#A50064',
         background: '#FDECF7',
         border: '#F3B5DC',
     },
     {
-        label: 'Paypal',
+        label: translate('text.paypal'),
         icon: Wallet,
         color: '#003087',
         background: 'linear-gradient(135deg, #EAF4FF 0%, #F5FAFF 100%)',
@@ -63,7 +71,7 @@ const paymentMethods = [
 const socialLinks = [
     {
         key: 'facebook',
-        label: 'Facebook',
+        label: translate('text.facebook'),
         href: '#',
         icon: Globe2,
         color: '#1877F2',
@@ -74,7 +82,7 @@ const socialLinks = [
     },
     {
         key: 'zalo',
-        label: 'Zalo',
+        label: translate('text.zalo'),
         href: '#',
         icon: MessageCircle,
         color: '#0068FF',
@@ -85,7 +93,7 @@ const socialLinks = [
     },
     {
         key: 'instagram',
-        label: 'Instagram',
+        label: translate('text.instagram'),
         href: '#',
         icon: Camera,
         color: '#C13584',
@@ -96,7 +104,7 @@ const socialLinks = [
     },
     {
         key: 'tiktok',
-        label: 'TikTok',
+        label: translate('text.tiktok'),
         href: '#',
         icon: Music,
         color: '#111111',
@@ -108,7 +116,7 @@ const socialLinks = [
     },
     {
         key: 'shoppe',
-        label: 'Shopee',
+        label: translate('text.shopee'),
         href: '#',
         icon: ShoppingBag,
         color: '#EE4D2D',
@@ -120,14 +128,14 @@ const socialLinks = [
 ];
 
 const dayLabels = {
-    mon: 'Thứ 2',
-    tue: 'Thứ 3',
-    wed: 'Thứ 4',
-    thu: 'Thứ 5',
-    fri: 'Thứ 6',
-    sat: 'Thứ 7',
-    sun: 'Chủ nhật',
-    holiday: 'Ngày lễ',
+    mon: translate('text.monday'),
+    tue: translate('text.tuesday'),
+    wed: translate('text.wednesday'),
+    thu: translate('text.thursday'),
+    fri: translate('text.friday'),
+    sat: translate('text.saturday'),
+    sun: translate('text.sunday'),
+    holiday: translate('text.holiday'),
 };
 
 function FooterTitle({ children }) {
@@ -184,10 +192,10 @@ function Footer() {
     const shopName = shopInfo?.shop_name || 'NguyenLien Shop';
     const phone = shopInfo?.phone || '0909 123 456';
     const email = shopInfo?.email || 'support@nguyenlien.shop';
-    const address = shopInfo?.address || 'Kho NguyenLien Shop, TP. Hồ Chí Minh';
+    const address = shopInfo?.address || translate('text.nguyenlien_shop_warehouse_city_ho_chi_minh');
     const shippingText = shopInfo?.shipping_partner
-        ? `Giao hàng toàn quốc qua ${shopInfo.shipping_partner}`
-        : 'Giao hàng toàn quốc qua đối tác vận chuyển';
+        ? translate('text.nationwide_delivery_via_value', { value0: shopInfo.shipping_partner })
+        : translate('text.nationwide_delivery_via_shipping_partner');
 
     return (
         <footer className="mt-auto border-t border-[var(--color-border)] bg-[#f3faf5] text-[var(--color-text-main)]">
@@ -200,31 +208,23 @@ function Footer() {
                         >
                             <img
                                 src={logo}
-                                alt="NguyenLien Shop"
+                                alt={translate('text.nguyenlien_shop')}
                                 className="h-9 w-auto object-contain"
                             />
                         </Link>
 
                         <p className="max-w-sm text-sm leading-6 text-[var(--color-text-muted)]">
-                            {shopName} cung cấp túi bao trái cây, túi vải và
-                            vật tư hỗ trợ bảo vệ trái cây cho nhà vườn, cửa hàng
-                            và khách mua lẻ.
-                        </p>
+                            {shopName} {translate('text.provides_fruit_bags_fabric_bags_and_materials_to_support_fruit_protectio')} </p>
 
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-                            <FooterTitle>Mua hàng - Góp ý</FooterTitle>
+                            <FooterTitle>{translate('text.purchase_suggestions')}</FooterTitle>
                             <ul className="space-y-1.5">
-                                <ContactLine icon={Phone}>
-                                    Hotline: {phone}
+                                <ContactLine icon={Phone}> {translate('text.hotline')} {phone}
                                 </ContactLine>
-                                <ContactLine icon={Mail}>
-                                    Email: {email}
+                                <ContactLine icon={Mail}> {translate('text.email_4c4e6b2d')} {email}
                                 </ContactLine>
-                                <ContactLine icon={Globe2}>
-                                    Website: nguyenlien.shop
-                                </ContactLine>
-                                <ContactLine icon={MessageCircle}>
-                                    Zalo: {social.zalo || shopName}
+                                <ContactLine icon={Globe2}> {translate('text.website_nguyenlien_shop')} </ContactLine>
+                                <ContactLine icon={MessageCircle}> {translate('text.zalo_bd2a5c19')} {social.zalo || shopName}
                                 </ContactLine>
                             </ul>
                         </div>
@@ -232,7 +232,7 @@ function Footer() {
 
                     <section className="space-y-5">
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-                            <FooterTitle>Địa chỉ</FooterTitle>
+                            <FooterTitle>{translate('text.address')}</FooterTitle>
                             <ul className="space-y-2">
                                 <ContactLine icon={MapPin}>
                                     {address}
@@ -244,7 +244,7 @@ function Footer() {
                         </div>
 
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-                            <FooterTitle>Thời gian làm việc</FooterTitle>
+                            <FooterTitle>{translate('text.working_time')}</FooterTitle>
                             <ul className="space-y-2">
                                 {configuredWorkingHours ? (
                                     configuredWorkingHours.map((hour) => (
@@ -254,12 +254,8 @@ function Footer() {
                                     ))
                                 ) : (
                                     <>
-                                        <ContactLine icon={Clock3}>
-                                            Thứ 2 - Thứ 7: 8:00 - 20:00
-                                        </ContactLine>
-                                        <ContactLine icon={Clock3}>
-                                            Chủ nhật và ngày lễ: 9:00 - 18:00
-                                        </ContactLine>
+                                        <ContactLine icon={Clock3}> {translate('text.monday_saturday_8_00_20_00')} </ContactLine>
+                                        <ContactLine icon={Clock3}> {translate('text.sundays_and_holidays_9_00_18_00')} </ContactLine>
                                     </>
                                 )}
                             </ul>
@@ -268,7 +264,7 @@ function Footer() {
 
                     <section className="space-y-5">
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-                            <FooterTitle>Thông tin</FooterTitle>
+                            <FooterTitle>{translate('text.information')}</FooterTitle>
                             <nav className="grid gap-2 text-sm text-[var(--color-text-main)]">
                                 {infoLinks.map((item) => (
                                     <a
@@ -283,18 +279,18 @@ function Footer() {
                         </div>
 
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-                            <FooterTitle>Chứng nhận - Uy tín</FooterTitle>
+                            <FooterTitle>{translate('text.certification_prestigious')}</FooterTitle>
                             <div className="flex flex-wrap items-center gap-3">
                                 <CertificateLogo
                                     href={certificationLinks.ministry_notified}
                                     src={notifiedTradeLogo}
-                                    alt="Đã thông báo Bộ Công Thương"
+                                    alt={translate('text.notified_to_the_ministry_of_industry_and_trade')}
                                     className="h-18 w-auto object-contain"
                                 />
                                 <CertificateLogo
                                     href={certificationLinks.ministry_registered}
                                     src={registeredTradeLogo}
-                                    alt="Đã đăng ký Bộ Công Thương"
+                                    alt={translate('text.registered_with_the_ministry_of_industry_and_trade')}
                                     className="h-14 w-auto object-contain"
                                 />
                             </div>
@@ -303,7 +299,7 @@ function Footer() {
 
                     <section className="space-y-5">
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-                            <FooterTitle>Phương thức thanh toán</FooterTitle>
+                            <FooterTitle>{translate('text.payment_method')}</FooterTitle>
                             <div className="flex flex-wrap gap-2">
                                 {paymentMethods.map((method) => {
                                     const Icon = method.icon;
@@ -327,7 +323,7 @@ function Footer() {
                         </div>
 
                         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-white/85 p-4 shadow-sm">
-                            <FooterTitle>Theo dõi tại</FooterTitle>
+                            <FooterTitle>{translate('text.follow_at')}</FooterTitle>
                             <div className="grid gap-2">
                                 {footerSocialLinks.map((item) => {
                                     const Icon = item.icon;
@@ -367,9 +363,7 @@ function Footer() {
                 </div>
             </div>
 
-            <div className="border-t border-[var(--color-border)] bg-white/60 px-4 py-4 text-center text-sm font-medium text-[var(--color-text-main)]">
-                Copyright © 2026, NguyenLien Shop, All Rights Reserved
-            </div>
+            <div className="border-t border-[var(--color-border)] bg-white/60 px-4 py-4 text-center text-sm font-medium text-[var(--color-text-main)]"> {translate('text.copyright_2026_nguyenlien_shop_all_rights_reserved')} </div>
         </footer>
     );
 }

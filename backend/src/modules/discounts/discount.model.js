@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const applicableTargetsSchema = new mongoose.Schema(
     {
-        // ===== SCOPE TYPE =====
+
         type: {
             type: String,
             enum: {
@@ -18,7 +18,7 @@ const applicableTargetsSchema = new mongoose.Schema(
             default: 'all',
         },
 
-        // ===== TARGETS (populated based on type) =====
+
         product_ids: {
             type: [mongoose.Schema.Types.ObjectId],
             ref: 'Product',
@@ -42,7 +42,7 @@ const applicableTargetsSchema = new mongoose.Schema(
 
 const userEligibilitySchema = new mongoose.Schema(
     {
-        // ===== USER ELIGIBILITY TYPE =====
+
         type: {
             type: String,
             enum: {
@@ -53,14 +53,14 @@ const userEligibilitySchema = new mongoose.Schema(
             default: 'all',
         },
 
-        // ===== USER TARGETS (populated based on type) =====
+
         user_ids: {
             type: [mongoose.Schema.Types.ObjectId],
             ref: 'User',
             default: [],
         },
 
-        // ===== VIP TIER (optional, for future tier-based eligibility) =====
+
         min_user_tier: {
             type: String,
             enum: {
@@ -75,17 +75,17 @@ const userEligibilitySchema = new mongoose.Schema(
 
 const discountSchema = new mongoose.Schema(
     {
-        // ===== IDENTITY & CODE =====
+
         code: {
             type: String,
             required: [true, 'Discount code is required'],
             unique: true,
             uppercase: true,
-            // ✅ Normalized: auto uppercase + trim
+
             trim: true,
             minlength: [3, 'Code must be at least 3 characters'],
             maxlength: [20, 'Code must not exceed 20 characters'],
-            // ✅ FIX #1: Regex validate alphanumeric + underscore/dash
+
             match: [
                 /^[A-Z0-9_-]+$/,
                 'Code must contain only uppercase letters, numbers, underscores, and dashes',
@@ -93,7 +93,7 @@ const discountSchema = new mongoose.Schema(
             index: true,
         },
 
-        // ===== DISCOUNT VALUE =====
+
         type: {
             type: String,
             enum: {
@@ -107,8 +107,8 @@ const discountSchema = new mongoose.Schema(
             type: Number,
             required: [true, 'Discount value is required'],
             min: [0, 'Value cannot be negative'],
-            // If type === 'percent': value = 50 (for 50%)
-            // If type === 'fixed': value = 200000 (for 200k VND)
+
+
             validate: {
                 validator: function (value) {
                     if (this.type === 'percent') {
@@ -121,17 +121,17 @@ const discountSchema = new mongoose.Schema(
             },
         },
 
-        // ===== MAX DISCOUNT AMOUNT (MANDATORY for percent) =====
-        // ✅ FIX #2: Prevent runaway discounts (e.g., 50% on 20M order = 10M loss)
+
+
         max_discount_amount: {
             type: Number,
             min: [0, 'Max discount amount cannot be negative'],
-            // MANDATORY if type === 'percent' (validated in pre-save)
-            // OPTIONAL if type === 'fixed'
+
+
         },
 
-        // ===== APPLICATION STRATEGY =====
-        // ✅ FIX #3: Explicit rule for multi-item discounts
+
+
         application_strategy: {
             type: String,
             enum: {
@@ -140,72 +140,72 @@ const discountSchema = new mongoose.Schema(
                     'Strategy must be apply_all, apply_once, apply_cheapest, or apply_most_expensive',
             },
             default: 'apply_all',
-            // apply_all: discount all matching items (most common)
-            // apply_once: only first matching item
-            // apply_cheapest: only discount cheapest item
-            // apply_most_expensive: only discount most expensive item
+
+
+
+
         },
 
-        // ===== TARGET SCOPE =====
-        // ✅ FIX #4: Replace ambiguous 'applies_to' with explicit 'applicable_targets'
+
+
         applicable_targets: {
             type: applicableTargetsSchema,
             default: { type: 'all' },
         },
 
-        // ===== USER ELIGIBILITY =====
-        // ✅ FIX #5: Separate user eligibility from product scope
+
+
         user_eligibility: {
             type: userEligibilitySchema,
             default: { type: 'all' },
         },
 
-        // ===== ORDER CONSTRAINTS =====
+
         min_order_value: {
             type: Number,
             default: 0,
             min: [0, 'Minimum order value cannot be negative'],
-            // Discount only applies if cart subtotal >= this value
+
         },
 
-        // ===== USAGE LIMITS =====
+
         usage_limit: {
             type: Number,
             required: [true, 'Usage limit is required'],
             min: [1, 'Usage limit must be at least 1'],
-            // Total number of times this code can be used (across all users)
+
         },
 
         usage_per_user_limit: {
             type: Number,
             required: [true, 'Usage per user limit is required'],
             min: [1, 'Usage per user limit must be at least 1'],
-            // Maximum times a single user can use this code
+
         },
 
         usage_count: {
             type: Number,
             default: 0,
             min: [0, 'Usage count cannot be negative'],
-            // ✅ FIX #6: Incremented atomically with $lt condition
-            // Current total uses (across all users)
+
+
         },
 
-        // ===== STACKING RULES =====
-        // ✅ FIX #7: Support future multi-discount feature
+
+
         is_stackable: {
             type: Boolean,
             default: false,
-            // If false: single discount per cart (current behavior)
-            // If true: can combine with other stackable discounts
+
+
         },
 
         stack_priority: {
             type: Number,
             default: 0,
-            // Higher priority applies first
-            // Used when multiple discounts stack
-            // Example: percent (priority 10) before fixed (priority 5)
+
+
+
         },
 
         show_on_homepage: {
@@ -227,23 +227,23 @@ const discountSchema = new mongoose.Schema(
             index: true,
         },
 
-        // ===== TIME WINDOW =====
-        // ✅ FIX #8: Explicit time range (no status automation)
+
+
         started_at: {
             type: Date,
             required: [true, 'Start date is required'],
             default: () => new Date(),
-            // When discount becomes valid
+
         },
 
         expiry_date: {
             type: Date,
             required: [true, 'Expiry date is required'],
-            // When discount expires
-            // ✅ Validation: expiry_date > started_at (check in pre-save)
+
+
         },
 
-        // ===== STATUS =====
+
         status: {
             type: String,
             enum: {
@@ -252,12 +252,12 @@ const discountSchema = new mongoose.Schema(
             },
             default: 'active',
             index: true,
-            // IMPORTANT: Runtime validation checks started_at/expiry_date
-            // Do NOT rely on status alone (may be outdated)
+
+
         },
 
-        // ===== SOFT DELETE =====
-        // ✅ FIX #9: Consistent with Product, Cart, Order models
+
+
         is_deleted: {
             type: Boolean,
             default: false,
@@ -269,19 +269,19 @@ const discountSchema = new mongoose.Schema(
             default: null,
         },
 
-        // ===== AUDIT TRAIL =====
-        // ✅ FIX #10: Track who created/updated discount (for admin panel)
+
+
         created_by: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             required: true,
-            // Reference to admin user who created
+
         },
 
         updated_by: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            // Reference to admin user who last modified
+
         },
     },
     {
@@ -292,7 +292,7 @@ const discountSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES (Production Optimized) =====
+
 
 discountSchema.index(
     { code: 1 },
@@ -373,7 +373,7 @@ discountSchema.index(
     }
 );
 
-// ===== MIDDLEWARE: Auto-Exclude Soft-Deleted =====
+
 
 const excludeDeleted = function (next) {
     const options = this.getOptions?.() || {};
@@ -411,7 +411,7 @@ discountSchema.pre('aggregate', function (next) {
     next();
 });
 
-// ===== MIDDLEWARE: Validation & Normalization =====
+
 
 discountSchema.pre('validate', function (next) {
     if (this.type === 'percent' && !this.max_discount_amount) {
@@ -455,13 +455,13 @@ discountSchema.pre('save', function (next) {
     next();
 });
 
-// ===== STATIC METHODS =====
+
 
 discountSchema.statics.findByCode = function (code) {
     return this.findOne(
         { code: code.toUpperCase().trim(), is_deleted: false },
         null,
-        { maxTimeMS: 5000 } // Timeout for checkout responsiveness
+        { maxTimeMS: 5000 }
     );
 };
 
@@ -621,7 +621,7 @@ discountSchema.statics.countNearExpiry = async function (
     });
 };
 
-// ===== INSTANCE METHODS =====
+
 
 discountSchema.methods.isWithinTimeWindow = function (now = new Date()) {
     return this.started_at <= now && now < this.expiry_date;
@@ -681,7 +681,7 @@ discountSchema.methods.toSafeResponse = function () {
     return obj;
 };
 
-// ===== RESPONSE SANITIZATION =====
+
 
 const sanitizeTransform = (_, ret) => {
     delete ret.__v;

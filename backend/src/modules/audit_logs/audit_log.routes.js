@@ -28,7 +28,7 @@ const {
 router.use(authenticate);
 router.use(authorize([ROLES.ADMIN]));
 
-// Routes (specific -> generic)
+
 router.get(
     '/users',
     validate({ query: getUserLogsQuerySchema }),

@@ -23,14 +23,14 @@ const {
 
 const router = express.Router();
 
-// ===== CURRENT USER =====
+
 router.get(
     "/me",
     authenticate,
     userController.getMe
 );
 
-// ===== ADMIN ONLY =====
+
 router.get(
     "/",
     authenticate,
@@ -55,7 +55,7 @@ router.patch(
     userController.updateUserRoles
 );
 
-// ===== UPDATE USER =====
+
 router.patch(
     "/:id",
     authenticate,
@@ -64,7 +64,7 @@ router.patch(
     userController.updateUser
 );
 
-// ===== DELETE USER =====
+
 router.delete(
     "/:id",
     authenticate,

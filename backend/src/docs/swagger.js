@@ -19,15 +19,15 @@ const swaggerSpec = {
     tags: [
         {
             name: "Auth",
-            description: "Đăng ký, đăng nhập, refresh access token, đăng xuất.",
+            description: "Register, log in, refresh access token, log out.",
         },
         {
             name: "Users",
-            description: "Quản lý thông tin người dùng.",
+            description: "Manage user information.",
         },
         {
             name: "User Addresses",
-            description: "Quản lý địa chỉ giao hàng.",
+            description: "Manage delivery addresses.",
         },
         {
             name: "Locations",
@@ -35,47 +35,47 @@ const swaggerSpec = {
         },
         {
             name: "Categories",
-            description: "Quản lý danh mục sản phẩm.",
+            description: "Manage product categories.",
         },
         {
             name: "Products",
-            description: "Quản lý sản phẩm.",
+            description: "Product management.",
         },
         {
             name: "Variants",
-            description: "Quản lý biến thể sản phẩm.",
+            description: "Manage product variations.",
         },
         {
             name: "Variant Units",
-            description: "Quản lý đơn vị bán của biến thể.",
+            description: "Manages the units sold of the variant.",
         },
         {
             name: "Carts",
-            description: "Quản lý giỏ hàng.",
+            description: "Manage shopping cart.",
         },
         {
             name: "Orders",
-            description: "Quản lý đơn hàng.",
+            description: "Order management.",
         },
         {
             name: "Payments",
-            description: "Quản lý thanh toán.",
+            description: "Payment management.",
         },
         {
             name: "Discounts",
-            description: "Quản lý mã giảm giá / voucher.",
+            description: "Manage discount codes / vouchers.",
         },
         {
             name: "Shipments",
-            description: "Quản lý vận chuyển.",
+            description: "Transport management.",
         },
         {
             name: "Reviews",
-            description: "Quản lý đánh giá sản phẩm.",
+            description: "Manage product reviews.",
         },
         {
             name: "Banners",
-            description: "Quản lý banner.",
+            description: "Banner management.",
         },
         {
             name: "Blogs",
@@ -83,23 +83,23 @@ const swaggerSpec = {
         },
         {
             name: "Announcements",
-            description: "Quản lý thông báo.",
+            description: "Manage notifications.",
         },
         {
             name: "Shop Info",
-            description: "Quản lý thông tin cửa hàng.",
+            description: "Manage store information.",
         },
         {
             name: "Notifications",
-            description: "Quản lý thông báo cho người dùng.",
+            description: "Manage notifications for users.",
         },
         {
             name: "Chats",
-            description: "Chatbot trợ lý AI tích hợp Gemini.",
+            description: "Gemini integrated AI assistant chatbot.",
         },
         {
             name: "Audit Logs",
-            description: "Tra cứu audit logs theo domain.",
+            description: "Look up audit logs by domain.",
         },
         {
             name: "Uploads",

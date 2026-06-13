@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import {
     Eye,
     Filter,
@@ -25,28 +26,28 @@ import {
 } from '../utils/adminFormat';
 
 const domainOptions = [
-    { value: '', label: 'Tất cả domain' },
-    { value: 'AUTH', label: 'AUTH' },
-    { value: 'USER', label: 'USER' },
-    { value: 'USER_ADDRESS', label: 'USER_ADDRESS' },
-    { value: 'CATEGORY', label: 'CATEGORY' },
-    { value: 'PRODUCT', label: 'PRODUCT' },
-    { value: 'PAYMENT', label: 'PAYMENT' },
-    { value: 'ORDER', label: 'ORDER' },
-    { value: 'SHIPMENT', label: 'SHIPMENT' },
-    { value: 'DISCOUNT', label: 'DISCOUNT' },
-    { value: 'REVIEW', label: 'REVIEW' },
-    { value: 'SHOP_CONTENT', label: 'SHOP_CONTENT' },
-    { value: 'CART', label: 'CART' },
-    { value: 'NOTIFICATION', label: 'NOTIFICATION' },
-    { value: 'EMAIL', label: 'EMAIL' },
+    { value: '', label: translate('text.all_domains') },
+    { value: 'AUTH', label: translate('text.auth') },
+    { value: 'USER', label: translate('text.user_6eb0c612') },
+    { value: 'USER_ADDRESS', label: translate('text.user_address') },
+    { value: 'CATEGORY', label: translate('text.category_762258cf') },
+    { value: 'PRODUCT', label: translate('text.product_964bd565') },
+    { value: 'PAYMENT', label: translate('text.payment') },
+    { value: 'ORDER', label: translate('text.order_683e61c8') },
+    { value: 'SHIPMENT', label: translate('text.shipment') },
+    { value: 'DISCOUNT', label: translate('text.discount_62775f06') },
+    { value: 'REVIEW', label: translate('text.review_ed6912ad') },
+    { value: 'SHOP_CONTENT', label: translate('text.shop_content') },
+    { value: 'CART', label: translate('text.cart_7cd0c455') },
+    { value: 'NOTIFICATION', label: translate('text.notification') },
+    { value: 'EMAIL', label: translate('text.email') },
 ];
 
 const levelOptions = [
-    { value: '', label: 'Tất cả level' },
-    { value: 'INFO', label: 'INFO' },
-    { value: 'IMPORTANT', label: 'IMPORTANT' },
-    { value: 'SECURITY', label: 'SECURITY' },
+    { value: '', label: translate('text.all_levels') },
+    { value: 'INFO', label: translate('text.info') },
+    { value: 'IMPORTANT', label: translate('text.important') },
+    { value: 'SECURITY', label: translate('text.security') },
 ];
 
 const actionMap = {
@@ -99,6 +100,7 @@ const actionMap = {
         'VNPAY_WEBHOOK_PAYMENT',
         'STRIPE_WEBHOOK_PAYMENT',
         'PAYPAL_WEBHOOK_PAYMENT',
+        'PAYOS_WEBHOOK_PAYMENT',
         'PAYMENT_WEBHOOK_AMOUNT_MISMATCH',
         'PAYMENT_WEBHOOK_REJECTED',
     ],
@@ -244,7 +246,7 @@ function getActionOptions(domain) {
     const actions = domain ? actionMap[domain] || [] : allActionOptions;
 
     return [
-        { value: '', label: domain ? `Tất cả action ${domain}` : 'Tất cả action' },
+        { value: '', label: domain ? translate('text.all_actions_value', { value0: domain }) : translate('text.all_actions') },
         ...actions.map((action) => ({ value: action, label: action })),
     ];
 }
@@ -315,9 +317,7 @@ function StatsPanel({ total, logs }) {
         <div className="grid gap-4 lg:grid-cols-4">
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Tổng log
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.total_log')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-text-main)]">
                         {total}
                     </p>
@@ -325,9 +325,7 @@ function StatsPanel({ total, logs }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        SECURITY trên trang
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.security_on_page')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-error)]">
                         {securityCount}
                     </p>
@@ -335,9 +333,7 @@ function StatsPanel({ total, logs }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        IMPORTANT trên trang
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.important_on_page')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-warning)]">
                         {importantCount}
                     </p>
@@ -345,9 +341,7 @@ function StatsPanel({ total, logs }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Domain trên trang
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.domain_on_page')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-primary-hover)]">
                         {domainsOnPage}
                     </p>
@@ -368,7 +362,7 @@ function AuditFilters({
         <div className="space-y-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <div className="grid gap-3 lg:grid-cols-4">
                 <Select
-                    label="Domain"
+                    label={translate('text.domain')}
                     value={values.domain}
                     onChange={(event) => onChange('domain', event.target.value)}
                 >
@@ -379,7 +373,7 @@ function AuditFilters({
                     ))}
                 </Select>
                 <Select
-                    label="Action"
+                    label={translate('text.action')}
                     value={values.action}
                     onChange={(event) => onChange('action', event.target.value)}
                 >
@@ -390,7 +384,7 @@ function AuditFilters({
                     ))}
                 </Select>
                 <Select
-                    label="Level"
+                    label={translate('text.level')}
                     value={values.level}
                     onChange={(event) => onChange('level', event.target.value)}
                 >
@@ -401,41 +395,37 @@ function AuditFilters({
                     ))}
                 </Select>
                 <Input
-                    label="Target type"
+                    label={translate('text.target_type')}
                     value={values.target_type}
-                    placeholder="Order, Payment..."
+                    placeholder={translate('text.order_payment')}
                     onChange={(event) => onChange('target_type', event.target.value)}
                 />
             </div>
             <div className="grid gap-3 lg:grid-cols-5">
                 <Input
-                    label="Actor ID"
+                    label={translate('text.actor_id')}
                     value={values.actor_id}
                     onChange={(event) => onChange('actor_id', event.target.value)}
                 />
                 <Input
-                    label="User ID"
+                    label={translate('text.user_id')}
                     value={values.user_id}
                     onChange={(event) => onChange('user_id', event.target.value)}
                 />
                 <Input
-                    label="Order ID"
+                    label={translate('text.order_id')}
                     value={values.order_id}
                     onChange={(event) => onChange('order_id', event.target.value)}
                 />
                 <Input
-                    label="Target ID"
+                    label={translate('text.target_id')}
                     value={values.target_id}
                     onChange={(event) => onChange('target_id', event.target.value)}
                 />
                 <div className="flex items-end gap-2">
                     <Button type="button" onClick={onApply}>
-                        <Filter className="h-4 w-4" />
-                        Lọc
-                    </Button>
-                    <Button type="button" variant="outline" onClick={onReset}>
-                        Xóa lọc
-                    </Button>
+                        <Filter className="h-4 w-4" /> {translate('text.filter')} </Button>
+                    <Button type="button" variant="outline" onClick={onReset}> {translate('text.clear_filter')} </Button>
                 </div>
             </div>
         </div>
@@ -474,9 +464,7 @@ function IdGrid({ log }) {
 
     if (!entries.length) {
         return (
-            <p className="text-sm text-[var(--color-text-muted)]">
-                Không có id phụ.
-            </p>
+            <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.no_secondary_id')} </p>
         );
     }
 
@@ -510,49 +498,41 @@ function AuditLogDetailPanel({ log }) {
             <div className="grid gap-4 lg:grid-cols-3">
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Actor
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.actor')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3">
-                        <DetailRow label="Actor ID" value={log.actor_id} />
-                        <DetailRow label="Actor type" value={log.actor_type} />
-                        <DetailRow label="IP" value={log.ip_address} />
+                        <DetailRow label={translate('text.actor_id')} value={log.actor_id} />
+                        <DetailRow label={translate('text.actor_type')} value={log.actor_type} />
+                        <DetailRow label={translate('text.ip')} value={log.ip_address} />
                     </CardBody>
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Target
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.target')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3">
-                        <DetailRow label="Target type" value={log.target_type} />
-                        <DetailRow label="Target ID" value={getTargetLabel(log)} />
-                        <DetailRow label="Status" value={log.status} />
+                        <DetailRow label={translate('text.target_type')} value={log.target_type} />
+                        <DetailRow label={translate('text.target_id')} value={getTargetLabel(log)} />
+                        <DetailRow label={translate('text.status')} value={log.status} />
                     </CardBody>
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Thời gian
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.time')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3">
-                        <DetailRow label="Created">
+                        <DetailRow label={translate('text.created')}>
                             {formatDateTime(log.created_at)}
                         </DetailRow>
-                        <DetailRow label="Provider" value={log.provider} />
-                        <DetailRow label="Template" value={log.template} />
+                        <DetailRow label={translate('text.provider')} value={log.provider} />
+                        <DetailRow label={translate('text.template')} value={log.template} />
                     </CardBody>
                 </Card>
             </div>
 
             <Card>
                 <CardHeader>
-                    <h3 className="font-semibold text-[var(--color-text-main)]">
-                        ID liên quan
-                    </h3>
+                    <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.related_id')} </h3>
                 </CardHeader>
                 <CardBody>
                     <IdGrid log={log} />
@@ -560,11 +540,11 @@ function AuditLogDetailPanel({ log }) {
             </Card>
 
             <div className="grid gap-4 lg:grid-cols-2">
-                <JsonPanel title="Changes" value={log.changes} />
-                <JsonPanel title="Metadata" value={log.metadata} />
+                <JsonPanel title={translate('text.changes')} value={log.changes} />
+                <JsonPanel title={translate('text.metadata')} value={log.metadata} />
             </div>
 
-            <JsonPanel title="User agent" value={log.user_agent} />
+            <JsonPanel title={translate('text.user_agent')} value={log.user_agent} />
         </div>
     );
 }
@@ -672,24 +652,16 @@ export default function AdminAuditLogsPage() {
         <div className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                        Admin
-                    </p>
-                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]">
-                        Audit logs
-                    </h1>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        ADMIN tra cứu lịch sử thao tác, đối soát thay đổi và kiểm tra sự kiện nhạy cảm.
-                    </p>
+                    <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.admin')} </p>
+                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]"> {translate('text.audit_logs')} </h1>
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.admin_looks_up_operation_history_checks_changes_and_checks_sensitive_eve')} </p>
                 </div>
                 <Button
                     variant="outline"
                     isLoading={logsQuery.isFetching}
                     onClick={refreshLogs}
                 >
-                    <RefreshCw className="h-4 w-4" />
-                    Tải lại
-                </Button>
+                    <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
             </div>
 
             <StatsPanel total={getTotalItems(pagination)} logs={logs} />
@@ -712,18 +684,18 @@ export default function AdminAuditLogsPage() {
                 </CardHeader>
                 <CardBody>
                     {logsQuery.isLoading ? (
-                        <Loading label="Đang tải audit logs..." />
+                        <Loading label={translate('text.loading_audit_logs')} />
                     ) : logsQuery.isError ? (
                         <EmptyState
                             icon={Search}
-                            title="Không tải được audit logs"
+                            title={translate('text.unable_to_download_audit_logs')}
                             description={logsQuery.error.message}
                         />
                     ) : logs.length === 0 ? (
                         <EmptyState
                             icon={FileSearch}
-                            title="Chưa có audit log"
-                            description="Các thao tác hệ thống sẽ hiển thị tại đây sau khi phát sinh."
+                            title={translate('text.no_audit_log_yet')}
+                            description={translate('text.system_operations_will_be_displayed_here_after_occurring')}
                         />
                     ) : (
                         <div className="space-y-4">
@@ -731,14 +703,14 @@ export default function AdminAuditLogsPage() {
                                 <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
                                     <thead>
                                         <tr className="bg-[var(--color-background)] text-left text-xs font-semibold uppercase text-[var(--color-text-muted)]">
-                                            <th className="px-4 py-3">Thời gian</th>
-                                            <th className="px-4 py-3">Domain</th>
-                                            <th className="px-4 py-3">Level</th>
-                                            <th className="px-4 py-3">Action</th>
-                                            <th className="px-4 py-3">Actor</th>
-                                            <th className="px-4 py-3">Target</th>
-                                            <th className="px-4 py-3">IP</th>
-                                            <th className="px-4 py-3 text-right">Tác vụ</th>
+                                            <th className="px-4 py-3">{translate('text.time')}</th>
+                                            <th className="px-4 py-3">{translate('text.domain')}</th>
+                                            <th className="px-4 py-3">{translate('text.level')}</th>
+                                            <th className="px-4 py-3">{translate('text.action')}</th>
+                                            <th className="px-4 py-3">{translate('text.actor')}</th>
+                                            <th className="px-4 py-3">{translate('text.target')}</th>
+                                            <th className="px-4 py-3">{translate('text.ip')}</th>
+                                            <th className="px-4 py-3 text-right">{translate('text.task')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
@@ -777,9 +749,7 @@ export default function AdminAuditLogsPage() {
                                                         variant="outline"
                                                         onClick={() => openDetail(log)}
                                                     >
-                                                        <Eye className="h-4 w-4" />
-                                                        Chi tiết
-                                                    </Button>
+                                                        <Eye className="h-4 w-4" /> {translate('text.details')} </Button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -799,16 +769,16 @@ export default function AdminAuditLogsPage() {
 
             <Modal
                 open={Boolean(selectedLog)}
-                title={logDetail?.action || 'Chi tiết audit log'}
+                title={logDetail?.action || translate('text.audit_log_details')}
                 onClose={closeDetail}
                 panelClassName="max-w-7xl"
             >
                 {detailQuery.isLoading ? (
-                    <Loading label="Đang tải chi tiết audit log..." />
+                    <Loading label={translate('text.loading_audit_log_details')} />
                 ) : detailQuery.isError ? (
                     <EmptyState
                         icon={ShieldAlert}
-                        title="Không tải được chi tiết audit log"
+                        title={translate('text.unable_to_download_audit_log_details')}
                         description={detailQuery.error.message}
                     />
                 ) : (

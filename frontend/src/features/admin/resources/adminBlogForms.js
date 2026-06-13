@@ -1,24 +1,25 @@
+import { translate } from '../../../shared/i18n/index';
 import { z } from 'zod';
 import { uploadApi } from '../../uploads/api/upload.api';
 
 export const blogStatusOptions = [
-    { value: '', label: 'Tất cả trạng thái' },
-    { value: 'DRAFT', label: 'DRAFT' },
-    { value: 'PUBLISHED', label: 'PUBLISHED' },
-    { value: 'ARCHIVED', label: 'ARCHIVED' },
+    { value: '', label: translate('text.all_statuses') },
+    { value: 'DRAFT', label: translate('text.draft') },
+    { value: 'PUBLISHED', label: translate('text.published') },
+    { value: 'ARCHIVED', label: translate('text.archived') },
 ];
 
 const optionalUrlSchema = z
     .string()
     .trim()
-    .refine((value) => value === '' || isHttpUrl(value), 'URL không hợp lệ');
+    .refine((value) => value === '' || isHttpUrl(value), translate('text.invalid_url'));
 
 const slugSchema = z
     .string()
     .trim()
     .refine(
         (value) => value === '' || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value),
-        'Slug chỉ gồm chữ thường, số và dấu gạch ngang'
+        translate('text.slug_includes_only_lowercase_letters_numbers_and_hyphens')
     );
 
 const parseTags = (value) =>
@@ -29,12 +30,12 @@ const parseTags = (value) =>
         .slice(0, 12);
 
 export const blogFormConfig = {
-    title: 'bài viết',
+    title: translate('text.article_eda8942f'),
     schema: z.object({
-        title: z.string().trim().min(3, 'Tiêu đề cần ít nhất 3 ký tự'),
+        title: z.string().trim().min(3, translate('text.title_needs_at_least_3_characters')),
         slug: slugSchema,
-        excerpt: z.string().trim().min(10, 'Mô tả ngắn cần ít nhất 10 ký tự'),
-        content: z.string().trim().min(20, 'Nội dung cần ít nhất 20 ký tự'),
+        excerpt: z.string().trim().min(10, translate('text.short_description_needs_at_least_10_characters')),
+        content: z.string().trim().min(20, translate('text.content_must_be_at_least_20_characters')),
         thumbnail_file: z.any().optional(),
         thumbnail_url: optionalUrlSchema,
         thumbnail_public_id: z.string().trim().max(160).optional(),
@@ -118,44 +119,44 @@ export const blogFormConfig = {
         return payload;
     },
     fields: [
-        { name: 'title', label: 'Tiêu đề', placeholder: 'Cách sử dụng túi bao trái cây', className: 'md:col-span-2' },
-        { name: 'slug', label: 'Slug', placeholder: 'cach-su-dung-tui-bao-trai-cay' },
+        { name: 'title', label: translate('text.title'), placeholder: translate('text.how_to_use_fruit_bags'), className: 'md:col-span-2' },
+        { name: 'slug', label: translate('text.slug'), placeholder: translate('text.cach_su_dung_tui_bao_trai_cay') },
         {
             name: 'status',
-            label: 'Trạng thái',
+            label: translate('text.status'),
             type: 'select',
             options: blogStatusOptions.filter((option) => option.value),
         },
         {
             name: 'excerpt',
-            label: 'Mô tả ngắn',
+            label: translate('text.short_description'),
             type: 'textarea',
             rows: 3,
             className: 'md:col-span-2',
         },
         {
             name: 'content',
-            label: 'Nội dung HTML',
+            label: translate('text.html_content'),
             type: 'textarea',
             rows: 12,
             className: 'md:col-span-2',
         },
         {
             name: 'thumbnail_file',
-            label: 'Ảnh thumbnail',
+            label: translate('text.thumbnail'),
             type: 'file',
             accept: 'image/*',
             previewUrl: (blog) => blog.thumbnail?.url,
             className: 'md:col-span-2',
         },
-        { name: 'thumbnail_url', label: 'Thumbnail URL', placeholder: 'https://...' },
-        { name: 'thumbnail_alt', label: 'Alt text' },
-        { name: 'thumbnail_public_id', label: 'Cloudinary public ID' },
-        { name: 'category', label: 'Danh mục', placeholder: 'Hướng dẫn sử dụng' },
-        { name: 'tags', label: 'Tags', placeholder: 'túi bao, bưởi, hướng dẫn', className: 'md:col-span-2' },
-        { name: 'meta_title', label: 'Meta title' },
-        { name: 'meta_description', label: 'Meta description' },
-        { name: 'seo_keywords', label: 'SEO keywords', placeholder: 'túi bao trái cây, bao bưởi', className: 'md:col-span-2' },
+        { name: 'thumbnail_url', label: translate('text.thumbnail_url'), placeholder: 'https://...' },
+        { name: 'thumbnail_alt', label: translate('text.alt_text') },
+        { name: 'thumbnail_public_id', label: translate('text.cloudinary_public_id') },
+        { name: 'category', label: translate('text.category'), placeholder: translate('text.instructions_for_use') },
+        { name: 'tags', label: translate('text.tags'), placeholder: translate('text.bag_grapefruit_instructions'), className: 'md:col-span-2' },
+        { name: 'meta_title', label: translate('text.meta_title') },
+        { name: 'meta_description', label: translate('text.meta_description') },
+        { name: 'seo_keywords', label: translate('text.seo_keywords'), placeholder: translate('text.fruit_bags_grapefruit_bags'), className: 'md:col-span-2' },
     ],
 };
 

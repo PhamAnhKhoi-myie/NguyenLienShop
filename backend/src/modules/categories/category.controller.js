@@ -3,7 +3,7 @@ const { assertAuthenticated } = require('../../utils/auth.util');
 const CategoryService = require('./category.service');
 const { buildAuditMetadata } = require('../../utils/audit.util');
 
-// ===== PUBLIC ENDPOINTS =====
+
 
 const getCategoryTree = asyncHandler(async (req, res) => {
     const { include_inactive = false } = req.query;
@@ -106,7 +106,7 @@ const getCategoryDescendants = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== ADMIN ENDPOINTS =====
+
 
 const createCategory = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);

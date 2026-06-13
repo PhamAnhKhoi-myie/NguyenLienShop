@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Button from './Button';
 
@@ -19,12 +20,9 @@ export default function Pagination({
                 disabled={!canGoPrev}
                 onClick={() => onPageChange?.(safePage - 1)}
             >
-                <ChevronLeft className="h-4 w-4" />
-                Trước
-            </Button>
+                <ChevronLeft className="h-4 w-4" /> {translate('text.previous')} </Button>
 
-            <span className="text-sm text-[var(--color-text-muted)]">
-                Trang {safePage} / {safeTotalPages}
+            <span className="text-sm text-[var(--color-text-muted)]"> {translate('text.trang')} {safePage} / {safeTotalPages}
             </span>
 
             <Button
@@ -32,9 +30,7 @@ export default function Pagination({
                 size="sm"
                 disabled={!canGoNext}
                 onClick={() => onPageChange?.(safePage + 1)}
-            >
-                Sau
-                <ChevronRight className="h-4 w-4" />
+            > {translate('text.sau')} <ChevronRight className="h-4 w-4" />
             </Button>
         </div>
     );

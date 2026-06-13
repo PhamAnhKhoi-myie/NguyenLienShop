@@ -8,7 +8,7 @@ const { buildAuditMetadata } = require('../../utils/audit.util');
 const shouldAuditWebhookRejection = (error) =>
     (error?.code || error?.errorCode) !== 'AMOUNT_MISMATCH_FRAUD_ATTEMPT';
 
-// ===== PUBLIC =====
+
 
 const handleVNPayWebhook = asyncHandler(async (req, res) => {
     const metadata = buildAuditMetadata(req);
@@ -187,7 +187,31 @@ const handlePayPalWebhook = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== CUSTOMER =====
+const handlePayOSWebhook = asyncHandler(async (req, res) => {
+    const metadata = buildAuditMetadata(req);
+
+    let result;
+
+    try {
+        result = await PaymentService.handlePayOSWebhook(req.body, metadata);
+    } catch (error) {
+        if (shouldAuditWebhookRejection(error)) {
+            await PaymentService.auditPaymentWebhookRejected(
+                'payos',
+                error,
+                metadata
+            );
+        }
+        throw error;
+    }
+
+    return res.status(200).json({
+        success: true,
+        data: result,
+    });
+});
+
+
 
 const createPayment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
@@ -343,7 +367,7 @@ const cancelPayment = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== ADMIN =====
+
 
 const adminListPayments = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
@@ -440,6 +464,7 @@ module.exports = {
     handleVNPayReturn,
     handleStripeWebhook,
     handlePayPalWebhook,
+    handlePayOSWebhook,
 
     createPayment,
     getPayment,

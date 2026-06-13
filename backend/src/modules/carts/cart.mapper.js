@@ -241,7 +241,7 @@ class CartMapper {
         return carts.map((cart) => this.toSummaryDTO(cart));
     }
 
-    // ===== HELPERS =====
+
     static transformItems(items) {
         if (!Array.isArray(items) || items.length === 0) {
             return [];
@@ -334,7 +334,7 @@ class CartMapper {
         const total = Math.max(subtotal - discountAmount, 0);
 
         return {
-            subtotal: Math.round(subtotal * 100) / 100, // Round to 2 decimals
+            subtotal: Math.round(subtotal * 100) / 100,
             discount_amount: Math.round(discountAmount * 100) / 100,
             total: Math.round(total * 100) / 100,
         };
@@ -396,7 +396,7 @@ class CartMapper {
             return price.toString();
         }
 
-        return `${price.toLocaleString('vi-VN')} ₫`;
+        return `${price.toLocaleString('en-US')} ₫`;
     }
 
     static validateCartTotals(cart) {

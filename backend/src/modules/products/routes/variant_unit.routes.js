@@ -15,7 +15,7 @@ const {
 const { authenticate } = require('../../../middlewares/auth.middleware');
 const { authorize } = require('../../../middlewares/authorize.middleware');
 
-// ===== PUBLIC =====
+
 
 router.get(
     '/',
@@ -56,7 +56,7 @@ router.post(
     variantUnitController.calculatePrice
 );
 
-// ===== ADMIN =====
+
 
 router.post(
     '/validate-tiers',

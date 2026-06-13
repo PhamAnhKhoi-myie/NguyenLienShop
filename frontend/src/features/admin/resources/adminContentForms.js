@@ -1,42 +1,43 @@
+import { translate } from '../../../shared/i18n/index';
 import { z } from 'zod';
 import { uploadApi } from '../../uploads/api/upload.api';
 
 const bannerLocations = [
-    { value: 'homepage_top', label: 'Trang chủ - đầu trang' },
-    { value: 'homepage_middle', label: 'Trang chủ - giữa trang' },
-    { value: 'homepage_bottom', label: 'Trang chủ - cuối trang' },
-    { value: 'category_page', label: 'Trang danh mục' },
+    { value: 'homepage_top', label: translate('text.home_top') },
+    { value: 'homepage_middle', label: translate('text.home_middle_of_page') },
+    { value: 'homepage_bottom', label: translate('text.home_bottom') },
+    { value: 'category_page', label: translate('text.category_page') },
 ];
 
 const announcementTargets = [
-    { value: 'all', label: 'Tất cả' },
-    { value: 'user', label: 'Khách đã đăng nhập' },
-    { value: 'admin', label: 'Admin/Manager' },
-    { value: 'guest', label: 'Khách vãng lai' },
+    { value: 'all', label: translate('text.all') },
+    { value: 'user', label: translate('text.guest_is_logged_in') },
+    { value: 'admin', label: translate('text.admin_manager') },
+    { value: 'guest', label: translate('text.visitors') },
 ];
 
 const announcementTypes = [
-    { value: 'info', label: 'Thông tin' },
-    { value: 'warning', label: 'Cảnh báo' },
-    { value: 'promotion', label: 'Khuyến mãi' },
-    { value: 'system', label: 'Hệ thống' },
-    { value: 'urgent', label: 'Khẩn cấp' },
+    { value: 'info', label: translate('text.information') },
+    { value: 'warning', label: translate('text.warning') },
+    { value: 'promotion', label: translate('text.promotion') },
+    { value: 'system', label: translate('text.system') },
+    { value: 'urgent', label: translate('text.urgent') },
 ];
 
 const booleanOptions = [
-    { value: 'true', label: 'Có' },
-    { value: 'false', label: 'Không' },
+    { value: 'true', label: translate('text.yes') },
+    { value: 'false', label: translate('text.no') },
 ];
 
 const dayOptions = [
-    { key: 'mon', label: 'Thứ 2' },
-    { key: 'tue', label: 'Thứ 3' },
-    { key: 'wed', label: 'Thứ 4' },
-    { key: 'thu', label: 'Thứ 5' },
-    { key: 'fri', label: 'Thứ 6' },
-    { key: 'sat', label: 'Thứ 7' },
-    { key: 'sun', label: 'Chủ nhật' },
-    { key: 'holiday', label: 'Ngày lễ' },
+    { key: 'mon', label: translate('text.monday') },
+    { key: 'tue', label: translate('text.tuesday') },
+    { key: 'wed', label: translate('text.wednesday') },
+    { key: 'thu', label: translate('text.thursday') },
+    { key: 'fri', label: translate('text.friday') },
+    { key: 'sat', label: translate('text.saturday') },
+    { key: 'sun', label: translate('text.sunday') },
+    { key: 'holiday', label: translate('text.holiday') },
 ];
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -45,8 +46,8 @@ const localDateTimeSchema = (label) =>
     z
         .string()
         .trim()
-        .min(1, `${label} là bắt buộc`)
-        .refine(isValidLocalDateTime, `${label} không hợp lệ`);
+        .min(1, translate('text.value_is_required', { value0: label }))
+        .refine(isValidLocalDateTime, translate('text.value_invalid', { value0: label }));
 
 const optionalHttpUrlSchema = (label) =>
     z
@@ -54,7 +55,7 @@ const optionalHttpUrlSchema = (label) =>
         .trim()
         .refine(
             (value) => value === '' || isHttpUrl(value),
-            `${label} phải là URL HTTP(S)`
+            translate('text.value_must_be_an_http_s_url', { value0: label })
         );
 
 const optionalZaloSchema = z
@@ -65,7 +66,7 @@ const optionalZaloSchema = z
             value === '' ||
             isHttpUrl(value) ||
             /^(\+?\d[\d\s().-]{5,20}|[a-zA-Z0-9_.-]{3,64})$/.test(value),
-        'Zalo phải là URL HTTP(S), số điện thoại hoặc ID an toàn'
+        translate('text.zalo_must_be_an_http_s_url_phone_number_or_secure_id')
     );
 
 const timeOrEmptySchema = (label) =>
@@ -74,7 +75,7 @@ const timeOrEmptySchema = (label) =>
         .trim()
         .refine(
             (value) => value === '' || timePattern.test(value),
-            `${label} phải theo định dạng HH:mm`
+            translate('text.value_must_be_in_the_format_hh_mm', { value0: label })
         );
 
 const bannerLinkSchema = z
@@ -82,7 +83,7 @@ const bannerLinkSchema = z
     .trim()
     .refine(
         (value) => value === '' || isSafeBannerLink(value),
-        'Link phải là URL HTTP(S), route nội bộ hoặc ID'
+        translate('text.link_must_be_an_http_s_url_internal_route_or_id')
     );
 
 function isHttpUrl(value) {
@@ -177,7 +178,7 @@ function validateWorkingHours(values, ctx) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: [`${key}_open`],
-                message: `${label} thiếu giờ mở cửa`,
+                message: translate('text.value_missing_opening_hours', { value0: label }),
             });
             return;
         }
@@ -186,7 +187,7 @@ function validateWorkingHours(values, ctx) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: [`${key}_close`],
-                message: `${label} thiếu giờ đóng cửa`,
+                message: translate('text.value_missing_closing_hours', { value0: label }),
             });
             return;
         }
@@ -197,7 +198,7 @@ function validateWorkingHours(values, ctx) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: [`${key}_close`],
-                message: `${label}: giờ đóng cửa phải sau giờ mở cửa`,
+                message: translate('text.value_closing_hours_must_be_after_opening_hours', { value0: label }),
             });
         }
     });
@@ -206,14 +207,14 @@ function validateWorkingHours(values, ctx) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['mon_open'],
-            message: 'Vui lòng cấu hình ít nhất một ngày mở cửa',
+            message: translate('text.please_configure_at_least_one_open_day'),
         });
     }
 }
 
 const workingHourSchemaShape = dayOptions.reduce((shape, { key, label }) => {
-    shape[`${key}_open`] = timeOrEmptySchema(`${label} mở cửa`);
-    shape[`${key}_close`] = timeOrEmptySchema(`${label} đóng cửa`);
+    shape[`${key}_open`] = timeOrEmptySchema(translate('text.value_open', { value0: label }));
+    shape[`${key}_close`] = timeOrEmptySchema(translate('text.value_closed', { value0: label }));
     return shape;
 }, {});
 
@@ -225,7 +226,7 @@ export const bannerFormSchema = z
         image_alt_text: z
             .string()
             .trim()
-            .max(200, 'Alt text không vượt quá 200 ký tự'),
+            .max(200, translate('text.alt_text_must_not_exceed_200_characters')),
         link: bannerLinkSchema,
         location: z.enum([
             'homepage_top',
@@ -235,11 +236,11 @@ export const bannerFormSchema = z
         ]),
         sort_order: z.coerce
             .number()
-            .int('Thứ tự phải là số nguyên')
-            .min(0, 'Thứ tự không được âm')
-            .max(999, 'Thứ tự không vượt quá 999'),
-        start_at: localDateTimeSchema('Thời điểm bắt đầu'),
-        end_at: localDateTimeSchema('Thời điểm kết thúc'),
+            .int(translate('text.order_must_be_an_integer'))
+            .min(0, translate('text.order_cannot_be_negative'))
+            .max(999, translate('text.order_not_to_exceed_999')),
+        start_at: localDateTimeSchema(translate('text.start_time')),
+        end_at: localDateTimeSchema(translate('text.end_time')),
     })
     .superRefine((values, ctx) => {
         const hasOldImage = Boolean(values.image_url);
@@ -249,7 +250,7 @@ export const bannerFormSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['image_file'],
-                message: 'Vui lòng chọn ảnh banner',
+                message: translate('text.please_select_banner_image'),
             });
         }
 
@@ -257,7 +258,7 @@ export const bannerFormSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['end_at'],
-                message: 'Thời điểm kết thúc phải sau thời điểm bắt đầu',
+                message: translate('text.end_time_must_be_after_start_time'),
             });
         }
     });
@@ -267,22 +268,22 @@ export const announcementFormSchema = z
         title: z
             .string()
             .trim()
-            .min(5, 'Tiêu đề cần ít nhất 5 ký tự')
-            .max(200, 'Tiêu đề không vượt quá 200 ký tự'),
+            .min(5, translate('text.title_needs_to_be_at_least_5_characters'))
+            .max(200, translate('text.title_must_not_exceed_200_characters')),
         content: z
             .string()
             .trim()
-            .min(10, 'Nội dung cần ít nhất 10 ký tự')
-            .max(5000, 'Nội dung không vượt quá 5000 ký tự'),
+            .min(10, translate('text.content_must_be_at_least_10_characters'))
+            .max(5000, translate('text.content_must_not_exceed_5000_characters')),
         priority: z.coerce
             .number()
-            .int('Ưu tiên phải là số nguyên')
-            .min(0, 'Ưu tiên không được âm')
-            .max(10, 'Ưu tiên không vượt quá 10'),
+            .int(translate('text.priority_must_be_an_integer'))
+            .min(0, translate('text.priority_cannot_be_negative'))
+            .max(10, translate('text.priority_does_not_exceed_10')),
         target: z.enum(['all', 'user', 'admin', 'guest']),
         type: z.enum(['info', 'warning', 'promotion', 'system', 'urgent']),
-        start_at: localDateTimeSchema('Thời điểm bắt đầu'),
-        end_at: localDateTimeSchema('Thời điểm kết thúc'),
+        start_at: localDateTimeSchema(translate('text.start_time')),
+        end_at: localDateTimeSchema(translate('text.end_time')),
         is_dismissible: z.enum(['true', 'false']),
     })
     .superRefine((values, ctx) => {
@@ -290,7 +291,7 @@ export const announcementFormSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['end_at'],
-                message: 'Thời điểm kết thúc phải sau thời điểm bắt đầu',
+                message: translate('text.end_time_must_be_after_start_time'),
             });
         }
     });
@@ -300,35 +301,35 @@ export const shopInfoFormSchema = z
         shop_name: z
             .string()
             .trim()
-            .min(2, 'Tên shop cần ít nhất 2 ký tự')
-            .max(100, 'Tên shop không vượt quá 100 ký tự'),
+            .min(2, translate('text.shop_name_needs_at_least_2_characters'))
+            .max(100, translate('text.shop_name_must_not_exceed_100_characters')),
         email: z
             .string()
             .trim()
-            .email('Email không hợp lệ'),
+            .email(translate('text.invalid_email')),
         phone: z
             .string()
             .trim()
-            .min(10, 'Số điện thoại cần ít nhất 10 ký tự')
-            .max(20, 'Số điện thoại không vượt quá 20 ký tự')
-            .regex(/^(\+84|0)[0-9]{9,10}$/, 'Số điện thoại cần đúng định dạng Việt Nam'),
+            .min(10, translate('text.phone_number_needs_to_be_at_least_10_characters'))
+            .max(20, translate('text.phone_number_must_not_exceed_20_characters'))
+            .regex(/^(\+84|0)[0-9]{9,10}$/, translate('text.phone_number_needs_to_be_in_vietnamese_format')),
         address: z
             .string()
             .trim()
-            .min(5, 'Địa chỉ cần ít nhất 5 ký tự')
-            .max(500, 'Địa chỉ không vượt quá 500 ký tự'),
+            .min(5, translate('text.address_must_be_at_least_5_characters'))
+            .max(500, translate('text.address_must_not_exceed_500_characters')),
         shipping_partner: z
             .string()
             .trim()
-            .max(200, 'Đối tác vận chuyển không vượt quá 200 ký tự'),
+            .max(200, translate('text.shipping_partner_must_not_exceed_200_characters')),
         facebook: optionalHttpUrlSchema('Facebook'),
         zalo: optionalZaloSchema,
         instagram: optionalHttpUrlSchema('Instagram'),
         shoppe: optionalHttpUrlSchema('Shoppe'),
         tiktok: optionalHttpUrlSchema('TikTok'),
-        ministry_notified: optionalHttpUrlSchema('Link thông báo Bộ Công Thương'),
-        ministry_registered: optionalHttpUrlSchema('Link đăng ký Bộ Công Thương'),
-        certification_extra: optionalHttpUrlSchema('Link chứng nhận dự phòng'),
+        ministry_notified: optionalHttpUrlSchema(translate('text.ministry_of_industry_and_trade_announcement_link')),
+        ministry_registered: optionalHttpUrlSchema(translate('text.ministry_of_industry_and_trade_registration_link')),
+        certification_extra: optionalHttpUrlSchema(translate('text.backup_certificate_link')),
         map_embed_url: optionalHttpUrlSchema('Google Map'),
         is_active: z.enum(['true', 'false']),
         ...workingHourSchemaShape,
@@ -336,7 +337,7 @@ export const shopInfoFormSchema = z
     .superRefine(validateWorkingHours);
 
 export const bannerFormConfig = {
-    title: 'banner',
+    title: translate('text.banner'),
     schema: bannerFormSchema,
     createEndpoint: '/banners',
     updateMethod: 'put',
@@ -393,34 +394,34 @@ export const bannerFormConfig = {
     fields: [
         {
             name: 'image_file',
-            label: 'Ảnh banner',
+            label: translate('text.banner_image'),
             type: 'file',
             accept: 'image/*',
             helperText: ({ mode }) =>
                 mode === 'edit'
-                    ? 'Chọn ảnh mới nếu muốn thay ảnh hiện tại.'
-                    : 'Chọn ảnh từ máy tính.',
+                    ? translate('text.select_a_new_image_if_you_want_to_replace_the_current_image')
+                    : translate('text.select_an_image_from_your_computer'),
             className: 'md:col-span-2',
         },
         {
             name: 'image_alt_text',
-            label: 'Alt text',
-            placeholder: 'Túi bao trái cây trắng 16x16',
+            label: translate('text.alt_text'),
+            placeholder: translate('text.white_fruit_bag_16x16'),
         },
         {
             name: 'location',
-            label: 'Vị trí',
+            label: translate('text.location'),
             type: 'select',
             options: bannerLocations,
         },
-        { name: 'sort_order', label: 'Thứ tự', type: 'number' },
-        { name: 'start_at', label: 'Bắt đầu', type: 'datetime-local' },
-        { name: 'end_at', label: 'Kết thúc', type: 'datetime-local' },
+        { name: 'sort_order', label: translate('text.order'), type: 'number' },
+        { name: 'start_at', label: translate('text.start'), type: 'datetime-local' },
+        { name: 'end_at', label: translate('text.end'), type: 'datetime-local' },
     ],
 };
 
 export const announcementFormConfig = {
-    title: 'thông báo',
+    title: translate('text.announces'),
     schema: announcementFormSchema,
     createEndpoint: '/announcements',
     updateMethod: 'put',
@@ -457,31 +458,31 @@ export const announcementFormConfig = {
         is_dismissible: values.is_dismissible === 'true',
     }),
     fields: [
-        { name: 'title', label: 'Tiêu đề', placeholder: 'Thông báo nghỉ lễ, khuyến mãi...' },
+        { name: 'title', label: translate('text.title'), placeholder: translate('text.holiday_announcements_promotions') },
         {
             name: 'type',
-            label: 'Loại',
+            label: translate('text.type'),
             type: 'select',
             options: announcementTypes,
         },
         {
             name: 'target',
-            label: 'Đối tượng',
+            label: translate('text.object'),
             type: 'select',
             options: announcementTargets,
         },
-        { name: 'priority', label: 'Ưu tiên', type: 'number' },
-        { name: 'start_at', label: 'Bắt đầu', type: 'datetime-local' },
-        { name: 'end_at', label: 'Kết thúc', type: 'datetime-local' },
+        { name: 'priority', label: translate('text.priority'), type: 'number' },
+        { name: 'start_at', label: translate('text.start'), type: 'datetime-local' },
+        { name: 'end_at', label: translate('text.end'), type: 'datetime-local' },
         {
             name: 'is_dismissible',
-            label: 'Cho phép tắt',
+            label: translate('text.allows_disabling'),
             type: 'select',
             options: booleanOptions,
         },
         {
             name: 'content',
-            label: 'Nội dung',
+            label: translate('text.content'),
             type: 'textarea',
             rows: 6,
             className: 'md:col-span-2',
@@ -490,7 +491,7 @@ export const announcementFormConfig = {
 };
 
 export const shopInfoFormConfig = {
-    title: 'thông tin shop',
+    title: translate('text.shop_information_90a1d336'),
     schema: shopInfoFormSchema,
     defaultValues: {
         shop_name: '',
@@ -551,65 +552,65 @@ export const shopInfoFormConfig = {
         is_active: values.is_active === 'true',
     }),
     fields: [
-        { name: 'shop_name', label: 'Tên shop', placeholder: 'Nguyễn Liên Shop' },
-        { name: 'email', label: 'Email', type: 'email', placeholder: 'shop@example.com' },
-        { name: 'phone', label: 'Số điện thoại', placeholder: '0912345678' },
+        { name: 'shop_name', label: translate('text.shop_name'), placeholder: translate('text.nguyen_lien_shop') },
+        { name: 'email', label: translate('text.email_84add5b2'), type: 'email', placeholder: translate('text.shop_example_com') },
+        { name: 'phone', label: translate('text.phone_number'), placeholder: '0912345678' },
         {
             name: 'is_active',
-            label: 'Trạng thái shop',
+            label: translate('text.shop_status'),
             type: 'select',
             options: [
-                { value: 'true', label: 'Đang bật' },
-                { value: 'false', label: 'Đang tắt' },
+                { value: 'true', label: translate('text.on') },
+                { value: 'false', label: translate('text.off') },
             ],
         },
         {
             name: 'address',
-            label: 'Địa chỉ',
+            label: translate('text.address'),
             type: 'textarea',
             className: 'md:col-span-2',
         },
         {
             name: 'shipping_partner',
-            label: 'Đối tác vận chuyển',
-            placeholder: 'Viettel Post',
+            label: translate('text.shipping_partner'),
+            placeholder: translate('text.viettel_post'),
             className: 'md:col-span-2',
         },
-        { name: 'facebook', label: 'Facebook', placeholder: 'https://...' },
-        { name: 'zalo', label: 'Zalo', placeholder: 'Số điện thoại, ID hoặc URL' },
-        { name: 'instagram', label: 'Instagram', placeholder: 'https://...' },
-        { name: 'shoppe', label: 'Shoppe', placeholder: 'https://...' },
-        { name: 'tiktok', label: 'TikTok', placeholder: 'https://...' },
+        { name: 'facebook', label: translate('text.facebook'), placeholder: 'https://...' },
+        { name: 'zalo', label: translate('text.zalo'), placeholder: translate('text.phone_number_id_or_url') },
+        { name: 'instagram', label: translate('text.instagram'), placeholder: 'https://...' },
+        { name: 'shoppe', label: translate('text.shoppe'), placeholder: 'https://...' },
+        { name: 'tiktok', label: translate('text.tiktok'), placeholder: 'https://...' },
         {
             name: 'ministry_notified',
-            label: 'Link logo đã thông báo Bộ Công Thương',
+            label: translate('text.logo_link_announced_to_the_ministry_of_industry_and_trade'),
             placeholder: 'https://...',
         },
         {
             name: 'ministry_registered',
-            label: 'Link logo đã đăng ký Bộ Công Thương',
+            label: translate('text.registered_logo_link_of_the_ministry_of_industry_and_trade'),
             placeholder: 'https://...',
         },
         {
             name: 'certification_extra',
-            label: 'Link chứng nhận dự phòng',
+            label: translate('text.backup_certificate_link'),
             placeholder: 'https://...',
         },
         {
             name: 'map_embed_url',
-            label: 'Google Map',
+            label: translate('text.google_map'),
             placeholder: 'https://...',
             className: 'md:col-span-2',
         },
         ...dayOptions.flatMap(({ key, label }) => [
             {
                 name: `${key}_open`,
-                label: `${label} mở cửa`,
+                label: translate('text.value_open', { value0: label }),
                 type: 'time',
             },
             {
                 name: `${key}_close`,
-                label: `${label} đóng cửa`,
+                label: translate('text.value_closed', { value0: label }),
                 type: 'time',
             },
         ]),

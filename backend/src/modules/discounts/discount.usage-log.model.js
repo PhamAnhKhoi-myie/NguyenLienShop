@@ -1,17 +1,17 @@
 const mongoose = require('mongoose');
 
-/**
- * DiscountUsageLog Schema
- * Tracks per-user discount usage for:
- * - Enforcing per-user usage limits
- * - Audit trail of discount redemptions
- * - Analytics and reporting
- *
- * Design Notes:
- * - TTL index on createdAt (auto-cleanup old logs after 1 year)
- * - Compound index on (discountId, userId) for fast lookup of user usage count
- * - Used at checkout time to verify user hasn't exceeded limits
- */
+
+
+
+
+
+
+
+
+
+
+
+
 const discountUsageLogSchema = new mongoose.Schema(
     {
         discount_id: {
@@ -24,8 +24,8 @@ const discountUsageLogSchema = new mongoose.Schema(
         user_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: false, // Guest users may not have user_id
-            sparse: true, // Allow null for guest users, but don't index nulls
+            required: false,
+            sparse: true,
             index: true,
             description: 'Reference to user who used the discount (null for guests)',
         },
@@ -75,60 +75,60 @@ const discountUsageLogSchema = new mongoose.Schema(
     },
     {
         collection: 'discount_usage_logs',
-        timestamps: { createdAt: 'created_at', updatedAt: false }, // No updatedAt
+        timestamps: { createdAt: 'created_at', updatedAt: false },
     }
 );
 
-/**
- * Indexes for Performance & Querying
- */
 
-// Simple index on created_at for sorting
-discountUsageLogSchema.index({ created_at: 1 }, { expireAfterSeconds: 31536000 }); // TTL: 365 days
 
-// Compound index: Fast lookup of how many times a user has used a specific discount
+
+
+
+discountUsageLogSchema.index({ created_at: 1 }, { expireAfterSeconds: 31536000 });
+
+
 discountUsageLogSchema.index({ discount_id: 1, user_id: 1, created_at: -1 });
 
-// Compound index: All usage for a discount (for analytics)
+
 discountUsageLogSchema.index({ discount_id: 1, created_at: -1 });
 
-// Index for guest cart tracking
+
 discountUsageLogSchema.index({ discount_id: 1, session_key: 1 });
 
-/**
- * Statics: Database Query Methods
- */
 
-/**
- * Get count of times a user has used a specific discount
- * @param {ObjectId} discountId - Discount ID
- * @param {ObjectId} userId - User ID
- * @returns {Promise<number>} - Count of usage
- */
+
+
+
+
+
+
+
+
+
 discountUsageLogSchema.statics.getUserUsageCount = async function (discountId, userId) {
     const count = await this.countDocuments({
         discount_id: discountId,
         user_id: userId,
-        created_at: { $gte: new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000) }, // Last 30 days
+        created_at: { $gte: new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000) },
     });
     return count;
 };
 
-/**
- * Get total usage count of a discount
- * @param {ObjectId} discountId - Discount ID
- * @returns {Promise<number>} - Total count
- */
+
+
+
+
+
 discountUsageLogSchema.statics.getTotalUsageCount = async function (discountId) {
     const count = await this.countDocuments({ discount_id: discountId });
     return count;
 };
 
-/**
- * Get unique user count who used a discount
- * @param {ObjectId} discountId - Discount ID
- * @returns {Promise<number>} - Count of unique users
- */
+
+
+
+
+
 discountUsageLogSchema.statics.getUniqueUserCount = async function (discountId) {
     const result = await this.aggregate([
         { $match: { discount_id: discountId, user_id: { $ne: null } } },
@@ -138,11 +138,11 @@ discountUsageLogSchema.statics.getUniqueUserCount = async function (discountId) 
     return result[0]?.unique_users || 0;
 };
 
-/**
- * Get total discount revenue given
- * @param {ObjectId} discountId - Discount ID
- * @returns {Promise<number>} - Total amount in VND
- */
+
+
+
+
+
 discountUsageLogSchema.statics.getTotalDiscountRevenue = async function (discountId) {
     const result = await this.aggregate([
         { $match: { discount_id: discountId } },
@@ -151,12 +151,12 @@ discountUsageLogSchema.statics.getTotalDiscountRevenue = async function (discoun
     return result[0]?.total_discount || 0;
 };
 
-/**
- * Log a discount usage
- * Called when discount is successfully applied to an order
- * @param {Object} data - Usage data
- * @returns {Promise<Document>} - Created usage log
- */
+
+
+
+
+
+
 discountUsageLogSchema.statics.logUsage = async function (data, options = {}) {
     const {
         discountId,
@@ -190,12 +190,12 @@ discountUsageLogSchema.statics.logUsage = async function (data, options = {}) {
     return this.create(payload);
 };
 
-/**
- * Get recent usage logs for a discount (for dashboard)
- * @param {ObjectId} discountId - Discount ID
- * @param {number} limit - Max results (default 10)
- * @returns {Promise<Array>} - Array of recent usage logs
- */
+
+
+
+
+
+
 discountUsageLogSchema.statics.getRecentUsage = async function (discountId, limit = 10) {
     return this.find({ discount_id: discountId })
         .select('user_id discount_code discount_amount order_total created_at')

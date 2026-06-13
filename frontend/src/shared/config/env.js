@@ -9,4 +9,8 @@ export const ENV = {
     VNPAY_CHECKOUT_ENABLED: parseBoolean(
         import.meta.env.VITE_VNPAY_CHECKOUT_ENABLED
     ),
+    PAYOS_CHECKOUT_ENABLED:
+        import.meta.env.VITE_PAYOS_CHECKOUT_ENABLED === undefined
+            ? true
+            : parseBoolean(import.meta.env.VITE_PAYOS_CHECKOUT_ENABLED),
 };

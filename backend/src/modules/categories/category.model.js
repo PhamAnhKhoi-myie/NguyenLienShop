@@ -77,7 +77,7 @@ const categorySchema = new mongoose.Schema({
     },
 });
 
-// ===== INDEXES - Production Optimized =====
+
 categorySchema.index(
     { slug: 1 },
     {
@@ -114,7 +114,7 @@ categorySchema.index({ level: 1, status: 1 });
 
 categorySchema.index({ is_deleted: 1, status: 1 });
 
-// ===== MIDDLEWARE: Auto-Slug Generation =====
+
 
 categorySchema.pre('validate', function (next) {
     if (!this.slug && this.name) {
@@ -127,7 +127,7 @@ categorySchema.pre('validate', function (next) {
     next();
 });
 
-// ===== MIDDLEWARE: Enforce Level & Timestamp on Save =====
+
 
 categorySchema.pre('save', function (next) {
     this.level = this.path.length;
@@ -135,7 +135,7 @@ categorySchema.pre('save', function (next) {
     next();
 });
 
-// ===== MIDDLEWARE: Auto-Filter Soft-Deleted =====
+
 
 categorySchema.pre(/^find/, function (next) {
     if (this.getOptions().includeDeleted) {
@@ -145,7 +145,7 @@ categorySchema.pre(/^find/, function (next) {
     next();
 });
 
-// ===== STATIC METHODS: Path Calculation =====
+
 
 categorySchema.statics.calculateNewPath = async function (categoryId, newParentId) {
     const categoryIdStr = categoryId.toString();
@@ -191,7 +191,7 @@ categorySchema.statics.updateDescendantsPath = async function (
     }
 
     const bulkOps = descendants.map(desc => {
-        // ✅ FIX: slice(oldPath.length + 1) để loại bỏ chính node B đang move
+
         const descendantsPart = desc.path.slice(oldPath.length + 1);
         const newDescPath = [...newPath, ...descendantsPart];
 
@@ -201,7 +201,7 @@ categorySchema.statics.updateDescendantsPath = async function (
                 update: {
                     $set: {
                         path: newDescPath,
-                        level: newDescPath.length,  // ✅ Consistent với path
+                        level: newDescPath.length,
                         updated_at: Date.now(),
                     }
                 }
@@ -213,7 +213,7 @@ categorySchema.statics.updateDescendantsPath = async function (
     return result;
 };
 
-// ===== STATIC METHODS: Query Helpers =====
+
 
 categorySchema.statics.findDescendants = async function (categoryId, options = {}) {
     const { includeInactive = false, includeDeleted = false } = options;

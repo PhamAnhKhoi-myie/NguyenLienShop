@@ -13,18 +13,18 @@ const {
     updateAnnouncementSchema
 } = require('./announcement.validator');
 
-/**
- * ============================================
- * PUBLIC ROUTES (no auth required)
- * ============================================
- */
+
+
+
+
+
 router.get('/', optionalAuthenticate, AnnouncementController.getActive);
 
-/**
- * ============================================
- * ADMIN ROUTES (require authentication + admin role)
- * ============================================
- */
+
+
+
+
+
 
 router.get(
     '/admin/all',

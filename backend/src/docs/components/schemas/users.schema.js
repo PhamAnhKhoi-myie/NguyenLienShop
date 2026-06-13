@@ -12,7 +12,12 @@ module.exports = {
                 pattern: "^[a-fA-F0-9]{24}$",
                 example: "507f1f77bcf86cd799439011",
             },
-            email: { type: "string", format: "email", example: "user@example.com" },
+            email: {
+                type: "string",
+                format: "email",
+                nullable: true,
+                example: "user@example.com",
+            },
             profile: {
                 type: "object",
                 properties: {
@@ -22,7 +27,7 @@ module.exports = {
                         nullable: true,
                         example: "https://example.com/avatar.png",
                     },
-                    phone_number: { type: "string", nullable: true, example: "0912345678" },
+                    phone_number: { type: "string", example: "0912345678" },
                     gender: {
                         type: "string",
                         enum: genderEnum,
@@ -44,6 +49,13 @@ module.exports = {
             status: { type: "string", enum: statusEnum, example: "ACTIVE" },
             is_email_verified: { type: "boolean", example: false },
             email_verified_at: {
+                type: "string",
+                format: "date-time",
+                nullable: true,
+                example: null,
+            },
+            is_phone_verified: { type: "boolean", example: true },
+            phone_verified_at: {
                 type: "string",
                 format: "date-time",
                 nullable: true,
@@ -75,11 +87,6 @@ module.exports = {
                 example: "https://example.com/avatar.png",
             },
             email: { type: "string", format: "email", example: "new@example.com" },
-            phone: {
-                type: "string",
-                pattern: "^\\d{10,}$",
-                example: "0912345678",
-            },
             gender: {
                 type: "string",
                 enum: genderEnum,

@@ -129,7 +129,7 @@ blogSchema.pre('validate', function (next) {
         this.slug = slugify(this.title, {
             lower: true,
             strict: true,
-            locale: 'vi',
+            locale: 'en',
         });
     }
 

@@ -21,8 +21,8 @@ const createAnnouncementData = (actorId) => {
 
     return [
         {
-            title: "Ưu đãi túi bao trái cây trong tuần",
-            content: "Khách mua từ 5 thùng túi bao trái cây sẽ được hỗ trợ phí giao hàng nội thành.",
+            title: "Weekly fruit bag promotion",
+            content: "Customers who purchase 5 or more boxes of fruit bags will be supported with intra-city delivery fees.",
             priority: 9,
             target: "all",
             type: "promotion",
@@ -35,8 +35,8 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Lịch giao hàng cuối tuần",
-            content: "Đơn đặt sau 16:00 thứ Bảy sẽ được xử lý vào ngày làm việc tiếp theo.",
+            title: "Weekend delivery schedule",
+            content: "Orders placed after 16:00 Saturday will be processed the next working day.",
             priority: 7,
             target: "guest",
             type: "info",
@@ -49,8 +49,8 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Cập nhật địa chỉ nhận hàng",
-            content: "Vui lòng kiểm tra số điện thoại và địa chỉ giao hàng trước khi thanh toán đơn mới.",
+            title: "Update delivery address",
+            content: "Please check your phone number and shipping address before paying for a new order.",
             priority: 6,
             target: "user",
             type: "warning",
@@ -63,8 +63,8 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Kiểm tra đơn hàng cần xử lý",
-            content: "Admin và Manager kiểm tra nhóm đơn mới trước 10:00 để kịp lịch bàn giao vận chuyển.",
+            title: "Check orders to be processed",
+            content: "Admin and Manager check the new group of orders before 10:00 to meet the delivery schedule.",
             priority: 10,
             target: "admin",
             type: "urgent",
@@ -77,8 +77,8 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Bảo trì hệ thống quản trị",
-            content: "Màn quản trị có lịch bảo trì ngắn vào tối mai, vui lòng hoàn tất cập nhật nội dung trước 20:00.",
+            title: "Maintenance of administration system",
+            content: "The admin screen has a short maintenance schedule tomorrow evening, please complete the content update before 8:00 pm.",
             priority: 8,
             target: "admin",
             type: "system",
@@ -91,8 +91,8 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Thông báo khuyến mãi đã kết thúc",
-            content: "Chương trình giảm giá thử nghiệm đã kết thúc và chỉ dùng để kiểm tra bộ lọc expired.",
+            title: "Promotion notice has ended",
+            content: "The trial discount program has ended and is only used to test the expired filter.",
             priority: 3,
             target: "all",
             type: "info",

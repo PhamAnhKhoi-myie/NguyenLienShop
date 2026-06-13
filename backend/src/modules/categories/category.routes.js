@@ -33,7 +33,7 @@ const {
 
 const router = express.Router();
 
-// ===== PUBLIC ROUTES (specific -> generic) =====
+
 router.get(
     '/tree',
     validate({ query: getCategoryTreeQuerySchema }),
@@ -82,7 +82,7 @@ router.get(
     getCategoryById
 );
 
-// ===== ADMIN ROUTES =====
+
 router.post(
     '/',
     authenticate,
@@ -99,7 +99,7 @@ router.patch(
     updateCategory
 );
 
-// ===== SOFT DELETE =====
+
 router.delete(
     '/:categoryId',
     authenticate,
@@ -108,7 +108,7 @@ router.delete(
     deleteCategory
 );
 
-// ===== HARD DELETE =====
+
 router.delete(
     '/:categoryId/hard',
     authenticate,
@@ -117,7 +117,7 @@ router.delete(
     hardDeleteCategory
 );
 
-// ===== RESTORE =====
+
 router.patch(
     '/:categoryId/restore',
     authenticate,

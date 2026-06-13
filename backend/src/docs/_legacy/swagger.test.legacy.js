@@ -1,5 +1,5 @@
-// test đã cũ và có thể sai với nhiều api. cân nhắc trước khi dùng
-// chạy npx jest src/docs/swagger.test.js
+
+
 
 const swaggerSpec = require("./swagger");
 
@@ -86,7 +86,7 @@ describe("swaggerSpec", () => {
                 name: "refreshToken",
                 required: false,
                 schema: { type: "string" },
-                description: "httpOnly cookie; tùy chọn.",
+                description: "httpOnly cookie; option.",
             },
         ]);
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
@@ -170,11 +170,11 @@ describe("swaggerSpec", () => {
         ]);
     });
 
-    // ===== User Addresses Tests =====
+
     it("should define User Addresses tag", () => {
         const addressTag = swaggerSpec.tags.find((tag) => tag.name === "User Addresses");
         expect(addressTag).toBeDefined();
-        expect(addressTag.description).toContain("Quản lý địa chỉ giao hàng");
+        expect(addressTag.description).toContain("Manage delivery address");
     });
 
     it("should define user address schemas correctly", () => {
@@ -263,11 +263,11 @@ describe("swaggerSpec", () => {
         );
     });
 
-    // ===== Categories Tests =====
+
     it("should define Categories tag", () => {
         const categoryTag = swaggerSpec.tags.find((tag) => tag.name === "Categories");
         expect(categoryTag).toBeDefined();
-        expect(categoryTag.description).toContain("Quản lý danh mục");
+        expect(categoryTag.description).toContain("Manage categories");
     });
 
     it("should define category schemas correctly", () => {
@@ -405,11 +405,11 @@ describe("swaggerSpec", () => {
         );
     });
 
-    // ===== Products Tests =====
+
     it("should define Products tag", () => {
         const productTag = swaggerSpec.tags.find((tag) => tag.name === "Products");
         expect(productTag).toBeDefined();
-        expect(productTag.description).toContain("Quản lý sản phẩm");
+        expect(productTag.description).toContain("Product Management");
     });
 
     it("should define product schemas correctly", () => {
@@ -548,11 +548,11 @@ describe("swaggerSpec", () => {
         );
     });
 
-    // ===== Variants Tests =====
+
     it("should define Variants tag", () => {
         const variantTag = swaggerSpec.tags.find((tag) => tag.name === "Variants");
         expect(variantTag).toBeDefined();
-        expect(variantTag.description).toContain("Quản lý biến thể sản phẩm");
+        expect(variantTag.description).toContain("Manage product variations");
     });
 
     it("should define variant schemas correctly", () => {
@@ -738,11 +738,11 @@ describe("swaggerSpec", () => {
         );
     });
 
-    // ===== Variant Units Tests =====
+
     it("should define Variant Units tag", () => {
         const unitTag = swaggerSpec.tags.find((tag) => tag.name === "Variant Units");
         expect(unitTag).toBeDefined();
-        expect(unitTag.description).toContain("Quản lý đơn vị bán của biến thể");
+        expect(unitTag.description).toContain("Manage sales of variant");
     });
 
     it("should define variant unit schemas correctly", () => {
@@ -917,16 +917,16 @@ describe("swaggerSpec", () => {
         expect(route.security).toEqual([{ bearerAuth: [] }]);
     });
 
-    // ===== CARTS TESTS =====
+
 
     it("should define Carts tag", () => {
         const cartTag = swaggerSpec.tags.find((tag) => tag.name === "Carts");
         expect(cartTag).toBeDefined();
-        expect(cartTag.description).toContain("Quản lý giỏ hàng");
+        expect(cartTag.description).toContain("Manage shopping cart");
     });
 
     it("should define cart schemas correctly", () => {
-        // ✅ Core cart schemas
+
         expect(swaggerSpec.components.schemas.CartItem).toBeDefined();
         expect(swaggerSpec.components.schemas.CartItem.required).toEqual([
             "id",
@@ -974,7 +974,7 @@ describe("swaggerSpec", () => {
             "total",
         ]);
 
-        // ✅ Input schemas
+
         expect(swaggerSpec.components.schemas.AddToCartInput).toBeDefined();
         expect(swaggerSpec.components.schemas.AddToCartInput.required).toEqual([
             "product_id",
@@ -1001,7 +1001,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.CreateGuestCartInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CreateGuestCartInput.required).toEqual(["session_key"]);
 
-        // ✅ Output schemas
+
         expect(swaggerSpec.components.schemas.CheckoutSnapshot).toBeDefined();
         expect(swaggerSpec.components.schemas.CheckoutSnapshot.required).toEqual([
             "source_cart_id",
@@ -1025,7 +1025,7 @@ describe("swaggerSpec", () => {
             "status",
         ]);
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.CartResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.CartResponse.required).toEqual(["success", "data"]);
 
@@ -1060,7 +1060,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Carts");
         expect(route.security).toEqual([]);
-        expect(route.description).toContain("khách");
+        expect(route.description).toContain("guest");
         expect(getSchemaRef(route.requestBody)).toBe("#/components/schemas/CreateGuestCartInput");
         expect(route.responses["201"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/CartResponse"
@@ -1138,12 +1138,12 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Carts");
         expect(route.security).toEqual([{ bearerAuth: [] }, {}]);
-        expect(route.description).toContain("Thêm sản phẩm vào giỏ hàng");
+        expect(route.description).toContain("Add product to cart");
         expect(route.parameters[0]).toMatchObject({
             in: "query",
             name: "session_key",
             schema: { type: "string", format: "uuid" },
-            description: "Session key cho giỏ khách (nếu không có JWT)",
+            description: "Session key for client cart (if no JWT)",
         });
         expect(getSchemaRef(route.requestBody)).toBe("#/components/schemas/AddToCartInput");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
@@ -1266,7 +1266,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Carts");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("Kiểm tra giỏ hàng");
+        expect(route.description).toContain("Check out cart");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/CheckoutResponse"
         );
@@ -1312,7 +1312,7 @@ describe("swaggerSpec", () => {
         expect(route.responses["403"].$ref).toBe("#/components/responses/Forbidden");
     });
 
-    // ===== CART ITEMS VALIDATION =====
+
 
     it("should validate CartItem schema properties", () => {
         const itemSchema = swaggerSpec.components.schemas.CartItem;
@@ -1485,16 +1485,16 @@ describe("swaggerSpec", () => {
         expect(listResponse.properties.pagination.required).toEqual(["total", "limit"]);
     });
 
-    // ===== ORDERS TESTS =====
+
 
     it("should define Orders tag", () => {
         const orderTag = swaggerSpec.tags.find((tag) => tag.name === "Orders");
         expect(orderTag).toBeDefined();
-        expect(orderTag.description).toContain("Quản lý đơn hàng");
+        expect(orderTag.description).toContain("Order management");
     });
 
     it("should define order schemas correctly", () => {
-        // ✅ Core order schemas
+
         expect(swaggerSpec.components.schemas.OrderAddressSnapshot).toBeDefined();
         expect(swaggerSpec.components.schemas.OrderAddressSnapshot.required).toEqual([
             "street",
@@ -1545,7 +1545,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.OrderStatusHistoryRecord).toBeDefined();
         expect(swaggerSpec.components.schemas.OrderFulfillment).toBeDefined();
 
-        // ✅ Main order schemas
+
         expect(swaggerSpec.components.schemas.Order).toBeDefined();
         expect(swaggerSpec.components.schemas.Order.required).toContain("id");
         expect(swaggerSpec.components.schemas.Order.required).toContain("order_code");
@@ -1557,7 +1557,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.OrderTracking).toBeDefined();
         expect(swaggerSpec.components.schemas.OrderStats).toBeDefined();
 
-        // ✅ Input schemas
+
         expect(swaggerSpec.components.schemas.CreateOrderInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CreateOrderInput.required).toEqual([
             "cart_id",
@@ -1596,7 +1596,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.WriteReviewInput).toBeDefined();
         expect(swaggerSpec.components.schemas.WriteReviewInput.required).toEqual(["item_id", "rating"]);
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.OrderResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.OrderResponse.required).toEqual(["success", "data"]);
 
@@ -1612,7 +1612,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.OrderStatsResponse).toBeDefined();
     });
 
-    // ===== PUBLIC ORDER ENDPOINTS =====
+
 
     it("should define track order endpoint correctly", () => {
         const route = getPath("/api/v1/orders/track/{order_code}", "get");
@@ -1620,7 +1620,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Orders");
         expect(route.security).toEqual([]);
-        expect(route.description).toContain("công khai");
+        expect(route.description).toContain("public");
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "order_code",
@@ -1633,7 +1633,7 @@ describe("swaggerSpec", () => {
         expect(route.responses["404"].$ref).toBe("#/components/responses/NotFound");
     });
 
-    // ===== CUSTOMER ORDER ENDPOINTS =====
+
 
     it("should define create order endpoint correctly", () => {
         const route = getPath("/api/v1/orders", "post");
@@ -1658,7 +1658,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Orders");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("lịch sử");
+        expect(route.description).toContain("history");
         expect(route.parameters).toBeDefined();
         expect(route.parameters.map((p) => p.name)).toContain("page");
         expect(route.parameters.map((p) => p.name)).toContain("limit");
@@ -1697,7 +1697,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Orders");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("hủy");
+        expect(route.description).toContain("cancel");
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "order_id",
@@ -1738,7 +1738,7 @@ describe("swaggerSpec", () => {
         expect(route.responses["409"].$ref).toBe("#/components/responses/Conflict");
     });
 
-    // ===== ADMIN ORDER ENDPOINTS =====
+
 
     it("should define get all orders endpoint correctly", () => {
         const route = getPath("/api/v1/admin/orders", "get");
@@ -1765,7 +1765,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Orders");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("thống kê");
+        expect(route.description).toContain("statistics");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/OrderStatsResponse"
         );
@@ -1890,7 +1890,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Orders");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("giao hàng");
+        expect(route.description).toContain("delivery");
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "order_id",
@@ -1906,7 +1906,7 @@ describe("swaggerSpec", () => {
         expect(route.responses["409"].$ref).toBe("#/components/responses/Conflict");
     });
 
-    // ===== ORDER SCHEMA VALIDATION =====
+
 
     it("should validate OrderAddressSnapshot required fields", () => {
         const addressSchema = swaggerSpec.components.schemas.OrderAddressSnapshot;
@@ -1921,18 +1921,18 @@ describe("swaggerSpec", () => {
     it("should validate OrderItemSnapshot snapshot fields", () => {
         const itemSchema = swaggerSpec.components.schemas.OrderItemSnapshot;
 
-        // ✅ Immutable snapshots
+
         expect(itemSchema.properties.product_name.type).toBe("string");
         expect(itemSchema.properties.variant_label.type).toBe("string");
         expect(itemSchema.properties.sku.type).toBe("string");
         expect(itemSchema.properties.unit_label.type).toBe("string");
         expect(itemSchema.properties.pack_size.type).toBe("integer");
 
-        // ✅ Pricing snapshot
+
         expect(itemSchema.properties.unit_price.type).toBe("number");
         expect(itemSchema.properties.line_total.type).toBe("number");
 
-        // ✅ Tracking
+
         expect(itemSchema.properties.quantity_ordered.type).toBe("integer");
         expect(itemSchema.properties.quantity_fulfilled.type).toBe("integer");
     });
@@ -2064,7 +2064,7 @@ describe("swaggerSpec", () => {
         expect(statsSchema.properties.paymentBreakdown).toBeDefined();
     });
 
-    // ===== ORDER ENDPOINT VALIDATION =====
+
 
     it("should validate all order endpoints return proper error codes", () => {
         const orderEndpoints = [
@@ -2194,16 +2194,16 @@ describe("swaggerSpec", () => {
         expect(inputSchema.properties.address_snapshot.allOf).toBeDefined();
     });
 
-    // ===== PAYMENTS TESTS =====
+
 
     it("should define Payments tag", () => {
         const paymentTag = swaggerSpec.tags.find((tag) => tag.name === "Payments");
         expect(paymentTag).toBeDefined();
-        expect(paymentTag.description).toContain("thanh toán");
+        expect(paymentTag.description).toContain("payment");
     });
 
     it("should define payment schemas correctly", () => {
-        // ✅ Core payment schemas
+
         expect(swaggerSpec.components.schemas.Payment).toBeDefined();
         expect(swaggerSpec.components.schemas.Payment.required).toEqual([
             "id",
@@ -2221,7 +2221,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.PaymentDetail).toBeDefined();
         expect(swaggerSpec.components.schemas.PaymentListItem).toBeDefined();
 
-        // ✅ Input schemas
+
         expect(swaggerSpec.components.schemas.CreatePaymentInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CreatePaymentInput.required).toEqual([
             "order_id",
@@ -2229,7 +2229,7 @@ describe("swaggerSpec", () => {
 
         expect(swaggerSpec.components.schemas.CancelPaymentInput).toBeDefined();
 
-        // ✅ Webhook schemas
+
         expect(swaggerSpec.components.schemas.VNPayWebhookInput).toBeDefined();
         expect(swaggerSpec.components.schemas.VNPayWebhookInput.required).toContain(
             "vnp_TxnRef"
@@ -2238,7 +2238,7 @@ describe("swaggerSpec", () => {
             "vnp_SecureHash"
         );
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.CreatePaymentResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.CreatePaymentResponse.required).toEqual([
             "success",
@@ -2256,7 +2256,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Payments");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("thanh toán");
+        expect(route.description).toContain("payment");
         expect(getSchemaRef(route.requestBody)).toBe(
             "#/components/schemas/CreatePaymentInput"
         );
@@ -2274,12 +2274,12 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Payments");
-        expect(route.security).toEqual([]);  // No auth required
+        expect(route.security).toEqual([]);
         expect(route.description).toContain("display only");
         expect(route.description).toContain("redirect");
-        expect(route.description).toContain("IPN webhook");  // Should mention IPN is source of truth
+        expect(route.description).toContain("IPN webhook");
 
-        // Check query parameters
+
         expect(route.parameters).toBeDefined();
         expect(route.parameters.length).toBeGreaterThan(0);
 
@@ -2288,7 +2288,7 @@ describe("swaggerSpec", () => {
         expect(vnpCodeParam.required).toBe(true);
         expect(vnpCodeParam.in).toBe("query");
 
-        // Check response is 302 redirect
+
         expect(route.responses["302"]).toBeDefined();
         expect(route.responses["302"].description).toContain("Redirect");
     });
@@ -2372,7 +2372,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Payments");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("lịch sử");
+        expect(route.description).toContain("history");
         expect(route.parameters.map((p) => p.name)).toContain("page");
         expect(route.parameters.map((p) => p.name)).toContain("limit");
         expect(route.parameters.map((p) => p.name)).toContain("status");
@@ -2408,7 +2408,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Payments");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("thử lại");
+        expect(route.description).toContain("try again");
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "paymentId",
@@ -2429,7 +2429,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Payments");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("hủy");
+        expect(route.description).toContain("cancel");
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "paymentId",
@@ -2472,7 +2472,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Payments");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("thống kê");
+        expect(route.description).toContain("statistics");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/PaymentStatsResponse"
         );
@@ -2520,7 +2520,7 @@ describe("swaggerSpec", () => {
         expect(route.responses["404"].$ref).toBe("#/components/responses/NotFound");
     });
 
-    // ===== PAYMENT SCHEMA VALIDATION =====
+
 
     it("should validate Payment schema properties", () => {
         const paymentSchema = swaggerSpec.components.schemas.Payment;
@@ -2532,6 +2532,7 @@ describe("swaggerSpec", () => {
             "vnpay",
             "stripe",
             "paypal",
+            "payos",
         ]);
         expect(paymentSchema.properties.amount.type).toBe("integer");
         expect(paymentSchema.properties.currency.enum).toEqual(["VND", "USD"]);
@@ -2553,7 +2554,7 @@ describe("swaggerSpec", () => {
         expect(inputSchema.required).toEqual(["order_id"]);
         expect(inputSchema.properties.order_id).toBeDefined();
         expect(inputSchema.properties.provider.default).toBe("vnpay");
-        // ✅ CRITICAL: No amount field (locked to order)
+
         expect(inputSchema.properties.amount).toBeUndefined();
     });
 
@@ -2568,7 +2569,7 @@ describe("swaggerSpec", () => {
         expect(webhookSchema.required).toContain("vnp_TxnRef");
         expect(webhookSchema.required).toContain("vnp_SecureHash");
 
-        // ✅ Signature format validation
+
         expect(webhookSchema.properties.vnp_SecureHash.pattern).toBe("^[a-f0-9]{64}$");
         expect(webhookSchema.properties.vnp_PayDate.pattern).toBe("^\\d{14}$");
     });
@@ -2577,7 +2578,7 @@ describe("swaggerSpec", () => {
         const paymentSchema = swaggerSpec.components.schemas.Payment;
         const webhookSchema = swaggerSpec.components.schemas.VNPayWebhookInput;
 
-        // ✅ Amounts must be integers
+
         expect(paymentSchema.properties.amount.type).toBe("integer");
         expect(webhookSchema.properties.vnp_Amount.type).toBe("integer");
     });
@@ -2674,11 +2675,11 @@ describe("swaggerSpec", () => {
         expect(listItemSchema.required).toContain("created_at");
     });
 
-    // ===== PAYMENT ENDPOINT VALIDATION =====
+
 
     it("should validate all payment endpoints have proper error responses", () => {
         const paymentEndpoints = [
-            ["/api/v1/payments/vnpay-return", "get"],  // ← ADD THIS
+            ["/api/v1/payments/vnpay-return", "get"],
             ["/api/v1/payments/webhook/vnpay", "post"],
             ["/api/v1/payments/webhook/stripe", "post"],
             ["/api/v1/payments/webhook/paypal", "post"],
@@ -2703,7 +2704,7 @@ describe("swaggerSpec", () => {
 
     it("should validate webhook endpoints have no auth requirement", () => {
         const webhookEndpoints = [
-            ["/api/v1/payments/vnpay-return", "get"],  // ← ADD THIS (return URL, display only)
+            ["/api/v1/payments/vnpay-return", "get"],
             ["/api/v1/payments/webhook/vnpay", "post"],
             ["/api/v1/payments/webhook/stripe", "post"],
             ["/api/v1/payments/webhook/paypal", "post"],
@@ -2768,11 +2769,12 @@ describe("swaggerSpec", () => {
         const createInput = swaggerSpec.components.schemas.CreatePaymentInput;
         const payment = swaggerSpec.components.schemas.Payment;
 
-        expect(createInput.properties.provider.enum).toEqual(["vnpay"]);
+        expect(createInput.properties.provider.enum).toEqual(["vnpay", "payos"]);
         expect(payment.properties.provider.enum).toEqual([
             "vnpay",
             "stripe",
             "paypal",
+            "payos",
         ]);
     });
 
@@ -2785,14 +2787,14 @@ describe("swaggerSpec", () => {
     it("should validate payment status transitions", () => {
         const payment = swaggerSpec.components.schemas.Payment;
 
-        // ✅ Only these statuses allowed
+
         expect(payment.properties.status.enum).toEqual(["pending", "paid", "failed"]);
     });
 
     it("should validate verification status transitions", () => {
         const payment = swaggerSpec.components.schemas.Payment;
 
-        // ✅ Webhook verification states
+
         expect(payment.properties.verification_status.enum).toEqual([
             "pending",
             "verified",
@@ -2893,7 +2895,7 @@ describe("swaggerSpec", () => {
         const providerParam = route.parameters.find((p) => p.name === "provider");
 
         expect(providerParam).toBeDefined();
-        expect(providerParam.schema.enum).toEqual(["vnpay", "stripe", "paypal"]);
+        expect(providerParam.schema.enum).toEqual(["vnpay", "stripe", "paypal", "payos"]);
     });
 
     it("should validate admin list payments supports verification_status filtering", () => {
@@ -2926,16 +2928,16 @@ describe("swaggerSpec", () => {
     });
 
 
-    // ===== DISCOUNTS TESTS =====
+
 
     it("should define Discounts tag", () => {
         const discountTag = swaggerSpec.tags.find((tag) => tag.name === "Discounts");
         expect(discountTag).toBeDefined();
-        expect(discountTag.description).toContain("Quản lý mã giảm giá");
+        expect(discountTag.description).toContain("Manage discount code");
     });
 
     it("should define discount schemas correctly", () => {
-        // ✅ Core discount schemas
+
         expect(swaggerSpec.components.schemas.CreateDiscountInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CreateDiscountInput.required).toEqual([
             "code",
@@ -2955,7 +2957,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.BulkCreateDiscountResult).toBeDefined();
         expect(swaggerSpec.components.schemas.DiscountStatsResponse).toBeDefined();
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.DiscountResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.DiscountsListResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.ValidateDiscountResponse).toBeDefined();
@@ -3209,7 +3211,7 @@ describe("swaggerSpec", () => {
         expect(route.responses["500"].$ref).toBe("#/components/responses/InternalError");
     });
 
-    // ===== DISCOUNT SCHEMA VALIDATION =====
+
 
     it("should validate Discount schema properties", () => {
         const discountSchema = swaggerSpec.components.schemas.Discount;
@@ -3359,7 +3361,7 @@ describe("swaggerSpec", () => {
     it("should validate UpdateDiscountInput allows partial updates", () => {
         const updateSchema = swaggerSpec.components.schemas.UpdateDiscountInput;
 
-        // All fields should be optional for PATCH
+
         expect(updateSchema.required).toBeUndefined();
         expect(updateSchema.properties.code).toBeDefined();
         expect(updateSchema.properties.type).toBeDefined();
@@ -3400,7 +3402,7 @@ describe("swaggerSpec", () => {
         expect(discountSchema.properties.stack_priority.example).toBe(0);
     });
 
-    // ===== DISCOUNT ENDPOINT VALIDATION =====
+
 
     it("should validate all discount endpoints have proper error responses", () => {
         const discountEndpoints = [
@@ -3592,16 +3594,16 @@ describe("swaggerSpec", () => {
         expect(listItemSchema.properties.usage_percentage.type).toBe("number");
     });
 
-    // ===== SHIPMENTS TESTS =====
+
 
     it("should define Shipments tag", () => {
         const shipmentTag = swaggerSpec.tags.find((tag) => tag.name === "Shipments");
         expect(shipmentTag).toBeDefined();
-        expect(shipmentTag.description).toContain("Quản lý vận chuyển");
+        expect(shipmentTag.description).toContain("Shipping Management");
     });
 
     it("should define shipment schemas correctly", () => {
-        // ✅ Core shipment schemas
+
         expect(swaggerSpec.components.schemas.ShippingAddress).toBeDefined();
         expect(swaggerSpec.components.schemas.ShippingAddress.required).toEqual([
             "recipient_name",
@@ -3618,7 +3620,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.ShipmentListDTO).toBeDefined();
         expect(swaggerSpec.components.schemas.TrackingDTO).toBeDefined();
 
-        // ✅ Input schemas
+
         expect(swaggerSpec.components.schemas.CreateShipmentInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CreateShipmentInput.required).toEqual([
             "order_id",
@@ -3630,7 +3632,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.RecordShipmentFailureInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CancelShipmentInput).toBeDefined();
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.ShipmentResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.ShipmentsListResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.TrackingResponse).toBeDefined();
@@ -3642,7 +3644,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shipments");
         expect(route.security).toEqual([]);
-        expect(route.description).toContain("công khai");
+        expect(route.description).toContain("public");
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "tracking_code",
@@ -3668,11 +3670,11 @@ describe("swaggerSpec", () => {
             required: true,
             schema: { type: "string", enum: ["GHN", "GHTK", "JT", "GRAB", "BEST", "OTHER"] },
         });
-        // ✅ Webhook response should have proper structure
+
         expect(route.responses["200"]).toBeDefined();
         expect(route.responses["200"].content["application/json"].schema).toBeDefined();
         expect(route.responses["400"].$ref).toBe("#/components/responses/BadRequest");
-        // ✅ FIXED: Only check if responses exist (don't assume 500)
+
         expect(Object.keys(route.responses).length).toBeGreaterThan(0);
     });
 
@@ -3916,10 +3918,10 @@ describe("swaggerSpec", () => {
         shipmentEndpoints.forEach(([path, method]) => {
             const route = getPath(path, method);
             expect(route).toBeDefined();
-            // ✅ FIXED: Verify route has responses defined
+
             expect(route.responses).toBeDefined();
             expect(Object.keys(route.responses).length).toBeGreaterThan(0);
-            // ✅ Verify at least one error response exists
+
             const hasErrorResponse = Object.keys(route.responses).some(
                 (code) => code.startsWith("4") || code.startsWith("5")
             );
@@ -3976,10 +3978,10 @@ describe("swaggerSpec", () => {
         expect(listResponse).toBeDefined();
         expect(listResponse.properties.pagination).toBeDefined();
 
-        // ✅ Get pagination schema (handle both inline and $ref)
+
         let paginationSchema = listResponse.properties.pagination;
 
-        // If it's a $ref, resolve it
+
         if (paginationSchema.$ref) {
             const schemaName = paginationSchema.$ref.split("/").pop();
             paginationSchema = swaggerSpec.components.schemas[schemaName];
@@ -4042,7 +4044,7 @@ describe("swaggerSpec", () => {
         const shipmentSchema = swaggerSpec.components.schemas.ShipmentDTO;
 
         expect(shipmentSchema).toBeDefined();
-        // ✅ Only check if required array exists
+
         if (shipmentSchema.required) {
             expect(shipmentSchema.required).toContain("order_id");
             expect(shipmentSchema.required).toContain("carrier");
@@ -4087,7 +4089,7 @@ describe("swaggerSpec", () => {
 
         expect(failureSchema).toBeDefined();
         expect(failureSchema.required).toContain("failure_notes");
-        // ✅ Handle both "reason" and "failure_reason" field names
+
         const reasonField = failureSchema.properties.reason || failureSchema.properties.failure_reason;
         expect(reasonField).toBeDefined();
         expect(reasonField.enum).toEqual([
@@ -4101,7 +4103,7 @@ describe("swaggerSpec", () => {
             "other",
         ]);
 
-        // ✅ Check notes if it exists
+
         if (failureSchema.properties.notes) {
             expect(failureSchema.properties.notes.type).toBe("string");
             expect(failureSchema.properties.notes.maxLength).toBe(500);
@@ -4114,7 +4116,7 @@ describe("swaggerSpec", () => {
         expect(cancelSchema).toBeDefined();
         expect(cancelSchema.required).toContain("reason");
         expect(cancelSchema.properties.reason.type).toBe("string");
-        // ✅ minLength can be >= 1 or undefined
+
         if (cancelSchema.properties.reason.minLength !== undefined) {
             expect(cancelSchema.properties.reason.minLength).toBeGreaterThanOrEqual(1);
         }
@@ -4140,7 +4142,7 @@ describe("swaggerSpec", () => {
             expect(timeline.properties[field]).toBeDefined();
             expect(timeline.properties[field].type).toBe("string");
             expect(timeline.properties[field].format).toBe("date-time");
-            // ✅ nullable might not be explicitly set, check if defined
+
             if (timeline.properties[field].nullable !== undefined) {
                 expect(timeline.properties[field].nullable).toBe(true);
             }
@@ -4155,7 +4157,7 @@ describe("swaggerSpec", () => {
         expect(failureInfo.properties.retry_count.minimum).toBe(0);
         expect(failureInfo.properties.can_retry.type).toBe("boolean");
 
-        // ✅ next_retry_at might not be present in all specs
+
         if (failureInfo.properties.next_retry_at) {
             expect(failureInfo.properties.next_retry_at.type).toBe("string");
             expect(failureInfo.properties.next_retry_at.format).toBe("date-time");
@@ -4177,7 +4179,7 @@ describe("swaggerSpec", () => {
         expect(listResponse.properties.success.type).toBe("boolean");
         expect(listResponse.properties.data.type).toBe("array");
 
-        // ✅ Handle both ShipmentDTO and ShipmentListDTO
+
         const itemRef = listResponse.properties.data.items.$ref;
         expect(itemRef).toMatch(/#\/components\/schemas\/Shipment(List)?DTO/);
 
@@ -4194,7 +4196,7 @@ describe("swaggerSpec", () => {
         expect(trackingDTO.properties.tracking_code).toBeDefined();
         expect(trackingDTO.properties.tracking_url).toBeDefined();
         expect(trackingDTO.properties.tracking_url.type).toBe("string");
-        // ✅ format might be "uri" or "url" or not present
+
         if (trackingDTO.properties.tracking_url.format) {
             expect(["uri", "url"]).toContain(trackingDTO.properties.tracking_url.format);
         }
@@ -4207,17 +4209,17 @@ describe("swaggerSpec", () => {
 
         expect(address).toBeDefined();
         expect(address.properties.recipient_name.type).toBe("string");
-        // ✅ minLength might not always be set
+
         if (address.properties.recipient_name.minLength !== undefined) {
             expect(address.properties.recipient_name.minLength).toBe(1);
         }
-        // ✅ maxLength might not always be defined
+
         if (address.properties.recipient_name.maxLength !== undefined) {
             expect(address.properties.recipient_name.maxLength).toBeGreaterThanOrEqual(50);
         }
 
         expect(address.properties.phone.type).toBe("string");
-        // ✅ FIXED: Make pattern check optional
+
         if (address.properties.phone.pattern) {
             expect(address.properties.phone.pattern).toBeDefined();
         }
@@ -4287,7 +4289,7 @@ describe("swaggerSpec", () => {
         expect(paramNames).toContain("status");
         expect(paramNames).toContain("carrier");
 
-        // ✅ order_id or date filters might be present
+
         const hasOrderIdOrDateFilters = paramNames.includes("order_id") ||
             paramNames.includes("date_from") ||
             paramNames.includes("date_to");
@@ -4361,14 +4363,14 @@ describe("swaggerSpec", () => {
         expect(route.security).toEqual([{ bearerAuth: [] }]);
         expect(route.responses["200"].content["application/json"].schema).toBeDefined();
         expect(route.responses["401"].$ref).toBe("#/components/responses/Unauthorized");
-        // ✅ 403 might not always be present for stats endpoint
+
         if (route.responses["403"]) {
             expect(route.responses["403"].$ref).toBe("#/components/responses/Forbidden");
         }
     });
 
     it("should validate shipment schemas are complete", () => {
-        // ✅ Additional validation for shipment data integrity
+
         const shipmentDTO = swaggerSpec.components.schemas.ShipmentDTO;
         expect(shipmentDTO.properties.order_id).toBeDefined();
         expect(shipmentDTO.properties.carrier).toBeDefined();
@@ -4401,7 +4403,7 @@ describe("swaggerSpec", () => {
             const postRoute = getPath(path, "post");
 
             if (getRoute) {
-                // ✅ FIXED: Check if any error responses exist
+
                 expect(getRoute.responses).toBeDefined();
                 const hasErrorResponse = Object.keys(getRoute.responses).some(
                     (code) => code.startsWith("4") || code.startsWith("5")
@@ -4439,16 +4441,16 @@ describe("swaggerSpec", () => {
         }
     });
 
-    // ===== REVIEWS TESTS =====
+
 
     it("should define Reviews tag", () => {
         const reviewTag = swaggerSpec.tags.find((tag) => tag.name === "Reviews");
         expect(reviewTag).toBeDefined();
-        expect(reviewTag.description).toContain("Quản lý đánh giá sản phẩm");
+        expect(reviewTag.description).toContain("Manage product reviews");
     });
 
     it("should define review schemas correctly", () => {
-        // ✅ Core review schemas
+
         expect(swaggerSpec.components.schemas.ReviewDTO).toBeDefined();
         expect(swaggerSpec.components.schemas.ReviewDTO.required).toContain("id");
         expect(swaggerSpec.components.schemas.ReviewDTO.required).toContain("user_id");
@@ -4459,7 +4461,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.ReviewListItem).toBeDefined();
         expect(swaggerSpec.components.schemas.AdminReviewDTO).toBeDefined();
 
-        // ✅ Input schemas
+
         expect(swaggerSpec.components.schemas.CreateReviewInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CreateReviewInput.required).toEqual([
             "product_id",
@@ -4474,7 +4476,7 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.FlagReviewInput).toBeDefined();
         expect(swaggerSpec.components.schemas.RejectReviewInput).toBeDefined();
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.ReviewResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.ReviewsListResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.AdminReviewsListResponse).toBeDefined();
@@ -4734,7 +4736,7 @@ describe("swaggerSpec", () => {
         expect(route.responses["404"].$ref).toBe("#/components/responses/NotFound");
     });
 
-    // ===== REVIEW SCHEMA VALIDATION =====
+
 
     it("should validate ReviewDTO schema structure", () => {
         const reviewSchema = swaggerSpec.components.schemas.ReviewDTO;
@@ -4768,7 +4770,7 @@ describe("swaggerSpec", () => {
     it("should validate UpdateReviewInput allows partial updates", () => {
         const updateSchema = swaggerSpec.components.schemas.UpdateReviewInput;
 
-        // All fields should be optional for PUT
+
         expect(updateSchema.properties.rating).toBeDefined();
         expect(updateSchema.properties.content).toBeDefined();
         expect(updateSchema.properties.title).toBeDefined();
@@ -4896,7 +4898,7 @@ describe("swaggerSpec", () => {
         expect(listItem.properties.created_at).toBeDefined();
     });
 
-    // ===== REVIEW ENDPOINT VALIDATION =====
+
 
     it("should validate all review endpoints have proper error responses", () => {
         const reviewEndpoints = [
@@ -5146,11 +5148,11 @@ describe("swaggerSpec", () => {
     it("should define Banners tag", () => {
         const bannerTag = swaggerSpec.tags.find((tag) => tag.name === "Banners");
         expect(bannerTag).toBeDefined();
-        expect(bannerTag.description).toContain("Quản lý banner");
+        expect(bannerTag.description).toContain("Manage banner");
     });
 
     it("should define banner schemas correctly", () => {
-        // ✅ Core banner schemas
+
         expect(swaggerSpec.components.schemas.CreateBannerInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CreateBannerInput.required).toEqual([
             "image",
@@ -5165,11 +5167,11 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.Banner).toBeDefined();
         expect(swaggerSpec.components.schemas.BannerListItem).toBeDefined();
 
-        // ✅ Input schemas
+
         expect(swaggerSpec.components.schemas.BannerImage).toBeDefined();
         expect(swaggerSpec.components.schemas.BannerImage.required).toEqual(["url"]);
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.BannerResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.BannerResponse.required).toEqual(["success", "data"]);
 
@@ -5186,7 +5188,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Banners");
-        expect(route.security).toEqual([]);  // Public endpoint
+        expect(route.security).toEqual([]);
         expect(route.description).toContain("active");
         expect(route.description).toContain("public");
 
@@ -5211,7 +5213,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Banners");
-        expect(route.security).toEqual([]);  // Public endpoint
+        expect(route.security).toEqual([]);
 
         expect(route.parameters[0]).toMatchObject({
             in: "path",
@@ -5356,7 +5358,7 @@ describe("swaggerSpec", () => {
         expect(route.responses["404"].$ref).toBe("#/components/responses/NotFound");
     });
 
-    // ===== BANNER SCHEMA VALIDATION =====
+
 
     it("should validate Banner schema properties", () => {
         const bannerSchema = swaggerSpec.components.schemas.Banner;
@@ -5401,7 +5403,7 @@ describe("swaggerSpec", () => {
     it("should validate UpdateBannerInput allows partial updates", () => {
         const updateSchema = swaggerSpec.components.schemas.UpdateBannerInput;
 
-        // All fields should be optional for PATCH
+
         expect(updateSchema.required).toBeUndefined();
         expect(updateSchema.properties.image).toBeDefined();
         expect(updateSchema.properties.link).toBeDefined();
@@ -5457,7 +5459,7 @@ describe("swaggerSpec", () => {
         expect(response.properties.data.$ref).toBe("#/components/schemas/Banner");
     });
 
-    // ===== BANNER ENDPOINT VALIDATION =====
+
 
     it("should validate public banner endpoints don't require auth", () => {
         const publicEndpoints = [
@@ -5518,7 +5520,7 @@ describe("swaggerSpec", () => {
         const imageSchema = swaggerSpec.components.schemas.BannerImage;
 
         expect(imageSchema.properties.url.format).toBe("uri");
-        // Pattern typically enforces http/https
+
     });
 
     it("should validate banner alt_text is optional and capped", () => {
@@ -5531,7 +5533,7 @@ describe("swaggerSpec", () => {
     it("should validate banner start_at must be before end_at", () => {
         const createInput = swaggerSpec.components.schemas.CreateBannerInput;
 
-        // This is typically enforced in Zod schema, documented in description
+
         expect(createInput.properties.start_at).toBeDefined();
         expect(createInput.properties.end_at).toBeDefined();
     });
@@ -5602,18 +5604,18 @@ describe("swaggerSpec", () => {
         expect(bannerSchema.properties.updated_at.format).toBe("date-time");
     });
 
-    // Announcements tag
+
     it('should define Announcements tag', () => {
         const announcementTag = swaggerSpec.tags.find(
             (tag) => tag.name === 'Announcements'
         );
         expect(announcementTag).toBeDefined();
-        expect(announcementTag.description).toContain('Quản lý');
-        expect(announcementTag.description).toContain('thông báo');
+        expect(announcementTag.description).toContain("Manage");
+        expect(announcementTag.description).toContain("announces");
     });
 
     it('should define announcement schemas correctly', () => {
-        // ✅ Core announcement schemas
+
         expect(swaggerSpec.components.schemas.Announcement).toBeDefined();
         expect(swaggerSpec.components.schemas.Announcement.required).toContain('id');
         expect(swaggerSpec.components.schemas.Announcement.required).toContain('title');
@@ -5627,7 +5629,7 @@ describe("swaggerSpec", () => {
 
         expect(swaggerSpec.components.schemas.AnnouncementListItem).toBeDefined();
 
-        // ✅ Input schemas
+
         expect(swaggerSpec.components.schemas.CreateAnnouncementInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CreateAnnouncementInput.required).toEqual([
             'title',
@@ -5638,7 +5640,7 @@ describe("swaggerSpec", () => {
 
         expect(swaggerSpec.components.schemas.UpdateAnnouncementInput).toBeDefined();
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.AnnouncementResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.AnnouncementsListResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.AnnouncementsListResponse.required).toEqual([
@@ -5653,9 +5655,9 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain('Announcements');
-        // ✅ FIXED: route.security can be undefined for public endpoints
+
         expect(route.security === undefined || route.security.length === 0).toBe(true);
-        expect(route.description).toContain('hoạt động');
+        expect(route.description).toContain("works");
         expect(route.description).toContain('active');
         expect(route.parameters[0]).toMatchObject({
             in: 'query',
@@ -5676,7 +5678,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain('Announcements');
-        // ✅ FIXED: route.security can be undefined for public endpoints
+
         expect(route.security === undefined || route.security.length === 0).toBe(true);
         expect(route.parameters[0]).toMatchObject({
             in: 'path',
@@ -5775,8 +5777,8 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain('Announcements');
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        // ✅ FIXED: Description is in Vietnamese, check for key terms
-        expect(route.description.toLowerCase()).toContain('chưa');
+
+        expect(route.description.toLowerCase()).toContain("not yet");
         expect(route.description).toContain('start_at');
         expect(route.responses['200'].content['application/json'].schema.$ref).toBe(
             '#/components/schemas/AnnouncementsListResponse'
@@ -5791,8 +5793,8 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain('Announcements');
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        // ✅ FIXED: Description is in Vietnamese, check for key terms
-        expect(route.description.toLowerCase()).toContain('kết thúc');
+
+        expect(route.description.toLowerCase()).toContain("end");
         expect(route.description).toContain('end_at');
         expect(route.responses['200'].content['application/json'].schema.$ref).toBe(
             '#/components/schemas/AnnouncementsListResponse'
@@ -5805,7 +5807,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain('Announcements');
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain('xóa');
+        expect(route.description).toContain("delete");
         expect(route.description).toContain('recover');
         expect(route.responses['200'].content['application/json'].schema.$ref).toBe(
             '#/components/schemas/AnnouncementsListResponse'
@@ -5824,11 +5826,11 @@ describe("swaggerSpec", () => {
             required: true,
             schema: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' }
         });
-        // ✅ FIXED: Handle both $ref and inline response schema
+
         const responseSchema = route.responses['200'].content['application/json'].schema;
         expect(responseSchema).toBeDefined();
 
-        // Check if it's a $ref or inline schema
+
         if (responseSchema.$ref) {
             expect(responseSchema.$ref).toContain('Announcement');
         } else if (responseSchema.properties) {
@@ -5840,7 +5842,7 @@ describe("swaggerSpec", () => {
         }
     });
 
-    // ===== ANNOUNCEMENT SCHEMA VALIDATION =====
+
 
     it('should validate Announcement schema properties', () => {
         const announcementSchema = swaggerSpec.components.schemas.Announcement;
@@ -5879,7 +5881,7 @@ describe("swaggerSpec", () => {
     it('should validate UpdateAnnouncementInput allows partial updates', () => {
         const updateSchema = swaggerSpec.components.schemas.UpdateAnnouncementInput;
 
-        // All fields should be optional for PATCH
+
         expect(updateSchema.required).toBeUndefined();
         expect(updateSchema.properties.title).toBeDefined();
         expect(updateSchema.properties.content).toBeDefined();
@@ -5944,13 +5946,13 @@ describe("swaggerSpec", () => {
         );
     });
 
-    // ===== ANNOUNCEMENT ENDPOINT VALIDATION =====
+
 
     it('should validate public announcement endpoints don\'t require auth', () => {
         const getRoute = getPath('/api/v1/announcements', 'get');
         const getByIdRoute = getPath('/api/v1/announcements/{id}', 'get');
 
-        // ✅ FIXED: security can be undefined [] for public endpoints
+
         expect(getRoute.security === undefined || getRoute.security.length === 0).toBe(true);
         expect(getByIdRoute.security === undefined || getByIdRoute.security.length === 0).toBe(true);
     });
@@ -6063,7 +6065,7 @@ describe("swaggerSpec", () => {
     it('should validate announcement end_at description mentions constraint', () => {
         const announcement = swaggerSpec.components.schemas.Announcement;
 
-        expect(announcement.properties.end_at.description).toContain('phải');
+        expect(announcement.properties.end_at.description).toContain("must be");
         expect(announcement.properties.end_at.description).toContain('>');
         expect(announcement.properties.end_at.description).toContain('start_at');
     });
@@ -6120,22 +6122,22 @@ describe("swaggerSpec", () => {
         const route = getPath('/api/v1/announcements/admin/scheduled', 'get');
 
         expect(route).toBeDefined();
-        expect(route.description).toContain('chưa bắt đầu');
+        expect(route.description).toContain("not started yet");
     });
 
     it('should validate expired announcements endpoint sorted by end_at', () => {
         const route = getPath('/api/v1/announcements/admin/expired', 'get');
 
         expect(route).toBeDefined();
-        expect(route.description).toContain('kết thúc');
+        expect(route.description).toContain("end");
     });
 
     it('should validate deleted announcements shows audit trail', () => {
         const route = getPath('/api/v1/announcements/admin/deleted', 'get');
 
         expect(route).toBeDefined();
-        // ✅ FIXED: Description is in Vietnamese, check for key concepts
-        expect(route.description.toLowerCase()).toContain('xóa');
+
+        expect(route.description.toLowerCase()).toContain("delete");
         expect(route.description.toLowerCase()).toContain('recover');
     });
 
@@ -6150,7 +6152,7 @@ describe("swaggerSpec", () => {
     it('should validate announcement created_by is required in response', () => {
         const announcement = swaggerSpec.components.schemas.Announcement;
 
-        // created_by không phải required field (vì nullable), nhưng phải có trong schema
+
         expect(announcement.properties.created_by).toBeDefined();
         expect(announcement.properties.created_by.pattern).toBe('^[a-fA-F0-9]{24}$');
     });
@@ -6182,16 +6184,16 @@ describe("swaggerSpec", () => {
         });
     });
 
-    // ===== SHOP INFO TESTS =====
+
 
     it("should define Shop Info tag", () => {
         const shopInfoTag = swaggerSpec.tags.find((tag) => tag.name === "Shop Info");
         expect(shopInfoTag).toBeDefined();
-        expect(shopInfoTag.description).toContain("Quản lý thông tin cửa hàng");
+        expect(shopInfoTag.description).toContain("Manage store information");
     });
 
     it("should define shop info schemas correctly", () => {
-        // ✅ Core shop info schemas
+
         expect(swaggerSpec.components.schemas.ShopInfo).toBeDefined();
         expect(swaggerSpec.components.schemas.ShopInfo.required).toContain("id");
         expect(swaggerSpec.components.schemas.ShopInfo.required).toContain("shop_name");
@@ -6234,13 +6236,13 @@ describe("swaggerSpec", () => {
         expect(swaggerSpec.components.schemas.CreateShopInfoInput.required).toContain("working_hours");
 
         expect(swaggerSpec.components.schemas.UpdateShopInfoInput).toBeDefined();
-        // All fields optional for PATCH
+
         expect(swaggerSpec.components.schemas.UpdateShopInfoInput.required).toBeUndefined();
 
         expect(swaggerSpec.components.schemas.ToggleShopStatusInput).toBeDefined();
         expect(swaggerSpec.components.schemas.ToggleShopStatusInput.required).toEqual(["is_active"]);
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.ShopInfoResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.ShopInfoResponse.required).toEqual(["success", "data"]);
 
@@ -6256,7 +6258,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shop Info");
-        expect(route.security).toEqual([]);  // No auth required
+        expect(route.security).toEqual([]);
         expect(route.description).toContain("PUBLIC");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/ShopInfoResponse"
@@ -6312,7 +6314,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shop Info");
-        expect(route.security).toEqual([]);  // No auth required
+        expect(route.security).toEqual([]);
         expect(route.description).toContain("PUBLIC");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/ContactInfoResponse"
@@ -6326,7 +6328,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shop Info");
-        expect(route.security).toEqual([]);  // No auth required
+        expect(route.security).toEqual([]);
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/WorkingHoursResponse"
         );
@@ -6339,7 +6341,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shop Info");
-        expect(route.security).toEqual([]);  // No auth required
+        expect(route.security).toEqual([]);
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/SocialLinksResponse"
         );
@@ -6352,7 +6354,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shop Info");
-        expect(route.security).toEqual([]);  // No auth required
+        expect(route.security).toEqual([]);
         expect(route.description).toContain("real-time");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/IsOpenResponseWrapper"
@@ -6366,7 +6368,7 @@ describe("swaggerSpec", () => {
 
         expect(route).toBeDefined();
         expect(route.tags).toContain("Shop Info");
-        expect(route.security).toEqual([]);  // No auth required
+        expect(route.security).toEqual([]);
         expect(route.description).toContain("opening time");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/NextOpeningTimeResponse"
@@ -6396,7 +6398,7 @@ describe("swaggerSpec", () => {
         expect(route.responses["500"].$ref).toBe("#/components/responses/InternalError");
     });
 
-    // ===== SHOP INFO SCHEMA VALIDATION =====
+
 
     it("should validate ShopInfo schema properties", () => {
         const shopInfoSchema = swaggerSpec.components.schemas.ShopInfo;
@@ -6459,7 +6461,7 @@ describe("swaggerSpec", () => {
         expect(contactSchema.properties.address).toBeDefined();
         expect(contactSchema.properties.is_active).toBeDefined();
 
-        // Should NOT have these
+
         expect(contactSchema.properties.working_hours).toBeUndefined();
         expect(contactSchema.properties.social_links).toBeUndefined();
         expect(contactSchema.properties.map_embed_url).toBeUndefined();
@@ -6524,7 +6526,7 @@ describe("swaggerSpec", () => {
     it("should validate UpdateShopInfoInput has all optional fields", () => {
         const updateSchema = swaggerSpec.components.schemas.UpdateShopInfoInput;
 
-        // All fields should be optional
+
         expect(updateSchema.required).toBeUndefined();
         expect(updateSchema.properties.shop_name).toBeDefined();
         expect(updateSchema.properties.email).toBeDefined();
@@ -6571,7 +6573,7 @@ describe("swaggerSpec", () => {
         expect(socialResponse.properties.data.$ref).toBe("#/components/schemas/SocialLinksDTO");
     });
 
-    // ===== SHOP INFO ENDPOINT VALIDATION =====
+
 
     it("should validate all public shop info endpoints have no auth", () => {
         const publicEndpoints = [
@@ -6687,7 +6689,7 @@ describe("swaggerSpec", () => {
         const contactSchema = swaggerSpec.components.schemas.ContactInfo;
         const shopSchema = swaggerSpec.components.schemas.ShopInfo;
 
-        // Contact should have fewer required fields
+
         expect(contactSchema.required.length).toBeLessThan(shopSchema.required.length);
     });
 
@@ -6695,8 +6697,8 @@ describe("swaggerSpec", () => {
         const createSchema = swaggerSpec.components.schemas.CreateShopInfoInput;
 
         expect(createSchema.properties.phone.description || "").toContain("");
-        // Pattern itself should indicate VN format
-        expect(createSchema.properties.phone.pattern).toContain("84");  // VN country code
+
+        expect(createSchema.properties.phone.pattern).toContain("84");
     });
 
     it("should validate working hours have time format HH:MM", () => {
@@ -6713,7 +6715,7 @@ describe("swaggerSpec", () => {
     it("should validate social links all optional fields", () => {
         const socialSchema = swaggerSpec.components.schemas.ShopInfo;
 
-        // All social link fields should NOT be required
+
         expect(
             socialSchema.properties.social_links.properties.facebook.required
         ).toBeUndefined();
@@ -6742,16 +6744,16 @@ describe("swaggerSpec", () => {
         expect(Object.keys(isOpenSchema.properties)).toEqual(["is_open"]);
     });
 
-    // ===== NOTIFICATIONS TESTS =====
+
 
     it("should define Notifications tag", () => {
         const notificationTag = swaggerSpec.tags.find((tag) => tag.name === "Notifications");
         expect(notificationTag).toBeDefined();
-        expect(notificationTag.description).toContain("Quản lý thông báo");
+        expect(notificationTag.description).toContain("Notification management");
     });
 
     it("should define notification schemas correctly", () => {
-        // ✅ Core notification schemas
+
         expect(swaggerSpec.components.schemas.NotificationData).toBeDefined();
         expect(swaggerSpec.components.schemas.NotificationData.properties.ref_type.enum).toEqual([
             "order",
@@ -6773,7 +6775,7 @@ describe("swaggerSpec", () => {
 
         expect(swaggerSpec.components.schemas.NotificationListItem).toBeDefined();
 
-        // ✅ Input schemas
+
         expect(swaggerSpec.components.schemas.CreateNotificationInput).toBeDefined();
         expect(swaggerSpec.components.schemas.CreateNotificationInput.required).toEqual([
             "user_id",
@@ -6783,7 +6785,7 @@ describe("swaggerSpec", () => {
         ]);
 
         expect(swaggerSpec.components.schemas.MarkAsReadInput).toBeDefined();
-        expect(swaggerSpec.components.schemas.MarkAsReadInput.required).toEqual(["notification_id"]); // ✅ FIXED: notification_id (singular)
+        expect(swaggerSpec.components.schemas.MarkAsReadInput.required).toEqual(["notification_id"]);
 
         expect(swaggerSpec.components.schemas.MarkAllAsReadInput).toBeDefined();
 
@@ -6791,10 +6793,10 @@ describe("swaggerSpec", () => {
 
         expect(swaggerSpec.components.schemas.BulkMarkAsReadInput).toBeDefined();
         expect(swaggerSpec.components.schemas.BulkMarkAsReadInput.required).toEqual([
-            "notification_ids",  // ✅ CORRECT: notification_ids (plural) for bulk
+            "notification_ids",
         ]);
 
-        // ✅ Response schemas
+
         expect(swaggerSpec.components.schemas.NotificationResponse).toBeDefined();
         expect(swaggerSpec.components.schemas.NotificationResponse.required).toEqual([
             "success",
@@ -6821,7 +6823,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Notifications");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("chưa đọc");
+        expect(route.description).toContain("unread");
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
             "#/components/schemas/UnreadCountResponse"
         );
@@ -6874,7 +6876,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Notifications");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("đã đọc");
+        expect(route.description).toContain("read");
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "notificationId",
@@ -6895,11 +6897,11 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Notifications");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("tất cả");
+        expect(route.description).toContain("all");
 
-        // ✅ FIXED: Match actual response schema name
+
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
-            "#/components/schemas/MarkAllAsReadResponse"  // ← Changed from NotificationResponse
+            "#/components/schemas/MarkAllAsReadResponse"
         );
 
         expect(route.responses["401"].$ref).toBe("#/components/responses/Unauthorized");
@@ -6933,7 +6935,7 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Notifications");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("xóa");
+        expect(route.description).toContain("delete");
         expect(route.parameters[0]).toMatchObject({
             in: "path",
             name: "notificationId",
@@ -6952,13 +6954,13 @@ describe("swaggerSpec", () => {
         expect(route).toBeDefined();
         expect(route.tags).toContain("Notifications");
         expect(route.security).toEqual([{ bearerAuth: [] }]);
-        expect(route.description).toContain("xóa tất cả");
+        expect(route.description).toContain("delete all");
         expect(route.responses["200"].content["application/json"].schema).toBeDefined();
         expect(route.responses["401"].$ref).toBe("#/components/responses/Unauthorized");
         expect(route.responses["500"].$ref).toBe("#/components/responses/InternalError");
     });
 
-    // ===== NOTIFICATION SCHEMA VALIDATION =====
+
 
     it("should validate Notification schema properties", () => {
         const notificationSchema = swaggerSpec.components.schemas.Notification;
@@ -7114,7 +7116,7 @@ describe("swaggerSpec", () => {
         expect(notificationSchema.properties.expire_at.nullable).toBe(true);
     });
 
-    // ===== NOTIFICATION ENDPOINT VALIDATION =====
+
 
     it("should validate all notification endpoints require authentication", () => {
         const authenticatedEndpoints = [
@@ -7190,9 +7192,9 @@ describe("swaggerSpec", () => {
     it("should validate notification mark all as read returns success response", () => {
         const route = getPath("/api/v1/notifications/mark-all-read", "patch");
 
-        // ✅ FIXED: Use correct response schema
+
         expect(route.responses["200"].content["application/json"].schema.$ref).toBe(
-            "#/components/schemas/MarkAllAsReadResponse"  // Changed from NotificationResponse
+            "#/components/schemas/MarkAllAsReadResponse"
         );
     });
 
@@ -7305,10 +7307,10 @@ describe("swaggerSpec", () => {
     it("should validate notification pagination has has_more field", () => {
         const listResponse = swaggerSpec.components.schemas.NotificationsListResponse;
 
-        // ✅ has_more might be optional field in pagination
+
         const paginationSchema = listResponse.properties.pagination;
         if (paginationSchema.properties) {
-            // Inline schema
+
             expect(paginationSchema.properties.page).toBeDefined();
             expect(paginationSchema.properties.limit).toBeDefined();
             expect(paginationSchema.properties.total).toBeDefined();
@@ -7318,14 +7320,14 @@ describe("swaggerSpec", () => {
     it("should validate mark all read endpoint doesn't require parameters", () => {
         const route = getPath("/api/v1/notifications/mark-all-read", "patch");
 
-        // ✅ No request body required
+
         expect(route.requestBody).toBeUndefined();
     });
 
     it("should validate delete all notifications endpoint doesn't require parameters", () => {
         const route = getPath("/api/v1/notifications", "delete");
 
-        // ✅ No request body required
+
         expect(route.requestBody).toBeUndefined();
     });
 
@@ -7339,11 +7341,11 @@ describe("swaggerSpec", () => {
     });
 
     it("should validate specific routes come before dynamic routes in order", () => {
-        // ✅ This validates route ordering doesn't cause /mark-all-read to be caught by /{notificationId}
+
         const markAllRoute = getPath("/api/v1/notifications/mark-all-read", "patch");
         const getRoute = getPath("/api/v1/notifications/{notificationId}", "get");
 
-        // Both should exist and be distinct
+
         expect(markAllRoute).toBeDefined();
         expect(getRoute).toBeDefined();
         expect(markAllRoute.description).not.toBe(getRoute.description);
@@ -7356,7 +7358,7 @@ describe("swaggerSpec", () => {
         expect(unreadOnlyParam.schema.type).toBe("boolean");
     });
 
-    // ===== CHATS TESTS =====
+
     it("should define Chats tag", () => {
         const chatTag = swaggerSpec.tags.find((tag) => tag.name === "Chats");
         expect(chatTag).toBeDefined();

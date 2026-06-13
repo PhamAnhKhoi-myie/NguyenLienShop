@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index';
 import { X } from 'lucide-react';
 import Button from './Button';
 
@@ -32,7 +33,7 @@ export default function Modal({
                         size="sm"
                         onClick={onClose}
                         className="shrink-0"
-                        aria-label="Đóng"
+                        aria-label={translate('text.close')}
                     >
                         <X className="h-4 w-4" />
                     </Button>

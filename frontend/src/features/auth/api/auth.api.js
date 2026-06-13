@@ -1,6 +1,9 @@
 import { axiosClient } from '../../../shared/api/axiosClient';
 
 export const authApi = {
+    requestRegistrationOtp: (payload) =>
+        axiosClient.post('/auth/register/request-otp', payload, { skipAuth: true }),
+
     register: (payload) =>
         axiosClient.post('/auth/register', payload, { skipAuth: true }),
 

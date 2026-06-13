@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
@@ -6,15 +7,19 @@ import { z } from 'zod';
 import Button from '../../../shared/components/Button';
 import Input from '../../../shared/components/Input';
 import { ROUTES } from '../../../shared/constants/routes';
+import {
+    isValidVietnamPhoneNumber,
+    normalizePhoneNumber,
+} from '../../../shared/utils/phone';
 import AuthPageCard from '../components/AuthPageCard';
 import { useForgotPassword } from '../hooks/useForgotPassword';
 
 const forgotPasswordSchema = z.object({
-    email: z
+    phone_number: z
         .string()
         .trim()
-        .min(1, 'Vui lòng nhập email')
-        .email('Email không hợp lệ'),
+        .min(1, translate('text.please_enter_phone_number'))
+        .refine(isValidVietnamPhoneNumber, translate('text.invalid_phone_number')),
 });
 
 export default function ForgotPasswordPage() {
@@ -27,33 +32,43 @@ export default function ForgotPasswordPage() {
     } = useForm({
         resolver: zodResolver(forgotPasswordSchema),
         defaultValues: {
-            email: '',
+            phone_number: '',
         },
     });
 
     const onSubmit = (values) => {
-        forgotPasswordMutation.mutate(values);
+        forgotPasswordMutation.mutate({
+            phone_number: normalizePhoneNumber(values.phone_number),
+        });
     };
+
+    const mockOtp = forgotPasswordMutation.data?.data?.mockOtp;
 
     return (
         <AuthPageCard
-            title="Quên mật khẩu"
-            subtitle="Nhập email để nhận mã khôi phục mật khẩu."
+            title={translate('text.forgot_password')}
+            subtitle={translate('text.enter_the_phone_number_to_receive_the_password_recovery_code')}
         >
             <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
                 <Input
-                    label="Email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="Nhập email"
-                    error={errors.email?.message}
-                    {...register('email')}
+                    label={translate('text.phone_number')}
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="0901234567"
+                    error={errors.phone_number?.message}
+                    {...register('phone_number')}
                 />
 
                 {forgotPasswordMutation.isSuccess && (
                     <p className="text-sm text-[var(--color-primary-hover)]">
                         {forgotPasswordMutation.data.message ||
-                            'Nếu email tồn tại, mã khôi phục đã được gửi.'}
+                            translate('text.if_the_phone_number_exists_a_recovery_code_has_been_sent')}
+                    </p>
+                )}
+
+                {mockOtp && (
+                    <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"> {translate('text.mock_sms_otp')} <strong>{mockOtp}</strong>
                     </p>
                 )}
 
@@ -69,16 +84,14 @@ export default function ForgotPasswordPage() {
                     isLoading={forgotPasswordMutation.isPending}
                 >
                     {forgotPasswordMutation.isPending
-                        ? 'Đang gửi...'
-                        : 'Gửi mã khôi phục'}
+                        ? translate('text.sending')
+                        : translate('text.send_recovery_code')}
                 </Button>
 
                 <Link
                     to={ROUTES.RESET_PASSWORD}
                     className="block text-center text-sm text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
-                >
-                    Đã có mã OTP? Đặt lại mật khẩu
-                </Link>
+                > {translate('text.already_have_an_otp_code_reset_password')} </Link>
             </form>
         </AuthPageCard>
     );

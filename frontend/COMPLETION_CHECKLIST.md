@@ -48,7 +48,7 @@ Dung checklist nay truoc khi coi mot module FE la xong.
 | --- | --- | --- |
 | UI foundation | Dat nen | Chi bo sung component moi khi workflow can |
 | App shell | Dat nen; da polish header mobile va admin card overflow | Tiep tuc kiem tra lai tren mobile sau moi dot them menu |
-| Auth | Dat nen | Manual test login/register/forgot/reset voi BE email that |
+| Auth | Dang ky so dien thoai qua Mock SMS OTP; login bang so dien thoai va mat khau | Doi SMS_PROVIDER sang nha cung cap that khi deploy |
 | Public catalog | Dat nen | Bo sung filter nang cao neu BE mo them field |
 | Cart | Dat nen | Test lai merge cart sau login bang guest cart that |
 | Checkout | Dat nen | Test COD end-to-end voi san pham that |

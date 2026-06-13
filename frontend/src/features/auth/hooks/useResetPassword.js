@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../shared/constants/routes';
@@ -12,7 +13,7 @@ export function useResetPassword() {
             navigate(ROUTES.LOGIN, {
                 replace: true,
                 state: {
-                    message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập.',
+                    message: translate('text.password_reset_successful_please_log_in'),
                 },
             });
         },

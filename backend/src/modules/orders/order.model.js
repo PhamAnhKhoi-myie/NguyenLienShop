@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema(
     {
-        // === CORE IDENTIFICATION ===
+
         user_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
@@ -14,10 +14,10 @@ const orderSchema = new mongoose.Schema(
             type: String,
             unique: true,
             required: true,
-            // Format: ORD-YYYYMMDD-XXXXX
+
         },
 
-        // === ADDRESS SNAPSHOT (Immutable) ===
+
         address_snapshot: {
             receiver_name: String,
             phone: String,
@@ -36,7 +36,7 @@ const orderSchema = new mongoose.Schema(
             recipient_name: String
         },
 
-        // === ITEMS (Order Snapshot) ===
+
         items: [
             {
                 _id: mongoose.Schema.Types.ObjectId,
@@ -50,29 +50,29 @@ const orderSchema = new mongoose.Schema(
                 variant_label: { type: String, required: true },
                 sku: { type: String, required: true },
 
-                unit_label: { type: String, required: true }, // "Gói 100 cái"
-                pack_size: { type: Number, required: true },   // 100 items per pack
+                unit_label: { type: String, required: true },
+                pack_size: { type: Number, required: true },
 
                 quantity_ordered: {
                     type: Number,
                     required: true,
-                    // Number of PACKS (not individual items)
+
                 },
                 quantity_fulfilled: {
                     type: Number,
                     default: 0
-                    // Number of PACKS fulfilled
+
                 },
 
                 unit_price: {
                     type: Number,
                     required: true
-                    // Price per PACK at order time
+
                 },
                 line_total: {
                     type: Number,
                     required: true
-                    // quantity_ordered × unit_price (snapshot)
+
                 },
 
                 review_status: {
@@ -83,12 +83,12 @@ const orderSchema = new mongoose.Schema(
             }
         ],
 
-        // === PRICING BREAKDOWN (All immutable) ===
+
         pricing: {
-            subtotal: { type: Number, required: true },      // Sum of line_totals
+            subtotal: { type: Number, required: true },
             shipping_fee: { type: Number, default: 0 },
-            discount_amount: { type: Number, default: 0 },   // Applied discount
-            total_amount: { type: Number, required: true }   // Final amount
+            discount_amount: { type: Number, default: 0 },
+            total_amount: { type: Number, required: true }
         },
 
         currency: {
@@ -97,28 +97,28 @@ const orderSchema = new mongoose.Schema(
             enum: ['VND', 'USD', 'EUR']
         },
 
-        // === DISCOUNT SNAPSHOT ===
+
         discount: {
-            code: String,                                     // Promo code reference
+            code: String,
             type: {
                 type: String,
                 enum: ['percentage', 'fixed', null],
                 default: null
             },
-            value: Number,                                    // % or amount
+            value: Number,
             scope: {
                 type: String,
                 enum: ['ORDER', 'ITEM'],
                 default: 'ORDER'
             },
-            applied_amount: Number                            // Actual discount applied
+            applied_amount: Number
         },
 
-        // === PAYMENT SNAPSHOT ===
+
         payment: {
             method: {
                 type: String,
-                enum: ['COD', 'VNPAY', 'MOMO', 'CARD'],
+                enum: ['COD', 'VNPAY', 'PAYOS', 'MOMO', 'CARD'],
                 required: true
             },
             status: {
@@ -130,19 +130,19 @@ const orderSchema = new mongoose.Schema(
             refunded_at: Date
         },
 
-        payment_id: mongoose.Schema.Types.ObjectId,        // External payment record
+        payment_id: mongoose.Schema.Types.ObjectId,
 
-        // === SHIPMENT SNAPSHOT (Lightweight) ===
+
         shipment: {
-            carrier: String,                                  // 'GHN', 'GRAB', etc
+            carrier: String,
             tracking_code: String,
             shipped_at: Date,
             delivered_at: Date
         },
 
-        shipment_id: mongoose.Schema.Types.ObjectId,       // External shipment record
+        shipment_id: mongoose.Schema.Types.ObjectId,
 
-        // === ORDER STATUS & LIFECYCLE ===
+
         status: {
             type: String,
             enum: ['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'FAILED', 'CANCELED'],
@@ -154,21 +154,21 @@ const orderSchema = new mongoose.Schema(
                 from: String,
                 to: String,
                 changed_at: { type: Date, default: Date.now },
-                changed_by: mongoose.Schema.Types.ObjectId,    // Optional: admin/system user
-                note: String                                     // Why the change?
+                changed_by: mongoose.Schema.Types.ObjectId,
+                note: String
             }
         ],
 
-        // === TIMESTAMPS & EXPIRY ===
-        payment_expires_at: Date,                           // Auto-fail PENDING order
 
-        // === AUDIT & SOFT DELETE ===
+        payment_expires_at: Date,
+
+
         is_deleted: { type: Boolean, default: false, index: true },
         deleted_at: Date,
 
-        // === METADATA ===
-        notes: String,                                      // Admin notes
-        customer_notes: String                              // Customer notes at checkout
+
+        notes: String,
+        customer_notes: String
     },
     {
         timestamps: true,
@@ -176,14 +176,14 @@ const orderSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES =====
-orderSchema.index({ user_id: 1, createdAt: -1 });     // User order history
-orderSchema.index({ status: 1, createdAt: -1 });       // Status filtering with newest first
-orderSchema.index({ 'payment.status': 1 });            // Payment status
-orderSchema.index({ payment_expires_at: 1 });          // TTL cleanup
-orderSchema.index({ is_deleted: 1, createdAt: -1 });  // Soft-delete queries
 
-// ===== METHODS =====
+orderSchema.index({ user_id: 1, createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: -1 });
+orderSchema.index({ 'payment.status': 1 });
+orderSchema.index({ payment_expires_at: 1 });
+orderSchema.index({ is_deleted: 1, createdAt: -1 });
+
+
 
 orderSchema.statics.generateOrderCode = async function () {
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -192,7 +192,7 @@ orderSchema.statics.generateOrderCode = async function () {
 
     const existing = await this.findOne({ order_code: code });
     if (existing) {
-        return this.generateOrderCode(); // Recursive retry
+        return this.generateOrderCode();
     }
 
     return code;
@@ -234,7 +234,7 @@ orderSchema.methods.canBeCanceled = function () {
     return ['PENDING', 'PAID', 'PROCESSING'].includes(this.status);
 };
 
-// ===== MIDDLEWARE =====
+
 
 orderSchema.pre('updateOne', function (next) {
     if (this.getUpdate().$set && this.getUpdate().$set.is_deleted === true) {

@@ -22,7 +22,7 @@ const stockSchema = new mongoose.Schema(
 
 const variantSchema = new mongoose.Schema(
     {
-        // ===== RELATIONSHIP =====
+
         product_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Product',
@@ -30,7 +30,7 @@ const variantSchema = new mongoose.Schema(
             index: true,
         },
 
-        // ===== IDENTITY =====
+
         sku: {
             type: String,
             required: [true, 'SKU is required'],
@@ -42,7 +42,7 @@ const variantSchema = new mongoose.Schema(
             ],
         },
 
-        // ===== ATTRIBUTES =====
+
         size: {
             type: String,
             required: [true, 'Size is required'],
@@ -55,7 +55,7 @@ const variantSchema = new mongoose.Schema(
             trim: true,
         },
 
-        // ===== PRICING (CACHED) =====
+
         min_price: {
             type: Number,
             default: 0,
@@ -80,13 +80,13 @@ const variantSchema = new mongoose.Schema(
             min: [0, 'Max price per unit cannot be negative'],
         },
 
-        // ===== STOCK =====
+
         stock: {
             type: stockSchema,
             default: () => ({}),
         },
 
-        // ===== STATUS =====
+
         status: {
             type: String,
             enum: {
@@ -97,7 +97,7 @@ const variantSchema = new mongoose.Schema(
             index: true,
         },
 
-        // ===== SOFT DELETE =====
+
         is_deleted: {
             type: Boolean,
             default: false,
@@ -117,7 +117,7 @@ const variantSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES (Production Optimized) =====
+
 variantSchema.index(
     { product_id: 1, status: 1, is_deleted: 1 },
     {
@@ -155,7 +155,7 @@ variantSchema.index(
 );
 
 
-// ===== MIDDLEWARE =====
+
 
 const excludeDeleted = function (next) {
     const options = this.getOptions?.() || {};
@@ -192,7 +192,7 @@ variantSchema.pre('save', function (next) {
     next();
 });
 
-// ===== STATIC METHODS =====
+
 
 variantSchema.statics.updatePriceCache = async function (variantId) {
     const VariantUnit = mongoose.model('VariantUnit');
@@ -299,7 +299,7 @@ variantSchema.statics.releaseReservedStock = async function (
     );
 };
 
-// ===== RESPONSE SANITIZATION =====
+
 const sanitizeTransform = (_, ret) => {
     delete ret.__v;
     return ret;

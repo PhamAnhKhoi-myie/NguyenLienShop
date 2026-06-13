@@ -1,9 +1,9 @@
 const { z } = require('zod');
 const mongoose = require('mongoose');
 
-/**
- * Base schemas
- */
+
+
+
 const objectIdSchema = z.string().refine(
     (val) => mongoose.Types.ObjectId.isValid(val),
     { message: 'Invalid MongoDB ObjectId' }
@@ -11,9 +11,9 @@ const objectIdSchema = z.string().refine(
 
 const objectIdOptionalSchema = objectIdSchema.optional().nullable();
 
-/**
- * Param schemas
- */
+
+
+
 const IdParamSchema = z.object({
     order_id: objectIdSchema,
 });
@@ -25,9 +25,9 @@ const OrderCodeParamSchema = z.object({
     ),
 });
 
-/**
- * Address
- */
+
+
+
 const addressSnapshotSchema = z.object({
     receiver_name: z.string().min(1).max(100).trim(),
     phone: z.string().regex(/^(0|\+84)[0-9]{9}$/).trim(),
@@ -37,9 +37,9 @@ const addressSnapshotSchema = z.object({
     note: z.string().trim().max(500).nullable().optional(),
 }).strict();
 
-/**
- * Item
- */
+
+
+
 const orderItemSchema = z.object({
     product_id: objectIdSchema,
     variant_id: objectIdSchema,
@@ -62,9 +62,9 @@ const orderItemSchema = z.object({
     review_status: z.enum(['pending', 'reviewed']).default('pending'),
 });
 
-/**
- * Pricing
- */
+
+
+
 const pricingSchema = z.object({
     subtotal: z.number().nonnegative(),
     shipping_fee: z.number().nonnegative().default(0),
@@ -83,9 +83,9 @@ const pricingSchema = z.object({
         { message: 'Total amount calculation is incorrect', path: ['total_amount'] }
     );
 
-/**
- * Discount
- */
+
+
+
 const discountSchema = z.object({
     code: z.string().max(50).optional(),
     type: z.enum(['percentage', 'fixed']),
@@ -98,19 +98,19 @@ const discountSchema = z.object({
         { message: 'Percentage discount cannot exceed 100%', path: ['value'] }
     );
 
-/**
- * Payment
- */
+
+
+
 const paymentSchema = z.object({
-    method: z.enum(['COD', 'VNPAY', 'MOMO', 'CARD']),
+    method: z.enum(['COD', 'VNPAY', 'PAYOS', 'MOMO', 'CARD']),
     status: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).default('PENDING'),
     paid_at: z.date().optional().nullable(),
     refunded_at: z.date().optional().nullable(),
 });
 
-/**
- * Shipment
- */
+
+
+
 const shipmentSchema = z.object({
     carrier: z.string().max(50).optional(),
     tracking_code: z.string().max(100).optional(),
@@ -122,9 +122,9 @@ const shipmentSchema = z.object({
         { message: 'Carrier is required if tracking code is provided', path: ['carrier'] }
     );
 
-/**
- * Status history
- */
+
+
+
 const statusHistoryRecordSchema = z.object({
     from: z.enum(['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'FAILED', 'CANCELED']).nullable(),
     to: z.enum(['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'FAILED', 'CANCELED']),
@@ -133,9 +133,9 @@ const statusHistoryRecordSchema = z.object({
     note: z.string().max(500).optional(),
 });
 
-/**
- * Body schemas
- */
+
+
+
 const createOrderBodySchema = z.object({
     cart_id: objectIdSchema,
 
@@ -149,7 +149,7 @@ const createOrderBodySchema = z.object({
         .default(0),
 
     payment_method: z
-        .enum(['COD', 'VNPAY', 'MOMO', 'CARD'])
+        .enum(['COD', 'VNPAY', 'PAYOS', 'MOMO', 'CARD'])
         .default('COD'),
 
     customer_notes: z
@@ -193,9 +193,9 @@ const adminUpdateOrderBodySchema = z.object({
     admin_notes: z.string().max(1000).optional(),
 });
 
-/**
- * Query schemas
- */
+
+
+
 const getOrdersQuerySchema = z.object({
     page: z.string().transform((v) => parseInt(v, 10)).refine((v) => v >= 1).default('1'),
     limit: z.string().transform((v) => parseInt(v, 10)).refine((v) => v > 0 && v <= 100).default('20'),
@@ -216,11 +216,11 @@ const getOrdersQuerySchema = z.object({
 });
 
 module.exports = {
-    // params
+
     IdParamSchema,
     OrderCodeParamSchema,
 
-    // body
+
     createOrderBodySchema,
     cancelOrderBodySchema,
     writeReviewBodySchema,
@@ -229,10 +229,10 @@ module.exports = {
     recordShipmentBodySchema,
     adminUpdateOrderBodySchema,
 
-    // query
+
     getOrdersQuerySchema,
 
-    // nested
+
     objectIdSchema,
     addressSnapshotSchema,
     orderItemSchema,

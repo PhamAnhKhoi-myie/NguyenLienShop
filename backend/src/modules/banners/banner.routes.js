@@ -11,22 +11,22 @@ const {
     updateBannerSchema
 } = require('./banner.validator');
 
-/**
- * ============================================
- * PUBLIC ROUTES (no auth required)
- * ============================================
- */
+
+
+
+
+
 
 router.get(
     '/location/:location',
     BannerController.getByLocation
 );
 
-/**
- * ============================================
- * ADMIN ROUTES (require authentication + admin role)
- * ============================================
- */
+
+
+
+
+
 
 router.get(
     '/deleted',

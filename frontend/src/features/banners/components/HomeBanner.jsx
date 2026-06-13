@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
@@ -108,9 +109,7 @@ export default function HomeBanner({ location = 'homepage_top' }) {
     if (isLoading) {
         return (
             <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] sm:min-h-[280px] md:min-h-[340px] lg:min-h-[360px]">
-                <p className="text-sm text-[var(--color-text-muted)]">
-                    Đang tải banner...
-                </p>
+                <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.loading_banner')} </p>
             </div>
         );
     }
@@ -123,13 +122,9 @@ export default function HomeBanner({ location = 'homepage_top' }) {
                         <ImageOff className="h-6 w-6" />
                     </div>
 
-                    <p className="mt-5 text-base font-semibold text-[var(--color-text-main)]">
-                        Chưa có banner
-                    </p>
+                    <p className="mt-5 text-base font-semibold text-[var(--color-text-main)]"> {translate('text.no_banner_yet')} </p>
 
-                    <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-[var(--color-text-muted)]">
-                        Tạo banner vị trí {location} trong trang quản trị.
-                    </p>
+                    <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-[var(--color-text-muted)]"> {translate('text.create_location_banner')} {location} {translate('text.in_the_admin_page')} </p>
                 </div>
             </div>
         );

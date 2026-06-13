@@ -14,9 +14,9 @@ const {
     flagReviewSchema
 } = require('./review.validator');
 
-// ============================================
-// PUBLIC ROUTES (no auth required)
-// ============================================
+
+
+
 
 router.get(
     '/product/:productId',
@@ -36,9 +36,9 @@ router.get(
     ReviewController.getOne
 );
 
-// ============================================
-// USER ROUTES (require authentication)
-// ============================================
+
+
+
 
 router.post(
     '/',
@@ -81,9 +81,9 @@ router.post(
     ReviewController.flagReview
 );
 
-// ============================================
-// ADMIN ROUTES (require authentication + admin role)
-// ============================================
+
+
+
 
 router.get(
     '/admin/pending',

@@ -32,6 +32,22 @@ const providerDataSchema = new mongoose.Schema(
         },
 
         paypal_payer_id: String,
+
+        payos_order_code: {
+            type: Number,
+            sparse: true,
+        },
+
+        payos_payment_link_id: {
+            type: String,
+            sparse: true,
+        },
+
+        payos_checkout_url: String,
+        payos_qr_code: String,
+        payos_status: String,
+        payos_reference: String,
+        payos_transaction_date_time: String,
     },
     { _id: false }
 );
@@ -55,8 +71,8 @@ const paymentSchema = new mongoose.Schema(
         provider: {
             type: String,
             enum: {
-                values: ['vnpay', 'stripe', 'paypal'],
-                message: 'Provider must be vnpay, stripe, or paypal',
+                values: ['vnpay', 'stripe', 'paypal', 'payos'],
+                message: 'Provider must be vnpay, stripe, paypal, or payos',
             },
             required: [true, 'Provider is required'],
             index: true,
@@ -148,7 +164,7 @@ const paymentSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES (Production Optimized) =====
+
 
 paymentSchema.index(
     { 'provider_data.vnp_txn_ref': 1 },
@@ -174,6 +190,24 @@ paymentSchema.index(
         unique: true,
         sparse: true,
         name: 'idempotency_key_unique',
+    }
+);
+
+paymentSchema.index(
+    { 'provider_data.payos_order_code': 1 },
+    {
+        unique: true,
+        sparse: true,
+        name: 'payos_order_code_unique',
+    }
+);
+
+paymentSchema.index(
+    { 'provider_data.payos_payment_link_id': 1 },
+    {
+        unique: true,
+        sparse: true,
+        name: 'payos_payment_link_id_unique',
     }
 );
 
@@ -235,7 +269,7 @@ paymentSchema.index(
     }
 );
 
-// ===== MIDDLEWARE: Auto-Exclude Soft-Deleted & Queries =====
+
 
 const excludeDeleted = function (next) {
     if (!this.getOptions().includeDeleted) {
@@ -270,7 +304,7 @@ paymentSchema.pre('aggregate', function (next) {
     next();
 });
 
-// ===== MIDDLEWARE: Update Timestamp & Lock Immutable Fields =====
+
 
 paymentSchema.pre('save', function (next) {
     if (this.isNew && this.status === 'pending' && !this.expires_at) {
@@ -302,7 +336,7 @@ paymentSchema.pre('findOneAndUpdate', function (next) {
     next();
 });
 
-// ===== STATIC METHODS =====
+
 
 paymentSchema.statics.generateIdempotencyKey = function (userId, orderId) {
     return `${userId.toString()}-${orderId.toString()}`;
@@ -311,6 +345,22 @@ paymentSchema.statics.generateIdempotencyKey = function (userId, orderId) {
 paymentSchema.statics.findByVNPayTxnRef = function (txnRef) {
     return this.findOne(
         { 'provider_data.vnp_txn_ref': txnRef, is_deleted: false },
+        null,
+        { maxTimeMS: 5000 }
+    );
+};
+
+paymentSchema.statics.findByPayOSOrderCode = function (orderCode) {
+    return this.findOne(
+        { 'provider_data.payos_order_code': Number(orderCode), is_deleted: false },
+        null,
+        { maxTimeMS: 5000 }
+    );
+};
+
+paymentSchema.statics.findByPayOSPaymentLinkId = function (paymentLinkId) {
+    return this.findOne(
+        { 'provider_data.payos_payment_link_id': paymentLinkId, is_deleted: false },
         null,
         { maxTimeMS: 5000 }
     );
@@ -391,7 +441,7 @@ paymentSchema.statics.findUnreconciledPaidPayments = function () {
         .where('order_id.status').ne('PAID');
 };
 
-// ===== INSTANCE METHODS =====
+
 
 paymentSchema.methods.isExpired = function () {
     if (!this.expires_at) return false;
@@ -420,7 +470,7 @@ paymentSchema.methods.toSafeResponse = function () {
     return obj;
 };
 
-// ===== RESPONSE SANITIZATION =====
+
 
 const sanitizeTransform = (_, ret) => {
     delete ret.__v;

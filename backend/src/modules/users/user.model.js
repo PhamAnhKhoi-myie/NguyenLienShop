@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
+const { normalizePhoneNumber } = require('../../utils/phone.util');
 
 const userSchema = new mongoose.Schema(
     {
         email: {
             type: String,
-            required: true,
+            default: null,
             lowercase: true,
             trim: true,
             match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -27,9 +28,10 @@ const userSchema = new mongoose.Schema(
             },
             phone_number: {
                 type: String,
+                required: true,
                 trim: true,
-                match: /^[0-9]{9,15}$/,
-                default: null,
+                set: normalizePhoneNumber,
+                match: /^0[35789]\d{8}$/,
             },
             gender: {
                 type: String,
@@ -72,6 +74,16 @@ const userSchema = new mongoose.Schema(
             default: null,
         },
 
+        is_phone_verified: {
+            type: Boolean,
+            default: false,
+        },
+
+        phone_verified_at: {
+            type: Date,
+            default: null,
+        },
+
         token_version: {
             type: Number,
             default: 0,
@@ -103,13 +115,14 @@ const userSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES =====
+
 userSchema.index(
     { email: 1 },
     {
         unique: true,
         partialFilterExpression: {
             deleted_at: { $eq: null },
+            email: { $type: 'string' },
         },
     }
 );
@@ -120,20 +133,20 @@ userSchema.index(
 userSchema.index({ deleted_at: 1 });
 userSchema.index({ status: 1, deleted_at: 1 });
 userSchema.index({ is_email_verified: 1, deleted_at: 1 });
+userSchema.index({ is_phone_verified: 1, deleted_at: 1 });
 userSchema.index(
     { 'profile.phone_number': 1 },
     {
         unique: true,
-        sparse: true,
         partialFilterExpression: {
             deleted_at: { $eq: null },
-            'profile.phone_number': { $exists: true, $ne: null },
+            'profile.phone_number': { $type: 'string' },
         },
     }
 );
 userSchema.index({ _id: 1, token_version: 1 });
 
-// ===== MIDDLEWARE =====
+
 const excludeDeleted = function (next) {
     const options = this.getOptions?.() || {};
 
@@ -168,15 +181,12 @@ userSchema.pre('save', function (next) {
         this.email = this.email.toLowerCase().trim();
     }
     if (this.profile?.phone_number) {
-        this.profile.phone_number = this.profile.phone_number.trim();
-        if (this.profile.phone_number === '') {
-            this.profile.phone_number = null;
-        }
+        this.profile.phone_number = normalizePhoneNumber(this.profile.phone_number);
     }
     next();
 });
 
-// ===== RESPONSE SANITIZATION =====
+
 const sanitizeTransform = (_, ret) => {
     delete ret.password_hash;
     delete ret.token_version;

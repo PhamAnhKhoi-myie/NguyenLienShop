@@ -14,18 +14,18 @@ class ChatController {
 
         const session = await ChatSession.findOne({ _id: session_id, user_id: userId });
         if (!session) {
-            throw new AppError('Phiên trò chuyện không tồn tại', 404, 'CHAT_SESSION_NOT_FOUND');
+            throw new AppError("Chat session does not exist", 404, 'CHAT_SESSION_NOT_FOUND');
         }
 
         const aiResult = await ChatService.processUserMessage(userId, session_id, message);
         const { intent } = aiResult.parsed_data;
 
-        let replyText = "Tôi có thể giúp gì thêm cho bạn không?";
+        let replyText = "Can I help you further?";
         let relatedData = null;
 
         switch (intent) {
             case CHAT_INTENTS.GREETING:
-                replyText = "Chào bạn! NguyenLienShop chuyên cung cấp bao bì thực phẩm. Bạn cần tìm loại túi hay màng bọc nào ạ?";
+                replyText = "Hello! NguyenLienShop specializes in providing food packaging. What type of bag or wrap do you need to look for?";
                 break;
 
             case CHAT_INTENTS.ASK_PRICE:
@@ -35,10 +35,10 @@ class ChatController {
                     const productInfo = products.length > 0 ? products[0] : null;
 
                     if (productInfo) {
-                        replyText = `Sản phẩm ${productInfo.name} hiện có giá từ ${productInfo.min_price.toLocaleString()}đ. Shop đang còn hàng ạ!`;
+                        replyText = `Product ${productInfo.name} is currently priced from ${productInfo.min_price.toLocaleString()}VND. The shop is still in stock!`;
                         relatedData = productInfo;
                     } else {
-                        replyText = `Dạ, shop có kinh doanh sản phẩm liên quan đến "${productName}", nhưng hiện tại mình chưa tìm thấy giá chính xác. Bạn đợi một chút nhân viên sẽ báo giá ngay ạ!`;
+                        replyText = `The shop carries products related to "${productName}", but an exact price is not currently available. Please wait a moment while a staff member prepares a quote.`;
                     }
                 }
                 break;
@@ -49,8 +49,8 @@ class ChatController {
                     ? await ProductService.searchProducts(searchProductName, 5)
                     : [];
                 replyText = relatedData.length > 0
-                    ? `Tôi tìm thấy một số sản phẩm phù hợp. Bạn xem thử nhé!`
-                    : `Hiện shop chưa có sản phẩm nào khớp với yêu cầu của bạn.`;
+                    ? `I found some suitable products. Please check it out!`
+                    : `Currently the shop does not have any products that match your request.`;
                 break;
 
             case CHAT_INTENTS.ORDER_STATUS:
@@ -59,25 +59,25 @@ class ChatController {
 
                 if (latestOrder) {
                     const statusMap = {
-                        PENDING: 'đang chờ thanh toán',
-                        PAID: 'đã thanh toán và đang chờ xử lý',
-                        PROCESSING: 'đang được chuẩn bị',
-                        SHIPPED: 'đang được giao đến bạn',
-                        DELIVERED: 'đã giao thành công',
-                        FAILED: 'thanh toán thất bại',
-                        CANCELED: 'đã bị hủy'
+                        PENDING: "awaiting payment",
+                        PAID: "paid and pending",
+                        PROCESSING: "is being prepared",
+                        SHIPPED: "is being delivered to you",
+                        DELIVERED: "delivered successfully",
+                        FAILED: "payment failed",
+                        CANCELED: "was canceled"
                     };
                     const normalizedStatus = latestOrder.status?.toUpperCase();
-                    const statusText = statusMap[normalizedStatus] || latestOrder.status || 'không xác định';
-                    replyText = `Đơn hàng #${latestOrder.id.slice(-6)} của bạn đang ở trạng thái: ${statusText}.`;
+                    const statusText = statusMap[normalizedStatus] || latestOrder.status || "undefined";
+                    replyText = `Your order #${latestOrder.id.slice(-6)} is in status: ${statusText}.`;
                     relatedData = latestOrder;
                 } else {
-                    replyText = "Dạ, shop kiểm tra thì hiện tại bạn chưa có đơn hàng nào ạ.";
+                    replyText = "Yes, the shop checked and you currently do not have any orders.";
                 }
                 break;
 
             default:
-                replyText = "Yêu cầu của bạn đang được ghi nhận. Bạn có thể nói rõ hơn về sản phẩm bạn đang quan tâm không?";
+                replyText = "Your request is being processed. Can you tell more about the product you are interested in?";
         }
 
         await ChatService.saveAssistantMessage(session_id, replyText, aiResult);
@@ -96,7 +96,7 @@ class ChatController {
     static createSession = asyncHandler(async (req, res) => {
         const session = await ChatSession.create({
             user_id: req.user.id,
-            title: req.body.title || 'Cuộc trò chuyện mới'
+            title: req.body.title || "New conversation"
         });
 
         res.status(201).json({

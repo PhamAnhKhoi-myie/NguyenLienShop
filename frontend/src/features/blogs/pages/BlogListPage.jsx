@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -75,20 +76,14 @@ export default function BlogListPage() {
         <div className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                        Blog
-                    </p>
-                    <h1 className="mt-1 text-3xl font-semibold text-[var(--color-text-main)]">
-                        Tin tức và hướng dẫn
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-muted)]">
-                        Bài viết về túi bao trái cây, mẹo chăm sóc vườn và thông tin từ shop.
-                    </p>
+                    <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.blog')} </p>
+                    <h1 className="mt-1 text-3xl font-semibold text-[var(--color-text-main)]"> {translate('text.news_and_guides')} </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-muted)]"> {translate('text.articles_about_fruit_bags_garden_care_tips_and_information_from_the_shop')} </p>
                 </div>
 
                 <div className="flex w-full gap-2 lg:max-w-xl">
                     <Input
-                        placeholder="Tìm bài viết..."
+                        placeholder={translate('text.find_posts')}
                         value={filters.search}
                         onChange={(event) =>
                             updateFilters({
@@ -97,28 +92,26 @@ export default function BlogListPage() {
                             })
                         }
                     />
-                    <Button type="button" variant="outline" onClick={resetFilters}>
-                        Xóa lọc
-                    </Button>
+                    <Button type="button" variant="outline" onClick={resetFilters}> {translate('text.clear_filter')} </Button>
                 </div>
             </div>
 
             {blogsQuery.isLoading ? (
                 <Card>
                     <CardBody>
-                        <Loading label="Đang tải bài viết..." />
+                        <Loading label={translate('text.loading_article')} />
                     </CardBody>
                 </Card>
             ) : blogsQuery.isError ? (
                 <EmptyState
                     icon={Search}
-                    title="Không tải được bài viết"
+                    title={translate('text.unable_to_load_article')}
                     description={blogsQuery.error.message}
                 />
             ) : blogs.length === 0 ? (
                 <EmptyState
-                    title="Chưa có bài viết"
-                    description="Các bài hướng dẫn và tin tức đã xuất bản sẽ hiển thị tại đây."
+                    title={translate('text.no_posts_yet')}
+                    description={translate('text.published_tutorials_and_news_will_appear_here')}
                 />
             ) : (
                 <>

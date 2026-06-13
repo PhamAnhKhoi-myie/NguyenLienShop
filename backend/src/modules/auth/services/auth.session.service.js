@@ -12,18 +12,18 @@ class AuthSessionService {
         try {
             decoded = verifyRefreshToken(refreshToken);
         } catch (err) {
-            throw new AppError('Refresh token không hợp lệ', 401, 'INVALID_REFRESH_TOKEN');
+            throw new AppError("Invalid refresh token", 401, 'INVALID_REFRESH_TOKEN');
         }
         const userId = decoded.userId;
 
         const tokenRecord = await TokenService.findByJti(decoded.jti);
 
         if (!tokenRecord) {
-            throw new AppError('Token không tồn tại', 401, 'TOKEN_NOT_FOUND');
+            throw new AppError("Token does not exist", 401, 'TOKEN_NOT_FOUND');
         }
 
         if (tokenRecord.user_id.toString() !== userId) {
-            throw new AppError('Token không thuộc về user', 401, 'INVALID_TOKEN');
+            throw new AppError("Token does not belong to user", 401, 'INVALID_TOKEN');
         }
 
         if (tokenRecord.replaced_by_jti) {
@@ -37,29 +37,29 @@ class AuthSessionService {
         }
 
         if (tokenRecord.is_revoked) {
-            throw new AppError('Token đã bị revoke', 401, 'TOKEN_REVOKED');
+            throw new AppError("Token has been revoked", 401, 'TOKEN_REVOKED');
         }
 
         if (tokenRecord.expires_at < new Date()) {
-            throw new AppError('Token đã hết hạn', 401, 'TOKEN_EXPIRED');
+            throw new AppError("Token has expired", 401, 'TOKEN_EXPIRED');
         }
 
         if (!TokenHash.verify(refreshToken, tokenRecord.token_hash)) {
-            throw new AppError('Token không hợp lệ', 401, 'INVALID_TOKEN');
+            throw new AppError("Invalid token", 401, 'INVALID_TOKEN');
         }
 
         const user = await User.findById(userId).select('+token_version');
 
         if (!user) {
-            throw new AppError('Không tìm thấy người dùng', 404, 'USER_NOT_FOUND');
+            throw new AppError("User not found", 404, 'USER_NOT_FOUND');
         }
 
         if (user.status !== 'ACTIVE') {
-            throw new AppError('Tài khoản không hoạt động', 403, 'ACCOUNT_INACTIVE');
+            throw new AppError("Inactive account", 403, 'ACCOUNT_INACTIVE');
         }
 
         if (decoded.tokenVersion !== user.token_version) {
-            throw new AppError('Token version không khớp', 401, 'TOKEN_VERSION_MISMATCH');
+            throw new AppError("Token version does not match", 401, 'TOKEN_VERSION_MISMATCH');
         }
 
         const newRefreshJti = crypto.randomUUID();
@@ -71,7 +71,7 @@ class AuthSessionService {
         );
 
         if (!revoked) {
-            throw new AppError('Token đã được sử dụng', 401, 'TOKEN_ALREADY_USED');
+            throw new AppError("Token has been used", 401, 'TOKEN_ALREADY_USED');
         }
 
         const newRefreshToken = generateRefreshToken({
@@ -130,10 +130,10 @@ class AuthSessionService {
     async logoutAllDevices(userId) {
         const user = await User.findByIdAndUpdate(userId, { $inc: { token_version: 1 } }, { new: true });
         if (!user) {
-            throw new AppError('Không tìm thấy người dùng', 404, 'USER_NOT_FOUND');
+            throw new AppError("User not found", 404, 'USER_NOT_FOUND');
         }
         await TokenService.revokeAllByUser(userId, 'logout_all_devices');
-        return { message: 'Đăng xuất từ tất cả thiết bị thành công' };
+        return { message: "Signed out from all devices successfully" };
     }
 }
 

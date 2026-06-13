@@ -1,5 +1,5 @@
-// Auto-split from legacy swagger.js.
-// TODO: đối chiếu lại với route/validator thật trước khi dùng làm nguồn chính.
+
+
 module.exports = {
     "/shipments/track/{tracking_code}": {
         "get": {
@@ -7,7 +7,7 @@ module.exports = {
                 "Shipments"
             ],
             "summary": "Track shipment by tracking code",
-            "description": "Track shipment công khai (không cần xác thực). Lấy thông tin vận chuyển theo tracking code.",
+            "description": "Track shipments publicly (no authentication required). Get shipping information by tracking code.",
             "security": [],
             "parameters": [
                 {
@@ -43,7 +43,7 @@ module.exports = {
                 "Shipments"
             ],
             "summary": "Carrier webhook for status updates",
-            "description": "Carrier webhook để nhận cập nhật vận chuyển. Không cần xác thực.",
+            "description": "Carrier webhook to receive shipping updates. No authentication required.",
             "security": [],
             "parameters": [
                 {

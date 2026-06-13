@@ -4,7 +4,7 @@ const VariantService = require('./variant.service');
 const { assertAuthenticated } = require('../../utils/auth.util');
 const { buildAuditMetadata } = require('../../utils/audit.util');
 
-// ===== PUBLIC =====
+
 
 const getVariantById = asyncHandler(async (req, res) => {
     const { variantId } = req.params;
@@ -63,7 +63,7 @@ const getMaxOrderQty = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== ADMIN =====
+
 
 const createVariant = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
@@ -123,7 +123,7 @@ const deleteVariant = asyncHandler(async (req, res) => {
     });
 });
 
-// ===== INTERNAL =====
+
 
 const reserveStock = asyncHandler(async (req, res) => {
     const { variantId } = req.params;

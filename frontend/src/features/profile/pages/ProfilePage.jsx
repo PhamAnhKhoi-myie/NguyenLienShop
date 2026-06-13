@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Camera, LogOut, Pencil, Save, UserRound, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -17,22 +18,24 @@ import AccountNav from '../components/AccountNav';
 import { useUpdateProfile } from '../hooks/useProfile';
 
 const profileSchema = z.object({
-    name: z.string().trim().min(2, 'Vui lòng nhập tên ít nhất 2 ký tự'),
-    email: z.string().trim().email('Email không hợp lệ'),
-    phone: z
+    name: z.string().trim().min(2, translate('text.please_enter_a_name_with_at_least_2_characters')),
+    email: z
         .string()
         .trim()
-        .regex(/^\d{10,15}$/, 'Số điện thoại cần từ 10 đến 15 số')
-        .or(z.literal('')),
-    avatar: z.string().trim().url('Avatar phải là URL hợp lệ').or(z.literal('')),
+        .refine(
+            (value) => value === '' || z.string().email().safeParse(value).success,
+            translate('text.invalid_email')
+        ),
+    phone: z.string(),
+    avatar: z.string().trim().url(translate('text.avatar_must_be_a_valid_url')).or(z.literal('')),
     gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED']),
 });
 
 const genderOptions = [
-    { value: 'UNSPECIFIED', label: 'Chưa cập nhật' },
-    { value: 'MALE', label: 'Nam' },
-    { value: 'FEMALE', label: 'Nữ' },
-    { value: 'OTHER', label: 'Khác' },
+    { value: 'UNSPECIFIED', label: translate('text.not_updated_yet') },
+    { value: 'MALE', label: translate('text.nam') },
+    { value: 'FEMALE', label: translate('text.female') },
+    { value: 'OTHER', label: translate('text.other') },
 ];
 
 const genderLabels = Object.fromEntries(
@@ -45,7 +48,7 @@ function getDisplayName(user) {
         user?.full_name ||
         user?.name ||
         user?.email ||
-        'Tài khoản'
+        translate('text.account')
     );
 }
 
@@ -186,7 +189,6 @@ export default function ProfilePage() {
                 payload: {
                     name: values.name.trim(),
                     email: values.email.trim(),
-                    phone: values.phone.trim() || undefined,
                     avatar: values.avatar.trim() || undefined,
                     gender: values.gender,
                 },
@@ -200,7 +202,7 @@ export default function ProfilePage() {
     };
 
     if (meQuery.isLoading && !displayUser) {
-        return <Loading label="Đang tải tài khoản..." />;
+        return <Loading label={translate('text.loading_account')} />;
     }
 
     const avatarCircle = (
@@ -248,14 +250,12 @@ export default function ProfilePage() {
                             />
 
                             {uploadAvatarMutation.isPending && (
-                                <p className="mt-3 text-sm text-[var(--color-text-muted)]">
-                                    Đang upload avatar...
-                                </p>
+                                <p className="mt-3 text-sm text-[var(--color-text-muted)]"> {translate('text.uploading_avatar')} </p>
                             )}
 
                             {uploadAvatarMutation.isError && (
                                 <p className="mt-3 text-sm text-[var(--color-error)]">
-                                    {uploadAvatarMutation.error.message || 'Upload avatar thất bại'}
+                                    {uploadAvatarMutation.error.message || translate('text.upload_avatar_failed')}
                                 </p>
                             )}
 
@@ -290,9 +290,7 @@ export default function ProfilePage() {
                                 isLoading={logoutMutation.isPending}
                                 onClick={() => logoutMutation.mutate()}
                             >
-                                <LogOut className="h-4 w-4" />
-                                Đăng xuất
-                            </Button>
+                                <LogOut className="h-4 w-4" /> {translate('text.sign_out')} </Button>
                         </div>
                     </CardBody>
                 </Card>
@@ -300,7 +298,7 @@ export default function ProfilePage() {
                 <Card>
                     <CardHeader>
                         <h2 className="font-semibold text-[var(--color-text-main)]">
-                            {isEditing ? 'Cập nhật thông tin' : 'Thông tin cá nhân'}
+                            {isEditing ? translate('text.update_information') : translate('text.personal_information')}
                         </h2>
                     </CardHeader>
                     <CardBody>
@@ -308,45 +306,35 @@ export default function ProfilePage() {
                             <div className="space-y-5">
                                 <dl className="grid gap-4 md:grid-cols-2">
                                     <div className="rounded-md border border-[var(--color-border)] p-4">
-                                        <dt className="text-sm text-[var(--color-text-muted)]">
-                                            Họ tên
-                                        </dt>
+                                        <dt className="text-sm text-[var(--color-text-muted)]"> {translate('text.full_name')} </dt>
                                         <dd className="mt-1 font-medium text-[var(--color-text-main)]">
                                             {getDisplayName(displayUser)}
                                         </dd>
                                     </div>
 
                                     <div className="rounded-md border border-[var(--color-border)] p-4">
-                                        <dt className="text-sm text-[var(--color-text-muted)]">
-                                            Email
-                                        </dt>
+                                        <dt className="text-sm text-[var(--color-text-muted)]"> {translate('text.email_84add5b2')} </dt>
                                         <dd className="mt-1 break-all font-medium text-[var(--color-text-main)]">
                                             {displayUser?.email || '-'}
                                         </dd>
                                     </div>
 
                                     <div className="rounded-md border border-[var(--color-border)] p-4">
-                                        <dt className="text-sm text-[var(--color-text-muted)]">
-                                            Số điện thoại
-                                        </dt>
+                                        <dt className="text-sm text-[var(--color-text-muted)]"> {translate('text.phone_number')} </dt>
                                         <dd className="mt-1 font-medium text-[var(--color-text-main)]">
                                             {getDisplayPhone(displayUser)}
                                         </dd>
                                     </div>
 
                                     <div className="rounded-md border border-[var(--color-border)] p-4">
-                                        <dt className="text-sm text-[var(--color-text-muted)]">
-                                            Giới tính
-                                        </dt>
+                                        <dt className="text-sm text-[var(--color-text-muted)]"> {translate('text.gender')} </dt>
                                         <dd className="mt-1 font-medium text-[var(--color-text-main)]">
                                             {getDisplayGender(displayUser)}
                                         </dd>
                                     </div>
 
                                     <div className="rounded-md border border-[var(--color-border)] p-4">
-                                        <dt className="text-sm text-[var(--color-text-muted)]">
-                                            Hạng tài khoản
-                                        </dt>
+                                        <dt className="text-sm text-[var(--color-text-muted)]"> {translate('text.account_class')} </dt>
                                         <dd className="mt-1 font-medium text-[var(--color-text-main)]">
                                             {displayUser?.tier || '-'}
                                         </dd>
@@ -354,15 +342,11 @@ export default function ProfilePage() {
                                 </dl>
 
                                 {updateProfileMutation.isSuccess && (
-                                    <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-                                        Đã cập nhật hồ sơ.
-                                    </p>
+                                    <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700"> {translate('text.profile_updated')} </p>
                                 )}
 
                                 <Button type="button" onClick={handleStartEdit}>
-                                    <Pencil className="h-4 w-4" />
-                                    Chỉnh sửa
-                                </Button>
+                                    <Pencil className="h-4 w-4" /> {translate('text.edit')} </Button>
                             </div>
                         ) : (
                             <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
@@ -370,12 +354,12 @@ export default function ProfilePage() {
 
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <Input
-                                        label="Họ tên"
+                                        label={translate('text.full_name')}
                                         error={errors.name?.message}
                                         {...register('name')}
                                     />
                                     <Input
-                                        label="Email"
+                                        label={translate('text.email_84add5b2')}
                                         type="email"
                                         error={errors.email?.message}
                                         {...register('email')}
@@ -383,14 +367,16 @@ export default function ProfilePage() {
                                 </div>
 
                                 <Input
-                                    label="Số điện thoại"
+                                    label={translate('text.phone_number')}
                                     placeholder="0901234567"
+                                    disabled
+                                    helperText={translate('text.login_phone_number_can_only_be_changed_through_the_otp_authentication_pr')}
                                     error={errors.phone?.message}
                                     {...register('phone')}
                                 />
 
                                 <Select
-                                    label="Giới tính"
+                                    label={translate('text.gender')}
                                     error={errors.gender?.message}
                                     {...register('gender')}
                                 >
@@ -413,9 +399,7 @@ export default function ProfilePage() {
                                         isLoading={updateProfileMutation.isPending}
                                         disabled={uploadAvatarMutation.isPending}
                                     >
-                                        <Save className="h-4 w-4" />
-                                        Lưu thay đổi
-                                    </Button>
+                                        <Save className="h-4 w-4" /> {translate('text.save_changes')} </Button>
 
                                     <Button
                                         type="button"
@@ -426,9 +410,7 @@ export default function ProfilePage() {
                                         }
                                         onClick={handleCancelEdit}
                                     >
-                                        <X className="h-4 w-4" />
-                                        Hủy
-                                    </Button>
+                                        <X className="h-4 w-4" /> {translate('text.cancel')} </Button>
                                 </div>
                             </form>
                         )}

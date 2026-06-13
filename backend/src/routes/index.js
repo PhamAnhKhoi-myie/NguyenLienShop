@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-// ===== IMPORT EXISTING ROUTES =====
+
 const authRoutes = require("../modules/auth/auth.routes");
 const userRoutes = require("../modules/users/user.routes");
 const userAddressRoutes = require("../modules/user_addresses/user_addresses.routes");
@@ -23,77 +23,77 @@ const uploadRoutes = require("../modules/uploads/upload.routes");
 const locationRoutes = require("../modules/locations/location.routes");
 const blogRoutes = require("../modules/blogs/blog.routes");
 
-// ============================================================================
-// ===== MOUNT ALL ROUTES =====
-// ============================================================================
 
-// Auth routes
+
+
+
+
 router.use("/auth", authRoutes);
 
-// User routes
+
 router.use("/users", userRoutes);
 
-// User address routes
+
 router.use("/user-addresses", userAddressRoutes);
 
 router.use("/locations", locationRoutes);
 
-// Category routes
+
 router.use("/categories", categoryRoutes);
 
-// Cart routes
+
 router.use("/carts", cartRoutes);
 
-// Discount routes
+
 router.use("/discounts", discountRoutes);
 
-// Order routes
+
 router.use("/orders", orderRoutes);
 
-// Shipment routes
+
 router.use("/shipments", shipmentRoutes);
 
-// Review routes
+
 router.use("/reviews", reviewRoutes);
 
-// Banner routes
+
 router.use("/banners", bannerRoutes);
 
-// Announcement routes
+
 router.use("/announcements", announcementRoutes);
 
-// Shop information routes
+
 router.use("/shop-info", shopInfoRoutes);
 
-// Notification routes
+
 router.use("/notifications", notificationRoutes);
 
-// Payment routes
+
 router.use("/payments", paymentRoutes);
 
-// Chat routes
+
 router.use("/chats", chatRoutes);
 
-// Audit log routes
+
 router.use("/audit-logs", auditLogRoutes);
 
-// Upload routes
+
 router.use("/uploads", uploadRoutes);
 
 router.use("/blogs", blogRoutes);
 
-// Product module routes
-// Routes structure:
-// - /products
-// - /products/:productId/variants
-// - /variants/:variantId
-// - /variant-units/:unitId
-// - /variants/:variantId/units
+
+
+
+
+
+
+
 router.use("/", productModuleRoutes);
 
-// ============================================================================
-// ===== 404 HANDLER =====
-// ============================================================================
+
+
+
 
 router.use((req, res) => {
     res.status(404).json({

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const { PayOS } = require('@payos/node');
 const Payment = require('./payment.model');
 const PaymentMapper = require('./payment.mapper');
 const AppError = require('../../utils/appError.util');
@@ -11,6 +12,8 @@ const Order = require('../orders/order.model');
 const OrderService = require('../orders/order.service');
 const Variant = require('../products/variant.model');
 const NotificationEventService = require('../notifications/notification_event.service');
+
+let payOSClient = null;
 
 const logger = {
     info: (data) => console.log(JSON.stringify({
@@ -26,11 +29,11 @@ const logger = {
     }))
 };
 
-/**
- * ============================================
- * PAYMENT SERVICE
- * ============================================
- */
+
+
+
+
+
 
 class PaymentService {
 
@@ -42,6 +45,8 @@ class PaymentService {
                 'MISSING_REQUIRED_PARAMS'
             );
         }
+
+        provider = String(provider || 'vnpay').trim().toLowerCase();
 
         this._assertPaymentProviderEnabled(provider);
 
@@ -58,6 +63,8 @@ class PaymentService {
                 'ORDER_NOT_FOUND'
             );
         }
+
+        this._assertProviderMatchesOrder(order, provider);
 
         const lockedAmount = order.pricing.total_amount;
         const currency = order.currency || 'VND';
@@ -83,6 +90,14 @@ class PaymentService {
             existingPayment.expires_at &&
             new Date() < new Date(existingPayment.expires_at)
         ) {
+            if (existingPayment.provider !== provider) {
+                throw new AppError(
+                    'Pending payment already exists with another provider',
+                    409,
+                    'PAYMENT_PROVIDER_MISMATCH'
+                );
+            }
+
             if (
                 provider === 'vnpay' &&
                 !existingPayment.provider_data?.vnp_txn_ref
@@ -92,6 +107,18 @@ class PaymentService {
                     vnp_txn_ref: this._generateVNPayTxnRef(
                         existingPayment.order_id
                     ),
+                };
+
+                await existingPayment.save();
+            }
+
+            if (
+                provider === 'payos' &&
+                !existingPayment.provider_data?.payos_order_code
+            ) {
+                existingPayment.provider_data = {
+                    ...existingPayment.provider_data,
+                    payos_order_code: this._generatePayOSOrderCode(),
                 };
 
                 await existingPayment.save();
@@ -107,8 +134,7 @@ class PaymentService {
                 ),
             };
         }
-        const thirtyMinutesFromNow = new Date();
-        thirtyMinutesFromNow.setMinutes(thirtyMinutesFromNow.getMinutes() + 30);
+        const paymentExpiresAt = this._getPaymentExpiresAt(provider);
 
         const txnRef = this._generateVNPayTxnRef(orderId);
 
@@ -116,6 +142,10 @@ class PaymentService {
 
         if (provider === 'vnpay') {
             providerData.vnp_txn_ref = txnRef;
+        }
+
+        if (provider === 'payos') {
+            providerData.payos_order_code = this._generatePayOSOrderCode();
         }
 
         let payment;
@@ -134,7 +164,7 @@ class PaymentService {
 
                 idempotency_key: idempotencyKey,
 
-                expires_at: thirtyMinutesFromNow,
+                expires_at: paymentExpiresAt,
 
                 provider_data: providerData,
             });
@@ -154,6 +184,14 @@ class PaymentService {
                 duplicatedPayment.expires_at &&
                 new Date() < new Date(duplicatedPayment.expires_at)
             ) {
+                if (duplicatedPayment.provider !== provider) {
+                    throw new AppError(
+                        'Pending payment already exists with another provider',
+                        409,
+                        'PAYMENT_PROVIDER_MISMATCH'
+                    );
+                }
+
                 return {
                     paymentId: duplicatedPayment._id.toString(),
                     payment: PaymentMapper.toResponseDTO(duplicatedPayment),
@@ -500,6 +538,103 @@ class PaymentService {
         };
     }
 
+    static async handlePayOSWebhook(webhookEvent, metadata = {}) {
+        const webhookData = await this._verifyPayOSWebhook(webhookEvent);
+
+        if (!webhookData?.orderCode || !webhookData?.paymentLinkId) {
+            throw new AppError(
+                'Invalid PayOS webhook payload',
+                400,
+                'INVALID_WEBHOOK_PAYLOAD'
+            );
+        }
+
+        const payment = await Payment.findByPayOSOrderCode(webhookData.orderCode) ||
+            await Payment.findByPayOSPaymentLinkId(webhookData.paymentLinkId);
+
+        if (!payment) {
+            if (this._isPayOSValidationWebhook(webhookData)) {
+                return {
+                    status: 'ignored',
+                    transactionRef: webhookData.paymentLinkId,
+                    message: 'PayOS webhook validation accepted',
+                };
+            }
+
+            throw new AppError(
+                'Payment not found',
+                404,
+                'PAYMENT_NOT_FOUND'
+            );
+        }
+
+        const receivedAmount = Number(webhookData.amount);
+        const expectedAmount = Math.round(Number(payment.amount));
+
+        if (!Number.isFinite(receivedAmount) || receivedAmount !== expectedAmount) {
+            await Payment.updateOne(
+                { _id: payment._id },
+                {
+                    $set: {
+                        verification_status: 'failed',
+                        failure_reason: 'AMOUNT_MISMATCH',
+                        failure_code: 'FRAUD_ATTEMPT',
+                        failure_message: `Expected ${expectedAmount}, received ${webhookData.amount}`,
+                        webhook_verified_at: new Date(),
+                    },
+                }
+            );
+
+            await this._createPaymentAuditLog({
+                action: AUDIT_ACTIONS.PAYMENT_WEBHOOK_AMOUNT_MISMATCH,
+                payment,
+                metadata,
+                changes: {
+                    amount: {
+                        from: expectedAmount,
+                        to: receivedAmount,
+                    },
+                    provider: {
+                        from: null,
+                        to: 'payos',
+                    },
+                },
+            });
+
+            throw new AppError(
+                'Payment amount mismatch',
+                409,
+                'AMOUNT_MISMATCH_FRAUD_ATTEMPT'
+            );
+        }
+
+        const isPaymentSuccess =
+            webhookEvent.success === true &&
+            webhookData.code === '00';
+
+        if (isPaymentSuccess) {
+            return await this._processPaymentSuccess(payment, {
+                payos_order_code: webhookData.orderCode,
+                payos_payment_link_id: webhookData.paymentLinkId,
+                payos_status: webhookData.code,
+                payos_reference: webhookData.reference,
+                payos_transaction_date_time: webhookData.transactionDateTime,
+                raw_ipn: webhookEvent,
+                audit_action: AUDIT_ACTIONS.PAYOS_WEBHOOK_PAYMENT,
+                audit_metadata: metadata,
+            });
+        }
+
+        return await this._processPaymentFailure(payment, {
+            payos_status: webhookData.code,
+            failure_reason: 'PAYOS_PAYMENT_REJECTED',
+            failure_message: webhookData.desc || webhookEvent.desc,
+            raw_ipn: webhookEvent,
+            audit_action: AUDIT_ACTIONS.PAYOS_WEBHOOK_PAYMENT,
+            audit_metadata: metadata,
+        });
+    }
+
     static async _processPaymentSuccess(payment, providerData) {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -536,6 +671,16 @@ class PaymentService {
                             providerData.stripe_status,
                         'provider_data.paypal_status':
                             providerData.paypal_status,
+                        'provider_data.payos_order_code':
+                            providerData.payos_order_code,
+                        'provider_data.payos_payment_link_id':
+                            providerData.payos_payment_link_id,
+                        'provider_data.payos_status':
+                            providerData.payos_status,
+                        'provider_data.payos_reference':
+                            providerData.payos_reference,
+                        'provider_data.payos_transaction_date_time':
+                            providerData.payos_transaction_date_time,
 
                         raw_ipn: providerData.raw_ipn,
                         raw_return: providerData.raw_return,
@@ -604,6 +749,9 @@ class PaymentService {
                             to: providerData.vnp_TxnRef ||
                                 providerData.stripe_pi_id ||
                                 providerData.paypal_order_id ||
+                                providerData.payos_reference ||
+                                providerData.payos_payment_link_id ||
+                                providerData.payos_order_code ||
                                 null,
                         },
                     },
@@ -620,6 +768,9 @@ class PaymentService {
                     providerData.vnp_TxnRef ||
                     providerData.stripe_pi_id ||
                     providerData.paypal_order_id ||
+                    providerData.payos_reference ||
+                    providerData.payos_payment_link_id ||
+                    providerData.payos_order_code ||
                     null,
                 message: 'Payment confirmed',
             };
@@ -639,7 +790,7 @@ class PaymentService {
             const result = await Payment.updateOne(
                 {
                     _id: payment._id,
-                    status: 'pending', // ← MANDATORY condition
+                    status: 'pending',
                 },
                 {
                     $set: {
@@ -650,14 +801,16 @@ class PaymentService {
                         failure_code: failureData.vnp_ResponseCode
                             || failureData.stripe_status
                             || failureData.paypal_status
+                            || failureData.payos_status
                             || 'UNKNOWN',
                         failure_message:
                             failureData.failure_message ||
-                            `Payment failed with code: ${failureData.vnp_ResponseCode || failureData.stripe_status}`,
+                            `Payment failed with code: ${failureData.vnp_ResponseCode || failureData.stripe_status || failureData.paypal_status || failureData.payos_status || 'UNKNOWN'}`,
+                        'provider_data.payos_status': failureData.payos_status,
                         raw_ipn: failureData.raw_ipn,
                     },
                     $unset: {
-                        expires_at: 1, // ← Remove TTL field
+                        expires_at: 1,
                     },
                 },
                 { session }
@@ -697,12 +850,12 @@ class PaymentService {
                 const stockResult = await Variant.updateOne(
                     {
                         _id: item.variant_id,
-                        'stock.reserved': { $gte: qtyItems }, // ← Must have reserved
+                        'stock.reserved': { $gte: qtyItems },
                     },
                     {
                         $inc: {
-                            'stock.available': +qtyItems, // Restore
-                            'stock.reserved': -qtyItems, // Release
+                            'stock.available': +qtyItems,
+                            'stock.reserved': -qtyItems,
                         },
                     },
                     { session }
@@ -739,7 +892,11 @@ class PaymentService {
                 order_id: payment.order_id.toString(),
                 user_id: payment.user_id.toString(),
                 failure_reason: failureData.failure_reason || 'PAYMENT_REJECTED',
-                failure_code: failureData.vnp_ResponseCode || failureData.stripe_status || 'UNKNOWN'
+                failure_code: failureData.vnp_ResponseCode ||
+                    failureData.stripe_status ||
+                    failureData.paypal_status ||
+                    failureData.payos_status ||
+                    'UNKNOWN'
             });
 
             if (failureData.audit_action) {
@@ -757,6 +914,7 @@ class PaymentService {
                             to: failureData.vnp_ResponseCode ||
                                 failureData.stripe_status ||
                                 failureData.paypal_status ||
+                                failureData.payos_status ||
                                 'UNKNOWN',
                         },
                     },
@@ -767,6 +925,7 @@ class PaymentService {
                 failure_code: failureData.vnp_ResponseCode ||
                     failureData.stripe_status ||
                     failureData.paypal_status ||
+                    failureData.payos_status ||
                     'UNKNOWN',
                 failure_reason: failureData.failure_reason || 'PAYMENT_REJECTED',
             });
@@ -863,8 +1022,7 @@ class PaymentService {
             }
 
             const now = new Date();
-            const thirtyMinutesFromNow = new Date(now);
-            thirtyMinutesFromNow.setMinutes(thirtyMinutesFromNow.getMinutes() + 30);
+            const paymentExpiresAt = this._getPaymentExpiresAt(payment.provider);
 
             const providerData = {
                 ...(payment.provider_data?.toObject
@@ -874,6 +1032,16 @@ class PaymentService {
 
             if (payment.provider === 'vnpay') {
                 providerData.vnp_txn_ref = `${Date.now()}_${payment.order_id.toString()}`;
+            }
+
+            if (payment.provider === 'payos') {
+                providerData.payos_order_code = this._generatePayOSOrderCode();
+                delete providerData.payos_payment_link_id;
+                delete providerData.payos_checkout_url;
+                delete providerData.payos_qr_code;
+                delete providerData.payos_status;
+                delete providerData.payos_reference;
+                delete providerData.payos_transaction_date_time;
             }
 
             const updatedPayment = await Payment.findOneAndUpdate(
@@ -886,7 +1054,7 @@ class PaymentService {
                     $set: {
                         status: 'pending',
                         verification_status: 'pending',
-                        expires_at: thirtyMinutesFromNow,
+                        expires_at: paymentExpiresAt,
                         last_retry_at: now,
                         provider_data: providerData,
                     },
@@ -924,7 +1092,7 @@ class PaymentService {
                     $set: {
                         status: 'PENDING',
                         'payment.status': 'PENDING',
-                        payment_expires_at: thirtyMinutesFromNow,
+                        payment_expires_at: paymentExpiresAt,
                     },
                     $unset: {
                         'payment.paid_at': 1,
@@ -954,7 +1122,8 @@ class PaymentService {
             const paymentUrl = await this._generatePaymentUrl(
                 updatedPayment,
                 payment.provider,
-                metadata
+                metadata,
+                { session }
             );
 
             await session.commitTransaction();
@@ -1021,6 +1190,10 @@ class PaymentService {
                     409,
                     'INVALID_PAYMENT_STATUS'
                 );
+            }
+
+            if (payment.provider === 'payos') {
+                await this._cancelPayOSPaymentLink(payment, reason);
             }
 
             const result = await Payment.updateOne(
@@ -1390,7 +1563,7 @@ class PaymentService {
         });
     }
 
-    // ===== INTERNAL HELPERS =====
+
 
     static async _createPaymentAuditLog({
         action,
@@ -1692,11 +1865,15 @@ class PaymentService {
         return error?.code === 11000;
     }
 
-    static async _generatePaymentUrl(payment, provider, metadata = {}) {
+    static async _generatePaymentUrl(payment, provider, metadata = {}, options = {}) {
         this._assertPaymentProviderEnabled(provider);
 
         if (String(provider || '').trim().toLowerCase() === 'vnpay') {
             return this._generateVNPayPaymentUrl(payment, metadata);
+        }
+
+        if (String(provider || '').trim().toLowerCase() === 'payos') {
+            return await this._generatePayOSPaymentUrl(payment, metadata, options);
         }
 
         throw new AppError(
@@ -1708,6 +1885,235 @@ class PaymentService {
 
     static _assertPaymentProviderEnabled(provider) {
         assertPaymentProviderEnabled(provider);
+    }
+
+    static async _generatePayOSPaymentUrl(payment, metadata = {}, options = {}) {
+        const providerData = this._getProviderDataObject(payment.provider_data);
+
+        if (providerData.payos_checkout_url) {
+            return providerData.payos_checkout_url;
+        }
+
+        if (payment.currency !== 'VND') {
+            throw new AppError(
+                'PayOS only supports VND payments',
+                400,
+                'PAYOS_UNSUPPORTED_CURRENCY'
+            );
+        }
+
+        const orderCode = providerData.payos_order_code ||
+            this._generatePayOSOrderCode();
+        const amount = Math.round(Number(payment.amount));
+
+        if (!Number.isInteger(amount) || amount <= 0) {
+            throw new AppError(
+                'Invalid payment amount for PayOS',
+                500,
+                'INVALID_PAYMENT_DATA'
+            );
+        }
+
+        const order = await Order.findById(payment.order_id)
+            .session(options.session || null)
+            .lean();
+
+        if (!order) {
+            throw new AppError(
+                'Order not found',
+                404,
+                'ORDER_NOT_FOUND'
+            );
+        }
+
+        let paymentLink;
+
+        try {
+            paymentLink = await this._getPayOSClient().paymentRequests.create({
+                orderCode,
+                amount,
+                description: this._buildPayOSDescription(orderCode),
+                cancelUrl: this._buildPayOSReturnUrl('cancel', payment),
+                returnUrl: this._buildPayOSReturnUrl('return', payment),
+                buyerName: order.address_snapshot?.receiver_name,
+                buyerPhone: order.address_snapshot?.phone,
+                buyerAddress: order.address_snapshot?.full_address,
+                expiredAt: Math.floor(
+                    new Date(payment.expires_at || this._getPaymentExpiresAt('payos')).getTime() / 1000
+                ),
+            });
+        } catch (error) {
+            logger.error({
+                event: 'payos_create_payment_link_failed',
+                payment_id: payment._id.toString(),
+                order_id: payment.order_id.toString(),
+                error: error.message,
+            });
+
+            throw new AppError(
+                'PayOS payment link creation failed',
+                502,
+                'PAYOS_CREATE_PAYMENT_FAILED'
+            );
+        }
+
+        const nextProviderData = {
+            ...providerData,
+            payos_order_code: paymentLink.orderCode || orderCode,
+            payos_payment_link_id: paymentLink.paymentLinkId,
+            payos_checkout_url: paymentLink.checkoutUrl,
+            payos_qr_code: paymentLink.qrCode,
+            payos_status: paymentLink.status,
+        };
+
+        payment.provider_data = nextProviderData;
+
+        await Payment.updateOne(
+            { _id: payment._id },
+            {
+                $set: {
+                    provider_data: nextProviderData,
+                },
+            },
+            options.session ? { session: options.session } : undefined
+        );
+
+        return paymentLink.checkoutUrl;
+    }
+
+    static _getPayOSClient() {
+        const clientId = process.env.PAYOS_CLIENT_ID;
+        const apiKey = process.env.PAYOS_API_KEY;
+        const checksumKey = process.env.PAYOS_CHECKSUM_KEY;
+
+        if (!clientId || !apiKey || !checksumKey) {
+            throw new AppError(
+                'PayOS config is missing',
+                500,
+                'PAYOS_CONFIG_MISSING'
+            );
+        }
+
+        if (!payOSClient) {
+            payOSClient = new PayOS({
+                clientId,
+                apiKey,
+                checksumKey,
+            });
+        }
+
+        return payOSClient;
+    }
+
+    static async _verifyPayOSWebhook(webhookEvent) {
+        try {
+            return await this._getPayOSClient().webhooks.verify(webhookEvent);
+        } catch (error) {
+            throw new AppError(
+                'PayOS webhook signature verification failed',
+                401,
+                'WEBHOOK_VERIFICATION_FAILED'
+            );
+        }
+    }
+
+    static async _cancelPayOSPaymentLink(payment, reason) {
+        const providerData = this._getProviderDataObject(payment.provider_data);
+        const paymentLinkId =
+            providerData.payos_payment_link_id ||
+            providerData.payos_order_code;
+
+        if (!paymentLinkId) {
+            return null;
+        }
+
+        return await this._getPayOSClient().paymentRequests.cancel(
+            paymentLinkId,
+            reason
+        );
+    }
+
+    static _isPayOSValidationWebhook(webhookData) {
+        return Number(webhookData.orderCode) === 123 &&
+            Number(webhookData.amount) === 3000 &&
+            webhookData.description === 'VQRIO123';
+    }
+
+    static _buildPayOSReturnUrl(type, payment) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const baseUrl = type === 'cancel'
+            ? process.env.PAYOS_CANCEL_URL || `${frontendUrl}/payment/cancel`
+            : process.env.PAYOS_RETURN_URL || `${frontendUrl}/payment/success`;
+
+        return this._appendUrlParams(baseUrl, {
+            provider: 'payos',
+            order_id: payment.order_id.toString(),
+            payment_id: payment._id.toString(),
+        });
+    }
+
+    static _appendUrlParams(url, params) {
+        try {
+            const parsedUrl = new URL(url);
+
+            Object.entries(params).forEach(([key, value]) => {
+                if (value !== undefined && value !== null && value !== '') {
+                    parsedUrl.searchParams.set(key, value);
+                }
+            });
+
+            return parsedUrl.toString();
+        } catch (error) {
+            throw new AppError(
+                'Invalid PayOS return URL config',
+                500,
+                'PAYOS_RETURN_URL_INVALID'
+            );
+        }
+    }
+
+    static _buildPayOSDescription(orderCode) {
+        return `NLS${String(orderCode).slice(-6)}`;
+    }
+
+    static _getProviderDataObject(providerData) {
+        if (!providerData) {
+            return {};
+        }
+
+        return providerData.toObject ? providerData.toObject() : providerData;
+    }
+
+    static _getPaymentExpiresAt(provider) {
+        const normalizedProvider = String(provider || '').trim().toLowerCase();
+        const minutes = normalizedProvider === 'payos'
+            ? Number(process.env.PAYOS_PAYMENT_EXPIRE_MINUTES || 15)
+            : 30;
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + minutes);
+        return expiresAt;
+    }
+
+    static _generatePayOSOrderCode() {
+        const timestampPart = Date.now() % 10000000000;
+        const randomPart = crypto.randomInt(10, 99);
+        return Number(`${timestampPart}${randomPart}`);
+    }
+
+    static _assertProviderMatchesOrder(order, provider) {
+        const providerByPaymentMethod = {
+            VNPAY: 'vnpay',
+            PAYOS: 'payos',
+        };
+        const expectedProvider = providerByPaymentMethod[order.payment?.method];
+
+        if (expectedProvider && expectedProvider !== provider) {
+            throw new AppError(
+                'Payment provider does not match order payment method',
+                409,
+                'PAYMENT_PROVIDER_MISMATCH'
+            );
+        }
     }
 
     static _generateVNPayPaymentUrl(payment, metadata = {}) {

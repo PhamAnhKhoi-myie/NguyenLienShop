@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import {
     AlertTriangle,
     CheckCircle2,
@@ -41,21 +42,21 @@ import {
 } from '../utils/adminFormat';
 
 const actionTitles = {
-    info: 'Cập nhật vận đơn',
-    status: 'Cập nhật trạng thái',
-    failure: 'Ghi nhận lỗi giao hàng',
-    cancel: 'Hủy vận đơn',
+    info: translate('text.update_bill_of_lading'),
+    status: translate('text.status_update'),
+    failure: translate('text.delivery_error_record'),
+    cancel: translate('text.cancel_bill_of_lading'),
 };
 
 const timelineLabels = {
-    created_at: 'Tạo vận đơn',
-    picked_up_at: 'Đã lấy hàng',
-    in_transit_at: 'Đang vận chuyển',
-    at_destination_at: 'Tới kho giao',
-    delivered_at: 'Đã giao',
-    failed_at: 'Giao thất bại',
-    cancelled_at: 'Đã hủy',
-    returned_at: 'Đã trả lại',
+    created_at: translate('text.create_bill_of_lading'),
+    picked_up_at: translate('text.picked_up'),
+    in_transit_at: translate('text.shipping_b3b001d4'),
+    at_destination_at: translate('text.go_to_warehouse_to_deliver'),
+    delivered_at: translate('text.delivered'),
+    failed_at: translate('text.delivery_failed'),
+    cancelled_at: translate('text.canceled'),
+    returned_at: translate('text.returned'),
 };
 
 function getShipmentId(shipment) {
@@ -149,9 +150,7 @@ function StatsPanel({ stats }) {
         <div className="grid gap-4 lg:grid-cols-4">
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Tổng vận đơn
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.total_bill_of_lading')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-text-main)]">
                         {getStatCount(stats?.totalShipments)}
                     </p>
@@ -159,9 +158,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Tỷ lệ giao thành công
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.successful_delivery_rate')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-primary-hover)]">
                         {getRate(stats, 'deliveryRate')}%
                     </p>
@@ -169,9 +166,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Tỷ lệ thất bại
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.failure_rate')} </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--color-warning)]">
                         {getRate(stats, 'failureRate')}%
                     </p>
@@ -179,9 +174,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card>
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Đơn vị vận chuyển
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.shipping_unit')} </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                         {carrierItems.length ? (
                             carrierItems.map((item) => (
@@ -201,9 +194,7 @@ function StatsPanel({ stats }) {
             </Card>
             <Card className="lg:col-span-4">
                 <CardBody>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Trạng thái vận chuyển
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.shipping_status')} </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                         {statusItems.length ? (
                             statusItems.map((item) => (
@@ -234,7 +225,7 @@ function ShipmentFilters({
     return (
         <div className="grid gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 lg:grid-cols-6">
             <Select
-                label="Trạng thái"
+                label={translate('text.status')}
                 value={values.status}
                 onChange={(event) => onChange('status', event.target.value)}
             >
@@ -245,7 +236,7 @@ function ShipmentFilters({
                 ))}
             </Select>
             <Select
-                label="Đơn vị"
+                label={translate('text.unit')}
                 value={values.carrier}
                 onChange={(event) => onChange('carrier', event.target.value)}
             >
@@ -256,30 +247,26 @@ function ShipmentFilters({
                 ))}
             </Select>
             <Input
-                label="Order ID"
+                label={translate('text.order_id')}
                 value={values.order_id}
                 onChange={(event) => onChange('order_id', event.target.value)}
             />
             <Input
-                label="Từ ngày"
+                label={translate('text.from_date')}
                 type="date"
                 value={values.date_from}
                 onChange={(event) => onChange('date_from', event.target.value)}
             />
             <Input
-                label="Đến ngày"
+                label={translate('text.until_date')}
                 type="date"
                 value={values.date_to}
                 onChange={(event) => onChange('date_to', event.target.value)}
             />
             <div className="flex items-end gap-2">
                 <Button type="button" onClick={onApply}>
-                    <Filter className="h-4 w-4" />
-                    Lọc
-                </Button>
-                <Button type="button" variant="outline" onClick={onReset}>
-                    Xóa lọc
-                </Button>
+                    <Filter className="h-4 w-4" /> {translate('text.filter')} </Button>
+                <Button type="button" variant="outline" onClick={onReset}> {translate('text.clear_filter')} </Button>
             </div>
         </div>
     );
@@ -293,7 +280,7 @@ function TimelinePanel({ timeline = {} }) {
             return {
                 key,
                 timestamp,
-                label: value?.label_vi || timelineLabels[key] || key,
+                label: value?.label || timelineLabels[key] || key,
             };
         })
         .filter((event) => event.timestamp)
@@ -301,9 +288,7 @@ function TimelinePanel({ timeline = {} }) {
 
     if (!events.length) {
         return (
-            <p className="text-sm text-[var(--color-text-muted)]">
-                Chưa có mốc vận chuyển.
-            </p>
+            <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.there_is_no_shipping_date_yet')} </p>
         );
     }
 
@@ -347,8 +332,7 @@ function ShipmentDetailPanel({
                         <StatusBadge value={shipment.status} />
                         <StatusBadge value={shipment.carrier} label={shipment.carrier} />
                     </div>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        Order {shipment.order_id}
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.order')} {shipment.order_id}
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -357,18 +341,14 @@ function ShipmentDetailPanel({
                         variant="outline"
                         onClick={() => onOpenAction('info')}
                     >
-                        <ClipboardEdit className="h-4 w-4" />
-                        Sửa
-                    </Button>
+                        <ClipboardEdit className="h-4 w-4" /> {translate('text.edit_0963749f')} </Button>
                     {hasNextShipmentStatus(shipment.status) && (
                         <Button
                             size="sm"
                             variant="outline"
                             onClick={() => onOpenAction('status')}
                         >
-                            <Truck className="h-4 w-4" />
-                            Trạng thái
-                        </Button>
+                            <Truck className="h-4 w-4" /> {translate('text.status')} </Button>
                     )}
                     {isInProgress(shipment.status) && (
                         <Button
@@ -376,9 +356,7 @@ function ShipmentDetailPanel({
                             variant="warning"
                             onClick={() => onOpenAction('failure')}
                         >
-                            <AlertTriangle className="h-4 w-4" />
-                            Ghi lỗi
-                        </Button>
+                            <AlertTriangle className="h-4 w-4" /> {translate('text.error_log')} </Button>
                     )}
                     {canCancelShipment(shipment) && (
                         <Button
@@ -386,9 +364,7 @@ function ShipmentDetailPanel({
                             variant="outline"
                             onClick={() => onOpenAction('cancel')}
                         >
-                            <XCircle className="h-4 w-4" />
-                            Hủy
-                        </Button>
+                            <XCircle className="h-4 w-4" /> {translate('text.cancel')} </Button>
                     )}
                     {canRetryShipment(shipment) && (
                         <Button
@@ -397,9 +373,7 @@ function ShipmentDetailPanel({
                             isLoading={isRetrying}
                             onClick={onRetry}
                         >
-                            <RotateCcw className="h-4 w-4" />
-                            Retry
-                        </Button>
+                            <RotateCcw className="h-4 w-4" /> {translate('text.retry')} </Button>
                     )}
                     {canConfirmDelivery(shipment) && (
                         <Button
@@ -407,9 +381,7 @@ function ShipmentDetailPanel({
                             isLoading={isConfirming}
                             onClick={onConfirmDelivery}
                         >
-                            <CheckCircle2 className="h-4 w-4" />
-                            Đã giao
-                        </Button>
+                            <CheckCircle2 className="h-4 w-4" /> {translate('text.delivered')} </Button>
                     )}
                     <Button
                         size="sm"
@@ -417,18 +389,14 @@ function ShipmentDetailPanel({
                         isLoading={isDeleting}
                         onClick={onDelete}
                     >
-                        <Trash2 className="h-4 w-4" />
-                        Xóa mềm
-                    </Button>
+                        <Trash2 className="h-4 w-4" /> {translate('text.soft_delete')} </Button>
                 </div>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3">
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Người nhận
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.recipient')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-2 text-sm">
                         <p className="font-medium text-[var(--color-text-main)]">
@@ -446,31 +414,23 @@ function ShipmentDetailPanel({
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Theo dõi
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.follow')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-2 text-sm">
                         <div className="flex justify-between gap-3">
-                            <span className="text-[var(--color-text-muted)]">
-                                Tiến độ
-                            </span>
+                            <span className="text-[var(--color-text-muted)]"> {translate('text.progress')} </span>
                             <span className="font-semibold text-[var(--color-primary-hover)]">
                                 {shipment.progress || 0}%
                             </span>
                         </div>
                         <div className="flex justify-between gap-3">
-                            <span className="text-[var(--color-text-muted)]">
-                                Tạo lúc
-                            </span>
+                            <span className="text-[var(--color-text-muted)]"> {translate('text.created_at')} </span>
                             <span className="text-right font-medium text-[var(--color-text-main)]">
                                 {formatDateTime(shipment.created_at)}
                             </span>
                         </div>
                         <div className="flex justify-between gap-3">
-                            <span className="text-[var(--color-text-muted)]">
-                                Giao lúc
-                            </span>
+                            <span className="text-[var(--color-text-muted)]"> {translate('text.delivered_at')} </span>
                             <span className="text-right font-medium text-[var(--color-text-main)]">
                                 {formatDateTime(shipment.delivered_at || shipment.timeline?.delivered_at?.timestamp) || '-'}
                             </span>
@@ -479,9 +439,7 @@ function ShipmentDetailPanel({
                 </Card>
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-[var(--color-text-main)]">
-                            Ghi chú
-                        </h3>
+                        <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.note')} </h3>
                     </CardHeader>
                     <CardBody className="space-y-3 text-sm">
                         <p className="text-[var(--color-text-muted)]">
@@ -503,9 +461,7 @@ function ShipmentDetailPanel({
 
             <Card>
                 <CardHeader>
-                    <h3 className="font-semibold text-[var(--color-text-main)]">
-                        Timeline
-                    </h3>
+                    <h3 className="font-semibold text-[var(--color-text-main)]"> {translate('text.timeline')} </h3>
                 </CardHeader>
                 <CardBody>
                     <TimelinePanel timeline={shipment.timeline} />
@@ -697,7 +653,7 @@ export default function AdminShipmentsPage() {
             return;
         }
 
-        const confirmed = window.confirm(`Retry vận đơn ${shipmentDetail.tracking_code}?`);
+        const confirmed = window.confirm(translate('text.retry_bill_of_lading_value', { value0: shipmentDetail.tracking_code }));
 
         if (!confirmed) {
             return;
@@ -714,7 +670,7 @@ export default function AdminShipmentsPage() {
             return;
         }
 
-        const confirmed = window.confirm(`Xác nhận vận đơn ${shipmentDetail.tracking_code} đã giao?`);
+        const confirmed = window.confirm(translate('text.confirm_bill_of_lading_value_delivered', { value0: shipmentDetail.tracking_code }));
 
         if (!confirmed) {
             return;
@@ -731,7 +687,7 @@ export default function AdminShipmentsPage() {
             return;
         }
 
-        const confirmed = window.confirm(`Xóa mềm vận đơn ${shipmentDetail.tracking_code}?`);
+        const confirmed = window.confirm(translate('text.soft_delete_bill_of_lading_value', { value0: shipmentDetail.tracking_code }));
 
         if (!confirmed) {
             return;
@@ -748,24 +704,16 @@ export default function AdminShipmentsPage() {
         <div className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <p className="text-sm font-medium text-[var(--color-primary-hover)]">
-                        Admin
-                    </p>
-                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]">
-                        Quản lý vận chuyển
-                    </h1>
-                    <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                        ADMIN theo dõi vận đơn, cập nhật trạng thái giao hàng và xử lý lỗi vận chuyển.
-                    </p>
+                    <p className="text-sm font-medium text-[var(--color-primary-hover)]"> {translate('text.admin')} </p>
+                    <h1 className="mt-1 text-2xl font-semibold text-[var(--color-text-main)]"> {translate('text.shipping_management')} </h1>
+                    <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.admin_tracks_bills_of_lading_updates_delivery_status_and_handles_shippin')} </p>
                 </div>
                 <Button
                     variant="outline"
                     isLoading={shipmentsQuery.isFetching || statsQuery.isFetching}
                     onClick={refreshShipments}
                 >
-                    <RefreshCw className="h-4 w-4" />
-                    Tải lại
-                </Button>
+                    <RefreshCw className="h-4 w-4" /> {translate('text.reload')} </Button>
             </div>
 
             <StatsPanel stats={statsQuery.data?.data} />
@@ -781,18 +729,18 @@ export default function AdminShipmentsPage() {
                 </CardHeader>
                 <CardBody>
                     {shipmentsQuery.isLoading ? (
-                        <Loading label="Đang tải vận đơn..." />
+                        <Loading label={translate('text.loading_bill_of_lading')} />
                     ) : shipmentsQuery.isError ? (
                         <EmptyState
                             icon={Search}
-                            title="Không tải được vận đơn"
+                            title={translate('text.unable_to_download_bill_of_lading')}
                             description={shipmentsQuery.error.message}
                         />
                     ) : shipments.length === 0 ? (
                         <EmptyState
                             icon={Truck}
-                            title="Chưa có vận đơn"
-                            description="Vận đơn tạo từ order PROCESSING sẽ hiển thị tại đây."
+                            title={translate('text.no_bill_of_lading')}
+                            description={translate('text.the_bill_of_lading_created_from_a_processing_order_will_be_displayed_her')}
                         />
                     ) : (
                         <div className="space-y-4">
@@ -800,13 +748,13 @@ export default function AdminShipmentsPage() {
                                 <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
                                     <thead>
                                         <tr className="bg-[var(--color-background)] text-left text-xs font-semibold uppercase text-[var(--color-text-muted)]">
-                                            <th className="px-4 py-3">Mã vận đơn</th>
-                                            <th className="px-4 py-3">Order</th>
-                                            <th className="px-4 py-3">Đơn vị</th>
-                                            <th className="px-4 py-3">Trạng thái</th>
-                                            <th className="px-4 py-3">Người nhận</th>
-                                            <th className="px-4 py-3">Ngày tạo</th>
-                                            <th className="px-4 py-3 text-right">Tác vụ</th>
+                                            <th className="px-4 py-3">{translate('text.bill_of_lading_code')}</th>
+                                            <th className="px-4 py-3">{translate('text.order')}</th>
+                                            <th className="px-4 py-3">{translate('text.unit')}</th>
+                                            <th className="px-4 py-3">{translate('text.status')}</th>
+                                            <th className="px-4 py-3">{translate('text.recipient')}</th>
+                                            <th className="px-4 py-3">{translate('text.creation_date')}</th>
+                                            <th className="px-4 py-3 text-right">{translate('text.task')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
@@ -838,9 +786,7 @@ export default function AdminShipmentsPage() {
                                                         variant="outline"
                                                         onClick={() => openDetail(shipment)}
                                                     >
-                                                        <Eye className="h-4 w-4" />
-                                                        Chi tiết
-                                                    </Button>
+                                                        <Eye className="h-4 w-4" /> {translate('text.details')} </Button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -860,15 +806,15 @@ export default function AdminShipmentsPage() {
 
             <Modal
                 open={Boolean(selectedShipment)}
-                title={shipmentDetail?.tracking_code || 'Chi tiết vận đơn'}
+                title={shipmentDetail?.tracking_code || translate('text.bill_of_lading_details')}
                 onClose={closeDetail}
                 panelClassName="max-w-7xl"
             >
                 {detailQuery.isLoading ? (
-                    <Loading label="Đang tải chi tiết vận đơn..." />
+                    <Loading label={translate('text.loading_bill_of_lading_details')} />
                 ) : detailQuery.isError ? (
                     <EmptyState
-                        title="Không tải được chi tiết vận đơn"
+                        title={translate('text.unable_to_download_bill_of_lading_details')}
                         description={detailQuery.error.message}
                     />
                 ) : (

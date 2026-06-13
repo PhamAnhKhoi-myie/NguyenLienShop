@@ -20,9 +20,9 @@ router.get('/is-open', ShopInfoController.isShopOpen);
 
 router.get('/next-opening', ShopInfoController.getNextOpeningTime);
 
-/**
- * ADMIN ROUTES (Authentication required)
- */
+
+
+
 router.post(
     '/',
     authenticate,

@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { Link } from 'react-router-dom';
 import { PackageCheck, ShieldCheck, Truck } from 'lucide-react';
 
@@ -9,33 +10,33 @@ import { ROUTES } from '../../../shared/constants/routes';
 const benefits = [
     {
         icon: ShieldCheck,
-        title: 'Bảo vệ trái cây',
-        description: 'Hạn chế sâu bệnh, côn trùng và tác động từ nắng mưa.',
+        title: translate('text.protect_fruit'),
+        description: translate('text.limit_pests_insects_and_impacts_from_sun_and_rain'),
     },
     {
         icon: PackageCheck,
-        title: 'Dễ chọn đúng loại',
-        description: 'Thông tin rõ về kích thước, chất liệu, số lượng/gói và công dụng.',
+        title: translate('text.easy_to_choose_the_right_type'),
+        description: translate('text.clear_information_about_size_material_quantity_package_and_use'),
     },
     {
         icon: Truck,
-        title: 'Phù hợp mua lẻ và nhà vườn',
-        description: 'Dễ đặt hàng, phù hợp cho khách cá nhân, vườn nhỏ và đại lý.',
+        title: translate('text.suitable_for_retail_and_garden_use'),
+        description: translate('text.easy_to_order_suitable_for_individual_customers_small_gardens_and_agents'),
     },
 ];
 
 const categories = [
     {
-        title: 'Túi bao bưởi',
-        description: 'Dành cho trái lớn, cần túi bền, thoáng và dễ rút miệng.',
+        title: translate('text.grapefruit_bag'),
+        description: translate('text.for_large_fruit_need_a_bag_that_is_durable_airy_and_easy_to_retract'),
     },
     {
-        title: 'Túi bao xoài',
-        description: 'Hỗ trợ hạn chế ruồi vàng, sâu bệnh và nám vỏ trái.',
+        title: translate('text.mango_bag'),
+        description: translate('text.helps_limit_yellow_flies_pests_and_melasma_on_fruit_skin'),
     },
     {
-        title: 'Túi bao ổi',
-        description: 'Dễ sử dụng, phù hợp cho vườn nhỏ và nhu cầu mua số lượng vừa.',
+        title: translate('text.guava_bag'),
+        description: translate('text.easy_to_use_suitable_for_small_gardens_and_medium_quantity_purchases'),
     },
 ];
 
@@ -44,30 +45,20 @@ export default function HomePage() {
         <div className="space-y-16">
             <section className="grid min-h-[360px] items-center gap-8 py-8 lg:grid-cols-[0.65fr_1.35fr] lg:py-12">
                 <div className="max-w-xl">
-                    <h1 className="text-4xl font-bold leading-tight text-[var(--color-text-main)] md:text-5xl">
-                        Túi bao trái cây sạch, bền và tiện cho nhà vườn
-                    </h1>
+                    <h1 className="text-4xl font-bold leading-tight text-[var(--color-text-main)] md:text-5xl"> {translate('text.fruit_bags_are_clean_durable_and_convenient_for_gardeners')} </h1>
 
-                    <p className="mt-5 text-base leading-7 text-[var(--color-text-muted)]">
-                        Cung cấp túi bao trái cây, túi vải rút và vật tư hỗ trợ
-                        bảo vệ cây trồng. Sản phẩm phù hợp cho vườn bưởi, xoài,
-                        ổi và nhiều loại cây ăn trái khác.
-                    </p>
+                    <p className="mt-5 text-base leading-7 text-[var(--color-text-muted)]"> {translate('text.providing_fruit_bags_drawstring_bags_and_materials_to_support_crop_prote')} </p>
 
                     <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                         <Link
                             to={ROUTES.PRODUCTS}
                             className="inline-flex h-11 items-center justify-center rounded-md bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
-                        >
-                            Xem sản phẩm
-                        </Link>
+                        > {translate('text.view_product')} </Link>
 
                         <Link
                             to={ROUTES.CART}
                             className="inline-flex h-11 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-5 text-sm font-semibold text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)]"
-                        >
-                            Xem giỏ hàng
-                        </Link>
+                        > {translate('text.view_cart')} </Link>
                     </div>
                 </div>
 
@@ -78,16 +69,9 @@ export default function HomePage() {
 
             <section>
                 <div className="mx-auto max-w-3xl text-center">
-                    <h2 className="text-2xl font-bold text-[var(--color-text-main)] md:text-3xl">
-                        Chọn đúng túi bao cho từng loại trái cây
-                    </h2>
+                    <h2 className="text-2xl font-bold text-[var(--color-text-main)] md:text-3xl"> {translate('text.choose_the_correct_bag_for_each_type_of_fruit')} </h2>
 
-                    <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]">
-                        Website giúp khách xem sản phẩm, chọn biến thể, chọn đơn vị
-                        bán, thêm vào giỏ hàng và đặt hàng nhanh hơn. Thông tin sản
-                        phẩm được trình bày theo kích thước, số lượng/gói, chất liệu,
-                        công dụng và giá bán.
-                    </p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]"> {translate('text.website_helps_customers_view_products_choose_variations_choose_sellers_a')} </p>
                 </div>
 
                 <div className="mt-8 grid gap-5 md:grid-cols-3">
@@ -118,22 +102,15 @@ export default function HomePage() {
             <section>
                 <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold text-[var(--color-text-main)]">
-                            Sản phẩm theo nhu cầu nhà vườn
-                        </h2>
+                        <h2 className="text-2xl font-bold text-[var(--color-text-main)]"> {translate('text.products_according_to_gardener_s_needs')} </h2>
 
-                        <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                            Có thể dùng cho danh mục nổi bật, sản phẩm bán chạy hoặc
-                            sản phẩm đang giảm giá.
-                        </p>
+                        <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.can_be_used_for_featured_categories_best_selling_products_or_discounted_')} </p>
                     </div>
 
                     <Link
                         to={ROUTES.PRODUCTS}
                         className="text-sm font-semibold text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
-                    >
-                        Xem tất cả sản phẩm
-                    </Link>
+                    > {translate('text.view_all_products')} </Link>
                 </div>
 
                 <div className="grid gap-5 md:grid-cols-3">
@@ -151,9 +128,7 @@ export default function HomePage() {
                                 <Link
                                     to={ROUTES.PRODUCTS}
                                     className="mt-4 inline-flex text-sm font-semibold text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
-                                >
-                                    Xem sản phẩm
-                                </Link>
+                                > {translate('text.view_product')} </Link>
                             </CardBody>
                         </Card>
                     ))}
@@ -161,21 +136,14 @@ export default function HomePage() {
             </section>
 
             <section className="pb-8 text-center">
-                <h2 className="text-2xl font-bold text-[var(--color-text-main)]">
-                    Cần chọn túi bao phù hợp?
-                </h2>
+                <h2 className="text-2xl font-bold text-[var(--color-text-main)]"> {translate('text.need_to_choose_the_right_bag')} </h2>
 
-                <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
-                    Xem danh sách sản phẩm để chọn đúng kích thước, chất liệu,
-                    số lượng/gói và mức giá phù hợp với vườn của bạn.
-                </p>
+                <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]"> {translate('text.view_product_listings_to_choose_the_right_size_material_quantity_package')} </p>
 
                 <Link
                     to={ROUTES.PRODUCTS}
                     className="mt-5 inline-flex h-11 items-center justify-center rounded-md bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
-                >
-                    Đi tới sản phẩm
-                </Link>
+                > {translate('text.go_to_product')} </Link>
             </section>
         </div>
     );

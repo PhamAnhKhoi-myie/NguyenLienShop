@@ -10,18 +10,18 @@ class VariantMapper {
             id: doc._id?.toString(),
             product_id: doc.product_id?.toString(),
 
-            // ✅ Identity
+
             sku: doc.sku,
             size: doc.size,
             fabric_type: doc.fabric_type,
 
-            // ✅ FIX #3: Pricing (cached)
+
             min_price: doc.min_price || 0,
             max_price: doc.max_price || 0,
             min_price_per_unit: doc.min_price_per_unit || 0,
             max_price_per_unit: doc.max_price_per_unit || 0,
 
-            // ✅ FIX #2: Stock (by cái, NOT pack)
+
             stock: {
                 available: doc.stock?.available || 0,
                 reserved: doc.stock?.reserved || 0,
@@ -52,7 +52,7 @@ class VariantMapper {
         return {
             ...responseDTO,
 
-            // ✅ Include nested units
+
             units: units.map((unit) => this.transformUnitDetail(unit)),
         };
     }
@@ -92,7 +92,7 @@ class VariantMapper {
             size: doc.size,
             fabric_type: doc.fabric_type,
 
-            // ✅ Stock check
+
             max_available_packs:
                 defaultUnit?.pack_size
                     ? Math.floor(
@@ -100,7 +100,7 @@ class VariantMapper {
                     )
                     : 0,
 
-            // ✅ Default unit info
+
             default_unit: defaultUnit
                 ? {
                     id: defaultUnit._id?.toString(),
@@ -132,7 +132,7 @@ class VariantMapper {
             size: doc.size,
             fabric_type: doc.fabric_type,
 
-            // ✅ Snapshot of pricing
+
             price_snapshot: {
                 min_price: doc.min_price || 0,
                 max_price: doc.max_price || 0,
@@ -140,7 +140,7 @@ class VariantMapper {
                 max_price_per_unit: doc.max_price_per_unit || 0,
             },
 
-            // ✅ Stock at time of order
+
             stock_snapshot: {
                 available: doc.stock?.available || 0,
                 reserved: doc.stock?.reserved || 0,

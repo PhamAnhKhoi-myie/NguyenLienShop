@@ -6,11 +6,11 @@ const { authenticate } = require('../../middlewares/auth.middleware');
 const OrderController = require('./order.controller');
 
 const {
-    // params
+
     IdParamSchema,
     OrderCodeParamSchema,
 
-    // body
+
     createOrderBodySchema,
     cancelOrderBodySchema,
     writeReviewBodySchema,
@@ -19,13 +19,13 @@ const {
     recordShipmentBodySchema,
     adminUpdateOrderBodySchema,
 
-    // query
+
     getOrdersQuerySchema,
 } = require('./order.validator');
 
 const router = express.Router();
 
-// ===== PUBLIC ENDPOINTS =====
+
 
 router.get(
     '/track/:order_code',
@@ -33,7 +33,7 @@ router.get(
     OrderController.trackOrder
 );
 
-// ===== CUSTOMER ENDPOINTS =====
+
 
 router.post(
     '/',
@@ -69,7 +69,7 @@ router.post(
     OrderController.writeReview
 );
 
-// ===== ADMIN ROUTES (specific first) =====
+
 
 router.get(
     '/admin/orders/stats',
@@ -141,7 +141,7 @@ router.get(
     OrderController.getAdminOrderDetail
 );
 
-// ===== GENERIC ROUTE (last) =====
+
 
 router.get(
     '/:order_id',

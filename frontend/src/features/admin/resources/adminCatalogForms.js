@@ -1,21 +1,22 @@
+import { translate } from '../../../shared/i18n/index';
 import { z } from 'zod';
 import { uploadApi } from '../../uploads/api/upload.api';
 
 const objectIdSchema = z
     .string()
-    .regex(/^[0-9a-fA-F]{24}$/, 'Vui lòng chọn dữ liệu hợp lệ');
+    .regex(/^[0-9a-fA-F]{24}$/, translate('text.please_select_valid_data'));
 
 const slugSchema = z
     .string()
     .trim()
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug chỉ gồm chữ thường, số và dấu gạch ngang');
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, translate('text.slug_includes_only_lowercase_letters_numbers_and_hyphens'));
 
 const optionalSlugSchema = z
     .string()
     .trim()
     .refine(
         (value) => value === '' || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value),
-        'Slug chỉ gồm chữ thường, số và dấu gạch ngang'
+        translate('text.slug_includes_only_lowercase_letters_numbers_and_hyphens')
     );
 
 const keywordsSchema = z.string().superRefine((value, ctx) => {
@@ -24,7 +25,7 @@ const keywordsSchema = z.string().superRefine((value, ctx) => {
     if (keywords.length > 10) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'Tối đa 10 từ khóa tìm kiếm',
+            message: translate('text.maximum_10_search_keywords'),
         });
     }
 });
@@ -46,37 +47,37 @@ function keywordsToText(keywords = []) {
 }
 
 export const categoryFormSchema = z.object({
-    name: z.string().trim().min(2, 'Tên danh mục cần ít nhất 2 ký tự').max(100),
+    name: z.string().trim().min(2, translate('text.category_name_needs_to_be_at_least_2_characters')).max(100),
     slug: slugSchema,
-    description: z.string().trim().max(500, 'Mô tả không vượt quá 500 ký tự'),
+    description: z.string().trim().max(500, translate('text.description_must_not_exceed_500_characters')),
     parent_id: z.string().optional(),
     status: z.enum(['ACTIVE', 'INACTIVE']),
     display_order: z.coerce
         .number()
-        .int('Thứ tự phải là số nguyên')
-        .min(0, 'Thứ tự không được âm'),
+        .int(translate('text.order_must_be_an_integer'))
+        .min(0, translate('text.order_cannot_be_negative')),
 });
 
 export const productFormSchema = z.object({
-    name: z.string().trim().min(2, 'Tên sản phẩm cần ít nhất 2 ký tự').max(200),
+    name: z.string().trim().min(2, translate('text.product_name_needs_to_be_at_least_2_characters')).max(200),
     slug: optionalSlugSchema,
     category_id: objectIdSchema,
-    brand: z.string().trim().max(100, 'Thương hiệu không vượt quá 100 ký tự'),
+    brand: z.string().trim().max(100, translate('text.brand_must_not_exceed_100_characters')),
     short_description: z
         .string()
         .trim()
-        .max(500, 'Mô tả ngắn không vượt quá 500 ký tự'),
+        .max(500, translate('text.short_description_not_exceeding_500_characters')),
     description: z
         .string()
         .trim()
-        .max(2000, 'Mô tả chi tiết không vượt quá 2000 ký tự'),
+        .max(2000, translate('text.detailed_description_must_not_exceed_2000_characters')),
     image_files: z.any().optional(),
     search_keywords_text: keywordsSchema,
     status: z.enum(['ACTIVE', 'INACTIVE']),
 });
 
 export const categoryFormConfig = {
-    title: 'danh mục',
+    title: translate('text.category_c6c555e3'),
     schema: categoryFormSchema,
     needsCategoryOptions: true,
     createEndpoint: '/categories',
@@ -107,36 +108,36 @@ export const categoryFormConfig = {
         display_order: Number(values.display_order || 0),
     }),
     fields: [
-        { name: 'name', label: 'Tên danh mục', placeholder: 'Ví dụ: Túi bao xoài' },
-        { name: 'slug', label: 'Slug', placeholder: 'tui-bao-xoai' },
+        { name: 'name', label: translate('text.category_name'), placeholder: translate('text.example_mango_bag') },
+        { name: 'slug', label: translate('text.slug'), placeholder: translate('text.tui_bao_xoai') },
         {
             name: 'parent_id',
-            label: 'Danh mục cha',
+            label: translate('text.parent_category'),
             type: 'select',
             optionsSource: 'categories',
-            emptyLabel: 'Không có danh mục cha',
+            emptyLabel: translate('text.no_parent_category'),
         },
         {
             name: 'status',
-            label: 'Trạng thái',
+            label: translate('text.status'),
             type: 'select',
             options: [
-                { value: 'ACTIVE', label: 'ACTIVE' },
-                { value: 'INACTIVE', label: 'INACTIVE' },
+                { value: 'ACTIVE', label: translate('text.active') },
+                { value: 'INACTIVE', label: translate('text.inactive') },
             ],
         },
         {
             name: 'description',
-            label: 'Mô tả',
+            label: translate('text.description'),
             type: 'textarea',
             className: 'md:col-span-2',
         },
-        { name: 'display_order', label: 'Thứ tự', type: 'number' },
+        { name: 'display_order', label: translate('text.order'), type: 'number' },
     ],
 };
 
 export const productFormConfig = {
-    title: 'sản phẩm',
+    title: translate('text.product_4e46ed68'),
     schema: productFormSchema,
     needsCategoryOptions: true,
     createEndpoint: '/products',
@@ -194,40 +195,40 @@ export const productFormConfig = {
         };
     },
     fields: [
-        { name: 'name', label: 'Tên sản phẩm', placeholder: 'Ví dụ: Túi bao trái 16x16' },
-        { name: 'slug', label: 'Slug', placeholder: 'tui-bao-trai-16x16' },
+        { name: 'name', label: translate('text.product_name'), placeholder: translate('text.example_left_bag_16x16') },
+        { name: 'slug', label: translate('text.slug'), placeholder: translate('text.tui_bao_trai_16x16') },
         {
             name: 'category_id',
-            label: 'Danh mục',
+            label: translate('text.category'),
             type: 'select',
             optionsSource: 'categories',
-            emptyLabel: 'Chọn danh mục',
+            emptyLabel: translate('text.select_category'),
         },
-        { name: 'brand', label: 'Thương hiệu', placeholder: 'Nguyễn Liên' },
+        { name: 'brand', label: translate('text.brand'), placeholder: translate('text.nguyen_lien') },
         {
             name: 'status',
-            label: 'Trạng thái',
+            label: translate('text.status'),
             type: 'select',
             options: [
-                { value: 'ACTIVE', label: 'ACTIVE' },
-                { value: 'INACTIVE', label: 'INACTIVE' },
+                { value: 'ACTIVE', label: translate('text.active') },
+                { value: 'INACTIVE', label: translate('text.inactive') },
             ],
         },
         {
             name: 'short_description',
-            label: 'Mô tả ngắn',
+            label: translate('text.short_description'),
             type: 'textarea',
             className: 'md:col-span-2',
         },
         {
             name: 'description',
-            label: 'Mô tả chi tiết',
+            label: translate('text.detailed_description'),
             type: 'textarea',
             className: 'md:col-span-2',
         },
         {
             name: 'image_files',
-            label: 'Ảnh sản phẩm',
+            label: translate('text.product_photo'),
             type: 'file',
             accept: 'image/*',
             multiple: true,
@@ -237,15 +238,15 @@ export const productFormConfig = {
                     : [],
             helperText: ({ mode }) =>
                 mode === 'edit'
-                    ? 'Ảnh hiện tại sẽ được giữ nếu không chọn ảnh mới. Có thể chọn nhiều ảnh.'
-                    : 'Chọn nhiều ảnh sản phẩm từ máy tính.',
+                    ? translate('text.the_current_image_will_be_kept_if_a_new_image_is_not_selected_multiple_p')
+                    : translate('text.select_multiple_product_images_from_your_computer'),
             className: 'md:col-span-2',
         },
         {
             name: 'search_keywords_text',
-            label: 'Từ khóa tìm kiếm',
+            label: translate('text.search_keyword'),
             type: 'textarea',
-            placeholder: 'túi bao trái, bao xoài, bao ổi',
+            placeholder: translate('text.fruit_bags_mango_bags_guava_bags'),
             className: 'md:col-span-2',
         },
     ],

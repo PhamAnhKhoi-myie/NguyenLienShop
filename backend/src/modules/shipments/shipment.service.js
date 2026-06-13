@@ -6,7 +6,7 @@ const AppError = require('../../utils/appError.util');
 const ShipmentAuditLogService = require('../audit_logs/shipment_audit_log/shipment_log.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
 
-// Import dependencies
+
 const Order = require('../orders/order.model');
 const NotificationEventService = require('../notifications/notification_event.service');
 
@@ -171,7 +171,7 @@ class ShipmentService {
     static async getShipment(shipmentId, userId = null) {
         const query = { _id: shipmentId, is_deleted: false };
 
-        // ✅ Ownership check (unless admin)
+
         if (userId) {
             query.user_id = userId;
         }
@@ -208,7 +208,7 @@ class ShipmentService {
     static async getShipmentsForOrder(orderId, userId = null) {
         const order = await Order.findOne({
             _id: orderId,
-            ...(userId && { user_id: userId }), // Ownership check if not admin
+            ...(userId && { user_id: userId }),
         });
 
         if (!order) {
@@ -294,10 +294,10 @@ class ShipmentService {
             picked_up: ['in_transit', 'failed', 'cancelled'],
             in_transit: ['at_destination', 'failed', 'cancelled'],
             at_destination: ['delivered', 'failed', 'cancelled'],
-            delivered: [], // Terminal state
-            failed: ['pending'], // Can retry
-            cancelled: [], // Terminal state
-            returned: [], // Terminal state
+            delivered: [],
+            failed: ['pending'],
+            cancelled: [],
+            returned: [],
         };
 
         if (!validTransitions[shipment.status]?.includes(newStatus)) {
@@ -1465,7 +1465,7 @@ class ShipmentService {
         return order;
     }
 
-    // ===== INTERNAL HELPERS =====
+
 
     static async auditShipmentWebhookRejected(
         carrier,
@@ -1631,7 +1631,7 @@ class ShipmentService {
     }
 
     static _getNextRetryTime(lastRetryAt) {
-        if (!lastRetryAt) return new Date(); // Can retry immediately
+        if (!lastRetryAt) return new Date();
 
         const nextRetryTime = new Date(lastRetryAt);
         nextRetryTime.setHours(nextRetryTime.getHours() + 48);

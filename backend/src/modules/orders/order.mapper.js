@@ -112,11 +112,11 @@ class OrderMapper {
                 pending_items: this.calculatePendingItems(doc.items || []),
             },
 
-            // ✅ External IDs for reference
+
             payment_id: doc.payment_id?.toString() || null,
             shipment_id: doc.shipment_id?.toString() || null,
 
-            // ✅ Expiry info
+
             payment_expires_at: doc.payment_expires_at || null,
         };
     }
@@ -251,7 +251,7 @@ class OrderMapper {
         };
     }
 
-    // =========== HELPERS ===========
+
 
     static transformItems(items) {
         if (!Array.isArray(items) || items.length === 0) {
@@ -372,7 +372,7 @@ class OrderMapper {
             changed_at_formatted: this.formatDate(record.changed_at),
             changed_by_id: record.changed_by?.toString() || null,
             note: record.note || null,
-            is_system: !record.changed_by, // System action if no changed_by
+            is_system: !record.changed_by,
         }));
     }
 
@@ -457,13 +457,13 @@ class OrderMapper {
 
     static getStatusLabel(status) {
         const labels = {
-            PENDING: 'Đang chờ thanh toán',
-            PAID: 'Đã thanh toán',
-            PROCESSING: 'Đang xử lý',
-            SHIPPED: 'Đã gửi',
-            DELIVERED: 'Đã giao',
-            FAILED: 'Thanh toán thất bại',
-            CANCELED: 'Đã hủy',
+            PENDING: "Awaiting payment",
+            PAID: "Paid",
+            PROCESSING: "Processing",
+            SHIPPED: "Sent",
+            DELIVERED: "Delivered",
+            FAILED: "Payment failed",
+            CANCELED: "Canceled",
         };
 
         return labels[status] || status;
@@ -499,7 +499,7 @@ class OrderMapper {
     }
 
     static formatPrice(price) {
-        return new Intl.NumberFormat('vi-VN', {
+        return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'VND',
         }).format(price);
@@ -510,7 +510,7 @@ class OrderMapper {
             return null;
         }
 
-        return new Date(date).toLocaleDateString('vi-VN', {
+        return new Date(date).toLocaleDateString('en-US', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -535,9 +535,9 @@ class OrderMapper {
         maxDate.setDate(maxDate.getDate() + maxDays);
 
         return {
-            min: minDate.toLocaleDateString('vi-VN'),
-            max: maxDate.toLocaleDateString('vi-VN'),
-            display: `${minDays}-${maxDays} ngày làm việc`,
+            min: minDate.toLocaleDateString('en-US'),
+            max: maxDate.toLocaleDateString('en-US'),
+            display: `${minDays}-${maxDays} working days`,
         };
     }
 
@@ -547,9 +547,9 @@ class OrderMapper {
         }
 
         const date = new Date(shippedDate);
-        date.setDate(date.getDate() + 3); // 3 days after shipped
+        date.setDate(date.getDate() + 3);
 
-        return date.toLocaleDateString('vi-VN');
+        return date.toLocaleDateString('en-US');
     }
 
     static buildTrackingUrl(carrier, trackingCode) {

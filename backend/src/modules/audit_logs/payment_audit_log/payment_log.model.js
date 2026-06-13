@@ -10,6 +10,7 @@ const PAYMENT_ACTIONS = [
     AUDIT_ACTIONS.VNPAY_WEBHOOK_PAYMENT,
     AUDIT_ACTIONS.STRIPE_WEBHOOK_PAYMENT,
     AUDIT_ACTIONS.PAYPAL_WEBHOOK_PAYMENT,
+    AUDIT_ACTIONS.PAYOS_WEBHOOK_PAYMENT,
     AUDIT_ACTIONS.PAYMENT_WEBHOOK_AMOUNT_MISMATCH,
     AUDIT_ACTIONS.PAYMENT_WEBHOOK_REJECTED,
 ];
@@ -27,7 +28,7 @@ const schema = new mongoose.Schema({
 
     user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
-    provider: { type: String, enum: ['vnpay', 'stripe', 'paypal', null], default: null },
+    provider: { type: String, enum: ['vnpay', 'stripe', 'paypal', 'payos', null], default: null },
 
     changes: {
         type: mongoose.Schema.Types.Mixed,

@@ -9,7 +9,7 @@ const priceTierSchema = new mongoose.Schema(
         },
         max_qty: {
             type: Number,
-            // null = unlimited (last tier)
+
             validate: {
                 validator: function (v) {
                     if (v === null) return true;
@@ -29,14 +29,14 @@ const priceTierSchema = new mongoose.Schema(
 
 const variantUnitSchema = new mongoose.Schema(
     {
-        // ===== RELATIONSHIP =====
+
         variant_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Variant',
             required: [true, 'Variant is required'],
         },
 
-        // ===== UNIT DEFINITION =====
+
         unit_type: {
             type: String,
             enum: {
@@ -51,7 +51,7 @@ const variantUnitSchema = new mongoose.Schema(
             type: String,
             required: [true, 'Display name is required'],
             trim: true,
-            // Example: "Gói 100", "Hộp 50"
+
         },
 
         pack_size: {
@@ -60,9 +60,9 @@ const variantUnitSchema = new mongoose.Schema(
             min: [1, 'Pack size must be at least 1'],
         },
 
-        // ===== PRICING TIERS =====
-        // ✅ FIX #1: Tier pricing structure
-        // Validation logic ở service layer (sorted, no overlap)
+
+
+
         price_tiers: {
             type: [priceTierSchema],
             required: [true, 'Price tiers are required'],
@@ -74,7 +74,7 @@ const variantUnitSchema = new mongoose.Schema(
             },
         },
 
-        // ===== ORDER RULES =====
+
         min_order_qty: {
             type: Number,
             default: 1,
@@ -83,7 +83,7 @@ const variantUnitSchema = new mongoose.Schema(
 
         max_order_qty: {
             type: Number,
-            // null = unlimited
+
             validate: {
                 validator: function (v) {
                     if (v === null) return true;
@@ -99,12 +99,12 @@ const variantUnitSchema = new mongoose.Schema(
             min: [1, 'Quantity step must be at least 1'],
         },
 
-        // ===== VISIBILITY =====
+
         is_default: {
             type: Boolean,
             default: false,
-            // Only 1 unit per variant can be default
-            // Enforce ở service layer
+
+
         },
 
         currency: {
@@ -116,10 +116,10 @@ const variantUnitSchema = new mongoose.Schema(
             },
         },
 
-        // ===== TIMESTAMPS =====
-        // ✅ Note: NO is_deleted/deleted_at
-        // Variant units không soft-delete (keep for audit)
-        // Nếu muốn disable unit → set status inactive ở variant
+
+
+
+
         created_at: {
             type: Date,
             default: Date.now,
@@ -132,7 +132,7 @@ const variantUnitSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES =====
+
 variantUnitSchema.index({ variant_id: 1 });
 
 variantUnitSchema.index(
@@ -151,7 +151,7 @@ variantUnitSchema.index(
     }
 );
 
-// ===== MIDDLEWARE =====
+
 variantUnitSchema.pre('save', function (next) {
     this.updated_at = new Date();
 
@@ -162,44 +162,44 @@ variantUnitSchema.pre('save', function (next) {
     next();
 });
 
-// ===== STATIC METHODS =====
+
 variantUnitSchema.statics.validatePriceTiers = function (tiers) {
     if (!tiers || tiers.length === 0) {
         throw new Error('Price tiers cannot be empty');
     }
 
-    // ✅ Sort by min_qty
+
     const sorted = [...tiers].sort((a, b) => a.min_qty - b.min_qty);
 
     for (let i = 0; i < sorted.length; i++) {
         const tier = sorted[i];
         const isLastTier = i === sorted.length - 1;
 
-        // Validate min_qty
+
         if (tier.min_qty < 1) {
             throw new Error('min_qty must be at least 1');
         }
 
-        // Validate max_qty vs min_qty
+
         if (tier.max_qty !== null && tier.max_qty < tier.min_qty) {
             throw new Error(
                 `Tier ${i}: max_qty (${tier.max_qty}) < min_qty (${tier.min_qty})`
             );
         }
 
-        // Validate price
+
         if (tier.unit_price <= 0) {
             throw new Error(`Tier ${i}: unit_price must be > 0`);
         }
 
-        // Last tier must be unlimited
+
         if (isLastTier && tier.max_qty !== null) {
             throw new Error(
                 'Last tier must have unlimited max_qty (null)'
             );
         }
 
-        // Check overlap with previous tier
+
         if (i > 0) {
             const prevTier = sorted[i - 1];
 
@@ -209,7 +209,7 @@ variantUnitSchema.statics.validatePriceTiers = function (tiers) {
                 );
             }
 
-            // ✅ Allow gap but no overlap
+
             if (prevTier.max_qty >= tier.min_qty) {
                 throw new Error(
                     `Tier ${i}: Overlap detected (prev.max=${prevTier.max_qty}, curr.min=${tier.min_qty})`
@@ -217,7 +217,7 @@ variantUnitSchema.statics.validatePriceTiers = function (tiers) {
             }
         }
 
-        // Check for duplicate min_qty
+
         if (i > 0 && sorted[i - 1].min_qty === tier.min_qty) {
             throw new Error(`Duplicate min_qty: ${tier.min_qty}`);
         }
@@ -271,7 +271,7 @@ variantUnitSchema.statics.getDefault = function (variantId) {
     );
 };
 
-// ===== RESPONSE SANITIZATION =====
+
 const sanitizeTransform = (_, ret) => {
     delete ret.__v;
     return ret;

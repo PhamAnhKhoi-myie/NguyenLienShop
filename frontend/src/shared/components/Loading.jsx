@@ -1,7 +1,8 @@
+import { translate } from '../i18n/index';
 import { Loader2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
-export default function Loading({ label = 'Đang tải...', fullPage = false }) {
+export default function Loading({ label = translate('text.loading'), fullPage = false }) {
     return (
         <div
             className={cn(

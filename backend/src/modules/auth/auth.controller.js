@@ -19,32 +19,46 @@ const getClientIp = (req) =>
     req.socket?.remoteAddress ||
     "";
 
+const requestRegistrationOtp = asyncHandler(async (req, res) => {
+    const result = await authService.requestRegistrationOtp(
+        req.body.phone_number
+    );
+
+    return res.status(200).json({
+        success: true,
+        message: "Registration OTP has been sent",
+        data: result,
+    });
+});
+
 const register = asyncHandler(async (req, res) => {
     const metadata = buildAuditMetadata(req);
-    const { email, password, full_name } = req.body;
+    const { phone_number, otp, password, full_name, email } = req.body;
 
     const result = await authService.register(
-        email,
+        phone_number,
+        otp,
         password,
         full_name,
+        email,
         metadata
     );
 
     return res.status(201).json({
         success: true,
-        message: "Đăng ký thành công",
+        message: "Registration successful",
         data: result,
     });
 });
 
 const login = asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    const { phone_number, password } = req.body;
 
     const userAgent = req.headers["user-agent"] || "";
     const ipAddress = getClientIp(req);
 
     const result = await authService.login(
-        email,
+        phone_number,
         password,
         userAgent,
         ipAddress
@@ -58,7 +72,7 @@ const login = asyncHandler(async (req, res) => {
 
     return res.status(200).json({
         success: true,
-        message: "Đăng nhập thành công",
+        message: "Login successful",
         data: AuthMapper.toLoginResponse(
             result.user,
             result.tokens
@@ -71,7 +85,7 @@ const refresh = asyncHandler(async (req, res) => {
 
     if (!refreshToken) {
         throw new AppError(
-            'Refresh token không tồn tại',
+            "Refresh token does not exist",
             401,
             'REFRESH_TOKEN_REQUIRED'
         );
@@ -94,7 +108,7 @@ const refresh = asyncHandler(async (req, res) => {
 
     return res.status(200).json({
         success: true,
-        message: "Refresh token thành công",
+        message: "Token refreshed successfully",
         data: { accessToken: result.accessToken },
     });
 });
@@ -120,7 +134,7 @@ const logout = asyncHandler(async (req, res) => {
 
     return res.status(200).json({
         success: true,
-        message: "Đăng xuất thành công",
+        message: "Signed out successfully",
         data: null,
     });
 });
@@ -144,25 +158,26 @@ const changePassword = asyncHandler(async (req, res) => {
 
 const forgotPassword = asyncHandler(async (req, res) => {
     const metadata = buildAuditMetadata(req);
-    const { email } = req.body;
+    const { phone_number } = req.body;
 
     const result = await authService.forgotPassword(
-        email,
+        phone_number,
         metadata
     );
 
     return res.status(200).json({
         success: true,
-        message: result.message
+        message: result.message,
+        data: result.data || null,
     });
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
     const metadata = buildAuditMetadata(req);
-    const { email, otp, newPassword } = req.body;
+    const { phone_number, otp, newPassword } = req.body;
 
     const result = await authService.resetPassword(
-        email,
+        phone_number,
         otp,
         newPassword,
         metadata
@@ -175,6 +190,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+    requestRegistrationOtp,
     register,
     login,
     refresh,

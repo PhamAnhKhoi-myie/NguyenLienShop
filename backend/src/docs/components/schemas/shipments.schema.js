@@ -1,4 +1,4 @@
-// Auto-split from legacy swagger.js.
+
 module.exports = {
     "ShippingAddress": {
         "type": "object",
@@ -13,7 +13,7 @@ module.exports = {
         "properties": {
             "recipient_name": {
                 "type": "string",
-                "example": "Nguyễn Văn A"
+                "example": "Nguyen Van A"
             },
             "phone": {
                 "type": "string",
@@ -21,19 +21,19 @@ module.exports = {
             },
             "address": {
                 "type": "string",
-                "example": "123 Đường ABC"
+                "example": "123 ABC Street"
             },
             "ward": {
                 "type": "string",
-                "example": "Phường 1"
+                "example": "Ward 1"
             },
             "district": {
                 "type": "string",
-                "example": "Quận 1"
+                "example": "District 1"
             },
             "province": {
                 "type": "string",
-                "example": "TP. Hồ Chí Minh"
+                "example": "City. Ho Chi Minh"
             },
             "postal_code": {
                 "type": "string",

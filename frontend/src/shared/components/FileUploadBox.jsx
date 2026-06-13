@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index';
 import { UploadCloud, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -26,9 +27,9 @@ export default function FileUploadBox(props) {
 }
 
 function FileUploadBoxContent({
-    label = 'Ảnh',
+    label = translate('text.photo'),
     accept = 'image/png,image/jpeg,image/jpg,image/webp',
-    helperText = 'PNG, JPG, JPEG, WEBP được hỗ trợ',
+    helperText = translate('text.png_jpg_jpeg_webp_supported'),
     error,
     disabled = false,
     multiple = false,
@@ -187,7 +188,7 @@ function FileUploadBoxContent({
                                                     handleRemoveOne(event, index)
                                                 }
                                                 className="absolute right-2 top-2 rounded-full bg-white p-1.5 text-[var(--color-text-main)] shadow"
-                                                aria-label={`Xóa ảnh ${index + 1}`}
+                                                aria-label={translate('text.delete_photo_value', { value0: index + 1 })}
                                             >
                                                 <X className="h-3.5 w-3.5" />
                                             </button>
@@ -198,7 +199,7 @@ function FileUploadBoxContent({
                         ) : (
                             <img
                                 src={previews[0]}
-                                alt="Preview"
+                                alt={translate('text.preview')}
                                 className="h-full max-h-[260px] w-full object-contain"
                             />
                         )}
@@ -206,8 +207,8 @@ function FileUploadBoxContent({
                         <div className="flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
                             <p className="text-sm text-[var(--color-text-muted)]">
                                 {hasLocalPreviews
-                                    ? 'Bấm vào khung để chọn lại ảnh'
-                                    : 'Bấm vào khung để chọn ảnh mới'}
+                                    ? translate('text.click_on_the_frame_to_select_the_image_again')
+                                    : translate('text.click_on_the_frame_to_select_a_new_image')}
                             </p>
 
                             {hasLocalPreviews && !disabled && (
@@ -216,9 +217,7 @@ function FileUploadBoxContent({
                                     onClick={handleRemoveAll}
                                     className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-[var(--color-text-main)] shadow"
                                 >
-                                    <X className="h-4 w-4" />
-                                    Xóa ảnh đã chọn
-                                </button>
+                                    <X className="h-4 w-4" /> {translate('text.delete_selected_photo')} </button>
                             )}
                         </div>
                     </div>
@@ -226,17 +225,13 @@ function FileUploadBoxContent({
                     <div className="flex min-h-[160px] flex-col items-center justify-center text-center">
                         <UploadCloud className="h-10 w-10 text-[var(--color-primary)]" />
 
-                        <p className="mt-4 text-base font-medium text-[var(--color-text-main)]">
-                            Chọn ảnh hoặc kéo thả vào đây
-                        </p>
+                        <p className="mt-4 text-base font-medium text-[var(--color-text-main)]"> {translate('text.select_image_or_drag_and_drop_here')} </p>
 
                         <p className="mt-2 text-sm text-[var(--color-text-muted)]">
                             {helperText}
                         </p>
 
-                        <span className="mt-5 inline-flex rounded-lg bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white">
-                            Chọn tệp
-                        </span>
+                        <span className="mt-5 inline-flex rounded-lg bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white"> {translate('text.select_file')} </span>
                     </div>
                 )}
 

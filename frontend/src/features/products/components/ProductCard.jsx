@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import { Package, Star } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -12,7 +13,7 @@ function formatPriceRange(product) {
     const max = product.max_price || 0;
 
     if (!min && !max) {
-        return 'Liên hệ';
+        return translate('text.contact');
     }
 
     if (min === max || !max) {
@@ -49,9 +50,9 @@ export default function ProductCard({ product }) {
 
             <CardBody className="space-y-3">
                 <div className="flex flex-wrap gap-2">
-                    <Badge>Đang bán</Badge>
+                    <Badge>{translate('text.on_sale')}</Badge>
                     {product.sold_count > 0 && (
-                        <Badge variant="accent">Bán chạy</Badge>
+                        <Badge variant="accent">{translate('text.best_seller')}</Badge>
                     )}
                 </div>
 
@@ -66,14 +67,12 @@ export default function ProductCard({ product }) {
                         {formatPriceRange(product)}
                     </p>
                     {product.min_price_per_unit > 0 && (
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            Từ {formatCurrency(product.min_price_per_unit)} / cái
-                        </p>
+                        <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.from')} {formatCurrency(product.min_price_per_unit)} {translate('text.item')} </p>
                     )}
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-[var(--color-text-muted)]">
-                    <span>Đã bán {product.sold_count || 0}</span>
+                    <span>{translate('text.sold')} {product.sold_count || 0}</span>
                     <span className="inline-flex items-center gap-1">
                         <Star className="h-4 w-4 fill-[var(--color-accent)] text-[var(--color-accent)]" />
                         {Number(product.rating_avg || 0).toFixed(1)}

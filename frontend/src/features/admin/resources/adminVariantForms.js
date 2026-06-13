@@ -1,16 +1,17 @@
+import { translate } from '../../../shared/i18n/index';
 import { z } from 'zod';
 
 const positiveInt = (label) =>
     z.coerce
         .number()
-        .int(`${label} phải là số nguyên`)
-        .positive(`${label} phải lớn hơn 0`);
+        .int(translate('text.value_must_be_an_integer', { value0: label }))
+        .positive(translate('text.value_must_be_greater_than_0', { value0: label }));
 
 const nonNegativeInt = (label) =>
     z.coerce
         .number()
-        .int(`${label} phải là số nguyên`)
-        .min(0, `${label} không được âm`);
+        .int(translate('text.value_must_be_an_integer', { value0: label }))
+        .min(0, translate('text.value_cannot_be_negative_4e5c385c', { value0: label }));
 
 function splitTierLine(line) {
     return line.split('|').map((part) => part.trim());
@@ -59,7 +60,7 @@ function validatePriceTierText(value, ctx) {
     if (lines.length === 0) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'Vui lòng nhập ít nhất một bậc giá',
+            message: translate('text.please_enter_at_least_one_price_tier'),
         });
         return;
     }
@@ -70,7 +71,7 @@ function validatePriceTierText(value, ctx) {
         if (!Number.isInteger(tier.min_qty) || tier.min_qty <= 0) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `Dòng ${index + 1}: min_qty phải là số nguyên dương`,
+                message: translate('text.line_value_min_qty_must_be_a_positive_integer', { value0: index + 1 }),
             });
         }
 
@@ -80,14 +81,14 @@ function validatePriceTierText(value, ctx) {
         ) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `Dòng ${index + 1}: max_qty phải là số nguyên dương hoặc để trống`,
+                message: translate('text.line_value_max_qty_must_be_a_positive_integer_or_blank', { value0: index + 1 }),
             });
         }
 
         if (!Number.isFinite(tier.unit_price) || tier.unit_price <= 0) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `Dòng ${index + 1}: unit_price phải lớn hơn 0`,
+                message: translate('text.line_value_unit_price_must_be_greater_than_0', { value0: index + 1 }),
             });
         }
     });
@@ -96,7 +97,7 @@ function validatePriceTierText(value, ctx) {
     if (lastTier?.max_qty !== null) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'Bậc giá cuối phải để trống max_qty để không giới hạn',
+            message: translate('text.the_last_price_tier_must_leave_max_qty_empty_for_unlimited'),
         });
     }
 
@@ -107,23 +108,23 @@ function validatePriceTierText(value, ctx) {
         if (current.min_qty <= previous.min_qty) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: 'price_tiers phải tăng dần theo min_qty',
+                message: translate('text.price_tiers_must_increase_according_to_min_qty'),
             });
         }
 
         if (previous.max_qty !== null && previous.max_qty >= current.min_qty) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: 'price_tiers không được chồng khoảng số lượng',
+                message: translate('text.price_tiers_cannot_overlap_the'),
             });
         }
     }
 }
 
 const variantFormSchema = z.object({
-    size: z.string().trim().min(1, 'Vui lòng nhập kích thước').max(50),
-    fabric_type: z.string().trim().min(1, 'Vui lòng nhập chất liệu').max(100),
-    available_stock: nonNegativeInt('Tồn kho'),
+    size: z.string().trim().min(1, translate('text.please_enter_size')).max(50),
+    fabric_type: z.string().trim().min(1, translate('text.please_enter_material')).max(100),
+    available_stock: nonNegativeInt(translate('text.inventory')),
     status: z.enum(['ACTIVE', 'INACTIVE']),
 });
 
@@ -133,13 +134,13 @@ const variantUnitFormSchema = z
         display_name: z
             .string()
             .trim()
-            .min(1, 'Vui lòng nhập tên đơn vị')
+            .min(1, translate('text.please_enter_the_unit_name'))
             .max(100),
-        pack_size: positiveInt('Quy cách'),
+        pack_size: positiveInt(translate('text.specification')),
         price_tiers_text: z.string().superRefine(validatePriceTierText),
-        min_order_qty: positiveInt('Số gói tối thiểu'),
+        min_order_qty: positiveInt(translate('text.minimum_number_of_packages')),
         max_order_qty: z.string().trim(),
-        qty_step: positiveInt('Bước nhảy số lượng'),
+        qty_step: positiveInt(translate('text.quantity_jump')),
         is_default: z.enum(['true', 'false']),
         currency: z.enum(['VND', 'USD', 'EUR']),
     })
@@ -153,7 +154,7 @@ const variantUnitFormSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['max_order_qty'],
-                message: 'Số gói tối đa phải là số nguyên dương hoặc để trống',
+                message: translate('text.maximum_number_of_packets_must_be_a_positive_integer_or_blank'),
             });
             return;
         }
@@ -162,13 +163,13 @@ const variantUnitFormSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['max_order_qty'],
-                message: 'Số gói tối đa phải lớn hơn hoặc bằng tối thiểu',
+                message: translate('text.maximum_number_of_packages_must_be_greater_than_or_equal_to_minimum'),
             });
         }
     });
 
 export const variantFormConfig = {
-    title: 'biến thể',
+    title: translate('text.variant'),
     schema: variantFormSchema,
     defaultValues: {
         size: '',
@@ -201,42 +202,42 @@ export const variantFormConfig = {
     fields: [
         {
             name: 'size',
-            label: 'Kích thước',
-            placeholder: '16x16 cm',
+            label: translate('text.size'),
+            placeholder: translate('text.16x16_cm'),
             readOnly: ({ mode }) => mode === 'edit',
             helperText: ({ mode }) =>
-                mode === 'edit' ? 'BE hiện không cho sửa kích thước variant.' : '',
+                mode === 'edit' ? translate('text.be_currently_does_not_allow_variant_sizes_to_be_edited') : '',
         },
         {
             name: 'fabric_type',
-            label: 'Chất liệu',
-            placeholder: 'Vải không dệt trắng',
+            label: translate('text.material'),
+            placeholder: translate('text.white_non_woven_fabric'),
             readOnly: ({ mode }) => mode === 'edit',
             helperText: ({ mode }) =>
-                mode === 'edit' ? 'BE hiện không cho sửa chất liệu variant.' : '',
+                mode === 'edit' ? translate('text.be_currently_does_not_allow_variant_materials_to_be_edited') : '',
         },
         {
             name: 'available_stock',
-            label: 'Tồn kho ban đầu',
+            label: translate('text.initial_inventory'),
             type: 'number',
             readOnly: ({ mode }) => mode === 'edit',
             helperText: ({ mode }) =>
-                mode === 'edit' ? 'BE hiện không cho sửa tồn kho qua endpoint variant update.' : '',
+                mode === 'edit' ? translate('text.be_currently_does_not_allow_inventory_editing_via_the_variant_update_end') : '',
         },
         {
             name: 'status',
-            label: 'Trạng thái',
+            label: translate('text.status'),
             type: 'select',
             options: [
-                { value: 'ACTIVE', label: 'ACTIVE' },
-                { value: 'INACTIVE', label: 'INACTIVE' },
+                { value: 'ACTIVE', label: translate('text.active') },
+                { value: 'INACTIVE', label: translate('text.inactive') },
             ],
         },
     ],
 };
 
 export const variantUnitFormConfig = {
-    title: 'đơn vị bán',
+    title: translate('text.sales_unit_d4b7c050'),
     schema: variantUnitFormSchema,
     defaultValues: {
         unit_type: 'PACK',
@@ -285,69 +286,69 @@ export const variantUnitFormConfig = {
     fields: [
         {
             name: 'unit_type',
-            label: 'Loại đơn vị',
+            label: translate('text.unit_type'),
             type: 'select',
             options: [
-                { value: 'UNIT', label: 'UNIT' },
-                { value: 'PACK', label: 'PACK' },
-                { value: 'BOX', label: 'BOX' },
-                { value: 'CARTON', label: 'CARTON' },
+                { value: 'UNIT', label: translate('text.unit_9676e3f3') },
+                { value: 'PACK', label: translate('text.pack') },
+                { value: 'BOX', label: translate('text.box') },
+                { value: 'CARTON', label: translate('text.carton') },
             ],
         },
         {
             name: 'display_name',
-            label: 'Tên hiển thị',
-            placeholder: 'Gói 100 túi',
+            label: translate('text.display_name'),
+            placeholder: translate('text.pack_of_100_bags'),
         },
         {
             name: 'pack_size',
-            label: 'Số túi/gói',
+            label: translate('text.number_of_bags_packages'),
             type: 'number',
             readOnly: ({ mode }) => mode === 'edit',
             helperText: ({ mode }) =>
-                mode === 'edit' ? 'BE hiện không cho sửa pack_size của unit.' : '',
+                mode === 'edit' ? translate('text.be_currently_does_not_allow_editing_the_unit_s_pack_size') : '',
         },
         {
             name: 'currency',
-            label: 'Tiền tệ',
+            label: translate('text.currency'),
             type: 'select',
             options: [
-                { value: 'VND', label: 'VND' },
-                { value: 'USD', label: 'USD' },
-                { value: 'EUR', label: 'EUR' },
+                { value: 'VND', label: translate('text.vnd') },
+                { value: 'USD', label: translate('text.usd') },
+                { value: 'EUR', label: translate('text.eur') },
             ],
         },
         {
             name: 'price_tiers_text',
-            label: 'Price tiers',
+            label: translate('text.price_tiers'),
             type: 'textarea',
             rows: 5,
             placeholder: '1|9|25000\n10||23000',
-            helperText: 'Mỗi dòng: min_qty|max_qty|unit_price. Dòng cuối để trống max_qty.',
+            helperText: translate('text.each_line_min_qty_max_qty_unit_price_the_last_line_leaves_max_qty_blank'),
             className: 'md:col-span-2',
         },
         {
             name: 'min_order_qty',
-            label: 'Số gói tối thiểu',
+            label: translate('text.minimum_number_of_packages'),
             type: 'number',
         },
         {
             name: 'max_order_qty',
-            label: 'Số gói tối đa',
-            placeholder: 'Để trống nếu không giới hạn',
+            label: translate('text.maximum_number_of_packages'),
+            placeholder: translate('text.leave_blank_if_not_limited_to'),
         },
         {
             name: 'qty_step',
-            label: 'Bước nhảy số lượng',
+            label: translate('text.quantity_jump'),
             type: 'number',
         },
         {
             name: 'is_default',
-            label: 'Mặc định',
+            label: translate('text.default'),
             type: 'select',
             options: [
-                { value: 'false', label: 'Không' },
-                { value: 'true', label: 'Có' },
+                { value: 'false', label: translate('text.no') },
+                { value: 'true', label: translate('text.yes') },
             ],
         },
     ],

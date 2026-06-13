@@ -1,10 +1,5 @@
 class CategoryMapper {
-    /**
-     * ✅ Convert Mongoose document → API Response DTO
-     * - Expose: id, name, slug, description, parent_id, level, status, etc.
-     * - Hide: _id, __v, internal fields
-     * - Format: breadcrumb-friendly structure
-     */
+
     static toResponseDTO(category) {
         if (!category) {
             return null;
@@ -29,9 +24,6 @@ class CategoryMapper {
         };
     }
 
-    /**
-     * ✅ Convert array of documents → array of DTOs
-     */
     static toResponseDTOList(categories) {
         if (!Array.isArray(categories)) {
             return [];
@@ -39,10 +31,6 @@ class CategoryMapper {
         return categories.map(cat => this.toResponseDTO(cat));
     }
 
-    /**
-     * ✅ Convert để return nested tree structure (with children)
-     * Dùng khi trả về getCategoryTree
-     */
     static toTreeDTO(categoryNode) {
         if (!categoryNode) {
             return null;
@@ -61,17 +49,17 @@ class CategoryMapper {
             display_order: categoryNode.display_order,
             created_at: categoryNode.created_at,
             updated_at: categoryNode.updated_at,
-            // ✅ Include children nếu có (nested)
+
             children: categoryNode.children && Array.isArray(categoryNode.children)
                 ? categoryNode.children.map(child => this.toTreeDTO(child))
                 : [],
         };
     }
 
-    /**
-     * ✅ Convert breadcrumb array → DTO list
-     * Dùng cho getCategoryBreadcrumb
-     */
+
+
+
+
     static toBreadcrumbDTO(categories) {
         if (!Array.isArray(categories)) {
             return [];
@@ -84,10 +72,10 @@ class CategoryMapper {
         }));
     }
 
-    /**
-     * ✅ Convert simple category info (lightweight)
-     * Dùng khi cần return minimal data (nested product, order, etc.)
-     */
+
+
+
+
     static toMinimalDTO(category) {
         if (!category) {
             return null;

@@ -1,11 +1,11 @@
 const { z } = require('zod');
 
-// ===== BASE =====
+
 const objectIdSchema = z
     .string()
     .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId');
 
-// ===== PARAMS =====
+
 const categoryIdParamSchema = z.object({
     categoryId: objectIdSchema,
 });
@@ -14,7 +14,7 @@ const slugParamSchema = z.object({
     slug: z.string().min(1),
 });
 
-// ===== QUERY =====
+
 const getCategoryTreeQuerySchema = z.object({
     include_inactive: z.coerce.boolean().default(false),
 });
@@ -28,7 +28,7 @@ const getAllCategoriesQuerySchema = z.object({
     parent_id: objectIdSchema.optional().nullable(),
 });
 
-// ===== BODY =====
+
 const createCategoryBodySchema = z.object({
     name: z.string().min(2).max(100).trim(),
     slug: z

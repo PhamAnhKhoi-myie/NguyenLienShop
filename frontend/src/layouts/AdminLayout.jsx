@@ -1,3 +1,4 @@
+import { translate } from '../shared/i18n/index';
 import {
     BarChart3,
     Boxes,
@@ -32,86 +33,86 @@ import {
 
 const adminNavItems = [
     {
-        label: 'Tổng quan',
+        label: translate('text.overview'),
         to: ROUTES.ADMIN,
         icon: LayoutDashboard,
         end: true,
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        label: 'Sản phẩm',
+        label: translate('text.product'),
         to: ROUTES.ADMIN_PRODUCTS,
         icon: Package,
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        label: 'Danh mục',
+        label: translate('text.category'),
         to: ROUTES.ADMIN_CATEGORIES,
         icon: Boxes,
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        label: 'Variants',
+        label: translate('text.variants'),
         to: ROUTES.ADMIN_VARIANTS,
         icon: Layers3,
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        label: 'Banner',
+        label: translate('text.banner_c8af83fb'),
         to: ROUTES.ADMIN_BANNERS,
         icon: BarChart3,
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        label: 'Bài viết',
+        label: translate('text.article'),
         to: ROUTES.ADMIN_BLOGS,
         icon: Newspaper,
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        label: 'Đánh giá',
+        label: translate('text.review'),
         to: ROUTES.ADMIN_REVIEWS,
         icon: MessageSquare,
         roles: ADMIN_ONLY_ROLES,
     },
     {
-        label: 'Thông tin shop',
+        label: translate('text.shop_information'),
         to: ROUTES.ADMIN_SHOP_INFO,
         icon: Settings,
         roles: CONTENT_MANAGER_ROLES,
     },
     {
-        label: 'Đơn hàng',
+        label: translate('text.order_0aba562f'),
         to: ROUTES.ADMIN_ORDERS,
         icon: ShoppingBag,
         roles: ADMIN_ONLY_ROLES,
     },
     {
-        label: 'Vận chuyển',
+        label: translate('text.shipping'),
         to: ROUTES.ADMIN_SHIPMENTS,
         icon: Truck,
         roles: ADMIN_ONLY_ROLES,
     },
     {
-        label: 'Thanh toán',
+        label: translate('text.checkout'),
         to: ROUTES.ADMIN_PAYMENTS,
         icon: CreditCard,
         roles: ADMIN_ONLY_ROLES,
     },
     {
-        label: 'Mã giảm giá',
+        label: translate('text.discount_code'),
         to: ROUTES.ADMIN_DISCOUNTS,
         icon: Percent,
         roles: ADMIN_ONLY_ROLES,
     },
     {
-        label: 'Người dùng',
+        label: translate('text.user'),
         to: ROUTES.ADMIN_USERS,
         icon: Users,
         roles: ADMIN_ONLY_ROLES,
     },
     {
-        label: 'Audit logs',
+        label: translate('text.audit_logs'),
         to: ROUTES.ADMIN_AUDIT_LOGS,
         icon: FileClock,
         roles: ADMIN_ONLY_ROLES,
@@ -135,7 +136,11 @@ export default function AdminLayout() {
         item.roles.some((role) => roles.includes(role))
     );
     const displayName =
-        user?.profile?.full_name || user?.full_name || user?.email || 'Quản trị';
+        user?.profile?.full_name ||
+        user?.full_name ||
+        user?.profile?.phone_number ||
+        user?.email ||
+        translate('text.administration');
 
     return (
         <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-main)] lg:grid lg:grid-cols-[280px_1fr]">
@@ -150,15 +155,13 @@ export default function AdminLayout() {
                         to={ROUTES.ADMIN}
                         className="text-lg font-semibold text-[var(--color-primary-hover)]"
                         onClick={() => setIsSidebarOpen(false)}
-                    >
-                        Admin Panel
-                    </Link>
+                    > {translate('text.admin_panel')} </Link>
                     <Button
                         variant="ghost"
                         size="sm"
                         className="lg:hidden"
                         onClick={() => setIsSidebarOpen(false)}
-                        aria-label="Đóng menu"
+                        aria-label={translate('text.close_menu')}
                     >
                         <X className="h-5 w-5" />
                     </Button>
@@ -188,7 +191,7 @@ export default function AdminLayout() {
                 <button
                     type="button"
                     className="fixed inset-0 z-40 bg-black/30 lg:hidden"
-                    aria-label="Đóng menu"
+                    aria-label={translate('text.close_menu')}
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
@@ -202,14 +205,12 @@ export default function AdminLayout() {
                                 size="sm"
                                 className="lg:hidden"
                                 onClick={() => setIsSidebarOpen(true)}
-                                aria-label="Mở menu"
+                                aria-label={translate('text.open_menu')}
                             >
                                 <Menu className="h-5 w-5" />
                             </Button>
                             <div>
-                                <p className="text-sm text-[var(--color-text-muted)]">
-                                    Xin chào
-                                </p>
+                                <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.hello')} </p>
                                 <h1 className="text-base font-semibold text-[var(--color-text-main)]">
                                     {displayName}
                                 </h1>
@@ -224,18 +225,14 @@ export default function AdminLayout() {
                                 to={ROUTES.HOME}
                                 className="hidden h-9 items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-secondary)] hover:text-[var(--color-primary-hover)] sm:inline-flex"
                             >
-                                <Home className="h-4 w-4" />
-                                Shop
-                            </Link>
+                                <Home className="h-4 w-4" /> {translate('text.shop')} </Link>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 isLoading={logoutMutation.isPending}
                                 onClick={() => logoutMutation.mutate()}
                             >
-                                <LogOut className="h-4 w-4" />
-                                Đăng xuất
-                            </Button>
+                                <LogOut className="h-4 w-4" /> {translate('text.sign_out')} </Button>
                         </div>
                     </div>
                 </header>

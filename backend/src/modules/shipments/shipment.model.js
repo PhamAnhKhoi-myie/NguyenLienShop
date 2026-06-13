@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
-/**
- * ============================================
- * SHIPMENT SCHEMA
- * ============================================
- */
+
+
+
+
+
 
 const shippingAddressSchema = new mongoose.Schema(
     {
@@ -111,7 +111,7 @@ timelineSchema.pre('validate', function (next) {
 
 const shipmentSchema = new mongoose.Schema(
     {
-        // ===== IDENTITY & OWNERSHIP =====
+
         order_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Order',
@@ -124,7 +124,7 @@ const shipmentSchema = new mongoose.Schema(
             required: [true, 'User is required'],
         },
 
-        // ===== CARRIER DETAILS =====
+
         carrier: {
             type: String,
             enum: {
@@ -144,13 +144,13 @@ const shipmentSchema = new mongoose.Schema(
             uppercase: true,
         },
 
-        // ===== ADDRESS SNAPSHOT =====
+
         shipping_address: {
             type: shippingAddressSchema,
             required: [true, 'Shipping address is required'],
         },
 
-        // ===== SHIPMENT STATUS =====
+
         status: {
             type: String,
             enum: {
@@ -169,13 +169,13 @@ const shipmentSchema = new mongoose.Schema(
             default: 'pending',
         },
 
-        // ===== TIMELINE =====
+
         timeline: {
             type: timelineSchema,
             required: true,
         },
 
-        // ===== FAILURE TRACKING =====
+
         failure_reason: {
             type: String,
             enum: {
@@ -204,7 +204,7 @@ const shipmentSchema = new mongoose.Schema(
             }
         },
 
-        // ===== RETRY LOGIC =====
+
         retry_count: {
             type: Number,
             default: 0,
@@ -223,7 +223,7 @@ const shipmentSchema = new mongoose.Schema(
             maxlength: [1000, 'Admin notes must not exceed 1000 characters'],
         },
 
-        // ===== SOFT DELETE =====
+
         is_deleted: {
             type: Boolean,
             default: false,
@@ -239,7 +239,7 @@ const shipmentSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES (FIXED: Removed duplicate status index) =====
+
 
 shipmentSchema.index(
     { user_id: 1, status: 1, created_at: -1 },
@@ -274,7 +274,7 @@ shipmentSchema.index(
     }
 );
 
-// ===== MIDDLEWARE =====
+
 
 const excludeDeleted = function (next) {
     if (!this.getOptions().includeDeleted) {
@@ -314,7 +314,7 @@ shipmentSchema.pre('save', function (next) {
     next();
 });
 
-// ===== STATIC METHODS =====
+
 
 shipmentSchema.statics.findByIdWithOwnershipCheck = async function (
     shipmentId,
@@ -422,7 +422,7 @@ shipmentSchema.statics.countByStatus = function () {
     ]);
 };
 
-// ===== INSTANCE METHODS =====
+
 
 shipmentSchema.methods.canBeRetried = function () {
     return (
@@ -485,7 +485,7 @@ shipmentSchema.methods.getCarrierTrackingURL = function () {
     return `${baseURL}${this.tracking_code}`;
 };
 
-// ===== RESPONSE SANITIZATION =====
+
 
 const sanitizeTransform = (_, ret) => {
     delete ret.__v;

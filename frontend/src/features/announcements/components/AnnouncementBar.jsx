@@ -1,3 +1,4 @@
+import { translate } from '../../../shared/i18n/index';
 import {
     AlertTriangle,
     Gift,
@@ -13,31 +14,31 @@ import { useAnnouncements } from '../hooks/useAnnouncements';
 const typeConfig = {
     info: {
         icon: Info,
-        label: 'Thông tin',
+        label: translate('text.information'),
         className: 'border-sky-200 bg-sky-50 text-sky-950',
         iconClassName: 'bg-sky-100 text-sky-700',
     },
     promotion: {
         icon: Gift,
-        label: 'Khuyến mãi',
+        label: translate('text.promotion'),
         className: 'border-amber-200 bg-amber-50 text-amber-950',
         iconClassName: 'bg-amber-100 text-amber-700',
     },
     warning: {
         icon: AlertTriangle,
-        label: 'Cảnh báo',
+        label: translate('text.warning'),
         className: 'border-orange-200 bg-orange-50 text-orange-950',
         iconClassName: 'bg-orange-100 text-orange-700',
     },
     system: {
         icon: Wrench,
-        label: 'Hệ thống',
+        label: translate('text.system'),
         className: 'border-slate-200 bg-slate-50 text-slate-900',
         iconClassName: 'bg-slate-100 text-slate-700',
     },
     urgent: {
         icon: ShieldAlert,
-        label: 'Khẩn cấp',
+        label: translate('text.urgent'),
         className: 'border-red-200 bg-red-50 text-red-950',
         iconClassName: 'bg-red-100 text-red-700',
     },
@@ -170,7 +171,7 @@ export default function AnnouncementBar({
                             <button
                                 type="button"
                                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/70 transition-colors hover:bg-white"
-                                aria-label="Tắt thông báo"
+                                aria-label={translate('text.turn_off_notification')}
                                 onClick={() => handleDismiss(announcement)}
                             >
                                 <X className="h-4 w-4" />

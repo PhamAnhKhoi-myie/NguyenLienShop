@@ -1,13 +1,13 @@
 const { z } = require('zod');
 const { isSafeBannerLink } = require('./banner-link.util');
 
-/**
- * ============================================
- * BANNER VALIDATORS (Zod Schemas)
- * ============================================
- */
 
-// ===== CUSTOM VALIDATORS (Reusable) =====
+
+
+
+
+
+
 
 const imageUrlSchema = z
     .string()
@@ -48,7 +48,7 @@ const bannerIdParamSchema = z.object({
     id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format')
 });
 
-// ===== OBJECT SCHEMAS =====
+
 
 const imageObjectSchema = z
     .object({

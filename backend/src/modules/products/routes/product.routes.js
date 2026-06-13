@@ -17,12 +17,12 @@ const {
 const { authenticate } = require('../../../middlewares/auth.middleware');
 const { authorize } = require('../../../middlewares/authorize.middleware');
 
-// ===== SLUG PARAM SCHEMA =====
+
 const slugParamSchema = z.object({
     slug: z.string().min(1).max(200)
 });
 
-// ===== PUBLIC =====
+
 
 router.get(
     '/',
@@ -57,7 +57,7 @@ router.get(
     productController.getProductById
 );
 
-// ===== ADMIN =====
+
 
 router.post(
     '/',

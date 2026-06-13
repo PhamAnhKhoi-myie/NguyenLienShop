@@ -27,7 +27,7 @@ const imageSchema = new mongoose.Schema(
 
 const productSchema = new mongoose.Schema(
     {
-        // ===== IDENTITY =====
+
         name: {
             type: String,
             required: [true, 'Product name is required'],
@@ -57,7 +57,7 @@ const productSchema = new mongoose.Schema(
             maxlength: [100, 'Brand must not exceed 100 characters'],
         },
 
-        // ===== PRICING (CACHED) =====
+
         min_price: {
             type: Number,
             default: 0,
@@ -83,7 +83,7 @@ const productSchema = new mongoose.Schema(
             min: [0, 'Max price per unit cannot be negative'],
         },
 
-        // ===== CONTENT =====
+
         description: {
             type: String,
             trim: true,
@@ -119,7 +119,7 @@ const productSchema = new mongoose.Schema(
             },
         },
 
-        // ===== ANALYTICS (DENORMALIZED) =====
+
         rating_avg: {
             type: Number,
             default: 0,
@@ -140,7 +140,7 @@ const productSchema = new mongoose.Schema(
             index: true,
         },
 
-        // ===== STATUS =====
+
         status: {
             type: String,
             enum: {
@@ -151,7 +151,7 @@ const productSchema = new mongoose.Schema(
             index: true,
         },
 
-        // ===== SOFT DELETE =====
+
         is_deleted: {
             type: Boolean,
             default: false,
@@ -171,7 +171,7 @@ const productSchema = new mongoose.Schema(
     }
 );
 
-// ===== INDEXES (Production Optimized) =====
+
 
 productSchema.index(
     { slug: 1 },
@@ -223,7 +223,7 @@ productSchema.index(
     }
 );
 
-// ===== MIDDLEWARE =====
+
 productSchema.pre('validate', function (next) {
     if (!this.slug) {
         this.slug = slugify(this.name, { lower: true, strict: true });
@@ -277,7 +277,7 @@ productSchema.pre('aggregate', function (next) {
     next();
 });
 
-// ===== STATIC METHODS =====
+
 
 productSchema.statics.findBySlug = function (slug, options = {}) {
     return this.findOne({ slug }, null, options);
@@ -292,7 +292,7 @@ productSchema.statics.updatePriceCache = async function (productId) {
     );
 
     if (variants.length === 0) {
-        // No variants → clear prices
+
         await this.findByIdAndUpdate(productId, {
             min_price: 0,
             max_price: 0,
@@ -362,7 +362,7 @@ productSchema.statics.softDelete = async function (productId, session) {
     }
 };
 
-// ===== RESPONSE SANITIZATION =====
+
 const sanitizeTransform = (_, ret) => {
     delete ret.__v;
     return ret;
