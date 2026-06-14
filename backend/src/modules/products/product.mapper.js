@@ -28,6 +28,24 @@ class ProductMapper {
             rating_avg: doc.rating_avg || 0,
             rating_count: doc.rating_count || 0,
             sold_count: doc.sold_count || 0,
+            is_best_seller: Boolean(doc.is_best_seller),
+            new_until: doc.new_until || null,
+            is_new: Boolean(doc.is_new),
+            in_stock: Boolean(doc.in_stock),
+            is_on_sale: Boolean(doc.is_on_sale),
+            original_min_price:
+                doc.original_min_price ?? doc.min_price ?? 0,
+            original_max_price:
+                doc.original_max_price ?? doc.max_price ?? 0,
+            original_min_price_per_unit:
+                doc.original_min_price_per_unit ??
+                doc.min_price_per_unit ??
+                0,
+            original_max_price_per_unit:
+                doc.original_max_price_per_unit ??
+                doc.max_price_per_unit ??
+                0,
+            max_discount_percent: doc.max_discount_percent || 0,
 
             status: doc.status,
 
@@ -75,12 +93,32 @@ class ProductMapper {
 
             min_price: doc.min_price || 0,
             max_price: doc.max_price || 0,
+            min_price_per_unit: doc.min_price_per_unit || 0,
+            max_price_per_unit: doc.max_price_per_unit || 0,
 
             image: this.getPrimaryImage(doc.images || []),
 
             rating_avg: doc.rating_avg || 0,
             rating_count: doc.rating_count || 0,
             sold_count: doc.sold_count || 0,
+            is_best_seller: Boolean(doc.is_best_seller),
+            new_until: doc.new_until || null,
+            is_new: Boolean(doc.is_new),
+            in_stock: Boolean(doc.in_stock),
+            is_on_sale: Boolean(doc.is_on_sale),
+            original_min_price:
+                doc.original_min_price ?? doc.min_price ?? 0,
+            original_max_price:
+                doc.original_max_price ?? doc.max_price ?? 0,
+            original_min_price_per_unit:
+                doc.original_min_price_per_unit ??
+                doc.min_price_per_unit ??
+                0,
+            original_max_price_per_unit:
+                doc.original_max_price_per_unit ??
+                doc.max_price_per_unit ??
+                0,
+            max_discount_percent: doc.max_discount_percent || 0,
 
             status: doc.status,
             created_at: doc.created_at,
@@ -189,6 +227,21 @@ class ProductMapper {
             max_price: doc.max_price || 0,
             min_price_per_unit: doc.min_price_per_unit || 0,
             max_price_per_unit: doc.max_price_per_unit || 0,
+            original_min_price:
+                doc.original_min_price ?? doc.min_price ?? 0,
+            original_max_price:
+                doc.original_max_price ?? doc.max_price ?? 0,
+            original_min_price_per_unit:
+                doc.original_min_price_per_unit ??
+                doc.min_price_per_unit ??
+                0,
+            original_max_price_per_unit:
+                doc.original_max_price_per_unit ??
+                doc.max_price_per_unit ??
+                0,
+            is_on_sale: Boolean(doc.is_on_sale),
+            max_discount_percent: doc.max_discount_percent || 0,
+            in_stock: Boolean(doc.in_stock),
 
             stock: {
                 available: doc.stock?.available || 0,
@@ -222,11 +275,24 @@ class ProductMapper {
             display_name: doc.display_name,
             pack_size: doc.pack_size,
 
-            price_tiers: (doc.price_tiers || []).map((tier) => ({
-                min_qty: tier.min_qty,
-                max_qty: tier.max_qty,
-                unit_price: tier.unit_price,
-            })),
+            price_tiers: (() => {
+                const {
+                    calculatePromotionalPrice,
+                } = require('./pricing.util');
+
+                return (doc.price_tiers || []).map((tier) => ({
+                    min_qty: tier.min_qty,
+                    max_qty: tier.max_qty,
+                    ...calculatePromotionalPrice(
+                        tier.unit_price,
+                        doc.promotion
+                    ),
+                }));
+            })(),
+            promotion: (() => {
+                const { toPromotionDTO } = require('./pricing.util');
+                return toPromotionDTO(doc.promotion);
+            })(),
 
             min_order_qty: doc.min_order_qty || 1,
             max_order_qty: doc.max_order_qty || null,

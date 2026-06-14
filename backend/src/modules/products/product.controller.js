@@ -17,6 +17,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
             min_price: filters.min_price,
             max_price: filters.max_price,
             status: filters.status,
+            badge: filters.badge,
             search: filters.search,
             sortBy: filters.sortBy,
         }

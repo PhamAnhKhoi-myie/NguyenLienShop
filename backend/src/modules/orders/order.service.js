@@ -9,13 +9,19 @@ const { assertPaymentProviderEnabled } = require('../payments/payment_provider.u
 
 
 const Variant = require('../products/variant.model');
+const Product = require('../products/product.model');
 const Cart = require('../carts/cart.model');
 const EmailService = require('../emails/email.service');
 const User = require('../users/user.model');
 const DiscountService = require('../discounts/discount.service');
+const CartService = require('../carts/cart.service');
 const ReviewService = require('../reviews/review.service');
 const LocationProvince = require('../locations/location_province.model');
 const LocationWard = require('../locations/location_ward.model');
+const {
+    DEFAULT_CURRENCY,
+    getDefaultShippingFee,
+} = require('../../config/commerce');
 
 
 
@@ -24,6 +30,13 @@ const LocationWard = require('../locations/location_ward.model');
 
 
 class OrderService {
+    static getCheckoutSettings() {
+        return {
+            shipping_fee: getDefaultShippingFee(),
+            currency: DEFAULT_CURRENCY,
+        };
+    }
+
     static async createOrderFromCart(userId, cartId, shippingData, metadata = {}) {
         if (!userId || !cartId) {
             throw new AppError(
@@ -47,7 +60,7 @@ class OrderService {
         session.startTransaction();
 
         try {
-            const cart = await Cart.findOne(
+            let cart = await Cart.findOne(
                 {
                     _id: cartId,
                     user_id: userId,
@@ -86,6 +99,12 @@ class OrderService {
                 session
             );
 
+            cart = await CartService.repriceCart(cart, { session });
+            cart = await CartService.refreshAppliedDiscount(cart, userId, {
+                throwOnInvalid: true,
+                session,
+            });
+
             const orderCode = await Order.generateOrderCode();
 
             const orderItems = cart.items.map((cartItem) => ({
@@ -104,7 +123,19 @@ class OrderService {
                 quantity_ordered: cartItem.quantity,
                 quantity_fulfilled: 0,
 
+                original_unit_price:
+                    cartItem.original_price_at_added ||
+                    cartItem.price_at_added,
                 unit_price: cartItem.price_at_added,
+                promotion_discount_amount:
+                    cartItem.promotion_discount_amount || 0,
+                promotion_discount_percent:
+                    cartItem.promotion_discount_percent || 0,
+                is_on_sale: Boolean(cartItem.is_on_sale),
+                original_line_total:
+                    cartItem.quantity *
+                    (cartItem.original_price_at_added ||
+                        cartItem.price_at_added),
                 line_total: cartItem.quantity * cartItem.price_at_added,
 
                 review_status: 'pending',
@@ -114,13 +145,21 @@ class OrderService {
                 (sum, item) => sum + item.line_total,
                 0
             );
+            const originalSubtotal = orderItems.reduce(
+                (sum, item) => sum + item.original_line_total,
+                0
+            );
+            const promotionDiscountAmount = Math.max(
+                originalSubtotal - subtotal,
+                0
+            );
 
             const discountAmount = Math.min(
                 cart.discount?.discount_amount || 0,
                 subtotal
             );
 
-            const shippingFee = shippingData.shipping_fee || 0;
+            const shippingFee = getDefaultShippingFee();
 
             const totalAmount = subtotal - discountAmount + shippingFee;
 
@@ -162,13 +201,16 @@ class OrderService {
                 items: orderItems,
 
                 pricing: {
+                    original_subtotal: originalSubtotal,
+                    promotion_discount_amount:
+                        promotionDiscountAmount,
                     subtotal,
                     shipping_fee: shippingFee,
                     discount_amount: discountAmount,
                     total_amount: totalAmount,
                 },
 
-                currency: shippingData.currency || 'VND',
+                currency: DEFAULT_CURRENCY,
 
                 discount: cart.discount
                     ? {
@@ -581,6 +623,12 @@ class OrderService {
 
             item.quantity_fulfilled += quantityFulfilled;
 
+            await Product.updateOne(
+                { _id: item.product_id },
+                { $inc: { sold_count: quantityFulfilled } },
+                { session }
+            );
+
             await order.save({ session });
             await session.commitTransaction();
 
@@ -848,6 +896,30 @@ class OrderService {
                             'Stock restoration failed',
                             500,
                             'STOCK_RESTORATION_FAILED'
+                        );
+                    }
+
+                    if (quantityFulfilled > 0) {
+                        await Product.updateOne(
+                            { _id: item.product_id },
+                            [
+                                {
+                                    $set: {
+                                        sold_count: {
+                                            $max: [
+                                                0,
+                                                {
+                                                    $subtract: [
+                                                        '$sold_count',
+                                                        quantityFulfilled,
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                    },
+                                },
+                            ],
+                            { session }
                         );
                     }
 

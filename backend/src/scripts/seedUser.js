@@ -11,7 +11,7 @@ const seedUsers = [
         password: process.env.SEED_ADMIN_PASSWORD || "Admin@123",
         roles: ["ADMIN"],
         profile: {
-            full_name: "System Admin",
+            full_name: "Quản trị viên hệ thống",
             phone_number: "0901000098",
         },
     },
@@ -20,7 +20,7 @@ const seedUsers = [
         password: process.env.SEED_MANAGER_PASSWORD || "Manager@123",
         roles: ["MANAGER"],
         profile: {
-            full_name: "Manager User",
+            full_name: "Quản lý cửa hàng",
             phone_number: "0901000099",
         },
     },
@@ -29,9 +29,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Nguyen Van An",
+            full_name: "Nguyễn Văn An",
             phone: "0901000001",
-            address: "Can Tho",
+            address: "Cần Thơ",
         },
     },
     {
@@ -39,9 +39,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Tran Thi Bich",
+            full_name: "Trần Thị Bích",
             phone: "0901000002",
-            address: "Tien Giang",
+            address: "Tiền Giang",
         },
     },
     {
@@ -49,9 +49,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Le Van Binh",
+            full_name: "Lê Văn Bình",
             phone: "0901000003",
-            address: "Vinh Long",
+            address: "Vĩnh Long",
         },
     },
     {
@@ -59,9 +59,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Pham Thi Cam",
+            full_name: "Phạm Thị Cẩm",
             phone: "0901000004",
-            address: "Ben Tre",
+            address: "Bến Tre",
         },
     },
     {
@@ -69,9 +69,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Huynh Van Cuong",
+            full_name: "Huỳnh Văn Cường",
             phone: "0901000005",
-            address: "Dong Thap",
+            address: "Đồng Tháp",
         },
     },
     {
@@ -79,7 +79,7 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Dang Thi Diem",
+            full_name: "Đặng Thị Diễm",
             phone: "0901000006",
             address: "Long An",
         },
@@ -89,7 +89,7 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Bui Truong Giang",
+            full_name: "Bùi Trường Giang",
             phone: "0901000007",
             address: "An Giang",
         },
@@ -99,9 +99,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Vo Thi Han",
+            full_name: "Võ Thị Hân",
             phone: "0901000008",
-            address: "Hau Giang",
+            address: "Hậu Giang",
         },
     },
     {
@@ -109,9 +109,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Ngo Thu Hoai",
+            full_name: "Ngô Thu Hoài",
             phone: "0901000009",
-            address: "Soc Trang",
+            address: "Sóc Trăng",
         },
     },
     {
@@ -119,9 +119,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Do Van Hung",
+            full_name: "Đỗ Văn Hùng",
             phone: "0901000010",
-            address: "Tra Vinh",
+            address: "Trà Vinh",
         },
     },
     {
@@ -129,9 +129,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Nguyen Thi Lan",
+            full_name: "Nguyễn Thị Lan",
             phone: "0901000011",
-            address: "City. Ho Chi Minh",
+            address: "TP. Hồ Chí Minh",
         },
     },
     {
@@ -139,9 +139,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Tran Van Loc",
+            full_name: "Trần Văn Lộc",
             phone: "0901000012",
-            address: "Binh Duong",
+            address: "Bình Dương",
         },
     },
     {
@@ -149,9 +149,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Le Van Minh",
+            full_name: "Lê Văn Minh",
             phone: "0901000013",
-            address: "Dong Nai",
+            address: "Đồng Nai",
         },
     },
     {
@@ -159,9 +159,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Pham Thi Mai",
+            full_name: "Phạm Thị Mai",
             phone: "0901000014",
-            address: "Tay Ninh",
+            address: "Tây Ninh",
         },
     },
     {
@@ -169,9 +169,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Hoang Van Nghia",
+            full_name: "Hoàng Văn Nghĩa",
             phone: "0901000015",
-            address: "Binh Phuoc",
+            address: "Bình Phước",
         },
     },
     {
@@ -179,9 +179,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Phan Thi Oanh",
+            full_name: "Phan Thị Oanh",
             phone: "0901000016",
-            address: "Lam Dong",
+            address: "Lâm Đồng",
         },
     },
     {
@@ -189,9 +189,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Truong Van Phuc",
+            full_name: "Trương Văn Phúc",
             phone: "0901000017",
-            address: "Khanh Hoa",
+            address: "Khánh Hòa",
         },
     },
     {
@@ -199,9 +199,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Mai Thi Quyen",
+            full_name: "Mai Thị Quyên",
             phone: "0901000018",
-            address: "Ninh Thuan",
+            address: "Ninh Thuận",
         },
     },
     {
@@ -209,9 +209,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Cao Van Son",
+            full_name: "Cao Văn Sơn",
             phone: "0901000019",
-            address: "Binh Thuan",
+            address: "Bình Thuận",
         },
     },
     {
@@ -219,9 +219,9 @@ const seedUsers = [
         password: "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
-            full_name: "Dinh Thi Thao",
+            full_name: "Đinh Thị Thảo",
             phone: "0901000020",
-            address: "Dak Lak",
+            address: "Đắk Lắk",
         },
     },
 ];
@@ -241,7 +241,18 @@ const seedUser = async () => {
         }).select("_id");
 
         if (existing) {
-            console.log(`⊘ Skipped user: ${email}`);
+            const profileUpdates = {
+                "profile.full_name": user.profile.full_name,
+                "profile.phone_number": phoneNumber,
+            };
+
+            await User.updateOne(
+                { _id: existing._id },
+                { $set: profileUpdates },
+                { runValidators: true }
+            );
+
+            console.log(`↻ Updated user: ${email}`);
             continue;
         }
 
@@ -281,7 +292,7 @@ if (require.main === module) {
     const run = async () => {
         try {
             await mongoose.connect(MONGODB_URI, {
-                dbName: process.env.MONGODB_DB_NAME || "nguyenlien_db",
+                dbName: process.env.MONGODB_DB_NAME || "nguyenlien_dev",
             });
 
             console.log("✓ MongoDB connected");

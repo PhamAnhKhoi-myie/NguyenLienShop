@@ -91,7 +91,7 @@ if (require.main === module) {
 
         try {
             await mongoose.connect(MONGODB_URI, {
-                dbName: process.env.MONGODB_DB_NAME || 'nguyenlien_db',
+                dbName: process.env.MONGODB_DB_NAME || 'nguyenlien_dev',
             });
 
             await seedLocations();

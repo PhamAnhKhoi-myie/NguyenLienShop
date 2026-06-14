@@ -46,6 +46,29 @@ function keywordsToText(keywords = []) {
     return Array.isArray(keywords) ? keywords.join(', ') : '';
 }
 
+function toDateTimeLocal(value) {
+    if (!value) {
+        return '';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function toIsoDateOrNull(value) {
+    if (!value) {
+        return null;
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 export const categoryFormSchema = z.object({
     name: z.string().trim().min(2, translate('text.category_name_needs_to_be_at_least_2_characters')).max(100),
     slug: slugSchema,
@@ -73,6 +96,8 @@ export const productFormSchema = z.object({
         .max(2000, translate('text.detailed_description_must_not_exceed_2000_characters')),
     image_files: z.any().optional(),
     search_keywords_text: keywordsSchema,
+    is_best_seller: z.enum(['true', 'false']),
+    new_until: z.string(),
     status: z.enum(['ACTIVE', 'INACTIVE']),
 });
 
@@ -152,6 +177,8 @@ export const productFormConfig = {
         description: '',
         image_files: [],
         search_keywords_text: '',
+        is_best_seller: 'false',
+        new_until: '',
         status: 'ACTIVE',
     },
     toFormValues: (product = {}) => ({
@@ -163,6 +190,8 @@ export const productFormConfig = {
         description: product.description || '',
         image_files: [],
         search_keywords_text: keywordsToText(product.search_keywords),
+        is_best_seller: product.is_best_seller ? 'true' : 'false',
+        new_until: toDateTimeLocal(product.new_until),
         status: product.status || 'ACTIVE',
     }),
     toPayload: async (values, { initialData } = {}) => {
@@ -191,6 +220,8 @@ export const productFormConfig = {
             description: cleanOptional(values.description),
             images,
             search_keywords: splitKeywords(values.search_keywords_text),
+            is_best_seller: values.is_best_seller === 'true',
+            new_until: toIsoDateOrNull(values.new_until),
             status: values.status,
         };
     },
@@ -213,6 +244,21 @@ export const productFormConfig = {
                 { value: 'ACTIVE', label: translate('text.active') },
                 { value: 'INACTIVE', label: translate('text.inactive') },
             ],
+        },
+        {
+            name: 'is_best_seller',
+            label: translate('text.best_seller'),
+            type: 'select',
+            options: [
+                { value: 'false', label: translate('text.no') },
+                { value: 'true', label: translate('text.yes') },
+            ],
+        },
+        {
+            name: 'new_until',
+            label: translate('text.new_until'),
+            type: 'datetime-local',
+            helperText: translate('text.new_until_helper'),
         },
         {
             name: 'short_description',

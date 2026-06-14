@@ -6,6 +6,7 @@ const ProductMapper = require('./product.mapper');
 const AppError = require('../../utils/appError.util');
 const ProductAuditLogService = require('../audit_logs/product_audit_log/product_log.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
+const { summarizePriceTiers } = require('./pricing.util');
 
 class ProductService {
     static async createProduct(data, actorId = null, metadata = {}) {
@@ -108,7 +109,10 @@ class ProductService {
         limit = 20,
         filters = {}
     ) {
-        const skip = (page - 1) * limit;
+        const {
+            page: normalizedPage,
+            limit: normalizedLimit,
+        } = this._normalizePagination(page, limit);
         const query = {};
 
 
@@ -122,24 +126,10 @@ class ProductService {
         }
 
 
-        if (filters.min_price || filters.max_price) {
-            const priceConditions = [];
-
-            if (filters.min_price !== undefined) {
-                priceConditions.push({
-                    max_price: { $gte: filters.min_price }
-                });
-            }
-
-            if (filters.max_price !== undefined) {
-                priceConditions.push({
-                    min_price: { $lte: filters.max_price }
-                });
-            }
-
-            if (priceConditions.length > 0) {
-                query.$and = priceConditions;
-            }
+        if (filters.badge === 'new') {
+            query.new_until = { $gte: new Date() };
+        } else if (filters.badge === 'best_seller') {
+            query.is_best_seller = true;
         }
 
         const search = filters.search?.trim();
@@ -170,21 +160,70 @@ class ProductService {
         }
 
 
-        const total = await Product.countDocuments(query);
-        const products = await Product.find(query)
-            .skip(skip)
-            .limit(limit)
-            .sort(sortBy)
-            .lean();
+        const products = await Product.find(query).sort(sortBy).lean();
+        let decoratedProducts = await this._decorateProducts(products);
+
+        if (filters.min_price !== undefined) {
+            decoratedProducts = decoratedProducts.filter(
+                (product) => product.max_price >= filters.min_price
+            );
+        }
+
+        if (filters.max_price !== undefined) {
+            decoratedProducts = decoratedProducts.filter(
+                (product) => product.min_price <= filters.max_price
+            );
+        }
+
+        if (filters.badge === 'on_sale') {
+            decoratedProducts = decoratedProducts.filter(
+                (product) => product.is_on_sale
+            );
+        } else if (filters.badge === 'in_stock') {
+            decoratedProducts = decoratedProducts.filter(
+                (product) => product.in_stock
+            );
+        }
+
+        decoratedProducts = this._sortDecoratedProducts(
+            decoratedProducts,
+            filters.sortBy,
+            Boolean(search)
+        );
+
+        const total = decoratedProducts.length;
+        const skip = (normalizedPage - 1) * normalizedLimit;
+        const paginatedProducts = decoratedProducts.slice(
+            skip,
+            skip + normalizedLimit
+        );
 
         return {
-            data: products.map((p) => ProductMapper.toListDTO(p)),
+            data: paginatedProducts.map((product) =>
+                ProductMapper.toListDTO(product)
+            ),
             pagination: {
-                current_page: page,
-                total_pages: Math.ceil(total / limit),
+                current_page: normalizedPage,
+                total_pages: Math.ceil(total / normalizedLimit),
                 total_items: total,
-                per_page: limit,
+                per_page: normalizedLimit,
             },
+        };
+    }
+
+    static _normalizePagination(page, limit) {
+        const parsedPage = Number.parseInt(page, 10);
+        const parsedLimit = Number.parseInt(limit, 10);
+
+        return {
+            page:
+                Number.isInteger(parsedPage) && parsedPage > 0
+                    ? parsedPage
+                    : 1,
+            limit:
+                Number.isInteger(parsedLimit) && parsedLimit > 0
+                    ? Math.min(parsedLimit, 100)
+                    : 20,
         };
     }
 
@@ -328,7 +367,10 @@ class ProductService {
             .sort({ sold_count: -1 })
             .lean();
 
-        return products.map((p) => ProductMapper.toListDTO(p));
+        const decoratedProducts = await this._decorateProducts(products);
+        return decoratedProducts.map((product) =>
+            ProductMapper.toListDTO(product)
+        );
     }
 
     static async searchProducts(query, limit = 20) {
@@ -340,7 +382,10 @@ class ProductService {
             .limit(limit)
             .lean();
 
-        return products.map((p) => ProductMapper.toListDTO(p));
+        const decoratedProducts = await this._decorateProducts(products);
+        return decoratedProducts.map((product) =>
+            ProductMapper.toListDTO(product)
+        );
     }
 
     static async _buildProductDetail(product, includeUnits = true) {
@@ -352,7 +397,7 @@ class ProductService {
 
         let unitsMap = {};
 
-        if (includeUnits && variants.length > 0) {
+        if (variants.length > 0) {
             const variantIds = variants.map(v => v._id);
 
             const allUnits = await VariantUnit.find({
@@ -370,12 +415,242 @@ class ProductService {
 
         const variantsWithUnits = variants.map((variant) => ({
             ...variant,
-            units: includeUnits
-                ? (unitsMap[variant._id.toString()] || [])
-                : [],
+            units: unitsMap[variant._id.toString()] || [],
         }));
 
-        return ProductMapper.toDetailDTO(product, variantsWithUnits);
+        const decoratedVariants = variantsWithUnits.map((variant) =>
+            this._decorateVariant(variant)
+        );
+        const decoratedProduct = this._decorateProduct(
+            product,
+            decoratedVariants
+        );
+
+        const responseVariants = includeUnits
+            ? decoratedVariants
+            : decoratedVariants.map((variant) => ({
+                ...variant,
+                units: [],
+            }));
+
+        return ProductMapper.toDetailDTO(
+            decoratedProduct,
+            responseVariants
+        );
+    }
+
+    static async _decorateProducts(products) {
+        if (!Array.isArray(products) || products.length === 0) {
+            return [];
+        }
+
+        const productIds = products.map((product) => product._id);
+        const variants = await Variant.find(
+            { product_id: { $in: productIds } },
+            null,
+            { includeDeleted: false }
+        ).lean();
+        const variantIds = variants.map((variant) => variant._id);
+        const units = variantIds.length > 0
+            ? await VariantUnit.find({
+                variant_id: { $in: variantIds },
+            }).lean()
+            : [];
+
+        const unitsByVariant = new Map();
+        for (const unit of units) {
+            const key = unit.variant_id.toString();
+            const current = unitsByVariant.get(key) || [];
+            current.push(unit);
+            unitsByVariant.set(key, current);
+        }
+
+        const variantsByProduct = new Map();
+        for (const variant of variants) {
+            const decoratedVariant = this._decorateVariant({
+                ...variant,
+                units:
+                    unitsByVariant.get(variant._id.toString()) || [],
+            });
+            const key = variant.product_id.toString();
+            const current = variantsByProduct.get(key) || [];
+            current.push(decoratedVariant);
+            variantsByProduct.set(key, current);
+        }
+
+        return products.map((product) =>
+            this._decorateProduct(
+                product,
+                variantsByProduct.get(product._id.toString()) || []
+            )
+        );
+    }
+
+    static _decorateVariant(variant) {
+        const units = (variant.units || []).map((unit) => ({
+            ...unit,
+            ...summarizePriceTiers(
+                unit.price_tiers,
+                unit.pack_size,
+                unit.promotion
+            ),
+        }));
+        const availableUnits = units.filter(
+            (unit) =>
+                variant.status === 'ACTIVE' &&
+                variant.stock?.available >=
+                    unit.pack_size * (unit.min_order_qty || 1)
+        );
+
+        return {
+            ...variant,
+            ...this._aggregatePriceSummaries(units, variant),
+            units,
+            in_stock: availableUnits.length > 0,
+        };
+    }
+
+    static _decorateProduct(product, variants) {
+        const activeVariants = variants.filter(
+            (variant) => variant.status === 'ACTIVE'
+        );
+
+        return {
+            ...product,
+            ...this._aggregatePriceSummaries(activeVariants, product),
+            is_new:
+                Boolean(product.new_until) &&
+                new Date(product.new_until) >= new Date(),
+            in_stock: activeVariants.some((variant) => variant.in_stock),
+        };
+    }
+
+    static _aggregatePriceSummaries(items, fallback = {}) {
+        const pricedItems = items.filter(
+            (item) =>
+                Number.isFinite(item.min_price) &&
+                Number.isFinite(item.max_price) &&
+                item.max_price > 0
+        );
+
+        if (pricedItems.length === 0) {
+            return {
+                min_price: fallback.min_price || 0,
+                max_price: fallback.max_price || 0,
+                min_price_per_unit:
+                    fallback.min_price_per_unit || 0,
+                max_price_per_unit:
+                    fallback.max_price_per_unit || 0,
+                original_min_price:
+                    fallback.original_min_price ??
+                    fallback.min_price ??
+                    0,
+                original_max_price:
+                    fallback.original_max_price ??
+                    fallback.max_price ??
+                    0,
+                original_min_price_per_unit:
+                    fallback.original_min_price_per_unit ??
+                    fallback.min_price_per_unit ??
+                    0,
+                original_max_price_per_unit:
+                    fallback.original_max_price_per_unit ??
+                    fallback.max_price_per_unit ??
+                    0,
+                is_on_sale: false,
+                max_discount_percent: 0,
+            };
+        }
+
+        return {
+            min_price: Math.min(
+                ...pricedItems.map((item) => item.min_price)
+            ),
+            max_price: Math.max(
+                ...pricedItems.map((item) => item.max_price)
+            ),
+            min_price_per_unit: Math.min(
+                ...pricedItems.map((item) => item.min_price_per_unit)
+            ),
+            max_price_per_unit: Math.max(
+                ...pricedItems.map((item) => item.max_price_per_unit)
+            ),
+            original_min_price: Math.min(
+                ...pricedItems.map(
+                    (item) =>
+                        item.original_min_price ?? item.min_price
+                )
+            ),
+            original_max_price: Math.max(
+                ...pricedItems.map(
+                    (item) =>
+                        item.original_max_price ?? item.max_price
+                )
+            ),
+            original_min_price_per_unit: Math.min(
+                ...pricedItems.map(
+                    (item) =>
+                        item.original_min_price_per_unit ??
+                        item.min_price_per_unit
+                )
+            ),
+            original_max_price_per_unit: Math.max(
+                ...pricedItems.map(
+                    (item) =>
+                        item.original_max_price_per_unit ??
+                        item.max_price_per_unit
+                )
+            ),
+            is_on_sale: pricedItems.some((item) => item.is_on_sale),
+            max_discount_percent: Math.max(
+                ...pricedItems.map(
+                    (item) => item.max_discount_percent || 0
+                )
+            ),
+        };
+    }
+
+    static _sortDecoratedProducts(products, sortBy, preserveOrder) {
+        if (preserveOrder) {
+            return products;
+        }
+
+        const sorted = [...products];
+        const compareNewest = (a, b) =>
+            new Date(b.created_at || 0) - new Date(a.created_at || 0);
+
+        if (sortBy === 'popular') {
+            return sorted.sort(
+                (a, b) =>
+                    Number(Boolean(b.is_best_seller)) -
+                        Number(Boolean(a.is_best_seller)) ||
+                    (b.sold_count || 0) - (a.sold_count || 0) ||
+                    (b.rating_avg || 0) - (a.rating_avg || 0)
+            );
+        }
+        if (sortBy === 'rating') {
+            return sorted.sort(
+                (a, b) =>
+                    (b.rating_avg || 0) - (a.rating_avg || 0) ||
+                    compareNewest(a, b)
+            );
+        }
+        if (sortBy === 'price_asc') {
+            return sorted.sort(
+                (a, b) =>
+                    (a.min_price || 0) - (b.min_price || 0) ||
+                    compareNewest(a, b)
+            );
+        }
+        if (sortBy === 'price_desc') {
+            return sorted.sort(
+                (a, b) =>
+                    (b.max_price || 0) - (a.max_price || 0) ||
+                    compareNewest(a, b)
+            );
+        }
+
+        return sorted.sort(compareNewest);
     }
 
     static _buildFieldChanges(before, after, fields) {

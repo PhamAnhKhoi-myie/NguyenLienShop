@@ -140,6 +140,18 @@ const productSchema = new mongoose.Schema(
             index: true,
         },
 
+        is_best_seller: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+
+        new_until: {
+            type: Date,
+            default: null,
+            index: true,
+        },
+
 
         status: {
             type: String,

@@ -266,6 +266,15 @@ export default function OrderDetailPage() {
                                             <p className="mt-1 text-sm text-[var(--color-text-main)]">
                                                 {item.quantity_ordered} {translate('text.package_x')} {formatCurrency(item.unit_price || 0)}
                                             </p>
+                                            {item.is_on_sale && (
+                                                <p className="mt-1 text-sm text-[var(--color-text-muted)] line-through">
+                                                    {formatCurrency(
+                                                        item.original_unit_price ||
+                                                            item.unit_price ||
+                                                            0
+                                                    )}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="flex flex-col gap-2 md:items-end">
                                             <p className="font-semibold text-[var(--color-primary-hover)]">
@@ -339,8 +348,17 @@ export default function OrderDetailPage() {
                                 label={translate('text.temporary')}
                                 value={formatCurrency(order.pricing?.subtotal || 0)}
                             />
+                            {order.pricing?.promotion_discount_amount > 0 && (
+                                <InfoRow
+                                    label={translate('text.product_promotion')}
+                                    value={`-${formatCurrency(
+                                        order.pricing
+                                            .promotion_discount_amount
+                                    )}`}
+                                />
+                            )}
                             <InfoRow
-                                label={translate('text.discount')}
+                                label={translate('text.voucher_discount')}
                                 value={formatCurrency(
                                     order.pricing?.discount_amount || 0
                                 )}

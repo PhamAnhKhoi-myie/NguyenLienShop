@@ -27,6 +27,7 @@ import { useClaimedDiscounts } from '../../discounts/hooks/useHomepageDiscounts'
 import { useCreatePayment } from '../../payments/hooks/usePayments';
 import {
     useAddresses,
+    useCheckoutSettings,
     useCreateAddress,
     useCreateOrder,
     useUpdateAddress,
@@ -42,7 +43,6 @@ const addressFormSchema = z.object({
     ward_code: z.string().trim().min(1, translate('text.please_select_ward_commune')),
     detail: z.string().trim().min(5, translate('text.specific_address_of_at_least_5_characters')),
     note: z.string().trim().max(500, translate('text.note_maximum_500_characters')).optional(),
-    shipping_fee: z.coerce.number().min(0, translate('text.invalid_shipping_charge')),
     payment_method: z.enum(['COD', 'VNPAY', 'PAYOS']),
 });
 
@@ -53,7 +53,6 @@ const emptyAddressValues = {
     ward_code: '',
     detail: '',
     note: '',
-    shipping_fee: 0,
     payment_method: 'COD',
 };
 
@@ -248,37 +247,28 @@ function AddressForm({
                 {...register('detail')}
             />
 
-            <div className="grid gap-4 md:grid-cols-2">
-                <Input
-                    label={translate('text.shipping_fee')}
-                    type="number"
-                    min="0"
-                    error={errors.shipping_fee?.message}
-                    {...register('shipping_fee')}
-                />
-                <Select
-                    label={translate('text.checkout')}
-                    error={errors.payment_method?.message}
-                    helperText={
-                        isSelectedPaymentDisabled
-                            ? translate('text.selected_payment_method_is_temporarily_unavailable')
-                            : undefined
-                    }
-                    {...paymentMethodField}
-                    onChange={(event) => {
-                        paymentMethodField.onChange(event);
-                        setPaymentMethod(event.target.value);
-                    }}
-                >
-                    <option value="COD">{translate('text.cod')}</option>
-                    <option value="VNPAY" disabled={!isVNPayEnabled}>
-                        {isVNPayEnabled ? 'VNPAY' : translate('text.vnpay_temporarily_disabled')}
-                    </option>
-                    <option value="PAYOS" disabled={!isPayOSEnabled}>
-                        {isPayOSEnabled ? 'PayOS' : translate('text.payos_temporarily_disabled')}
-                    </option>
-                </Select>
-            </div>
+            <Select
+                label={translate('text.checkout')}
+                error={errors.payment_method?.message}
+                helperText={
+                    isSelectedPaymentDisabled
+                        ? translate('text.selected_payment_method_is_temporarily_unavailable')
+                        : undefined
+                }
+                {...paymentMethodField}
+                onChange={(event) => {
+                    paymentMethodField.onChange(event);
+                    setPaymentMethod(event.target.value);
+                }}
+            >
+                <option value="COD">{translate('text.cod')}</option>
+                <option value="VNPAY" disabled={!isVNPayEnabled}>
+                    {isVNPayEnabled ? 'VNPAY' : translate('text.vnpay_temporarily_disabled')}
+                </option>
+                <option value="PAYOS" disabled={!isPayOSEnabled}>
+                    {isPayOSEnabled ? 'PayOS' : translate('text.payos_temporarily_disabled')}
+                </option>
+            </Select>
 
             <Textarea
                 label={translate('text.delivery_notes')}
@@ -317,6 +307,7 @@ export default function CheckoutPage() {
         format: 'detail',
     });
     const addressesQuery = useAddresses();
+    const checkoutSettingsQuery = useCheckoutSettings();
     const validateCartMutation = useValidateCart();
     const applyDiscountMutation = useApplyCartDiscount();
     const removeDiscountMutation = useRemoveCartDiscount();
@@ -341,6 +332,8 @@ export default function CheckoutPage() {
     const cart = cartQuery.data?.data;
     const items = cart?.items || [];
     const totals = cart?.totals || {};
+    const shippingFee =
+        checkoutSettingsQuery.data?.data?.shipping_fee || 0;
     const claimedDiscounts = claimedDiscountsQuery.data?.data || [];
     const addresses = useMemo(
         () => addressesQuery.data?.data || [],
@@ -476,15 +469,12 @@ export default function CheckoutPage() {
                 );
             }
 
-            const shippingFee = Number(values.shipping_fee || 0);
             const note = values.note?.trim() || undefined;
             const response = await createOrderMutation.mutateAsync({
                 cart_id: cart.id,
                 address_snapshot: toAddressSnapshot(values),
-                shipping_fee: shippingFee,
                 payment_method: values.payment_method,
                 customer_notes: note,
-                currency: 'VND',
             });
 
             const order = response.data;
@@ -566,7 +556,11 @@ export default function CheckoutPage() {
         }
     };
 
-    if (cartQuery.isLoading || addressesQuery.isLoading) {
+    if (
+        cartQuery.isLoading ||
+        addressesQuery.isLoading ||
+        checkoutSettingsQuery.isLoading
+    ) {
         return (
             <Card>
                 <CardBody>
@@ -576,11 +570,14 @@ export default function CheckoutPage() {
         );
     }
 
-    if (cartQuery.isError) {
+    if (cartQuery.isError || checkoutSettingsQuery.isError) {
         return (
             <EmptyState
                 title={translate('text.unable_to_load_shopping_cart')}
-                description={cartQuery.error.message}
+                description={
+                    cartQuery.error?.message ||
+                    checkoutSettingsQuery.error?.message
+                }
                 actionLabel={translate('text.return_to_cart')}
                 onAction={() => navigate(ROUTES.CART)}
             />
@@ -709,6 +706,15 @@ export default function CheckoutPage() {
                                             <p className="text-[var(--color-text-muted)]">
                                                 {item.quantity_packs || item.quantity || 1} {translate('text.package_x')} {formatCurrency(item.price_at_added || 0)}
                                             </p>
+                                            {item.is_on_sale && (
+                                                <p className="text-xs text-[var(--color-text-muted)] line-through">
+                                                    {formatCurrency(
+                                                        item.original_price_at_added ||
+                                                            item.price_at_added ||
+                                                            0
+                                                    )}
+                                                </p>
+                                            )}
                                         </div>
                                         <span className="font-medium text-[var(--color-text-main)]">
                                             {formatCurrency(item.line_total || 0)}
@@ -723,14 +729,30 @@ export default function CheckoutPage() {
                                         <span className="text-[var(--color-text-muted)]"> {translate('text.temporary')} </span>
                                         <span>{formatCurrency(totals.subtotal || 0)}</span>
                                     </div>
+                                    {totals.promotion_discount_amount > 0 && (
+                                        <div className="flex justify-between gap-4">
+                                            <span className="text-[var(--color-text-muted)]">
+                                                {translate('text.product_promotion')}
+                                            </span>
+                                            <span className="text-[var(--color-error)]">
+                                                -{formatCurrency(
+                                                    totals.promotion_discount_amount
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between gap-4">
-                                        <span className="text-[var(--color-text-muted)]"> {translate('text.discount')} </span>
+                                        <span className="text-[var(--color-text-muted)]"> {translate('text.voucher_discount')} </span>
                                         <span>{formatCurrency(totals.discount_amount || 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                        <span className="text-[var(--color-text-muted)]"> {translate('text.shipping_fee')} </span>
+                                        <span>{formatCurrency(shippingFee)}</span>
                                     </div>
                                     <div className="flex justify-between gap-4">
                                         <span className="text-[var(--color-text-muted)]"> {translate('text.current_total')} </span>
                                         <span className="font-semibold text-[var(--color-primary-hover)]">
-                                            {formatCurrency(totals.total || 0)}
+                                            {formatCurrency((totals.total || 0) + shippingFee)}
                                         </span>
                                     </div>
                                 </div>

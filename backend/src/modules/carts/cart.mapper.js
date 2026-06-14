@@ -41,6 +41,9 @@ class CartMapper {
             item_count: doc.items?.length || 0,
             items_total_units: this.calculateTotalUnits(doc.items || []),
 
+            original_subtotal: totals.original_subtotal,
+            promotion_discount_amount:
+                totals.promotion_discount_amount,
             subtotal: totals.subtotal,
             discount_amount: totals.discount_amount,
             total: totals.total,
@@ -82,6 +85,9 @@ class CartMapper {
                 : null,
 
             totals: {
+                original_subtotal: totals.original_subtotal,
+                promotion_discount_amount:
+                    totals.promotion_discount_amount,
                 subtotal: totals.subtotal,
                 discount_amount: totals.discount_amount,
                 total: totals.total,
@@ -150,9 +156,20 @@ class CartMapper {
                 display_name: item.display_name,
                 pack_size: item.pack_size,
 
+                original_price_at_added:
+                    item.original_price_at_added ||
+                    item.price_at_added,
                 price_at_added: item.price_at_added,
                 quantity: item.quantity,
+                original_line_total:
+                    (item.original_price_at_added ||
+                        item.price_at_added) * item.quantity,
                 line_total: item.price_at_added * item.quantity,
+                promotion_discount_amount:
+                    item.promotion_discount_amount || 0,
+                promotion_discount_percent:
+                    item.promotion_discount_percent || 0,
+                is_on_sale: Boolean(item.is_on_sale),
 
                 total_items: item.quantity * item.pack_size,
                 price_per_item: Math.round(
@@ -171,6 +188,9 @@ class CartMapper {
                 : null,
 
             totals: {
+                original_subtotal: totals.original_subtotal,
+                promotion_discount_amount:
+                    totals.promotion_discount_amount,
                 subtotal: totals.subtotal,
                 discount_amount: totals.discount_amount,
                 total: totals.total,
@@ -209,6 +229,9 @@ class CartMapper {
                 : null,
 
             totals: {
+                original_subtotal: totals.original_subtotal,
+                promotion_discount_amount:
+                    totals.promotion_discount_amount,
                 subtotal: totals.subtotal,
                 discount_amount: totals.discount_amount,
                 total: totals.total,
@@ -262,10 +285,22 @@ class CartMapper {
             display_name: item.display_name,
             pack_size: item.pack_size,
 
+            original_price_at_added:
+                item.original_price_at_added ||
+                item.price_at_added,
             price_at_added: item.price_at_added,
             quantity: item.quantity,
 
+            original_line_total:
+                (item.original_price_at_added ||
+                    item.price_at_added) * item.quantity,
             line_total: item.price_at_added * item.quantity,
+            promotion_discount_amount:
+                item.promotion_discount_amount || 0,
+            promotion_discount_percent:
+                item.promotion_discount_percent || 0,
+            is_on_sale: Boolean(item.is_on_sale),
+            voucher_allowed: item.voucher_allowed !== false,
 
             added_at: item.added_at,
         }));
@@ -294,8 +329,20 @@ class CartMapper {
             quantity_packs: item.quantity,
             total_items: item.quantity * item.pack_size,
 
+            original_price_at_added:
+                item.original_price_at_added ||
+                item.price_at_added,
             price_at_added: item.price_at_added,
+            original_line_total:
+                (item.original_price_at_added ||
+                    item.price_at_added) * item.quantity,
             line_total: item.price_at_added * item.quantity,
+            promotion_discount_amount:
+                item.promotion_discount_amount || 0,
+            promotion_discount_percent:
+                item.promotion_discount_percent || 0,
+            is_on_sale: Boolean(item.is_on_sale),
+            voucher_allowed: item.voucher_allowed !== false,
             price_per_item: Math.round(
                 item.price_at_added / item.pack_size
             ),
@@ -321,22 +368,33 @@ class CartMapper {
     }
 
     static calculateCartTotals(items, discount) {
+        let originalSubtotal = 0;
         let subtotal = 0;
         if (Array.isArray(items)) {
-            subtotal = items.reduce(
-                (sum, item) => sum + item.price_at_added * item.quantity,
-                0
-            );
+            for (const item of items) {
+                const originalPrice =
+                    item.original_price_at_added ||
+                    item.price_at_added;
+                originalSubtotal += originalPrice * item.quantity;
+                subtotal += item.price_at_added * item.quantity;
+            }
         }
 
         const discountAmount = discount?.discount_amount || 0;
+        const promotionDiscountAmount = Math.max(
+            originalSubtotal - subtotal,
+            0
+        );
 
         const total = Math.max(subtotal - discountAmount, 0);
 
         return {
-            subtotal: Math.round(subtotal * 100) / 100,
-            discount_amount: Math.round(discountAmount * 100) / 100,
-            total: Math.round(total * 100) / 100,
+            original_subtotal: Math.round(originalSubtotal),
+            promotion_discount_amount:
+                Math.round(promotionDiscountAmount),
+            subtotal: Math.round(subtotal),
+            discount_amount: Math.round(discountAmount),
+            total: Math.round(total),
         };
     }
 

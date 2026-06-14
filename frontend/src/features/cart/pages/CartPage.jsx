@@ -174,8 +174,20 @@ export default function CartPage() {
                                     {formatCurrency(totals.subtotal || 0)}
                                 </span>
                             </div>
+                            {totals.promotion_discount_amount > 0 && (
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-[var(--color-text-muted)]">
+                                        {translate('text.product_promotion')}
+                                    </span>
+                                    <span className="font-medium text-[var(--color-error)]">
+                                        -{formatCurrency(
+                                            totals.promotion_discount_amount
+                                        )}
+                                    </span>
+                                </div>
+                            )}
                             <div className="flex justify-between gap-4">
-                                <span className="text-[var(--color-text-muted)]"> {translate('text.discount')} </span>
+                                <span className="text-[var(--color-text-muted)]"> {translate('text.voucher_discount')} </span>
                                 <span className="font-medium text-[var(--color-text-main)]">
                                     {formatCurrency(totals.discount_amount || 0)}
                                 </span>

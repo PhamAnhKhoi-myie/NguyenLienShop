@@ -39,6 +39,19 @@ function imageCount(row) {
     return row.images?.length || row.image_urls?.length || 0;
 }
 
+function productPriceRange(row) {
+    const min = Number(row.min_price || 0);
+    const max = Number(row.max_price || 0);
+
+    if (!min && !max) {
+        return '-';
+    }
+
+    return min === max
+        ? formatMoney(min)
+        : `${formatMoney(min)} - ${formatMoney(max)}`;
+}
+
 function discountValue(row) {
     if (row.type === 'percentage') {
         return `${row.value}%`;
@@ -66,7 +79,10 @@ export const adminResources = {
             { key: 'name', header: translate('text.product_name'), value: 'name' },
             { key: 'category', header: translate('text.category'), value: (row) => row.category?.name || row.category_name },
             { key: 'status', header: translate('text.status'), value: 'status', type: 'status' },
-            { key: 'price', header: translate('text.price_range'), value: (row) => row.price_range || row.priceRange },
+            { key: 'price', header: translate('text.price_range'), value: productPriceRange },
+            { key: 'is_new', header: translate('text.new_arrival'), value: 'is_new' },
+            { key: 'is_best_seller', header: translate('text.best_seller'), value: 'is_best_seller' },
+            { key: 'is_on_sale', header: translate('text.discounted'), value: 'is_on_sale' },
             { key: 'images', header: translate('text.photo'), value: imageCount },
             { key: 'created_at', header: translate('text.creation_date'), value: 'created_at', type: 'date' },
         ],

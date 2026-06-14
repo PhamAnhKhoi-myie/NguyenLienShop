@@ -13,9 +13,10 @@ const OrderAuditLog = require("../modules/audit_logs/order_audit_log/order_log.m
 const ReviewAuditLog = require("../modules/audit_logs/review_audit_log/review_log.model");
 
 const MONGODB_URI = process.env.MONGO_URI;
-const DB_NAME = process.env.MONGODB_DB_NAME || "nguyenlien_db";
+const DB_NAME = process.env.MONGODB_DB_NAME || "nguyenlien_dev";
 const ORDER_PREFIX = "DEV-REV";
-const TITLE_PREFIX = "[DEV REVIEW]";
+const TITLE_PREFIX = "[ĐÁNH GIÁ DEV]";
+const LEGACY_TITLE_PREFIX = "[DEV REVIEW]";
 const PREFERRED_ADMIN_EMAIL = "khoiphamvk123@gmail.com";
 const PREFERRED_CUSTOMER_EMAILS = [
     "nguyenvana.customer@gmail.com",
@@ -182,6 +183,7 @@ const loadCombos = async () => {
 const cleanupFixtures = async () => {
     const orderCodePattern = new RegExp(`^${ORDER_PREFIX}-`);
     const titlePattern = new RegExp(`^${escapeRegExp(TITLE_PREFIX)}`);
+    const legacyTitlePattern = new RegExp(`^${escapeRegExp(LEGACY_TITLE_PREFIX)}`);
 
     const oldOrders = await Order.find(
         { order_code: orderCodePattern },
@@ -190,7 +192,10 @@ const cleanupFixtures = async () => {
     );
     const oldOrderIds = oldOrders.map((order) => order._id);
 
-    const reviewQuery = [{ title: titlePattern }];
+    const reviewQuery = [
+        { title: titlePattern },
+        { title: legacyTitlePattern },
+    ];
 
     if (oldOrderIds.length > 0) {
         reviewQuery.push({ order_id: { $in: oldOrderIds } });
@@ -238,14 +243,14 @@ const buildOrderPayload = ({ code, user, combo, quantity = 1 }) => {
         user_id: user._id,
         order_code: code,
         address_snapshot: {
-            receiver_name: user.profile?.full_name || "Khach hang dev",
+            receiver_name: user.profile?.full_name || "Khách hàng dev",
             phone: user.profile?.phone_number || "0901000000",
             province_code: "79",
-            province_name: "TP. Ho Chi Minh",
+            province_name: "TP. Hồ Chí Minh",
             ward_code: "26734",
-            ward_name: "Phuong dev",
+            ward_name: "Phường dev",
             detail: "123 Nguyen Lien",
-            full_address: "123 Nguyen Lien, TP. Ho Chi Minh",
+            full_address: "123 Nguyễn Liên, TP. Hồ Chí Minh",
             note: "Review fixture",
         },
         items: [
@@ -293,7 +298,7 @@ const buildOrderPayload = ({ code, user, combo, quantity = 1 }) => {
             { from: "PROCESSING", to: "SHIPPED", changed_at: shippedAt, changed_by: null, note: "Dev fixture shipped" },
             { from: "SHIPPED", to: "DELIVERED", changed_at: deliveredAt, changed_by: null, note: "Dev fixture delivered" },
         ],
-        customer_notes: "Review UI dev fixture",
+        customer_notes: "Dữ liệu mẫu phục vụ kiểm tra giao diện đánh giá",
     };
 };
 
@@ -364,8 +369,8 @@ const seedReviewsDev = async () => {
             user: users.primaryUser,
             combo,
             rating: 5 - (index % 2),
-            title: `${TITLE_PREFIX} Da duyet ${index + 1}`,
-            content: `Danh gia dev da duyet ${index + 1}. San pham dung nhu mo ta, giao hang on dinh va de thao tac tren UI.`,
+            title: `${TITLE_PREFIX} Đã duyệt ${index + 1}`,
+            content: `Đánh giá dev đã duyệt ${index + 1}. Sản phẩm đúng như mô tả, giao hàng ổn định và dễ thao tác trên giao diện.`,
         });
 
         await ReviewService.approveReview(toId(review._id), toId(users.admin._id), metadata);
@@ -393,8 +398,8 @@ const seedReviewsDev = async () => {
             user,
             combo,
             rating: 4 + (index % 2),
-            title: `${TITLE_PREFIX} Khach xem san pham ${index + 1}`,
-            content: `Danh gia dev cong khai ${index + 1}. Noi dung du do dai de hien thi tot tren danh sach review san pham.`,
+            title: `${TITLE_PREFIX} Khách xem sản phẩm ${index + 1}`,
+            content: `Đánh giá dev công khai ${index + 1}. Nội dung có độ dài phù hợp để hiển thị tốt trong danh sách đánh giá sản phẩm.`,
         });
 
         await ReviewService.approveReview(toId(review._id), toId(users.admin._id), metadata);
@@ -414,8 +419,8 @@ const seedReviewsDev = async () => {
             user,
             combo,
             rating: 4,
-            title: `${TITLE_PREFIX} Cho duyet ${index + 1}`,
-            content: `Danh gia dev dang cho duyet ${index + 1}. Noi dung nay dung de kiem tra tab Cho duyet trong admin.`,
+            title: `${TITLE_PREFIX} Chờ duyệt ${index + 1}`,
+            content: `Đánh giá dev đang chờ duyệt ${index + 1}. Nội dung này dùng để kiểm tra tab Chờ duyệt trong trang quản trị.`,
         });
 
         created.pendingReviews.push(review);
@@ -432,8 +437,8 @@ const seedReviewsDev = async () => {
         user: users.flaggedReviewUser,
         combo: flaggedCombo,
         rating: 2,
-        title: `${TITLE_PREFIX} Bi bao cao 1`,
-        content: "Danh gia dev bi bao cao de kiem tra tab Bi bao cao trong admin moderation.",
+        title: `${TITLE_PREFIX} Bị báo cáo 1`,
+        content: "Đánh giá dev bị báo cáo để kiểm tra tab Bị báo cáo trong trang quản trị.",
     });
 
     await ReviewService.approveReview(toId(flaggedReview._id), toId(users.admin._id), metadata);

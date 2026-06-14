@@ -29,6 +29,7 @@ class CartService {
             quantity: item.quantity,
             pack_size: item.pack_size,
             price_at_added: item.price_at_added,
+            voucher_allowed: item.voucher_allowed !== false,
             line_total: item.price_at_added * item.quantity,
         }));
     }
@@ -63,7 +64,11 @@ class CartService {
             return await Cart.findByIdAndUpdate(
                 cart._id,
                 { discount: null, updated_at: new Date() },
-                { new: true }
+                {
+                    new: true,
+                    session: options.session,
+                    includeExpired: true,
+                }
             );
         }
 
@@ -86,7 +91,11 @@ class CartService {
                     ),
                     updated_at: new Date(),
                 },
-                { new: true }
+                {
+                    new: true,
+                    session: options.session,
+                    includeExpired: true,
+                }
             );
         } catch (error) {
             if (!(error instanceof AppError)) {
@@ -100,9 +109,115 @@ class CartService {
             return await Cart.findByIdAndUpdate(
                 cart._id,
                 { discount: null, updated_at: new Date() },
-                { new: true }
+                {
+                    new: true,
+                    session: options.session,
+                    includeExpired: true,
+                }
             );
         }
+    }
+
+    static async repriceCart(cart, options = {}) {
+        if (!cart?.items?.length) {
+            return cart;
+        }
+
+        const unitIds = [
+            ...new Set(cart.items.map((item) => item.unit_id.toString())),
+        ];
+        const query = VariantUnit.find({ _id: { $in: unitIds } });
+        if (options.session) {
+            query.session(options.session);
+        }
+
+        const units = await query;
+        const unitsById = new Map(
+            units.map((unit) => [unit._id.toString(), unit])
+        );
+
+        let pricingChanged = false;
+
+        for (const item of cart.items) {
+            const unit = unitsById.get(item.unit_id.toString());
+            if (
+                !unit ||
+                unit.variant_id.toString() !== item.variant_id.toString()
+            ) {
+                throw new AppError(
+                    `Unit is no longer available for ${item.product_name}`,
+                    400,
+                    'UNIT_UNAVAILABLE'
+                );
+            }
+
+            if (
+                item.quantity < 1 ||
+                item.quantity > 999 ||
+                item.quantity < unit.min_order_qty ||
+                (unit.max_order_qty &&
+                    item.quantity > unit.max_order_qty)
+            ) {
+                throw new AppError(
+                    `Quantity is no longer valid for ${item.product_name}`,
+                    400,
+                    'INVALID_QUANTITY'
+                );
+            }
+
+            const qtyStep = unit.qty_step || 1;
+            if (
+                qtyStep > 1 &&
+                (item.quantity - unit.min_order_qty) % qtyStep !== 0
+            ) {
+                throw new AppError(
+                    `Quantity step is no longer valid for ${item.product_name}`,
+                    400,
+                    'QTY_STEP_INVALID'
+                );
+            }
+
+            const pricing = VariantUnit.calculatePrice(
+                item.quantity,
+                unit.price_tiers,
+                unit.pack_size,
+                unit.promotion
+            );
+
+            if (
+                item.price_at_added !== pricing.unit_price ||
+                item.original_price_at_added !==
+                    pricing.original_unit_price ||
+                item.promotion_discount_amount !==
+                    pricing.promotion_discount_amount ||
+                item.promotion_discount_percent !==
+                    pricing.promotion_discount_percent ||
+                item.is_on_sale !== pricing.is_on_sale ||
+                item.voucher_allowed !== pricing.voucher_allowed ||
+                item.pack_size !== unit.pack_size ||
+                item.display_name !== unit.display_name
+            ) {
+                pricingChanged = true;
+                item.price_at_added = pricing.unit_price;
+                item.original_price_at_added =
+                    pricing.original_unit_price;
+                item.promotion_discount_amount =
+                    pricing.promotion_discount_amount;
+                item.promotion_discount_percent =
+                    pricing.promotion_discount_percent;
+                item.is_on_sale = pricing.is_on_sale;
+                item.voucher_allowed = pricing.voucher_allowed;
+                item.pack_size = unit.pack_size;
+                item.display_name = unit.display_name;
+            }
+        }
+
+        if (pricingChanged) {
+            cart.updated_at = new Date();
+            await cart.save({ session: options.session });
+        }
+
+        return cart;
     }
 
     static async getUserCart(userId, options = {}) {
@@ -119,6 +234,9 @@ class CartService {
         if (options.extend) {
             cart = await Cart.extendExpiry(cart._id, 7);
         }
+
+        cart = await this.repriceCart(cart);
+        cart = await this.refreshAppliedDiscount(cart, userId);
 
         return CartMapper.toResponseDTO(cart);
     }
@@ -137,6 +255,9 @@ class CartService {
         if (options.extend) {
             cart = await Cart.extendExpiry(cart._id, 7);
         }
+
+        cart = await this.repriceCart(cart);
+        cart = await this.refreshAppliedDiscount(cart, null);
 
         return CartMapper.toResponseDTO(cart);
     }
@@ -163,6 +284,9 @@ class CartService {
         if (options.extend) {
             cart = await Cart.extendExpiry(cart._id, 7);
         }
+
+        cart = await this.repriceCart(cart);
+        cart = await this.refreshAppliedDiscount(cart, null);
 
         return CartMapper.toResponseDTO(cart);
     }
@@ -288,9 +412,10 @@ class CartService {
         }
 
         const priceCalculation = VariantUnit.calculatePrice(
-            quantity,
+            totalQuantity,
             unit.price_tiers,
-            unit.pack_size
+            unit.pack_size,
+            unit.promotion
         );
 
         const maxQuantity = Math.min(
@@ -313,9 +438,18 @@ class CartService {
             pack_size: unit.pack_size,
 
             price_at_added: priceCalculation.unit_price,
+            original_price_at_added:
+                priceCalculation.original_unit_price,
+            promotion_discount_amount:
+                priceCalculation.promotion_discount_amount,
+            promotion_discount_percent:
+                priceCalculation.promotion_discount_percent,
+            is_on_sale: priceCalculation.is_on_sale,
+            voucher_allowed: priceCalculation.voucher_allowed,
 
             quantity,
             max_quantity: maxQuantity,
+            expected_quantity: existingQuantity,
         };
 
         const updatedCart = await Cart.addItemAtomic(cart._id, cartItemData);
@@ -475,11 +609,28 @@ class CartService {
             );
         }
 
+        const priceCalculation = VariantUnit.calculatePrice(
+            newQuantity,
+            unit.price_tiers,
+            unit.pack_size,
+            unit.promotion
+        );
+
         const updatedCart = await Cart.updateItemQuantityAtomic(
             cartId,
             itemId,
-            newQuantity
+            newQuantity,
+            priceCalculation.unit_price,
+            item.quantity,
+            priceCalculation
         );
+        if (!updatedCart) {
+            throw new AppError(
+                'Cart quantity changed. Please refresh cart and try again',
+                409,
+                'CART_QUANTITY_CONFLICT'
+            );
+        }
 
         const discountAdjustedCart = await this.refreshAppliedDiscount(
             updatedCart,
@@ -764,6 +915,7 @@ class CartService {
 
             userCart.updated_at = new Date();
             await userCart.save({ session });
+            userCart = await this.repriceCart(userCart, { session });
 
             await Cart.updateOne(
                 { _id: guestCart._id },
@@ -902,6 +1054,7 @@ class CartService {
             );
         }
 
+        cart = await this.repriceCart(cart);
         cart = await this.refreshAppliedDiscount(
             cart,
             userId,
@@ -1052,6 +1205,15 @@ class CartService {
             display_name: item.display_name || null,
             pack_size: item.pack_size || 0,
             price_at_added: item.price_at_added || 0,
+            original_price_at_added:
+                item.original_price_at_added ||
+                item.price_at_added ||
+                0,
+            promotion_discount_amount:
+                item.promotion_discount_amount || 0,
+            promotion_discount_percent:
+                item.promotion_discount_percent || 0,
+            is_on_sale: Boolean(item.is_on_sale),
             quantity: item.quantity || 0,
         };
     }

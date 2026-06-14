@@ -3,6 +3,15 @@ import { CART_QUERY_KEY } from '../../cart/hooks/useCart';
 import { checkoutApi } from '../api/checkout.api';
 
 const ADDRESS_QUERY_KEY = ['checkout', 'addresses'];
+const CHECKOUT_SETTINGS_QUERY_KEY = ['checkout', 'settings'];
+
+export function useCheckoutSettings() {
+    return useQuery({
+        queryKey: CHECKOUT_SETTINGS_QUERY_KEY,
+        queryFn: checkoutApi.getCheckoutSettings,
+        staleTime: 5 * 60 * 1000,
+    });
+}
 
 export function useAddresses() {
     return useQuery({

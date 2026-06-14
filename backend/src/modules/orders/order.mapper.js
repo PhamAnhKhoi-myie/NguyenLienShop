@@ -17,6 +17,12 @@ class OrderMapper {
             items: this.transformItems(doc.items || []),
 
             pricing: {
+                original_subtotal:
+                    doc.pricing?.original_subtotal ||
+                    doc.pricing?.subtotal ||
+                    0,
+                promotion_discount_amount:
+                    doc.pricing?.promotion_discount_amount || 0,
                 subtotal: doc.pricing?.subtotal || 0,
                 shipping_fee: doc.pricing?.shipping_fee || 0,
                 discount_amount: doc.pricing?.discount_amount || 0,
@@ -203,6 +209,14 @@ class OrderMapper {
             items: this.transformItemsForEmail(doc.items || []),
 
             pricing: {
+                original_subtotal: this.formatPrice(
+                    doc.pricing?.original_subtotal ||
+                    doc.pricing?.subtotal ||
+                    0
+                ),
+                promotion_discount_amount: this.formatPrice(
+                    doc.pricing?.promotion_discount_amount || 0
+                ),
                 subtotal: this.formatPrice(doc.pricing?.subtotal || 0),
                 shipping_fee: this.formatPrice(doc.pricing?.shipping_fee || 0),
                 discount_amount: this.formatPrice(
@@ -275,7 +289,16 @@ class OrderMapper {
             total_items_fulfilled: (item.quantity_fulfilled || 0) *
                 item.pack_size,
 
+            original_unit_price:
+                item.original_unit_price || item.unit_price,
             unit_price: item.unit_price,
+            promotion_discount_amount:
+                item.promotion_discount_amount || 0,
+            promotion_discount_percent:
+                item.promotion_discount_percent || 0,
+            is_on_sale: Boolean(item.is_on_sale),
+            original_line_total:
+                item.original_line_total || item.line_total,
             line_total: item.line_total,
 
             review_status: item.review_status || 'pending',

@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 const ShopInfo = require("../modules/shop_info/shop_info.model");
 
 const shopInfoData = {
-    shop_name: "NguyenLien Shop",
+    shop_name: "Nguyễn Liên Shop",
     email: "support@nguyenlien.shop",
     phone: "0909123456",
-    address: "Kho NguyenLien Shop, TP. Ho Chi Minh",
+    address: "Kho Nguyễn Liên Shop, TP. Hồ Chí Minh",
     shipping_partner: "Viettel Post",
     working_hours: [
         { day: "mon", open: "08:00", close: "20:00" },
@@ -71,7 +71,7 @@ if (require.main === module) {
     const run = async () => {
         try {
             await mongoose.connect(MONGODB_URI, {
-                dbName: process.env.MONGODB_DB_NAME || "nguyenlien_db",
+                dbName: process.env.MONGODB_DB_NAME || "nguyenlien_dev",
             });
 
             console.log("MongoDB connected");

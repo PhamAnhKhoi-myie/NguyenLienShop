@@ -1,8 +1,7 @@
 import { translate } from '../../../shared/i18n/index';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import CategoryTreeMenu from '../../categories/components/CategoryTreeMenu';
-import Card, { CardBody, CardHeader } from '../../../shared/components/Card';
+import Card, { CardBody } from '../../../shared/components/Card';
 import EmptyState from '../../../shared/components/EmptyState';
 import Loading from '../../../shared/components/Loading';
 import Pagination from '../../../shared/components/Pagination';
@@ -33,8 +32,7 @@ export default function ProductListPage() {
             limit: DEFAULT_LIMIT,
             search: searchParams.get('search') || '',
             category_id: searchParams.get('category_id') || '',
-            min_price: searchParams.get('min_price') || '',
-            max_price: searchParams.get('max_price') || '',
+            badge: searchParams.get('badge') || '',
             sortBy: searchParams.get('sortBy') || 'newest',
             status: 'ACTIVE',
         }),
@@ -104,87 +102,68 @@ export default function ProductListPage() {
                 onReset={resetFilters}
             />
 
-            <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-                <Card className="h-fit">
-                    <CardHeader>
-                        <h2 className="font-semibold text-[var(--color-text-main)]"> {translate('text.category')} </h2>
-                    </CardHeader>
-                    <CardBody>
-                        <CategoryTreeMenu
-                            selectedId={filters.category_id}
-                            onSelect={(categoryId) =>
-                                updateFilters({
-                                    category_id: categoryId,
-                                    page: 1,
-                                })
-                            }
-                        />
-                    </CardBody>
-                </Card>
-
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            {productsQuery.isFetching
-                                ? translate('text.updating_9f3d40e5')
-                                : translate('text.value_product', { value0: pagination.total_items || 0 })}
-                        </p>
-                    </div>
-
-                    {productsQuery.isLoading && (
-                        <Card>
-                            <CardBody>
-                                <Loading label={translate('text.loading_products')} />
-                            </CardBody>
-                        </Card>
-                    )}
-
-                    {productsQuery.isError && (
-                        <Card>
-                            <CardBody>
-                                <p className="text-sm text-[var(--color-error)]">
-                                    {productsQuery.error.message}
-                                </p>
-                            </CardBody>
-                        </Card>
-                    )}
-
-                    {!productsQuery.isLoading &&
-                        !productsQuery.isError &&
-                        products.length === 0 && (
-                            <EmptyState
-                                title={translate('text.no_product_found')}
-                                description={translate('text.try_changing_keywords_categories_or_price_ranges_to_see_more_products')}
-                            />
-                        )}
-
-                    {products.length > 0 && (
-                        <>
-                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                                {products.map((product) => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
-
-                            <Card>
-                                <CardBody>
-                                    <Pagination
-                                        page={pagination.current_page || filters.page}
-                                        totalPages={totalPages}
-                                        onPageChange={(page) =>
-                                            updateFilters({
-                                                page: Math.min(
-                                                    Math.max(page, 1),
-                                                    totalPages
-                                                ),
-                                            })
-                                        }
-                                    />
-                                </CardBody>
-                            </Card>
-                        </>
-                    )}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                        {productsQuery.isFetching
+                            ? translate('text.updating_9f3d40e5')
+                            : translate('text.value_product', { value0: pagination.total_items || 0 })}
+                    </p>
                 </div>
+
+                {productsQuery.isLoading && (
+                    <Card>
+                        <CardBody>
+                            <Loading label={translate('text.loading_products')} />
+                        </CardBody>
+                    </Card>
+                )}
+
+                {productsQuery.isError && (
+                    <Card>
+                        <CardBody>
+                            <p className="text-sm text-[var(--color-error)]">
+                                {productsQuery.error.message}
+                            </p>
+                        </CardBody>
+                    </Card>
+                )}
+
+                {!productsQuery.isLoading &&
+                    !productsQuery.isError &&
+                    products.length === 0 && (
+                        <EmptyState
+                            title={translate('text.no_product_found')}
+                            description={translate('text.try_changing_keywords_categories_or_price_ranges_to_see_more_products')}
+                        />
+                    )}
+
+                {products.length > 0 && (
+                    <>
+                        <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            {products.map((product) => (
+                                <ProductCard key={product.id} product={product} />
+                            ))}
+                        </div>
+
+                        <Card>
+                            <CardBody>
+                                <Pagination
+                                    page={pagination.current_page || filters.page}
+                                    totalPages={totalPages}
+                                    onPageChange={(page) =>
+                                        updateFilters({
+                                            page: Math.min(
+                                                Math.max(page, 1),
+                                                totalPages
+                                            ),
+                                        })
+                                    }
+                                />
+                            </CardBody>
+                        </Card>
+                    </>
+                )}
             </div>
         </div>
     );

@@ -657,18 +657,21 @@ class DiscountService {
         };
     }
 
-    static filterApplicableItems(cartItems, applicableTargets = {}) {
+    static filterApplicableItems(cartItems = [], applicableTargets = {}) {
         const { type = 'all', product_ids = [], category_ids = [], variant_ids = [] } =
             applicableTargets || {};
+        const voucherEligibleItems = cartItems.filter(
+            (item) => item.voucher_allowed !== false
+        );
         const productIds = product_ids.map((id) => id.toString());
         const categoryIds = category_ids.map((id) => id.toString());
         const variantIds = variant_ids.map((id) => id.toString());
 
         if (type === 'all') {
-            return cartItems;
+            return voucherEligibleItems;
         }
 
-        return cartItems.filter((item) => {
+        return voucherEligibleItems.filter((item) => {
             if (type === 'specific_variants' && variantIds.length > 0) {
                 return variantIds.includes(item.variant_id.toString());
             }

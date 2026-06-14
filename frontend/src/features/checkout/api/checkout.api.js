@@ -5,5 +5,6 @@ export const checkoutApi = {
     createAddress: (payload) => axiosClient.post('/user-addresses', payload),
     updateAddress: (addressId, payload) =>
         axiosClient.patch(`/user-addresses/${addressId}`, payload),
+    getCheckoutSettings: () => axiosClient.get('/orders/checkout-settings'),
     createOrder: (payload) => axiosClient.post('/orders', payload),
 };

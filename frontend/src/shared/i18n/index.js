@@ -5,13 +5,28 @@ import en from './locales/en.json';
 import vi from './locales/vi.json';
 
 const LANGUAGE_STORAGE_KEY = 'app_language';
-const DEFAULT_LANGUAGE = 'en';
+const DEFAULT_LANGUAGE = 'vi';
 const SUPPORTED_LANGUAGES = ['en', 'vi'];
 
-const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-const initialLanguage = SUPPORTED_LANGUAGES.includes(storedLanguage)
-    ? storedLanguage
-    : DEFAULT_LANGUAGE;
+function detectInitialLanguage() {
+    const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+
+    if (SUPPORTED_LANGUAGES.includes(storedLanguage)) {
+        return storedLanguage;
+    }
+
+    const browserLanguages =
+        navigator.languages?.length > 0
+            ? navigator.languages
+            : [navigator.language];
+    const prefersVietnamese = browserLanguages.some((language) =>
+        language?.toLowerCase().startsWith('vi')
+    );
+
+    return prefersVietnamese ? 'vi' : DEFAULT_LANGUAGE;
+}
+
+const initialLanguage = detectInitialLanguage();
 
 i18n.use(initReactI18next).init({
     resources: {

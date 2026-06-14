@@ -66,13 +66,55 @@ const orderSchema = new mongoose.Schema(
 
                 unit_price: {
                     type: Number,
-                    required: true
+                    required: true,
+                    validate: {
+                        validator: Number.isInteger,
+                        message: 'Unit price must be an integer'
+                    }
 
+                },
+                original_unit_price: {
+                    type: Number,
+                    default: 0,
+                    validate: {
+                        validator: Number.isInteger,
+                        message: 'Original unit price must be an integer'
+                    }
+                },
+                promotion_discount_amount: {
+                    type: Number,
+                    default: 0,
+                    validate: {
+                        validator: Number.isInteger,
+                        message: 'Promotion discount must be an integer'
+                    }
+                },
+                promotion_discount_percent: {
+                    type: Number,
+                    default: 0,
+                    min: 0,
+                    max: 99
+                },
+                is_on_sale: {
+                    type: Boolean,
+                    default: false
                 },
                 line_total: {
                     type: Number,
-                    required: true
+                    required: true,
+                    validate: {
+                        validator: Number.isInteger,
+                        message: 'Line total must be an integer'
+                    }
 
+                },
+                original_line_total: {
+                    type: Number,
+                    default: 0,
+                    validate: {
+                        validator: Number.isInteger,
+                        message: 'Original line total must be an integer'
+                    }
                 },
 
                 review_status: {
@@ -85,10 +127,36 @@ const orderSchema = new mongoose.Schema(
 
 
         pricing: {
-            subtotal: { type: Number, required: true },
-            shipping_fee: { type: Number, default: 0 },
-            discount_amount: { type: Number, default: 0 },
-            total_amount: { type: Number, required: true }
+            original_subtotal: {
+                type: Number,
+                default: 0,
+                validate: Number.isInteger
+            },
+            promotion_discount_amount: {
+                type: Number,
+                default: 0,
+                validate: Number.isInteger
+            },
+            subtotal: {
+                type: Number,
+                required: true,
+                validate: Number.isInteger
+            },
+            shipping_fee: {
+                type: Number,
+                default: 0,
+                validate: Number.isInteger
+            },
+            discount_amount: {
+                type: Number,
+                default: 0,
+                validate: Number.isInteger
+            },
+            total_amount: {
+                type: Number,
+                required: true,
+                validate: Number.isInteger
+            }
         },
 
         currency: {

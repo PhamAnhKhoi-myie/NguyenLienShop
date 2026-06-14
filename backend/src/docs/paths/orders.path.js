@@ -127,6 +127,19 @@ module.exports = {
         },
     },
 
+    "/orders/checkout-settings": {
+        get: {
+            tags: ["Orders"],
+            summary: "Get server-controlled checkout pricing settings",
+            security: [{ bearerAuth: [] }],
+            responses: {
+                200: ok("#/components/schemas/CheckoutSettingsResponse"),
+                401: { $ref: "#/components/responses/Unauthorized" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
     "/orders/{order_id}": {
         get: {
             tags: ["Orders"],

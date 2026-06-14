@@ -19,7 +19,7 @@ const setupConnectionListeners = () => {
 setupConnectionListeners();
 
 const connectDB = async (retries = 5, baseDelayMs = 5000) => {
-    const dbName = process.env.MONGODB_DB_NAME || "nguyenlien_db";
+    const dbName = process.env.MONGODB_DB_NAME || "nguyenlien_dev";
 
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {

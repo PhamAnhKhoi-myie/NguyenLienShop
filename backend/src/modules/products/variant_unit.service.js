@@ -9,7 +9,13 @@ const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 class VariantUnitService {
     static async createVariantUnit(variantId, data, actorId = null, metadata = {}) {
-        const { pack_size, price_tiers, is_default, ...rest } = data;
+        const {
+            pack_size,
+            price_tiers,
+            promotion,
+            is_default,
+            ...rest
+        } = data;
 
         const variant = await Variant.findById(variantId);
         if (!variant) {
@@ -36,6 +42,7 @@ class VariantUnitService {
         try {
             const validation = VariantUnit.validatePriceTiers(price_tiers);
             validatedTiers = validation.sorted;
+            VariantUnit.validatePromotion(promotion, validatedTiers);
         } catch (error) {
             throw new AppError(error.message, 400, 'INVALID_PRICE_TIERS');
         }
@@ -58,6 +65,7 @@ class VariantUnitService {
             variant_id: variantId,
             pack_size,
             price_tiers: validatedTiers,
+            promotion,
             is_default: finalIsDefault,
             ...rest,
         });
@@ -149,19 +157,24 @@ class VariantUnitService {
         const variant = await this._getVariantForAudit(unit.variant_id);
         const originalUnit = unit.toObject ? unit.toObject() : unit;
 
-        if (updateData.price_tiers) {
-            try {
+        try {
+            if (updateData.price_tiers) {
                 const validation = VariantUnit.validatePriceTiers(
                     updateData.price_tiers
                 );
                 updateData.price_tiers = validation.sorted;
-            } catch (error) {
-                throw new AppError(
-                    error.message,
-                    400,
-                    'INVALID_PRICE_TIERS'
-                );
             }
+
+            VariantUnit.validatePromotion(
+                updateData.promotion || unit.promotion,
+                updateData.price_tiers || unit.price_tiers
+            );
+        } catch (error) {
+            throw new AppError(
+                error.message,
+                400,
+                'INVALID_PRICE_CONFIGURATION'
+            );
         }
 
         if (updateData.is_default) {
@@ -179,7 +192,7 @@ class VariantUnitService {
                 { new: true, runValidators: true }
             );
 
-            if (updateData.price_tiers) {
+            if (updateData.price_tiers || updateData.promotion) {
                 await VariantService.recalculatePriceCache(
                     unit.variant_id
                 );
@@ -315,7 +328,8 @@ class VariantUnitService {
         const calculation = VariantUnit.calculatePrice(
             qtyPacks,
             unit.price_tiers,
-            unit.pack_size
+            unit.pack_size,
+            unit.promotion
         );
 
         return {

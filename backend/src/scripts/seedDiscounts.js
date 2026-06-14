@@ -622,7 +622,7 @@ if (require.main === module) {
     const run = async () => {
         try {
             await mongoose.connect(MONGODB_URI, {
-                dbName: process.env.MONGODB_DB_NAME || "nguyenlien_db",
+                dbName: process.env.MONGODB_DB_NAME || "nguyenlien_dev",
             });
 
             console.log("✓ MongoDB connected");

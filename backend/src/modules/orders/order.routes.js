@@ -43,6 +43,12 @@ router.post(
 );
 
 router.get(
+    '/checkout-settings',
+    authenticate,
+    OrderController.getCheckoutSettings
+);
+
+router.get(
     '/',
     authenticate,
     validate({ query: getOrdersQuerySchema }),

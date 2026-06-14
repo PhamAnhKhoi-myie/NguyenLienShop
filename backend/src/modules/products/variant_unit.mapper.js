@@ -16,8 +16,10 @@ class VariantUnitMapper {
 
             price_tiers: this.transformPriceTiers(
                 doc.price_tiers || [],
-                doc.pack_size
+                doc.pack_size,
+                doc.promotion
             ),
+            promotion: this.transformPromotion(doc.promotion),
 
             min_order_qty: doc.min_order_qty || 1,
             max_order_qty: doc.max_order_qty || null,
@@ -82,8 +84,10 @@ class VariantUnitMapper {
 
             price_tiers: this.transformPriceTiers(
                 priceTiers,
-                doc.pack_size
+                doc.pack_size,
+                doc.promotion
             ),
+            promotion: this.transformPromotion(doc.promotion),
 
             min_order_qty: doc.min_order_qty || 1,
             max_order_qty: doc.max_order_qty || null,
@@ -106,31 +110,43 @@ class VariantUnitMapper {
 
         const doc = unit.toObject ? unit.toObject() : unit;
 
-        const matchingTier = this.findPriceTierForQty(
+        const VariantUnit = require('./variant_unit.model');
+        const pricing = VariantUnit.calculatePrice(
             qtyPacks,
-            doc.price_tiers || []
+            doc.price_tiers || [],
+            doc.pack_size,
+            doc.promotion
         );
-
-        const unitPrice = matchingTier?.unit_price || 0;
-        const totalPrice = qtyPacks * unitPrice;
-        const totalItems = qtyPacks * doc.pack_size;
 
         return {
             unit_id: doc._id?.toString(),
             unit_name: doc.display_name,
             pack_size: doc.pack_size,
             quantity_packs: qtyPacks,
-            total_items: totalItems,
+            total_items: pricing.total_items,
 
-            unit_price: unitPrice,
-            total_price: totalPrice,
-            price_per_item: Math.round(totalPrice / totalItems),
+            original_unit_price: pricing.original_unit_price,
+            unit_price: pricing.unit_price,
+            original_total_price: pricing.original_total_price,
+            total_price: pricing.total_price,
+            price_per_item: pricing.price_per_unit,
+            promotion_discount_amount:
+                pricing.promotion_discount_amount,
+            promotion_discount_percent:
+                pricing.promotion_discount_percent,
+            is_on_sale: pricing.is_on_sale,
             currency: doc.currency || 'VND',
 
-            applied_tier: matchingTier
+            applied_tier: pricing
                 ? {
-                    min_qty: matchingTier.min_qty,
-                    max_qty: matchingTier.max_qty,
+                    min_qty: this.findPriceTierForQty(
+                        qtyPacks,
+                        doc.price_tiers || []
+                    )?.min_qty,
+                    max_qty: this.findPriceTierForQty(
+                        qtyPacks,
+                        doc.price_tiers || []
+                    )?.max_qty,
                 }
                 : null,
         };
@@ -175,8 +191,10 @@ class VariantUnitMapper {
 
             price_tiers: this.transformPriceTiers(
                 priceTiers,
-                doc.pack_size
+                doc.pack_size,
+                doc.promotion
             ),
+            promotion: this.transformPromotion(doc.promotion),
 
             constraints: {
                 min_order_qty: doc.min_order_qty || 1,
@@ -191,23 +209,45 @@ class VariantUnitMapper {
         };
     }
 
-    static transformPriceTiers(priceTiers, packSize) {
+    static transformPriceTiers(priceTiers, packSize, promotion) {
         if (!Array.isArray(priceTiers) || priceTiers.length === 0) {
             return [];
         }
 
-        return priceTiers.map((tier, index) => ({
-            tier_number: index + 1,
-            min_qty: tier.min_qty,
-            max_qty: tier.max_qty,
-            unit_price: tier.unit_price,
+        const {
+            calculatePromotionalPrice,
+        } = require('./pricing.util');
 
-            price_per_unit: packSize
-                ? Math.round(tier.unit_price / packSize)
-                : 0,
+        return priceTiers.map((tier, index) => {
+            const pricing = calculatePromotionalPrice(
+                tier.unit_price,
+                promotion
+            );
 
-            qty_range: this.formatQtyRange(tier.min_qty, tier.max_qty),
-        }));
+            return {
+                tier_number: index + 1,
+                min_qty: tier.min_qty,
+                max_qty: tier.max_qty,
+                ...pricing,
+                original_price_per_unit: packSize
+                    ? Math.round(
+                        pricing.original_unit_price / packSize
+                    )
+                    : 0,
+                price_per_unit: packSize
+                    ? Math.round(pricing.unit_price / packSize)
+                    : 0,
+                qty_range: this.formatQtyRange(
+                    tier.min_qty,
+                    tier.max_qty
+                ),
+            };
+        });
+    }
+
+    static transformPromotion(promotion) {
+        const { toPromotionDTO } = require('./pricing.util');
+        return toPromotionDTO(promotion);
     }
 
     static transformPriceTiersWithCalc(priceTiers, packSize = 100) {

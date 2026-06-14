@@ -21,8 +21,9 @@ const createAnnouncementData = (actorId) => {
 
     return [
         {
-            title: "Weekly fruit bag promotion",
-            content: "Customers who purchase 5 or more boxes of fruit bags will be supported with intra-city delivery fees.",
+            title: "Ưu đãi túi bao trái cây trong tuần",
+            legacy_title: "Weekly fruit bag promotion",
+            content: "Khách hàng mua từ 5 thùng túi bao trái cây trở lên sẽ được hỗ trợ phí giao hàng nội thành.",
             priority: 9,
             target: "all",
             type: "promotion",
@@ -35,8 +36,9 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Weekend delivery schedule",
-            content: "Orders placed after 16:00 Saturday will be processed the next working day.",
+            title: "Lịch giao hàng cuối tuần",
+            legacy_title: "Weekend delivery schedule",
+            content: "Đơn hàng đặt sau 16:00 thứ Bảy sẽ được xử lý vào ngày làm việc tiếp theo.",
             priority: 7,
             target: "guest",
             type: "info",
@@ -49,8 +51,9 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Update delivery address",
-            content: "Please check your phone number and shipping address before paying for a new order.",
+            title: "Kiểm tra địa chỉ giao hàng",
+            legacy_title: "Update delivery address",
+            content: "Vui lòng kiểm tra số điện thoại và địa chỉ nhận hàng trước khi thanh toán đơn hàng mới.",
             priority: 6,
             target: "user",
             type: "warning",
@@ -63,8 +66,9 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Check orders to be processed",
-            content: "Admin and Manager check the new group of orders before 10:00 to meet the delivery schedule.",
+            title: "Kiểm tra đơn hàng cần xử lý",
+            legacy_title: "Check orders to be processed",
+            content: "Admin và Manager vui lòng kiểm tra nhóm đơn hàng mới trước 10:00 để bảo đảm lịch giao hàng.",
             priority: 10,
             target: "admin",
             type: "urgent",
@@ -77,8 +81,9 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Maintenance of administration system",
-            content: "The admin screen has a short maintenance schedule tomorrow evening, please complete the content update before 8:00 pm.",
+            title: "Bảo trì hệ thống quản trị",
+            legacy_title: "Maintenance of administration system",
+            content: "Màn hình quản trị sẽ được bảo trì ngắn vào tối mai, vui lòng hoàn tất cập nhật nội dung trước 20:00.",
             priority: 8,
             target: "admin",
             type: "system",
@@ -91,8 +96,9 @@ const createAnnouncementData = (actorId) => {
             deleted_at: null,
         },
         {
-            title: "Promotion notice has ended",
-            content: "The trial discount program has ended and is only used to test the expired filter.",
+            title: "Thông báo khuyến mãi đã kết thúc",
+            legacy_title: "Promotion notice has ended",
+            content: "Chương trình giảm giá thử nghiệm đã kết thúc và chỉ được dùng để kiểm tra bộ lọc đã hết hạn.",
             priority: 3,
             target: "all",
             type: "info",
@@ -136,15 +142,16 @@ const seedAnnouncements = async () => {
     const announcements = createAnnouncementData(actorId);
 
     for (const announcement of announcements) {
+        const { legacy_title: legacyTitle, ...announcementData } = announcement;
         const existing = await Announcement.findOne({
-            title: announcement.title,
+            title: { $in: [announcement.title, legacyTitle] },
             target: announcement.target,
         }).setOptions({ includeDeleted: true });
 
         const action = existing ? "Updated" : "Created";
         const doc = existing || new Announcement();
 
-        Object.assign(doc, announcement);
+        Object.assign(doc, announcementData);
         await doc.save();
 
         console.log(`[announcements] ${action}: ${announcement.title}`);
@@ -165,7 +172,7 @@ if (require.main === module) {
     const run = async () => {
         try {
             await mongoose.connect(MONGODB_URI, {
-                dbName: process.env.MONGODB_DB_NAME || "nguyenlien_db",
+                dbName: process.env.MONGODB_DB_NAME || "nguyenlien_dev",
             });
 
             console.log("MongoDB connected");

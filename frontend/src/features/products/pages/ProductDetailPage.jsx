@@ -1,6 +1,5 @@
 import { getLocale, translate } from '../../../shared/i18n/index';
 import {
-    ArrowLeft,
     Boxes,
     CheckCircle2,
     Flag,
@@ -17,9 +16,15 @@ import {
     Tag,
     ThumbsDown,
     ThumbsUp,
+    Zap,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    Link,
+    useNavigate,
+    useParams,
+    useSearchParams,
+} from 'react-router-dom';
 import Badge from '../../../shared/components/Badge';
 import Button from '../../../shared/components/Button';
 import Card, { CardBody, CardHeader } from '../../../shared/components/Card';
@@ -39,7 +44,15 @@ import {
     useMarkReviewHelpful,
     useProductReviews,
 } from '../../reviews/hooks/useReviews';
+import ProductPrice from '../components/ProductPrice';
 import { useProductDetail } from '../hooks/useProducts';
+import {
+    calculateOrderTotal,
+    calculateOriginalOrderTotal,
+    findTierForQuantity,
+    getTierOriginalUnitPrice,
+    getTierUnitPrice,
+} from '../utils/pricing';
 
 const REVIEW_PAGE_SIZE = 5;
 
@@ -50,21 +63,6 @@ const FLAG_REASON_OPTIONS = [
     { value: 'duplicate', label: translate('text.duplicate_review') },
     { value: 'other', label: translate('text.other_reasons') },
 ];
-
-function formatPriceRange(min, max, currency = 'VND') {
-    const start = Number(min || 0);
-    const end = Number(max || 0);
-
-    if (!start && !end) {
-        return translate('text.contact');
-    }
-
-    if (start === end || !end) {
-        return formatCurrency(start, currency);
-    }
-
-    return `${formatCurrency(start, currency)} - ${formatCurrency(end, currency)}`;
-}
 
 function formatPackSize(packSize) {
     if (!packSize) {
@@ -148,6 +146,11 @@ function SpecItem({ icon: Icon, label, value }) {
 
 export default function ProductDetailPage() {
     const { productId } = useParams();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const isBuyNowIntent = searchParams.get('intent') === 'buy-now';
+    const purchaseOptionsRef = useRef(null);
+    const hasFocusedPurchaseOptions = useRef(false);
     const accessToken = useAuthStore((state) => state.accessToken);
     const productQuery = useProductDetail(productId, { include_units: true });
     const [reviewsPage, setReviewsPage] = useState(1);
@@ -170,7 +173,13 @@ export default function ProductDetailPage() {
         reviewsPagination.total ?? product?.rating_count ?? reviews.length
     );
     const ratingAverage = reviewsTotal > 0 ? Number(product?.rating_avg || 0) : 0;
-    const variants = useMemo(() => product?.variants || [], [product?.variants]);
+    const variants = useMemo(
+        () =>
+            (product?.variants || []).filter(
+                (variant) => variant.status === 'ACTIVE'
+            ),
+        [product?.variants]
+    );
     const images = useMemo(() => product?.images || [], [product?.images]);
     const primaryImage = useMemo(() => getPrimaryImage(images), [images]);
     const [selectedImageUrl, setSelectedImageUrl] = useState('');
@@ -205,20 +214,67 @@ export default function ProductDetailPage() {
     const priceTiers = selectedUnit?.price_tiers || [];
     const currency = selectedUnit?.currency || 'VND';
     const minOrderQuantity = selectedUnit?.min_order_qty || 1;
-    const maxOrderQuantity = selectedUnit?.max_order_qty || 999;
+    const availableItems = Math.max(
+        0,
+        Number(selectedVariant?.stock?.available || 0)
+    );
+    const availablePacks =
+        selectedUnit?.pack_size > 0
+            ? Math.floor(
+                availableItems / selectedUnit.pack_size
+            )
+            : 0;
+    const maxOrderQuantity = Math.min(
+        selectedUnit?.max_order_qty || 999,
+        availablePacks
+    );
     const quantityStep = selectedUnit?.qty_step || 1;
     const cartQuantity = Math.min(
         maxOrderQuantity,
         Math.max(minOrderQuantity, quantity)
     );
+    const selectedTier = useMemo(
+        () => findTierForQuantity(selectedUnit, cartQuantity),
+        [cartQuantity, selectedUnit]
+    );
+    const selectedUnitPrice = getTierUnitPrice(selectedTier);
+    const selectedOriginalUnitPrice = getTierOriginalUnitPrice(selectedTier);
+    const orderTotal = calculateOrderTotal(selectedTier, cartQuantity);
+    const originalOrderTotal = calculateOriginalOrderTotal(
+        selectedTier,
+        cartQuantity
+    );
     const canAddToCart = Boolean(
-        product?.id &&
+            product?.id &&
             selectedVariant?.id &&
             selectedUnit?.id &&
+            product.in_stock &&
+            selectedVariant.in_stock &&
+            maxOrderQuantity >= minOrderQuantity &&
             !addCartItemMutation.isPending
     );
 
-    const handleAddToCart = async () => {
+    useEffect(() => {
+        if (
+            !isBuyNowIntent ||
+            !product?.id ||
+            hasFocusedPurchaseOptions.current
+        ) {
+            return;
+        }
+
+        hasFocusedPurchaseOptions.current = true;
+        const timeoutId = window.setTimeout(() => {
+            purchaseOptionsRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+            });
+        }, 150);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [isBuyNowIntent, product?.id]);
+
+    const handleAddToCart = async ({ checkout = false } = {}) => {
         setCartNotice(null);
 
         if (!selectedVariant?.id || !selectedUnit?.id) {
@@ -236,6 +292,11 @@ export default function ProductDetailPage() {
                 unit_id: selectedUnit.id,
                 quantity: cartQuantity,
             });
+
+            if (checkout) {
+                navigate(ROUTES.CHECKOUT);
+                return;
+            }
 
             setCartNotice({
                 type: 'success',
@@ -319,12 +380,6 @@ export default function ProductDetailPage() {
 
     return (
         <div className="space-y-6">
-            <Link
-                to={ROUTES.PRODUCTS}
-                className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-primary)]"
-            >
-                <ArrowLeft className="h-4 w-4" /> {translate('text.back_to_catalog')} </Link>
-
             <div className="grid gap-6 lg:grid-cols-[minmax(0,520px)_1fr]">
                 <div className="space-y-4">
                     <Card className="overflow-hidden">
@@ -377,17 +432,7 @@ export default function ProductDetailPage() {
 
                 <div className="space-y-5">
                     <div>
-                        <div className="flex flex-wrap gap-2">
-                            <Badge>{translate('text.on_sale')}</Badge>
-                            {product.brand && (
-                                <Badge variant="muted">{product.brand}</Badge>
-                            )}
-                            {product.sold_count > 0 && (
-                                <Badge variant="accent">{translate('text.best_seller')}</Badge>
-                            )}
-                        </div>
-
-                        <h1 className="mt-3 text-3xl font-semibold leading-tight text-[var(--color-text-main)]">
+                        <h1 className="text-3xl font-semibold leading-tight text-[var(--color-text-main)]">
                             {product.name}
                         </h1>
 
@@ -400,13 +445,16 @@ export default function ProductDetailPage() {
                             <span>{translate('text.sold')} {product.sold_count || 0}</span>
                         </div>
 
-                        <p className="mt-4 text-3xl font-semibold text-[var(--color-primary-hover)]">
-                            {formatPriceRange(
-                                product.min_price,
-                                product.max_price,
-                                currency
-                            )}
-                        </p>
+                        <ProductPrice
+                            className="mt-4"
+                            min={product.min_price}
+                            max={product.max_price}
+                            originalMin={product.original_min_price}
+                            originalMax={product.original_max_price}
+                            currency={currency}
+                            isOnSale={product.is_on_sale}
+                            priceClassName="text-3xl"
+                        />
 
                         {(product.short_description || product.description) && (
                             <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">
@@ -415,153 +463,247 @@ export default function ProductDetailPage() {
                         )}
                     </div>
 
-                    <Card>
-                        <CardHeader>
-                            <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.product_variant')} </h2>
-                        </CardHeader>
-                        <CardBody className="space-y-4">
-                            {variants.length === 0 ? (
-                                <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.product_has_no_variations_yet')} </p>
-                            ) : (
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    {variants.map((variant) => (
-                                        <button
-                                            key={variant.id}
-                                            type="button"
-                                            className={cn(
-                                                'rounded-lg border p-4 text-left transition-colors',
-                                                selectedVariant?.id === variant.id
-                                                    ? 'border-[var(--color-primary)] bg-[var(--color-secondary)]'
-                                                    : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
-                                            )}
-                                            onClick={() =>
-                                                setSelectedVariantId(variant.id)
-                                            }
-                                        >
-                                            <p className="font-semibold text-[var(--color-text-main)]">
-                                                {variant.size ||
-                                                    translate('text.updating_dimension')}
-                                            </p>
-                                            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                                {variant.fabric_type ||
-                                                    translate('text.material_is_updating')}
-                                            </p>
-                                            <p className="mt-2 text-sm font-medium text-[var(--color-primary-hover)]">
-                                                {formatPriceRange(
-                                                    variant.min_price,
-                                                    variant.max_price,
-                                                    currency
-                                                )}
-                                            </p>
-                                        </button>
-                                    ))}
+                    <Card
+                        ref={purchaseOptionsRef}
+                        className={
+                            isBuyNowIntent
+                                ? 'scroll-mt-24 border-[var(--color-primary)]'
+                                : ''
+                        }
+                    >
+                        {isBuyNowIntent && (
+                            <CardHeader className="!p-4">
+                                <div className="flex justify-end">
+                                    <Badge variant="accent">
+                                        {translate('text.buy_now')}
+                                    </Badge>
                                 </div>
-                            )}
-                        </CardBody>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.sales_unit')} </h2>
-                        </CardHeader>
-                        <CardBody className="space-y-4">
-                            {units.length === 0 ? (
-                                <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.this_variant_has_no_units_for_sale_yet')} </p>
-                            ) : (
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    {units.map((unit) => (
-                                        <button
-                                            key={unit.id}
-                                            type="button"
-                                            className={cn(
-                                                'rounded-lg border p-4 text-left transition-colors',
-                                                selectedUnit?.id === unit.id
-                                                    ? 'border-[var(--color-primary)] bg-[var(--color-secondary)]'
-                                                    : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
-                                            )}
-                                            onClick={() => setSelectedUnitId(unit.id)}
-                                        >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <p className="font-semibold text-[var(--color-text-main)]">
-                                                        {unit.display_name}
-                                                    </p>
-                                                    <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                                        {formatPackSize(
-                                                            unit.pack_size
-                                                        )}{' '} {translate('text.package')} </p>
+                            </CardHeader>
+                        )}
+                        <CardBody className="space-y-4 !p-4">
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
+                                    {translate('text.fabric_type')}
+                                </h3>
+                                {variants.length === 0 ? (
+                                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.product_has_no_variations_yet')} </p>
+                                ) : (
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                        {variants.map((variant) => (
+                                            <button
+                                                key={variant.id}
+                                                type="button"
+                                                className={cn(
+                                                    'rounded-md border px-3 py-2.5 text-left transition-colors',
+                                                    selectedVariant?.id === variant.id
+                                                        ? 'border-[var(--color-primary)] bg-[var(--color-secondary)]'
+                                                        : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
+                                                )}
+                                                onClick={() =>
+                                                    setSelectedVariantId(variant.id)
+                                                }
+                                            >
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-semibold text-[var(--color-text-main)]">
+                                                            {variant.size ||
+                                                                translate('text.updating_dimension')}
+                                                        </p>
+                                                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                                                            {variant.fabric_type ||
+                                                                translate('text.material_is_updating')}
+                                                        </p>
+                                                    </div>
+                                                    {selectedVariant?.id ===
+                                                        variant.id && (
+                                                        <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                                                    )}
                                                 </div>
-                                                {unit.is_default && (
-                                                    <CheckCircle2 className="h-5 w-5 text-[var(--color-primary)]" />
-                                                )}
-                                            </div>
-                                            <p className="mt-3 text-sm text-[var(--color-text-muted)]"> {translate('text.minimum')} {unit.min_order_qty || 1} {translate('text.package_08ffada9')} {unit.max_order_qty
-                                                    ? translate('text.maximum_value_package', { value0: unit.max_order_qty })
-                                                    : ''}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {selectedVariant && (
+                                <div className="space-y-2">
+                                    <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
+                                        {translate('text.unit')}
+                                    </h3>
+                                    {units.length === 0 ? (
+                                        <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.this_variant_has_no_units_for_sale_yet')} </p>
+                                    ) : (
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                            {units.map((unit) => (
+                                                <button
+                                                    key={unit.id}
+                                                    type="button"
+                                                    className={cn(
+                                                        'rounded-md border px-3 py-2.5 text-left transition-colors',
+                                                        selectedUnit?.id === unit.id
+                                                            ? 'border-[var(--color-primary)] bg-[var(--color-secondary)]'
+                                                            : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
+                                                    )}
+                                                    onClick={() => setSelectedUnitId(unit.id)}
+                                                >
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-semibold text-[var(--color-text-main)]">
+                                                                {unit.display_name}
+                                                            </p>
+                                                            <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                                                                {translate('text.value_items', {
+                                                                    value0:
+                                                                        unit.pack_size,
+                                                                })}{' '}
+                                                                {translate('text.package')}
+                                                            </p>
+                                                            <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                                                                {translate('text.minimum')} {unit.min_order_qty || 1} {translate('text.package_08ffada9')}
+                                                                {unit.max_order_qty
+                                                                    ? translate('text.maximum_value_package', {
+                                                                        value0:
+                                                                            unit.max_order_qty,
+                                                                    })
+                                                                    : ''}
+                                                            </p>
+                                                        </div>
+                                                        {selectedUnit?.id ===
+                                                            unit.id && (
+                                                            <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {selectedUnit && (
+                                <div className="grid gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                                    <div>
+                                        <p className="text-sm font-semibold text-[var(--color-text-main)]"> {translate('text.number_of_packages')} </p>
+                                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]"> {translate('text.minimum')} {minOrderQuantity} {translate('text.package_08ffada9')} {selectedUnit.max_order_qty
+                                                ? translate('text.maximum_value_package', { value0: selectedUnit.max_order_qty })
+                                                : ''}
+                                        </p>
+                                        <p
+                                            className={cn(
+                                                'mt-1 text-xs font-medium',
+                                                availablePacks > 0
+                                                    ? 'text-[var(--color-primary-hover)]'
+                                                    : 'text-[var(--color-error)]'
+                                            )}
+                                        >
+                                            {translate('text.remaining')} {availablePacks}{' '}
+                                            {translate('text.package_08ffada9')}
+                                            {selectedUnit.pack_size > 1 && (
+                                                <span className="font-normal text-[var(--color-text-muted)]">
+                                                    {' '}
+                                                    ({translate('text.value_items', {
+                                                        value0: availableItems,
+                                                    })})
+                                                </span>
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={
+                                                cartQuantity <= minOrderQuantity ||
+                                                addCartItemMutation.isPending
+                                            }
+                                            onClick={() =>
+                                                setQuantity(
+                                                    Math.max(
+                                                        minOrderQuantity,
+                                                        cartQuantity - quantityStep
+                                                    )
+                                                )
+                                            }
+                                            aria-label={translate('text.reduce_quantity')}
+                                        >
+                                            <Minus className="h-4 w-4" />
+                                        </Button>
+                                        <span className="flex h-9 min-w-14 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-semibold">
+                                            {cartQuantity}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={
+                                                cartQuantity >= maxOrderQuantity ||
+                                                addCartItemMutation.isPending
+                                            }
+                                            onClick={() =>
+                                                setQuantity(
+                                                    Math.min(
+                                                        maxOrderQuantity,
+                                                        cartQuantity + quantityStep
+                                                    )
+                                                )
+                                            }
+                                            aria-label={translate('text.increase_quantity')}
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedUnit && (
+                                <div className="rounded-md border border-green-200 bg-green-50 p-3">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <p className="text-sm font-semibold text-[var(--color-text-main)]">
+                                                {translate('text.temporary')}
                                             </p>
-                                        </button>
-                                    ))}
+                                            {selectedTier && (
+                                                <p className="mt-0.5 text-xs text-green-700">
+                                                    {cartQuantity} {translate('text.package_08ffada9')} x{' '}
+                                                    {selectedOriginalUnitPrice >
+                                                        selectedUnitPrice && (
+                                                        <span className="mr-1 text-[var(--color-text-muted)] line-through">
+                                                            {formatCurrency(
+                                                                selectedOriginalUnitPrice,
+                                                                currency
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                    {formatCurrency(
+                                                        selectedUnitPrice,
+                                                        currency
+                                                    )}
+                                                    /{translate('text.package_08ffada9')}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="sm:text-right">
+                                            {originalOrderTotal > orderTotal && (
+                                                <p className="text-xs text-[var(--color-text-muted)] line-through">
+                                                    {formatCurrency(
+                                                        originalOrderTotal,
+                                                        currency
+                                                    )}
+                                                </p>
+                                            )}
+                                            <p className="text-xl font-semibold text-[var(--color-primary-hover)]">
+                                                {selectedTier
+                                                    ? formatCurrency(
+                                                        orderTotal,
+                                                        currency
+                                                    )
+                                                    : translate('text.updating')}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </CardBody>
                     </Card>
-
-                    {selectedUnit && (
-                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-[var(--color-text-main)]"> {translate('text.number_of_packages')} </p>
-                                    <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.minimum')} {minOrderQuantity} {translate('text.package_08ffada9')} {selectedUnit.max_order_qty
-                                            ? translate('text.maximum_value_package', { value0: selectedUnit.max_order_qty })
-                                            : ''}
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={
-                                            cartQuantity <= minOrderQuantity ||
-                                            addCartItemMutation.isPending
-                                        }
-                                        onClick={() =>
-                                            setQuantity(
-                                                Math.max(
-                                                    minOrderQuantity,
-                                                    cartQuantity - quantityStep
-                                                )
-                                            )
-                                        }
-                                        aria-label={translate('text.reduce_quantity')}
-                                    >
-                                        <Minus className="h-4 w-4" />
-                                    </Button>
-                                    <span className="flex h-9 min-w-14 items-center justify-center rounded-md border border-[var(--color-border)] px-3 text-sm font-semibold">
-                                        {cartQuantity}
-                                    </span>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={
-                                            cartQuantity >= maxOrderQuantity ||
-                                            addCartItemMutation.isPending
-                                        }
-                                        onClick={() =>
-                                            setQuantity(
-                                                Math.min(
-                                                    maxOrderQuantity,
-                                                    cartQuantity + quantityStep
-                                                )
-                                            )
-                                        }
-                                        aria-label={translate('text.increase_quantity')}
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     {cartNotice && (
                         <p
@@ -581,15 +723,31 @@ export default function ProductDetailPage() {
                         </p>
                     )}
 
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        <Button
+                            variant="outline"
+                            fullWidth
+                            disabled={!canAddToCart}
+                            isLoading={addCartItemMutation.isPending}
+                            onClick={() => handleAddToCart()}
+                        >
+                            <ShoppingCart className="h-4 w-4" />
+                            {translate('text.add_to_cart')}
+                        </Button>
                         <Button
                             fullWidth
                             disabled={!canAddToCart}
                             isLoading={addCartItemMutation.isPending}
-                            onClick={handleAddToCart}
+                            onClick={() =>
+                                handleAddToCart({ checkout: true })
+                            }
                         >
-                            <ShoppingCart className="h-4 w-4" /> {translate('text.add_to_cart')} </Button>
-                        <Button variant="outline" fullWidth> {translate('text.contact_for_consultation')} </Button>
+                            <Zap className="h-4 w-4" />
+                            {translate('text.buy_now')}
+                        </Button>
+                        <Button variant="outline" fullWidth>
+                            {translate('text.contact_for_consultation')}
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -833,10 +991,28 @@ export default function ProductDetailPage() {
                                                 {formatTierQuantity(tier)}
                                             </td>
                                             <td className="py-3 pr-4 text-[var(--color-primary-hover)]">
-                                                {formatCurrency(
-                                                    tier.unit_price,
-                                                    currency
-                                                )}
+                                                <div className="flex flex-wrap items-baseline gap-2">
+                                                    <span
+                                                        className={
+                                                            tier.is_on_sale
+                                                                ? 'font-semibold text-[var(--color-error)]'
+                                                                : ''
+                                                        }
+                                                    >
+                                                        {formatCurrency(
+                                                            tier.unit_price,
+                                                            currency
+                                                        )}
+                                                    </span>
+                                                    {tier.is_on_sale && (
+                                                        <span className="text-xs text-[var(--color-text-muted)] line-through">
+                                                            {formatCurrency(
+                                                                tier.original_unit_price,
+                                                                currency
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="py-3 pr-4 text-[var(--color-text-muted)]">
                                                 {getUnitPricePerItem(

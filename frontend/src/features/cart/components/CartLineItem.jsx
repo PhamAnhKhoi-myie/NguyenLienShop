@@ -1,6 +1,7 @@
 import { translate } from '../../../shared/i18n/index';
 import { Minus, PackageOpen, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import Badge from '../../../shared/components/Badge';
 import Button from '../../../shared/components/Button';
 import { formatCurrency } from '../../../shared/utils/formatCurrency';
 
@@ -59,6 +60,18 @@ export default function CartLineItem({
                     <p className="font-semibold text-[var(--color-primary-hover)]">
                         {formatCurrency(item.price_at_added || 0)}
                     </p>
+                    {item.is_on_sale && (
+                        <div className="mt-1 flex flex-wrap items-center gap-2 md:justify-end">
+                            <span className="text-sm text-[var(--color-text-muted)] line-through">
+                                {formatCurrency(
+                                    item.original_price_at_added || 0
+                                )}
+                            </span>
+                            <Badge variant="error">
+                                -{item.promotion_discount_percent || 0}%
+                            </Badge>
+                        </div>
+                    )}
                     <p className="mt-1 text-sm text-[var(--color-text-muted)]"> {translate('text.amount_42d6fffe')} {formatCurrency(item.line_total || 0)}
                     </p>
                 </div>

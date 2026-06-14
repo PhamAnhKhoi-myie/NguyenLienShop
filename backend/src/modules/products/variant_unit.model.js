@@ -1,4 +1,8 @@
 const mongoose = require('mongoose');
+const {
+    calculatePrice,
+    isPromotionActive,
+} = require('./pricing.util');
 
 const priceTierSchema = new mongoose.Schema(
     {
@@ -22,6 +26,49 @@ const priceTierSchema = new mongoose.Schema(
             type: Number,
             required: [true, 'Unit price is required'],
             min: [0, 'Unit price cannot be negative'],
+            validate: {
+                validator: Number.isInteger,
+                message: 'Unit price must be an integer',
+            },
+        },
+    },
+    { _id: false }
+);
+
+const promotionSchema = new mongoose.Schema(
+    {
+        enabled: {
+            type: Boolean,
+            default: false,
+        },
+        type: {
+            type: String,
+            enum: {
+                values: ['FIXED', 'PERCENT'],
+                message: 'Promotion type must be FIXED or PERCENT',
+            },
+            default: 'FIXED',
+        },
+        value: {
+            type: Number,
+            default: 0,
+            min: [0, 'Promotion value cannot be negative'],
+            validate: {
+                validator: Number.isInteger,
+                message: 'Promotion value must be an integer',
+            },
+        },
+        starts_at: {
+            type: Date,
+            default: null,
+        },
+        ends_at: {
+            type: Date,
+            default: null,
+        },
+        allow_voucher: {
+            type: Boolean,
+            default: true,
         },
     },
     { _id: false }
@@ -72,6 +119,11 @@ const variantUnitSchema = new mongoose.Schema(
                 },
                 message: 'At least one price tier is required',
             },
+        },
+
+        promotion: {
+            type: promotionSchema,
+            default: () => ({}),
         },
 
 
@@ -192,6 +244,10 @@ variantUnitSchema.statics.validatePriceTiers = function (tiers) {
             throw new Error(`Tier ${i}: unit_price must be > 0`);
         }
 
+        if (!Number.isInteger(tier.unit_price)) {
+            throw new Error(`Tier ${i}: unit_price must be an integer`);
+        }
+
 
         if (isLastTier && tier.max_qty !== null) {
             throw new Error(
@@ -226,6 +282,50 @@ variantUnitSchema.statics.validatePriceTiers = function (tiers) {
     return { valid: true, sorted };
 };
 
+variantUnitSchema.statics.validatePromotion = function (
+    promotion,
+    priceTiers
+) {
+    if (!promotion?.enabled) {
+        return { valid: true };
+    }
+
+    if (!['FIXED', 'PERCENT'].includes(promotion.type)) {
+        throw new Error('Promotion type must be FIXED or PERCENT');
+    }
+
+    if (!Number.isInteger(promotion.value) || promotion.value <= 0) {
+        throw new Error('Promotion value must be a positive integer');
+    }
+
+    if (promotion.type === 'PERCENT' && promotion.value >= 100) {
+        throw new Error('Percent promotion must be less than 100');
+    }
+
+    if (
+        promotion.type === 'FIXED' &&
+        priceTiers.some((tier) => promotion.value >= tier.unit_price)
+    ) {
+        throw new Error(
+            'Fixed promotion must be lower than every tier price'
+        );
+    }
+
+    if (
+        promotion.starts_at &&
+        promotion.ends_at &&
+        new Date(promotion.ends_at) <= new Date(promotion.starts_at)
+    ) {
+        throw new Error('Promotion end time must be after start time');
+    }
+
+    return { valid: true };
+};
+
+variantUnitSchema.methods.isPromotionActive = function (at = new Date()) {
+    return isPromotionActive(this.promotion, at);
+};
+
 variantUnitSchema.statics.getPriceByQty = function (qty, priceTiers) {
     if (!priceTiers || priceTiers.length === 0) {
         throw new Error('No price tiers available');
@@ -249,20 +349,11 @@ variantUnitSchema.statics.getPriceByQty = function (qty, priceTiers) {
 variantUnitSchema.statics.calculatePrice = function (
     qty,
     priceTiers,
-    packSize
+    packSize,
+    promotion,
+    at = new Date()
 ) {
-    const unit_price =
-        this.getPriceByQty(qty, priceTiers);
-    const total_price = qty * unit_price;
-    const total_items = qty * packSize;
-
-    return {
-        qty_packs: qty,
-        unit_price,
-        total_price,
-        total_items,
-        price_per_unit: Math.round(total_price / total_items),
-    };
+    return calculatePrice(qty, priceTiers, packSize, promotion, at);
 };
 
 variantUnitSchema.statics.getDefault = function (variantId) {

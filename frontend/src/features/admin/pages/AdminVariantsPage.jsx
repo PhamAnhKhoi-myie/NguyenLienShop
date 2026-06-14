@@ -39,6 +39,16 @@ const unitColumns = [
             row.price_range?.min,
         type: 'money',
     },
+    {
+        key: 'promotion',
+        header: translate('text.discounted'),
+        value: (row) => Boolean(row.promotion?.is_active),
+        type: 'status',
+        labelMap: {
+            true: translate('text.yes'),
+            false: translate('text.no'),
+        },
+    },
     { key: 'is_default', header: translate('text.default'), value: 'is_default', type: 'status' },
     { key: 'currency', header: translate('text.currency'), value: 'currency' },
 ];

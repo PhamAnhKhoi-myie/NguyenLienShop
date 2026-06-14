@@ -79,7 +79,12 @@ module.exports = {
             quantity_fulfilled: { type: "integer", minimum: 0, example: 0 },
             total_items_ordered: { type: "integer", minimum: 1, example: 1000 },
             total_items_fulfilled: { type: "integer", minimum: 0, example: 0 },
+            original_unit_price: { type: "number", minimum: 0, example: 200000 },
             unit_price: { type: "number", minimum: 0, exclusiveMinimum: true, example: 180000 },
+            promotion_discount_amount: { type: "number", minimum: 0, example: 20000 },
+            promotion_discount_percent: { type: "integer", minimum: 0, maximum: 99, example: 10 },
+            is_on_sale: { type: "boolean", example: true },
+            original_line_total: { type: "number", minimum: 0, example: 2000000 },
             line_total: { type: "number", minimum: 0, exclusiveMinimum: true, example: 1800000 },
             review_status: { type: "string", enum: ["pending", "reviewed"], example: "pending" },
         },
@@ -89,6 +94,8 @@ module.exports = {
         type: "object",
         required: ["subtotal", "shipping_fee", "discount_amount", "total_amount", "currency"],
         properties: {
+            original_subtotal: { type: "number", minimum: 0, example: 2000000 },
+            promotion_discount_amount: { type: "number", minimum: 0, example: 200000 },
             subtotal: { type: "number", minimum: 0, example: 1800000 },
             shipping_fee: { type: "number", minimum: 0, default: 0, example: 30000 },
             discount_amount: { type: "number", minimum: 0, default: 0, example: 180000 },
@@ -340,10 +347,24 @@ module.exports = {
         properties: {
             cart_id: { type: "string", pattern: objectIdPattern, example: "507f1f77bcf86cd799439016" },
             address_snapshot: { $ref: "#/components/schemas/CreateOrderAddressSnapshotInput" },
-            shipping_fee: { type: "number", minimum: 0, default: 0, example: 30000 },
             payment_method: { type: "string", enum: paymentMethodEnum, default: "COD", example: "COD" },
             customer_notes: { type: "string", maxLength: 500, example: "Please deliver in the morning." },
-            currency: { type: "string", enum: ["VND", "USD", "EUR"], default: "VND", example: "VND" },
+        },
+    },
+
+    CheckoutSettingsResponse: {
+        type: "object",
+        required: ["success", "data"],
+        properties: {
+            success: { type: "boolean", example: true },
+            data: {
+                type: "object",
+                required: ["shipping_fee", "currency"],
+                properties: {
+                    shipping_fee: { type: "integer", minimum: 0, example: 30000 },
+                    currency: { type: "string", enum: ["VND"], example: "VND" },
+                },
+            },
         },
     },
 

@@ -45,10 +45,33 @@ function priceTiersToText(priceTiers = []) {
                 tier.max_qty === null || tier.max_qty === undefined
                     ? ''
                     : tier.max_qty,
-                tier.unit_price,
+                tier.original_unit_price ?? tier.unit_price,
             ].join('|')
         )
         .join('\n');
+}
+
+function toDateTimeLocal(value) {
+    if (!value) {
+        return '';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function toIsoDateOrNull(value) {
+    if (!value) {
+        return null;
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function validatePriceTierText(value, ctx) {
@@ -85,7 +108,10 @@ function validatePriceTierText(value, ctx) {
             });
         }
 
-        if (!Number.isFinite(tier.unit_price) || tier.unit_price <= 0) {
+        if (
+            !Number.isInteger(tier.unit_price) ||
+            tier.unit_price <= 0
+        ) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: translate('text.line_value_unit_price_must_be_greater_than_0', { value0: index + 1 }),
@@ -143,27 +169,78 @@ const variantUnitFormSchema = z
         qty_step: positiveInt(translate('text.quantity_jump')),
         is_default: z.enum(['true', 'false']),
         currency: z.enum(['VND', 'USD', 'EUR']),
+        promotion_enabled: z.enum(['true', 'false']),
+        promotion_type: z.enum(['FIXED', 'PERCENT']),
+        promotion_value: nonNegativeInt(translate('text.discount_value')),
+        promotion_starts_at: z.string(),
+        promotion_ends_at: z.string(),
+        promotion_allow_voucher: z.enum(['true', 'false']),
     })
     .superRefine((values, ctx) => {
-        if (!values.max_order_qty) {
-            return;
+        if (values.max_order_qty) {
+            const maxOrderQty = Number(values.max_order_qty);
+            if (!Number.isInteger(maxOrderQty) || maxOrderQty <= 0) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['max_order_qty'],
+                    message: translate('text.maximum_number_of_packets_must_be_a_positive_integer_or_blank'),
+                });
+            } else if (maxOrderQty < values.min_order_qty) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['max_order_qty'],
+                    message: translate('text.maximum_number_of_packages_must_be_greater_than_or_equal_to_minimum'),
+                });
+            }
         }
 
-        const maxOrderQty = Number(values.max_order_qty);
-        if (!Number.isInteger(maxOrderQty) || maxOrderQty <= 0) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['max_order_qty'],
-                message: translate('text.maximum_number_of_packets_must_be_a_positive_integer_or_blank'),
-            });
-            return;
+        if (values.promotion_enabled === 'true') {
+            if (values.promotion_value <= 0) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['promotion_value'],
+                    message: translate('text.discount_value_must_be_greater_than_zero'),
+                });
+            }
+
+            if (
+                values.promotion_type === 'PERCENT' &&
+                values.promotion_value >= 100
+            ) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['promotion_value'],
+                    message: translate('text.discount_percent_must_be_less_than_100'),
+                });
+            }
+
+            if (values.promotion_type === 'FIXED') {
+                const tiers = parsePriceTiers(values.price_tiers_text);
+                if (
+                    tiers.some(
+                        (tier) =>
+                            values.promotion_value >= tier.unit_price
+                    )
+                ) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        path: ['promotion_value'],
+                        message: translate('text.fixed_discount_must_be_less_than_all_prices'),
+                    });
+                }
+            }
         }
 
-        if (maxOrderQty < values.min_order_qty) {
+        if (
+            values.promotion_starts_at &&
+            values.promotion_ends_at &&
+            new Date(values.promotion_ends_at) <=
+                new Date(values.promotion_starts_at)
+        ) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                path: ['max_order_qty'],
-                message: translate('text.maximum_number_of_packages_must_be_greater_than_or_equal_to_minimum'),
+                path: ['promotion_ends_at'],
+                message: translate('text.promotion_end_must_be_after_start'),
             });
         }
     });
@@ -249,6 +326,12 @@ export const variantUnitFormConfig = {
         qty_step: 1,
         is_default: 'false',
         currency: 'VND',
+        promotion_enabled: 'false',
+        promotion_type: 'FIXED',
+        promotion_value: 0,
+        promotion_starts_at: '',
+        promotion_ends_at: '',
+        promotion_allow_voucher: 'true',
     },
     toFormValues: (unit = {}) => ({
         unit_type: unit.unit_type || 'PACK',
@@ -262,6 +345,17 @@ export const variantUnitFormConfig = {
         qty_step: unit.qty_step || unit.constraints?.qty_step || 1,
         is_default: unit.is_default ? 'true' : 'false',
         currency: unit.currency || unit.pricing?.currency || 'VND',
+        promotion_enabled: unit.promotion?.enabled ? 'true' : 'false',
+        promotion_type: unit.promotion?.type || 'FIXED',
+        promotion_value: unit.promotion?.value || 0,
+        promotion_starts_at: toDateTimeLocal(
+            unit.promotion?.starts_at
+        ),
+        promotion_ends_at: toDateTimeLocal(
+            unit.promotion?.ends_at
+        ),
+        promotion_allow_voucher:
+            unit.promotion?.allow_voucher === false ? 'false' : 'true',
     }),
     toPayload: (values, { mode }) => {
         const payload = {
@@ -275,6 +369,17 @@ export const variantUnitFormConfig = {
             qty_step: Number(values.qty_step),
             is_default: values.is_default === 'true',
             currency: values.currency,
+            promotion: {
+                enabled: values.promotion_enabled === 'true',
+                type: values.promotion_type,
+                value: Number(values.promotion_value || 0),
+                starts_at: toIsoDateOrNull(
+                    values.promotion_starts_at
+                ),
+                ends_at: toIsoDateOrNull(values.promotion_ends_at),
+                allow_voucher:
+                    values.promotion_allow_voucher === 'true',
+            },
         };
 
         if (mode === 'create') {
@@ -350,6 +455,49 @@ export const variantUnitFormConfig = {
                 { value: 'false', label: translate('text.no') },
                 { value: 'true', label: translate('text.yes') },
             ],
+        },
+        {
+            name: 'promotion_enabled',
+            label: translate('text.promotion_enabled'),
+            type: 'select',
+            options: [
+                { value: 'false', label: translate('text.no') },
+                { value: 'true', label: translate('text.yes') },
+            ],
+        },
+        {
+            name: 'promotion_type',
+            label: translate('text.promotion_type'),
+            type: 'select',
+            options: [
+                { value: 'FIXED', label: translate('text.fixed_amount') },
+                { value: 'PERCENT', label: translate('text.percentage') },
+            ],
+        },
+        {
+            name: 'promotion_value',
+            label: translate('text.discount_value'),
+            type: 'number',
+            helperText: translate('text.promotion_value_helper'),
+        },
+        {
+            name: 'promotion_allow_voucher',
+            label: translate('text.allow_voucher_with_promotion'),
+            type: 'select',
+            options: [
+                { value: 'true', label: translate('text.yes') },
+                { value: 'false', label: translate('text.no') },
+            ],
+        },
+        {
+            name: 'promotion_starts_at',
+            label: translate('text.promotion_starts_at'),
+            type: 'datetime-local',
+        },
+        {
+            name: 'promotion_ends_at',
+            label: translate('text.promotion_ends_at'),
+            type: 'datetime-local',
         },
     ],
 };

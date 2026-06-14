@@ -56,8 +56,15 @@ const orderItemSchema = z.object({
     quantity_ordered: z.number().int().positive().max(1000000),
     quantity_fulfilled: z.number().int().nonnegative().default(0),
 
-    unit_price: z.number().positive(),
-    line_total: z.number().positive(),
+    original_unit_price: z.number().int().positive().optional(),
+    unit_price: z.number().int().positive(),
+    promotion_discount_amount:
+        z.number().int().nonnegative().default(0),
+    promotion_discount_percent:
+        z.number().int().min(0).max(99).default(0),
+    is_on_sale: z.boolean().default(false),
+    original_line_total: z.number().int().positive().optional(),
+    line_total: z.number().int().positive(),
 
     review_status: z.enum(['pending', 'reviewed']).default('pending'),
 });
@@ -66,10 +73,13 @@ const orderItemSchema = z.object({
 
 
 const pricingSchema = z.object({
-    subtotal: z.number().nonnegative(),
-    shipping_fee: z.number().nonnegative().default(0),
-    discount_amount: z.number().nonnegative().default(0),
-    total_amount: z.number().nonnegative(),
+    original_subtotal: z.number().int().nonnegative().optional(),
+    promotion_discount_amount:
+        z.number().int().nonnegative().default(0),
+    subtotal: z.number().int().nonnegative(),
+    shipping_fee: z.number().int().nonnegative().default(0),
+    discount_amount: z.number().int().nonnegative().default(0),
+    total_amount: z.number().int().nonnegative(),
 })
     .refine(
         (p) => p.discount_amount <= p.subtotal,
@@ -141,13 +151,6 @@ const createOrderBodySchema = z.object({
 
     address_snapshot: addressSnapshotSchema,
 
-    shipping_fee: z
-        .number({
-            invalid_type_error: 'shipping_fee must be a number',
-        })
-        .min(0, 'shipping_fee cannot be negative')
-        .default(0),
-
     payment_method: z
         .enum(['COD', 'VNPAY', 'PAYOS', 'MOMO', 'CARD'])
         .default('COD'),
@@ -157,9 +160,6 @@ const createOrderBodySchema = z.object({
         .max(500, 'customer_notes cannot exceed 500 characters')
         .optional(),
 
-    currency: z
-        .enum(['VND', 'USD', 'EUR'])
-        .default('VND'),
 }).strict();
 
 const cancelOrderBodySchema = z.object({

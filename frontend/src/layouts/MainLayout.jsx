@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 
 import Header from './Header';
 import Footer from './Footer';
+import Breadcrumb from '../shared/components/Breadcrumb';
 import FloatingActions from '../shared/components/FloatingActions';
 import backgroundImage from '../assets/images/background.png';
 
@@ -23,6 +24,7 @@ function MainLayout() {
                 <Header />
 
                 <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-6 pt-6 sm:pt-[68px]">
+                    <Breadcrumb />
                     <Outlet />
                 </main>
 

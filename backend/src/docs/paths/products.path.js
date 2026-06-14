@@ -63,6 +63,14 @@ module.exports = {
                 { in: "query", name: "min_price", schema: { type: "integer", minimum: 0 } },
                 { in: "query", name: "max_price", schema: { type: "integer", minimum: 0 } },
                 { in: "query", name: "status", schema: { type: "string", enum: ["ACTIVE", "INACTIVE"] } },
+                {
+                    in: "query",
+                    name: "badge",
+                    schema: {
+                        type: "string",
+                        enum: ["new", "best_seller", "on_sale", "in_stock"],
+                    },
+                },
                 { in: "query", name: "search", schema: { type: "string", maxLength: 100 } },
                 {
                     in: "query",

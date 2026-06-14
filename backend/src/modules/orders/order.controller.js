@@ -38,6 +38,15 @@ const createOrder = asyncHandler(async (req, res) => {
     });
 });
 
+const getCheckoutSettings = asyncHandler(async (req, res) => {
+    assertAuthenticated(req.user);
+
+    res.status(200).json({
+        success: true,
+        data: OrderService.getCheckoutSettings(),
+    });
+});
+
 const getOrders = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
 
@@ -315,6 +324,7 @@ const getAdminOrderDetail = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+    getCheckoutSettings,
     trackOrder,
     createOrder,
     getOrders,

@@ -53,6 +53,10 @@ const createProductSchema = z.object({
         .max(10)
         .default([]),
 
+    is_best_seller: z.boolean().default(false),
+
+    new_until: z.coerce.date().nullable().optional(),
+
     status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });
 
@@ -84,6 +88,10 @@ const updateProductSchema = z.object({
         ),
 
     search_keywords: z.array(z.string().trim()).max(10).optional(),
+
+    is_best_seller: z.boolean().optional(),
+
+    new_until: z.coerce.date().nullable().optional(),
 
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
@@ -117,6 +125,10 @@ const getProductsSchema = z.object({
         .optional(),
 
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+
+    badge: z
+        .enum(['new', 'best_seller', 'on_sale', 'in_stock'])
+        .optional(),
 
     search: z.string().max(100).optional(),
 

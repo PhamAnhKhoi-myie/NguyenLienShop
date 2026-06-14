@@ -66,6 +66,47 @@ const cartItemSchema = new mongoose.Schema(
             type: Number,
             required: [true, 'Price at added is required'],
             min: [0, 'Price cannot be negative'],
+            validate: {
+                validator: Number.isInteger,
+                message: 'Price must be an integer',
+            },
+        },
+
+        original_price_at_added: {
+            type: Number,
+            default: 0,
+            min: [0, 'Original price cannot be negative'],
+            validate: {
+                validator: Number.isInteger,
+                message: 'Original price must be an integer',
+            },
+        },
+
+        promotion_discount_amount: {
+            type: Number,
+            default: 0,
+            min: [0, 'Promotion discount cannot be negative'],
+            validate: {
+                validator: Number.isInteger,
+                message: 'Promotion discount must be an integer',
+            },
+        },
+
+        promotion_discount_percent: {
+            type: Number,
+            default: 0,
+            min: [0, 'Promotion percent cannot be negative'],
+            max: [99, 'Promotion percent must be less than 100'],
+        },
+
+        is_on_sale: {
+            type: Boolean,
+            default: false,
+        },
+
+        voucher_allowed: {
+            type: Boolean,
+            default: true,
         },
 
 
@@ -382,6 +423,10 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
         typeof itemData.max_quantity === 'number'
             ? itemData.max_quantity
             : 999;
+    const expectedQuantity =
+        typeof itemData.expected_quantity === 'number'
+            ? itemData.expected_quantity
+            : 0;
 
     const validatedItem = {
         product_id: itemData.product_id,
@@ -395,6 +440,15 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
         display_name: itemData.display_name,
         pack_size: itemData.pack_size,
         price_at_added: itemData.price_at_added,
+        original_price_at_added:
+            itemData.original_price_at_added ??
+            itemData.price_at_added,
+        promotion_discount_amount:
+            itemData.promotion_discount_amount || 0,
+        promotion_discount_percent:
+            itemData.promotion_discount_percent || 0,
+        is_on_sale: Boolean(itemData.is_on_sale),
+        voucher_allowed: itemData.voucher_allowed !== false,
         quantity: itemData.quantity,
         added_at: new Date(),
     };
@@ -420,6 +474,7 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
                     $elemMatch: {
                         unit_id: unitObjectId,
                         quantity: {
+                            $eq: expectedQuantity,
                             $lte: maxQuantity - itemData.quantity,
                         },
                     },
@@ -427,7 +482,21 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
             },
             {
                 $inc: { 'items.$[item].quantity': itemData.quantity },
-                updated_at: new Date(),
+                $set: {
+                    'items.$[item].price_at_added': itemData.price_at_added,
+                    'items.$[item].original_price_at_added':
+                        itemData.original_price_at_added ??
+                        itemData.price_at_added,
+                    'items.$[item].promotion_discount_amount':
+                        itemData.promotion_discount_amount || 0,
+                    'items.$[item].promotion_discount_percent':
+                        itemData.promotion_discount_percent || 0,
+                    'items.$[item].is_on_sale':
+                        Boolean(itemData.is_on_sale),
+                    'items.$[item].voucher_allowed':
+                        itemData.voucher_allowed !== false,
+                    updated_at: new Date(),
+                },
             },
             {
                 arrayFilters: [{ 'item.unit_id': unitObjectId }],
@@ -460,6 +529,7 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
                 $elemMatch: {
                     unit_id: unitObjectId,
                     quantity: {
+                        $eq: expectedQuantity,
                         $lte: maxQuantity - itemData.quantity,
                     },
                 },
@@ -467,7 +537,21 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
         },
         {
             $inc: { 'items.$[item].quantity': itemData.quantity },
-            updated_at: new Date(),
+            $set: {
+                'items.$[item].price_at_added': itemData.price_at_added,
+                'items.$[item].original_price_at_added':
+                    itemData.original_price_at_added ??
+                    itemData.price_at_added,
+                'items.$[item].promotion_discount_amount':
+                    itemData.promotion_discount_amount || 0,
+                'items.$[item].promotion_discount_percent':
+                    itemData.promotion_discount_percent || 0,
+                'items.$[item].is_on_sale':
+                    Boolean(itemData.is_on_sale),
+                'items.$[item].voucher_allowed':
+                    itemData.voucher_allowed !== false,
+                updated_at: new Date(),
+            },
         },
         {
             arrayFilters: [{ 'item.unit_id': unitObjectId }],
@@ -491,17 +575,42 @@ cartSchema.statics.removeItemAtomic = async function (cartId, itemId) {
 cartSchema.statics.updateItemQuantityAtomic = async function (
     cartId,
     itemId,
-    newQuantity
+    newQuantity,
+    priceAtAdded,
+    expectedQuantity,
+    pricingSnapshot = {}
 ) {
     if (newQuantity < 1) {
         throw new Error('Quantity must be at least 1');
     }
 
-    return await this.findByIdAndUpdate(
-        cartId,
+    return await this.findOneAndUpdate(
         {
-            $set: { 'items.$[item].quantity': newQuantity },
-            updated_at: new Date(),
+            _id: cartId,
+            items: {
+                $elemMatch: {
+                    _id: itemId,
+                    quantity: expectedQuantity,
+                },
+            },
+        },
+        {
+            $set: {
+                'items.$[item].quantity': newQuantity,
+                'items.$[item].price_at_added': priceAtAdded,
+                'items.$[item].original_price_at_added':
+                    pricingSnapshot.original_unit_price ??
+                    priceAtAdded,
+                'items.$[item].promotion_discount_amount':
+                    pricingSnapshot.promotion_discount_amount || 0,
+                'items.$[item].promotion_discount_percent':
+                    pricingSnapshot.promotion_discount_percent || 0,
+                'items.$[item].is_on_sale':
+                    Boolean(pricingSnapshot.is_on_sale),
+                'items.$[item].voucher_allowed':
+                    pricingSnapshot.voucher_allowed !== false,
+                updated_at: new Date(),
+            },
         },
         {
             arrayFilters: [{ 'item._id': itemId }],

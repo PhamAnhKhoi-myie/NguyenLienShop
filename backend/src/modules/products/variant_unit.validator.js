@@ -28,8 +28,40 @@ const unitIdParamSchema = z.object({
 const priceTierSchema = z.object({
     min_qty: z.number().int().positive(),
     max_qty: z.number().int().positive().nullable().optional(),
-    unit_price: z.number().positive(),
+    unit_price: z.number().int().positive(),
 });
+
+const promotionSchema = z
+    .object({
+        enabled: z.boolean().default(false),
+        type: z.enum(['FIXED', 'PERCENT']).default('FIXED'),
+        value: z.number().int().nonnegative().default(0),
+        starts_at: z.coerce.date().nullable().optional(),
+        ends_at: z.coerce.date().nullable().optional(),
+        allow_voucher: z.boolean().default(true),
+    })
+    .refine(
+        (promotion) =>
+            !promotion.enabled ||
+            (promotion.value > 0 &&
+                (promotion.type !== 'PERCENT' ||
+                    promotion.value < 100)),
+        {
+            message:
+                'Enabled promotion requires a positive value; percent must be less than 100',
+            path: ['value'],
+        }
+    )
+    .refine(
+        (promotion) =>
+            !promotion.starts_at ||
+            !promotion.ends_at ||
+            promotion.ends_at > promotion.starts_at,
+        {
+            message: 'Promotion end time must be after start time',
+            path: ['ends_at'],
+        }
+    );
 
 
 
@@ -71,6 +103,15 @@ const createVariantUnitSchema = z.object({
             },
             { message: 'Price tiers overlap' }
         ),
+
+    promotion: promotionSchema.default({
+        enabled: false,
+        type: 'FIXED',
+        value: 0,
+        starts_at: null,
+        ends_at: null,
+        allow_voucher: true,
+    }),
 
     min_order_qty: z.number().int().positive().default(1),
 
@@ -130,6 +171,8 @@ const updateVariantUnitSchema = z.object({
             }
         )
         .optional(),
+
+    promotion: promotionSchema.optional(),
 
     min_order_qty: z.number().int().positive().optional(),
 
