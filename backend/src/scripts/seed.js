@@ -8,6 +8,7 @@ const seedDiscounts = require("./seedDiscounts");
 const seedLocations = require("./seedLocations");
 const seedShopInfo = require("./seedShopInfo");
 const seedAnnouncements = require("./seedAnnouncements");
+const seedBanners = require("./seedBanners");
 
 const MONGODB_URI = process.env.MONGO_URI;
 
@@ -30,6 +31,7 @@ const run = async () => {
         await seedProducts();
         await seedDiscounts();
         await seedShopInfo();
+        await seedBanners();
         await seedAnnouncements();
 
         console.log("✓ All seed completed");

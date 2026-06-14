@@ -1282,5 +1282,11 @@
   "text.fixed_discount_must_be_less_than_all_prices": "Số tiền giảm phải nhỏ hơn mọi mức giá.",
   "text.promotion_end_must_be_after_start": "Thời gian kết thúc phải sau thời gian bắt đầu.",
   "text.product_promotion": "Giảm giá sản phẩm",
-  "text.voucher_discount": "Giảm bằng voucher"
+  "text.voucher_discount": "Giảm bằng voucher",
+  "text.bag_type": "Loại túi",
+  "text.fruit_type": "Loại trái cây",
+  "text.other_products": "Sản phẩm khác",
+  "text.about": "About",
+  "text.shopee_store": "Cửa hàng Shopee",
+  "text.google_maps": "Google Maps"
 }

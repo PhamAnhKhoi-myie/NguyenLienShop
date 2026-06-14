@@ -1282,5 +1282,11 @@
   "text.fixed_discount_must_be_less_than_all_prices": "Fixed discount must be lower than every price tier.",
   "text.promotion_end_must_be_after_start": "Promotion end time must be after its start time.",
   "text.product_promotion": "Product promotion",
-  "text.voucher_discount": "Voucher discount"
+  "text.voucher_discount": "Voucher discount",
+  "text.bag_type": "Bag type",
+  "text.fruit_type": "Fruit type",
+  "text.other_products": "Other products",
+  "text.about": "About",
+  "text.shopee_store": "Shopee store",
+  "text.google_maps": "Google Maps"
 }

@@ -85,12 +85,22 @@ function hasAdminAccess(user) {
     return roles.some((role) => ADMIN_ENTRY_ROLES.includes(role));
 }
 
+const navItemBaseClass =
+    'inline-flex h-10 items-center rounded-full px-4 text-sm font-semibold transition-colors duration-200';
+
 function getNavLinkClass({ isActive }) {
     return [
-        'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+        navItemBaseClass,
         isActive
-            ? 'bg-[var(--color-primary)] text-white shadow-sm'
-            : 'text-[var(--color-text-main)] hover:bg-[var(--color-background)] hover:text-[var(--color-primary)]',
+            ? 'bg-[var(--color-primary)] text-white shadow-sm hover:bg-[var(--color-primary-hover)] hover:text-white'
+            : 'text-[var(--color-text-main)] hover:bg-green-50 hover:text-[var(--color-primary)]',
+    ].join(' ');
+}
+
+function getStaticNavItemClass() {
+    return [
+        navItemBaseClass,
+        'cursor-default text-[var(--color-text-main)] hover:bg-green-50 hover:text-[var(--color-primary)]',
     ].join(' ');
 }
 
@@ -100,16 +110,31 @@ const navItems = [
         to: ROUTES.PRODUCTS,
     },
     {
+        label: translate('text.bag_type'),
+    },
+    {
+        label: translate('text.fruit_type'),
+    },
+    {
+        label: translate('text.other_products'),
+    },
+    {
         label: translate('text.home'),
         to: ROUTES.HOME,
         end: true,
+    },
+    {
+        label: translate('text.about'),
     },
     {
         label: translate('text.blog'),
         to: ROUTES.BLOGS,
     },
     {
-        label: translate('text.google_map'),
+        label: translate('text.shopee_store'),
+    },
+    {
+        label: translate('text.google_maps'),
         to: ROUTES.STORE_LOCATION,
     },
 ];
@@ -434,16 +459,25 @@ function Header() {
                 ].join(' ')}
             >
                 <nav className="mx-auto flex h-12 max-w-7xl items-center justify-center gap-3 px-4 text-sm font-medium">
-                    {navItems.map((item) => (
-                        <NavLink
-                            key={item.to}
-                            to={item.to}
-                            end={item.end}
-                            className={getNavLinkClass}
-                        >
-                            {item.label}
-                        </NavLink>
-                    ))}
+                    {navItems.map((item) =>
+                        item.to ? (
+                            <NavLink
+                                key={item.to}
+                                to={item.to}
+                                end={item.end}
+                                className={getNavLinkClass}
+                            >
+                                {item.label}
+                            </NavLink>
+                        ) : (
+                            <span
+                                key={item.label}
+                                className={getStaticNavItemClass()}
+                            >
+                                {item.label}
+                            </span>
+                        )
+                    )}
                 </nav>
             </div>
         </header>
