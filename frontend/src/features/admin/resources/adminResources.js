@@ -78,6 +78,14 @@ export const adminResources = {
         columns: [
             { key: 'name', header: translate('text.product_name'), value: 'name' },
             { key: 'category', header: translate('text.category'), value: (row) => row.category?.name || row.category_name },
+            {
+                key: 'product_type',
+                header: 'Loại sản phẩm',
+                value: (row) =>
+                    row.product_type === 'SIMPLE'
+                        ? 'Đơn giản'
+                        : 'Có biến thể',
+            },
             { key: 'status', header: translate('text.status'), value: 'status', type: 'status' },
             { key: 'price', header: translate('text.price_range'), value: productPriceRange },
             { key: 'is_new', header: translate('text.new_arrival'), value: 'is_new' },

@@ -148,6 +148,7 @@ class CartMapper {
                 variant_id: item.variant_id?.toString(),
                 unit_id: item.unit_id?.toString(),
                 category_id: item.category_id?.toString(),
+                product_type: item.product_type || 'VARIABLE',
 
                 sku: item.sku,
                 variant_label: item.variant_label,
@@ -277,6 +278,7 @@ class CartMapper {
             variant_id: item.variant_id?.toString(),
             unit_id: item.unit_id?.toString(),
             category_id: item.category_id?.toString(),
+            product_type: item.product_type || 'VARIABLE',
 
             sku: item.sku,
             variant_label: item.variant_label,
@@ -318,6 +320,7 @@ class CartMapper {
             variant_id: item.variant_id?.toString(),
             unit_id: item.unit_id?.toString(),
             category_id: item.category_id?.toString(),
+            product_type: item.product_type || 'VARIABLE',
 
             sku: item.sku,
             variant_label: item.variant_label,

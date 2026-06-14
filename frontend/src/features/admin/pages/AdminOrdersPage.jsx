@@ -235,6 +235,12 @@ function OrderItemsTable({ order, onOpenFulfill }) {
                         const remaining =
                             Number(item.quantity_ordered || 0) -
                             Number(item.quantity_fulfilled || 0);
+                        const isSimpleProduct = item.product_type === 'SIMPLE';
+                        const productMeta = isSimpleProduct
+                            ? item.pack_size > 1
+                                ? `${item.unit_label} · ${item.pack_size} ${translate('text.bag_package')}`
+                                : item.unit_label
+                            : `${item.variant_label} · ${item.unit_label} · ${item.pack_size} ${translate('text.bag_package')}`;
 
                         return (
                             <tr key={item.id}>
@@ -243,7 +249,7 @@ function OrderItemsTable({ order, onOpenFulfill }) {
                                         {item.product_name}
                                     </p>
                                     <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                                        {item.variant_label} · {item.unit_label} · {item.pack_size} {translate('text.bag_package')} </p>
+                                        {productMeta} </p>
                                 </td>
                                 <td className="px-4 py-3 align-top text-[var(--color-text-main)]">
                                     {item.sku}

@@ -30,6 +30,22 @@ const keywordsSchema = z.string().superRefine((value, ctx) => {
     }
 });
 
+
+const hideSimpleFields = ({ values }) => values?.product_type !== 'SIMPLE';
+
+const productTypeOptions = [
+    { value: 'VARIABLE', label: 'Sản phẩm có biến thể' },
+    { value: 'SIMPLE', label: 'Sản phẩm đơn giản' },
+];
+
+const simpleUnitTypeOptions = [
+    { value: 'UNIT', label: 'Cái / sản phẩm lẻ' },
+    { value: 'PACK', label: 'Bịch / gói' },
+    { value: 'BOX', label: 'Hộp' },
+    { value: 'CARTON', label: 'Thùng' },
+];
+
+
 function cleanOptional(value) {
     const trimmed = String(value || '').trim();
     return trimmed || undefined;
@@ -85,6 +101,7 @@ export const productFormSchema = z.object({
     name: z.string().trim().min(2, translate('text.product_name_needs_to_be_at_least_2_characters')).max(200),
     slug: optionalSlugSchema,
     category_id: objectIdSchema,
+    product_type: z.enum(['VARIABLE', 'SIMPLE']),
     brand: z.string().trim().max(100, translate('text.brand_must_not_exceed_100_characters')),
     short_description: z
         .string()
@@ -99,6 +116,72 @@ export const productFormSchema = z.object({
     is_best_seller: z.enum(['true', 'false']),
     new_until: z.string(),
     status: z.enum(['ACTIVE', 'INACTIVE']),
+    simple_unit_type: z.enum(['UNIT', 'PACK', 'BOX', 'CARTON']),
+    simple_unit_display_name: z.string().trim().max(100, 'Tên đơn vị không quá 100 ký tự'),
+    simple_pack_size: z.any(),
+    simple_price: z.any(),
+    simple_stock: z.any(),
+    simple_min_order_qty: z.any(),
+    simple_max_order_qty: z.any(),
+    simple_qty_step: z.any(),
+}).superRefine((values, ctx) => {
+    if (values.product_type !== 'SIMPLE') {
+        return;
+    }
+
+    if (!values.simple_unit_display_name.trim()) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['simple_unit_display_name'],
+            message: 'Vui lòng nhập đơn vị hiển thị',
+        });
+    }
+
+    const simplePackSize = Number(values.simple_pack_size);
+    const simplePrice = Number(values.simple_price);
+    const simpleStock = Number(values.simple_stock);
+    const simpleMinOrderQty = Number(values.simple_min_order_qty);
+    const simpleMaxOrderQty = values.simple_max_order_qty === ''
+        ? null
+        : Number(values.simple_max_order_qty);
+    const simpleQtyStep = Number(values.simple_qty_step);
+
+    const numberChecks = [
+        { value: simplePackSize, path: 'simple_pack_size', message: 'Quy cách phải là số nguyên lớn hơn 0', min: 1 },
+        { value: simplePrice, path: 'simple_price', message: 'Giá bán phải lớn hơn 0', min: 1 },
+        { value: simpleStock, path: 'simple_stock', message: 'Tồn kho không được âm', min: 0 },
+        { value: simpleMinOrderQty, path: 'simple_min_order_qty', message: 'Số lượng tối thiểu phải lớn hơn 0', min: 1 },
+        { value: simpleQtyStep, path: 'simple_qty_step', message: 'Bước tăng phải lớn hơn 0', min: 1 },
+    ];
+
+    numberChecks.forEach((item) => {
+        if (!Number.isInteger(item.value) || item.value < item.min) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: [item.path],
+                message: item.message,
+            });
+        }
+    });
+
+    if (
+        values.simple_max_order_qty !== '' &&
+        (!Number.isInteger(simpleMaxOrderQty) || simpleMaxOrderQty <= 0)
+    ) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['simple_max_order_qty'],
+            message: 'Số lượng tối đa phải là số nguyên dương',
+        });
+    }
+
+    if (simpleMaxOrderQty && simpleMaxOrderQty < simpleMinOrderQty) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['simple_max_order_qty'],
+            message: 'Số lượng tối đa phải lớn hơn hoặc bằng tối thiểu',
+        });
+    }
 });
 
 export const categoryFormConfig = {
@@ -166,12 +249,13 @@ export const productFormConfig = {
     schema: productFormSchema,
     needsCategoryOptions: true,
     createEndpoint: '/products',
-    getDetailEndpoint: (row) => `/products/${row.id || row._id}`,
+    getDetailEndpoint: (row) => `/products/${row.id || row._id}?include_units=true`,
     getUpdateEndpoint: (row) => `/products/${row.id || row._id}`,
     defaultValues: {
         name: '',
         slug: '',
         category_id: '',
+        product_type: 'VARIABLE',
         brand: '',
         short_description: '',
         description: '',
@@ -180,20 +264,41 @@ export const productFormConfig = {
         is_best_seller: 'false',
         new_until: '',
         status: 'ACTIVE',
+        simple_unit_type: 'PACK',
+        simple_unit_display_name: 'Bịch',
+        simple_pack_size: 1,
+        simple_price: 0,
+        simple_stock: 0,
+        simple_min_order_qty: 1,
+        simple_max_order_qty: '',
+        simple_qty_step: 1,
     },
-    toFormValues: (product = {}) => ({
-        name: product.name || '',
-        slug: product.slug || '',
-        category_id: product.category_id || '',
-        brand: product.brand || '',
-        short_description: product.short_description || '',
-        description: product.description || '',
-        image_files: [],
-        search_keywords_text: keywordsToText(product.search_keywords),
-        is_best_seller: product.is_best_seller ? 'true' : 'false',
-        new_until: toDateTimeLocal(product.new_until),
-        status: product.status || 'ACTIVE',
-    }),
+    toFormValues: (product = {}) => {
+        const simpleSales = product.simple_sales || {};
+
+        return {
+            name: product.name || '',
+            slug: product.slug || '',
+            category_id: product.category_id || '',
+            product_type: product.product_type || 'VARIABLE',
+            brand: product.brand || '',
+            short_description: product.short_description || '',
+            description: product.description || '',
+            image_files: [],
+            search_keywords_text: keywordsToText(product.search_keywords),
+            is_best_seller: product.is_best_seller ? 'true' : 'false',
+            new_until: toDateTimeLocal(product.new_until),
+            status: product.status || 'ACTIVE',
+            simple_unit_type: simpleSales.unit_type || 'PACK',
+            simple_unit_display_name: simpleSales.display_name || 'Bịch',
+            simple_pack_size: simpleSales.pack_size || 1,
+            simple_price: simpleSales.price || 0,
+            simple_stock: simpleSales.stock ?? 0,
+            simple_min_order_qty: simpleSales.min_order_qty || 1,
+            simple_max_order_qty: simpleSales.max_order_qty || '',
+            simple_qty_step: simpleSales.qty_step || 1,
+        };
+    },
     toPayload: async (values, { initialData } = {}) => {
         let images = Array.isArray(initialData?.images) ? initialData.images : [];
         const files = Array.isArray(values.image_files) ? values.image_files : [];
@@ -211,10 +316,11 @@ export const productFormConfig = {
             }));
         }
 
-        return {
+        const payload = {
             name: values.name.trim(),
             slug: cleanOptional(values.slug)?.toLowerCase(),
             category_id: values.category_id,
+            product_type: values.product_type,
             brand: cleanOptional(values.brand),
             short_description: cleanOptional(values.short_description),
             description: cleanOptional(values.description),
@@ -224,6 +330,21 @@ export const productFormConfig = {
             new_until: toIsoDateOrNull(values.new_until),
             status: values.status,
         };
+
+        if (values.product_type === 'SIMPLE') {
+            payload.simple_unit_type = values.simple_unit_type;
+            payload.simple_unit_display_name = values.simple_unit_display_name.trim();
+            payload.simple_pack_size = Number(values.simple_pack_size || 1);
+            payload.simple_price = Number(values.simple_price || 0);
+            payload.simple_stock = Number(values.simple_stock || 0);
+            payload.simple_min_order_qty = Number(values.simple_min_order_qty || 1);
+            payload.simple_max_order_qty = values.simple_max_order_qty
+                ? Number(values.simple_max_order_qty)
+                : null;
+            payload.simple_qty_step = Number(values.simple_qty_step || 1);
+        }
+
+        return payload;
     },
     fields: [
         { name: 'name', label: translate('text.product_name'), placeholder: translate('text.example_left_bag_16x16') },
@@ -234,6 +355,16 @@ export const productFormConfig = {
             type: 'select',
             optionsSource: 'categories',
             emptyLabel: translate('text.select_category'),
+        },
+        {
+            name: 'product_type',
+            label: 'Loại sản phẩm',
+            type: 'select',
+            options: productTypeOptions,
+            helperText: ({ values }) =>
+                values?.product_type === 'SIMPLE'
+                    ? 'Sản phẩm đơn giản: khách chỉ chọn số lượng, hệ thống tự tạo biến thể/đơn vị nội bộ.'
+                    : 'Sản phẩm có biến thể: giữ cách quản lý loại vải, kích thước, đơn vị hiện tại.',
         },
         { name: 'brand', label: translate('text.brand'), placeholder: translate('text.nguyen_lien') },
         {
@@ -259,6 +390,57 @@ export const productFormConfig = {
             label: translate('text.new_until'),
             type: 'datetime-local',
             helperText: translate('text.new_until_helper'),
+        },
+        {
+            name: 'simple_unit_type',
+            label: 'Kiểu đơn vị',
+            type: 'select',
+            options: simpleUnitTypeOptions,
+            hidden: hideSimpleFields,
+        },
+        {
+            name: 'simple_unit_display_name',
+            label: 'Đơn vị hiển thị',
+            placeholder: 'Ví dụ: Bịch',
+            hidden: hideSimpleFields,
+        },
+        {
+            name: 'simple_pack_size',
+            label: 'Quy cách / pack_size',
+            type: 'number',
+            helperText: 'Ví dụ: 1 bịch dây thun = 1 đơn vị bán.',
+            hidden: hideSimpleFields,
+        },
+        {
+            name: 'simple_price',
+            label: 'Giá bán',
+            type: 'number',
+            hidden: hideSimpleFields,
+        },
+        {
+            name: 'simple_stock',
+            label: 'Tồn kho',
+            type: 'number',
+            helperText: 'Nhập số đơn vị đang có, ví dụ số bịch hiện có.',
+            hidden: hideSimpleFields,
+        },
+        {
+            name: 'simple_min_order_qty',
+            label: 'Số lượng tối thiểu',
+            type: 'number',
+            hidden: hideSimpleFields,
+        },
+        {
+            name: 'simple_max_order_qty',
+            label: 'Số lượng tối đa',
+            placeholder: 'Bỏ trống nếu không giới hạn',
+            hidden: hideSimpleFields,
+        },
+        {
+            name: 'simple_qty_step',
+            label: 'Bước tăng số lượng',
+            type: 'number',
+            hidden: hideSimpleFields,
         },
         {
             name: 'short_description',

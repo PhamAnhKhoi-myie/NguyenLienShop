@@ -44,6 +44,11 @@ const orderSchema = new mongoose.Schema(
                 product_id: mongoose.Schema.Types.ObjectId,
                 variant_id: mongoose.Schema.Types.ObjectId,
                 unit_id: mongoose.Schema.Types.ObjectId,
+                product_type: {
+                    type: String,
+                    enum: ['SIMPLE', 'VARIABLE'],
+                    default: 'VARIABLE',
+                },
 
                 product_name: { type: String, required: true },
                 product_image: String,

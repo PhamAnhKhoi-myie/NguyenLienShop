@@ -1,15 +1,12 @@
 import { getLocale, translate } from '../../../shared/i18n/index';
 import {
-    Boxes,
     CheckCircle2,
     Flag,
-    Layers,
     MessageSquare,
     Minus,
     PackageOpen,
     Plus,
     RefreshCw,
-    Ruler,
     ShieldCheck,
     ShoppingCart,
     Star,
@@ -63,14 +60,6 @@ const FLAG_REASON_OPTIONS = [
     { value: 'duplicate', label: translate('text.duplicate_review') },
     { value: 'other', label: translate('text.other_reasons') },
 ];
-
-function formatPackSize(packSize) {
-    if (!packSize) {
-        return translate('text.updating');
-    }
-
-    return translate('text.value_the', { value0: packSize });
-}
 
 function formatTierQuantity(tier) {
     if (!tier?.max_qty) {
@@ -130,20 +119,6 @@ function RatingStars({ value }) {
     );
 }
 
-function SpecItem({ icon: Icon, label, value }) {
-    return (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-[var(--color-text-muted)]">
-                <Icon className="h-4 w-4 text-[var(--color-primary)]" />
-                {label}
-            </div>
-            <p className="mt-2 text-base font-semibold text-[var(--color-text-main)]">
-                {value || translate('text.updating')}
-            </p>
-        </div>
-    );
-}
-
 export default function ProductDetailPage() {
     const { productId } = useParams();
     const navigate = useNavigate();
@@ -163,6 +138,7 @@ export default function ProductDetailPage() {
     const flagReviewMutation = useFlagReview();
     const addCartItemMutation = useAddCartItem();
     const product = productQuery.data?.data;
+    const isSimpleProduct = product?.product_type === 'SIMPLE';
     const reviews = reviewsQuery.data?.data || [];
     const reviewsPagination = reviewsQuery.data?.pagination || {};
     const reviewsTotalPages = Math.max(
@@ -188,6 +164,11 @@ export default function ProductDetailPage() {
         images.find((image) => image.url === selectedImageUrl) || primaryImage;
     const selectedImageFailed =
         selectedImage?.url && failedImageUrls.includes(selectedImage.url);
+    const thumbnailSlots = images.length
+        ? images
+        : Array.from({ length: 5 }, (_, index) => ({
+            id: `placeholder-${index}`,
+        }));
     const [selectedVariantId, setSelectedVariantId] = useState('');
     const selectedVariant = useMemo(
         () =>
@@ -229,6 +210,12 @@ export default function ProductDetailPage() {
         availablePacks
     );
     const quantityStep = selectedUnit?.qty_step || 1;
+    const quantityLabel = isSimpleProduct
+        ? 'Số lượng'
+        : translate('text.number_of_packages');
+    const unitLabel = isSimpleProduct
+        ? selectedUnit?.display_name || 'sản phẩm'
+        : translate('text.package_08ffada9');
     const cartQuantity = Math.min(
         maxOrderQuantity,
         Math.max(minOrderQuantity, quantity)
@@ -245,13 +232,13 @@ export default function ProductDetailPage() {
         cartQuantity
     );
     const canAddToCart = Boolean(
-            product?.id &&
-            selectedVariant?.id &&
-            selectedUnit?.id &&
-            product.in_stock &&
-            selectedVariant.in_stock &&
-            maxOrderQuantity >= minOrderQuantity &&
-            !addCartItemMutation.isPending
+        product?.id &&
+        selectedVariant?.id &&
+        selectedUnit?.id &&
+        product.in_stock &&
+        selectedVariant.in_stock &&
+        maxOrderQuantity >= minOrderQuantity &&
+        !addCartItemMutation.isPending
     );
 
     useEffect(() => {
@@ -383,12 +370,12 @@ export default function ProductDetailPage() {
             <div className="grid gap-6 lg:grid-cols-[minmax(0,520px)_1fr]">
                 <div className="space-y-4">
                     <Card className="overflow-hidden">
-                        <div className="aspect-square bg-[var(--color-surface)]">
+                        <div className="aspect-square bg-[var(--color-background)]">
                             {selectedImage?.url && !selectedImageFailed ? (
                                 <img
                                     src={selectedImage.url}
                                     alt={selectedImage.alt || product.name}
-                                    className="h-full w-full object-contain p-6"
+                                    className="h-full w-full object-contain p-4 sm:p-6"
                                     onError={() =>
                                         setFailedImageUrls((current) =>
                                             current.includes(selectedImage.url)
@@ -398,36 +385,75 @@ export default function ProductDetailPage() {
                                     }
                                 />
                             ) : (
-                                <div className="flex h-full items-center justify-center bg-[var(--color-background)] text-[var(--color-text-muted)]">
-                                    <PackageOpen className="h-20 w-20" />
+                                <div className="flex h-full items-center justify-center text-[var(--color-text-muted)]">
+                                    <PackageOpen
+                                        className="h-20 w-20"
+                                        strokeWidth={1.6}
+                                    />
                                 </div>
                             )}
                         </div>
                     </Card>
 
-                    {images.length > 1 && (
-                        <div className="grid grid-cols-5 gap-3">
-                            {images.map((image) => (
+                    <div className="relative z-40 grid grid-cols-5 gap-2 sm:gap-3">
+                        {thumbnailSlots.map((image, index) => {
+                            const hasImage = Boolean(image.url);
+                            const isSelected =
+                                hasImage && selectedImage?.url === image.url;
+                            const imageFailed =
+                                hasImage && failedImageUrls.includes(image.url);
+
+                            return (
                                 <button
-                                    key={`${image.url}-${image.sort_order}`}
+                                    key={image.url || image.id || index}
                                     type="button"
+                                    disabled={!hasImage}
+                                    aria-label={
+                                        hasImage
+                                            ? `${product.name} ${index + 1}`
+                                            : translate('text.updating')
+                                    }
                                     className={cn(
-                                        'aspect-square rounded-lg border bg-[var(--color-surface)] p-2 transition-colors',
-                                        selectedImage?.url === image.url
-                                            ? 'border-[var(--color-primary)]'
-                                            : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'
+                                        'aspect-square rounded-md border bg-[var(--color-surface)] p-1.5 transition-colors sm:p-2',
+                                        hasImage
+                                            ? 'hover:border-[var(--color-primary)]'
+                                            : 'cursor-default border-dashed text-[var(--color-text-muted)]',
+                                        isSelected
+                                            ? 'border-[var(--color-primary)] bg-[var(--color-secondary)] ring-1 ring-[var(--color-primary)]'
+                                            : 'border-[var(--color-border)]'
                                     )}
-                                    onClick={() => setSelectedImageUrl(image.url)}
+                                    onClick={() => {
+                                        if (hasImage) {
+                                            setSelectedImageUrl(image.url);
+                                        }
+                                    }}
                                 >
-                                    <img
-                                        src={image.url}
-                                        alt={image.alt || product.name}
-                                        className="h-full w-full object-contain"
-                                    />
+                                    {hasImage && !imageFailed ? (
+                                        <img
+                                            src={image.url}
+                                            alt={image.alt || product.name}
+                                            className="h-full w-full object-contain"
+                                            loading="lazy"
+                                            onError={() =>
+                                                setFailedImageUrls((current) =>
+                                                    current.includes(image.url)
+                                                        ? current
+                                                        : [...current, image.url]
+                                                )
+                                            }
+                                        />
+                                    ) : (
+                                        <div className="flex h-full w-full items-center justify-center rounded-sm bg-[var(--color-background)]">
+                                            <PackageOpen
+                                                className="h-5 w-5 sm:h-6 sm:w-6"
+                                                strokeWidth={1.6}
+                                            />
+                                        </div>
+                                    )}
                                 </button>
-                            ))}
-                        </div>
-                    )}
+                            );
+                        })}
+                    </div>
                 </div>
 
                 <div className="space-y-5">
@@ -456,9 +482,9 @@ export default function ProductDetailPage() {
                             priceClassName="text-3xl"
                         />
 
-                        {(product.short_description || product.description) && (
+                        {product.short_description && (
                             <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">
-                                {product.short_description || product.description}
+                                {product.short_description}
                             </p>
                         )}
                     </div>
@@ -481,51 +507,53 @@ export default function ProductDetailPage() {
                             </CardHeader>
                         )}
                         <CardBody className="space-y-4 !p-4">
-                            <div className="space-y-2">
-                                <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
-                                    {translate('text.fabric_type')}
-                                </h3>
-                                {variants.length === 0 ? (
-                                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.product_has_no_variations_yet')} </p>
-                                ) : (
-                                    <div className="grid gap-2 sm:grid-cols-2">
-                                        {variants.map((variant) => (
-                                            <button
-                                                key={variant.id}
-                                                type="button"
-                                                className={cn(
-                                                    'rounded-md border px-3 py-2.5 text-left transition-colors',
-                                                    selectedVariant?.id === variant.id
-                                                        ? 'border-[var(--color-primary)] bg-[var(--color-secondary)]'
-                                                        : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
-                                                )}
-                                                onClick={() =>
-                                                    setSelectedVariantId(variant.id)
-                                                }
-                                            >
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div className="min-w-0">
-                                                        <p className="text-sm font-semibold text-[var(--color-text-main)]">
-                                                            {variant.size ||
-                                                                translate('text.updating_dimension')}
-                                                        </p>
-                                                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-                                                            {variant.fabric_type ||
-                                                                translate('text.material_is_updating')}
-                                                        </p>
-                                                    </div>
-                                                    {selectedVariant?.id ===
-                                                        variant.id && (
-                                                        <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                            {!isSimpleProduct && (
+                                <div className="space-y-2">
+                                    <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
+                                        {translate('text.fabric_type')}
+                                    </h3>
+                                    {variants.length === 0 ? (
+                                        <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.product_has_no_variations_yet')} </p>
+                                    ) : (
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                            {variants.map((variant) => (
+                                                <button
+                                                    key={variant.id}
+                                                    type="button"
+                                                    className={cn(
+                                                        'rounded-md border px-3 py-2.5 text-left transition-colors',
+                                                        selectedVariant?.id === variant.id
+                                                            ? 'border-[var(--color-primary)] bg-[var(--color-secondary)]'
+                                                            : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
                                                     )}
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                                                    onClick={() =>
+                                                        setSelectedVariantId(variant.id)
+                                                    }
+                                                >
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-semibold text-[var(--color-text-main)]">
+                                                                {variant.size ||
+                                                                    translate('text.updating_dimension')}
+                                                            </p>
+                                                            <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                                                                {variant.fabric_type ||
+                                                                    translate('text.material_is_updating')}
+                                                            </p>
+                                                        </div>
+                                                        {selectedVariant?.id ===
+                                                            variant.id && (
+                                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                                                            )}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
-                            {selectedVariant && (
+                            {!isSimpleProduct && selectedVariant && (
                                 <div className="space-y-2">
                                     <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
                                         {translate('text.unit')}
@@ -570,8 +598,8 @@ export default function ProductDetailPage() {
                                                         </div>
                                                         {selectedUnit?.id ===
                                                             unit.id && (
-                                                            <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
-                                                        )}
+                                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                                                            )}
                                                     </div>
                                                 </button>
                                             ))}
@@ -583,10 +611,10 @@ export default function ProductDetailPage() {
                             {selectedUnit && (
                                 <div className="grid gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                                     <div>
-                                        <p className="text-sm font-semibold text-[var(--color-text-main)]"> {translate('text.number_of_packages')} </p>
-                                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]"> {translate('text.minimum')} {minOrderQuantity} {translate('text.package_08ffada9')} {selectedUnit.max_order_qty
-                                                ? translate('text.maximum_value_package', { value0: selectedUnit.max_order_qty })
-                                                : ''}
+                                        <p className="text-sm font-semibold text-[var(--color-text-main)]"> {quantityLabel} </p>
+                                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]"> {translate('text.minimum')} {minOrderQuantity} {unitLabel} {selectedUnit.max_order_qty
+                                            ? translate('text.maximum_value_package', { value0: selectedUnit.max_order_qty })
+                                            : ''}
                                         </p>
                                         <p
                                             className={cn(
@@ -597,7 +625,7 @@ export default function ProductDetailPage() {
                                             )}
                                         >
                                             {translate('text.remaining')} {availablePacks}{' '}
-                                            {translate('text.package_08ffada9')}
+                                            {unitLabel}
                                             {selectedUnit.pack_size > 1 && (
                                                 <span className="font-normal text-[var(--color-text-muted)]">
                                                     {' '}
@@ -663,21 +691,21 @@ export default function ProductDetailPage() {
                                             </p>
                                             {selectedTier && (
                                                 <p className="mt-0.5 text-xs text-green-700">
-                                                    {cartQuantity} {translate('text.package_08ffada9')} x{' '}
+                                                    {cartQuantity} {unitLabel} x{' '}
                                                     {selectedOriginalUnitPrice >
                                                         selectedUnitPrice && (
-                                                        <span className="mr-1 text-[var(--color-text-muted)] line-through">
-                                                            {formatCurrency(
-                                                                selectedOriginalUnitPrice,
-                                                                currency
-                                                            )}
-                                                        </span>
-                                                    )}
+                                                            <span className="mr-1 text-[var(--color-text-muted)] line-through">
+                                                                {formatCurrency(
+                                                                    selectedOriginalUnitPrice,
+                                                                    currency
+                                                                )}
+                                                            </span>
+                                                        )}
                                                     {formatCurrency(
                                                         selectedUnitPrice,
                                                         currency
                                                     )}
-                                                    /{translate('text.package_08ffada9')}
+                                                    /{unitLabel}
                                                 </p>
                                             )}
                                         </div>
@@ -754,35 +782,18 @@ export default function ProductDetailPage() {
 
             <Card>
                 <CardHeader>
-                    <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.specifications')} </h2>
+                    <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.product_details')} </h2>
                 </CardHeader>
                 <CardBody>
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <SpecItem
-                            icon={Ruler}
-                            label={translate('text.bag_size')}
-                            value={selectedVariant?.size}
-                        />
-                        <SpecItem
-                            icon={ShieldCheck}
-                            label={translate('text.material')}
-                            value={selectedVariant?.fabric_type}
-                        />
-                        <SpecItem
-                            icon={Boxes}
-                            label={translate('text.quantity_package')}
-                            value={formatPackSize(selectedUnit?.pack_size)}
-                        />
-                        <SpecItem
-                            icon={Layers}
-                            label={translate('text.uses')}
-                            value={
-                                product.short_description ||
-                                product.description ||
-                                translate('text.updating')
-                            }
-                        />
-                    </div>
+                    {product.description ? (
+                        <div className="max-w-none whitespace-pre-line break-words text-sm leading-7 text-[var(--color-text-main)]">
+                            {product.description}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-[var(--color-text-muted)]">
+                            {translate('text.updating')}
+                        </p>
+                    )}
                 </CardBody>
             </Card>
 
@@ -894,7 +905,7 @@ export default function ProductDetailPage() {
                                                     className="w-full sm:w-auto"
                                                     variant={
                                                         review.user_vote ===
-                                                        'helpful'
+                                                            'helpful'
                                                             ? 'secondary'
                                                             : 'ghost'
                                                     }
@@ -915,7 +926,7 @@ export default function ProductDetailPage() {
                                                     className="w-full sm:w-auto"
                                                     variant={
                                                         review.user_vote ===
-                                                        'unhelpful'
+                                                            'unhelpful'
                                                             ? 'secondary'
                                                             : 'ghost'
                                                     }

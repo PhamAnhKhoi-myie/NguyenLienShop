@@ -124,7 +124,9 @@ export default function AdminVariantsPage() {
         row: null,
     });
     const productQuery = useAdminList('/products', { page: 1, limit: 100 });
-    const products = getRows(productQuery.data);
+    const products = getRows(productQuery.data).filter(
+        (product) => product.product_type !== 'SIMPLE'
+    );
     const activeProductId = selectedProductId || products[0]?.id || '';
     const variantQuery = useAdminList(
         activeProductId ? `/products/${activeProductId}/variants` : '',

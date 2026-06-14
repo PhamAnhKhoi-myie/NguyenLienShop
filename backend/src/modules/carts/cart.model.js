@@ -25,6 +25,12 @@ const cartItemSchema = new mongoose.Schema(
             ref: 'Category',
         },
 
+        product_type: {
+            type: String,
+            enum: ['SIMPLE', 'VARIABLE'],
+            default: 'VARIABLE',
+        },
+
 
         sku: {
             type: String,
@@ -433,6 +439,7 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
         variant_id: itemData.variant_id,
         unit_id: unitObjectId,
         category_id: itemData.category_id,
+        product_type: itemData.product_type || 'VARIABLE',
         sku: itemData.sku,
         variant_label: itemData.variant_label,
         product_name: itemData.product_name,
@@ -495,6 +502,8 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
                         Boolean(itemData.is_on_sale),
                     'items.$[item].voucher_allowed':
                         itemData.voucher_allowed !== false,
+                    'items.$[item].product_type':
+                        itemData.product_type || 'VARIABLE',
                     updated_at: new Date(),
                 },
             },
@@ -550,6 +559,8 @@ cartSchema.statics.addItemAtomic = async function (cartId, itemData) {
                     Boolean(itemData.is_on_sale),
                 'items.$[item].voucher_allowed':
                     itemData.voucher_allowed !== false,
+                'items.$[item].product_type':
+                    itemData.product_type || 'VARIABLE',
                 updated_at: new Date(),
             },
         },

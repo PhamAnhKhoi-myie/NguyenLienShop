@@ -23,6 +23,59 @@ const imageSchema = z.object({
     sort_order: z.number().int().nonnegative().default(0),
 });
 
+const productTypeSchema = z.enum(['SIMPLE', 'VARIABLE']);
+
+const simpleUnitTypeSchema = z.enum(['UNIT', 'PACK', 'BOX', 'CARTON']);
+
+const optionalPositiveIntSchema = z.preprocess(
+    (value) => (value === '' ? null : value),
+    z.coerce.number().int().positive().nullable().optional()
+);
+
+const simpleProductFields = {
+    simple_unit_type: simpleUnitTypeSchema.default('PACK'),
+    simple_unit_display_name: z.string().trim().max(100).optional(),
+    simple_pack_size: z.coerce.number().int().positive().default(1),
+    simple_price: z.coerce.number().int().nonnegative().optional(),
+    simple_stock: z.coerce.number().int().nonnegative().default(0),
+    simple_min_order_qty: z.coerce.number().int().positive().default(1),
+    simple_max_order_qty: optionalPositiveIntSchema,
+    simple_qty_step: z.coerce.number().int().positive().default(1),
+};
+
+function validateSimpleProductFields(values, ctx) {
+    if (values.product_type !== 'SIMPLE') {
+        return;
+    }
+
+    if (!values.simple_unit_display_name?.trim()) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['simple_unit_display_name'],
+            message: 'Simple product unit display name is required',
+        });
+    }
+
+    if (!Number.isInteger(values.simple_price) || values.simple_price <= 0) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['simple_price'],
+            message: 'Simple product price must be greater than 0',
+        });
+    }
+
+    if (
+        values.simple_max_order_qty &&
+        values.simple_max_order_qty < values.simple_min_order_qty
+    ) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['simple_max_order_qty'],
+            message: 'Simple product max order quantity must be >= min order quantity',
+        });
+    }
+}
+
 const createProductSchema = z.object({
     name: z.string().min(2).max(200).trim(),
 
@@ -35,6 +88,8 @@ const createProductSchema = z.object({
     category_id: objectIdSchema,
 
     brand: z.string().max(100).optional(),
+
+    product_type: productTypeSchema.default('VARIABLE'),
 
     short_description: z.string().max(500).optional(),
 
@@ -58,7 +113,9 @@ const createProductSchema = z.object({
     new_until: z.coerce.date().nullable().optional(),
 
     status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
-});
+
+    ...simpleProductFields,
+}).superRefine(validateSimpleProductFields);
 
 const updateProductSchema = z.object({
     name: z.string().min(2).max(200).trim().optional(),
@@ -72,6 +129,8 @@ const updateProductSchema = z.object({
     category_id: objectIdOptionalSchema,
 
     brand: z.string().max(100).optional(),
+
+    product_type: productTypeSchema.optional(),
 
     short_description: z.string().max(500).optional(),
 
@@ -94,6 +153,31 @@ const updateProductSchema = z.object({
     new_until: z.coerce.date().nullable().optional(),
 
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+
+    simple_unit_type: simpleUnitTypeSchema.optional(),
+    simple_unit_display_name: z.string().trim().max(100).optional(),
+    simple_pack_size: z.coerce.number().int().positive().optional(),
+    simple_price: z.coerce.number().int().nonnegative().optional(),
+    simple_stock: z.coerce.number().int().nonnegative().optional(),
+    simple_min_order_qty: z.coerce.number().int().positive().optional(),
+    simple_max_order_qty: optionalPositiveIntSchema,
+    simple_qty_step: z.coerce.number().int().positive().optional(),
+}).superRefine((values, ctx) => {
+    if (values.product_type === 'SIMPLE') {
+        validateSimpleProductFields(values, ctx);
+    }
+
+    if (
+        values.simple_max_order_qty &&
+        values.simple_min_order_qty &&
+        values.simple_max_order_qty < values.simple_min_order_qty
+    ) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['simple_max_order_qty'],
+            message: 'Simple product max order quantity must be >= min order quantity',
+        });
+    }
 });
 
 const getProductsSchema = z.object({

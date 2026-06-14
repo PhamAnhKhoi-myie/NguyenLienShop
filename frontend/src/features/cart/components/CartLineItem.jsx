@@ -20,6 +20,8 @@ export default function CartLineItem({
     const quantity = getQuantity(item);
     const packSize = item.pack_size || 0;
     const totalItems = item.total_items || quantity * packSize;
+    const isSimpleProduct = item.product_type === 'SIMPLE';
+    const unitLabel = item.display_name || 'sản phẩm';
     const canDecrease = quantity > 1 && !isUpdating && !isRemoving;
     const canIncrease = quantity < 999 && !isUpdating && !isRemoving;
 
@@ -45,18 +47,28 @@ export default function CartLineItem({
                     {item.product_name}
                 </h3>
                 <div className="mt-2 grid gap-1 text-sm text-[var(--color-text-muted)]">
-                    <span>{item.variant_label}</span>
-                    <span>{item.display_name}</span>
+                    {!isSimpleProduct && item.variant_label && (
+                        <span>{item.variant_label}</span>
+                    )}
+                    <span>{unitLabel}</span>
+                    {(!isSimpleProduct || packSize > 1) && (
+                        <span>
+                            {packSize ? translate('text.value_piece_pack', { value0: packSize }) : translate('text.specifications_are_being_updated')}
+                        </span>
+                    )}
                     <span>
-                        {packSize ? translate('text.value_piece_pack', { value0: packSize }) : translate('text.specifications_are_being_updated')}
+                        {isSimpleProduct
+                            ? `Tổng ${quantity} ${unitLabel}`
+                            : `${translate('text.total_bag')} ${totalItems || 0} ${translate('text.the')}`}
                     </span>
-                    <span> {translate('text.total_bag')} {totalItems || 0} {translate('text.the')} </span>
                 </div>
             </div>
 
             <div className="flex flex-col items-start gap-3 md:items-end">
                 <div className="text-left md:text-right">
-                    <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.price_package')} </p>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                        {isSimpleProduct ? `Giá / ${unitLabel}` : translate('text.price_package')}
+                    </p>
                     <p className="font-semibold text-[var(--color-primary-hover)]">
                         {formatCurrency(item.price_at_added || 0)}
                     </p>

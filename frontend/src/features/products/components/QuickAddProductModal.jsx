@@ -38,6 +38,7 @@ export default function QuickAddProductModal({
     );
     const addCartItemMutation = useAddCartItem();
     const detail = productQuery.data?.data;
+    const isSimpleProduct = detail?.product_type === 'SIMPLE';
     const variants = useMemo(
         () =>
             (detail?.variants || []).filter(
@@ -77,13 +78,19 @@ export default function QuickAddProductModal({
     const availableQuantity =
         selectedUnit?.pack_size > 0
             ? Math.floor(
-                  availableItems / Number(selectedUnit.pack_size)
-              )
+                availableItems / Number(selectedUnit.pack_size)
+            )
             : 0;
     const maxQuantity = Math.min(
         Number(selectedUnit?.max_order_qty || 999),
         availableQuantity
     );
+    const quantityLabel = isSimpleProduct
+        ? 'Số lượng'
+        : translate('text.number_of_packages');
+    const unitLabel = isSimpleProduct
+        ? selectedUnit?.display_name || 'sản phẩm'
+        : translate('text.package_08ffada9');
     const cartQuantity = Math.min(
         maxQuantity,
         Math.max(minQuantity, quantity)
@@ -98,12 +105,12 @@ export default function QuickAddProductModal({
     );
     const canSubmit = Boolean(
         detail?.id &&
-            selectedVariant?.id &&
-            selectedUnit?.id &&
-            detail.in_stock &&
-            selectedVariant.in_stock &&
-            maxQuantity >= minQuantity &&
-            !addCartItemMutation.isPending
+        selectedVariant?.id &&
+        selectedUnit?.id &&
+        detail.in_stock &&
+        selectedVariant.in_stock &&
+        maxQuantity >= minQuantity &&
+        !addCartItemMutation.isPending
     );
 
     const handleClose = () => {
@@ -215,63 +222,67 @@ export default function QuickAddProductModal({
                             {detail.name}
                         </h3>
                         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                            {translate('text.select_product_options')}
+                            {isSimpleProduct
+                                ? 'Chọn số lượng sản phẩm'
+                                : translate('text.select_product_options')}
                         </p>
                     </div>
 
-                    {variants.length === 0 ? (
-                        <div className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
-                            <PackageOpen className="h-5 w-5" />
-                            {translate('text.product_has_no_variations_yet')}
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            <p className="text-sm font-medium text-[var(--color-text-main)]">
-                                {translate('text.fabric_type')}
-                            </p>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                                {variants.map((variant) => (
-                                    <button
-                                        key={variant.id}
-                                        type="button"
-                                        disabled={!variant.in_stock}
-                                        className={cn(
-                                            'rounded-md border px-3 py-2.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-                                            selectedVariant?.id === variant.id
-                                                ? 'border-[var(--color-primary)] bg-[var(--color-secondary)]'
-                                                : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'
-                                        )}
-                                        onClick={() =>
-                                            handleSelectVariant(variant.id)
-                                        }
-                                    >
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="min-w-0">
-                                                <p className="font-medium text-[var(--color-text-main)]">
-                                                    {variant.size ||
-                                                        translate(
-                                                            'text.updating_dimension'
-                                                        )}
-                                                </p>
-                                                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                                                    {variant.fabric_type ||
-                                                        translate(
-                                                            'text.material_is_updating'
-                                                        )}
-                                                </p>
-                                            </div>
-                                            {selectedVariant?.id ===
-                                                variant.id && (
-                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
-                                            )}
-                                        </div>
-                                    </button>
-                                ))}
+                    {!isSimpleProduct && (
+                        variants.length === 0 ? (
+                            <div className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
+                                <PackageOpen className="h-5 w-5" />
+                                {translate('text.product_has_no_variations_yet')}
                             </div>
-                        </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium text-[var(--color-text-main)]">
+                                    {translate('text.fabric_type')}
+                                </p>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    {variants.map((variant) => (
+                                        <button
+                                            key={variant.id}
+                                            type="button"
+                                            disabled={!variant.in_stock}
+                                            className={cn(
+                                                'rounded-md border px-3 py-2.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                                                selectedVariant?.id === variant.id
+                                                    ? 'border-[var(--color-primary)] bg-[var(--color-secondary)]'
+                                                    : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'
+                                            )}
+                                            onClick={() =>
+                                                handleSelectVariant(variant.id)
+                                            }
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="font-medium text-[var(--color-text-main)]">
+                                                        {variant.size ||
+                                                            translate(
+                                                                'text.updating_dimension'
+                                                            )}
+                                                    </p>
+                                                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                                                        {variant.fabric_type ||
+                                                            translate(
+                                                                'text.material_is_updating'
+                                                            )}
+                                                    </p>
+                                                </div>
+                                                {selectedVariant?.id ===
+                                                    variant.id && (
+                                                        <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                                                    )}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )
                     )}
 
-                    {selectedVariant && (
+                    {!isSimpleProduct && selectedVariant && (
                         <div className="space-y-2">
                             <p className="text-sm font-medium text-[var(--color-text-main)]">
                                 {translate('text.unit')}
@@ -322,11 +333,11 @@ export default function QuickAddProductModal({
                         <div className="grid gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                             <div>
                                 <p className="text-sm font-medium text-[var(--color-text-main)]">
-                                    {translate('text.number_of_packages')}
+                                    {quantityLabel}
                                 </p>
                                 <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
                                     {translate('text.minimum')} {minQuantity}{' '}
-                                    {translate('text.package_08ffada9')}
+                                    {unitLabel}
                                     {selectedUnit.max_order_qty
                                         ? translate('text.maximum_value_package', {
                                             value0: selectedUnit.max_order_qty,
@@ -342,7 +353,7 @@ export default function QuickAddProductModal({
                                     )}
                                 >
                                     {translate('text.remaining')} {availableQuantity}{' '}
-                                    {translate('text.package_08ffada9')}
+                                    {unitLabel}
                                     {selectedUnit.pack_size > 1 && (
                                         <span className="font-normal text-[var(--color-text-muted)]">
                                             {' '}
@@ -412,23 +423,22 @@ export default function QuickAddProductModal({
                                     </p>
                                     {selectedTier && (
                                         <p className="mt-0.5 text-xs text-green-700">
-                                            {cartQuantity}{' '}
-                                            {translate('text.package_08ffada9')} x{' '}
+                                            {cartQuantity} {unitLabel} x{' '}
                                             {selectedOriginalUnitPrice >
                                                 selectedUnitPrice && (
-                                                <span className="mr-1 text-[var(--color-text-muted)] line-through">
-                                                    {formatCurrency(
-                                                        selectedOriginalUnitPrice,
-                                                        selectedUnit.currency ||
+                                                    <span className="mr-1 text-[var(--color-text-muted)] line-through">
+                                                        {formatCurrency(
+                                                            selectedOriginalUnitPrice,
+                                                            selectedUnit.currency ||
                                                             'VND'
-                                                    )}
-                                                </span>
-                                            )}
+                                                        )}
+                                                    </span>
+                                                )}
                                             {formatCurrency(
                                                 selectedUnitPrice,
                                                 selectedUnit.currency || 'VND'
                                             )}
-                                            /{translate('text.package_08ffada9')}
+                                            /{unitLabel}
                                         </p>
                                     )}
                                 </div>

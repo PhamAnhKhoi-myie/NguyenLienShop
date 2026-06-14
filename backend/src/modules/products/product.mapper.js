@@ -12,6 +12,7 @@ class ProductMapper {
             slug: doc.slug,
             category_id: doc.category_id?.toString(),
             brand: doc.brand || null,
+            product_type: doc.product_type || 'VARIABLE',
 
             min_price: doc.min_price || 0,
             max_price: doc.max_price || 0,
@@ -22,6 +23,8 @@ class ProductMapper {
             short_description: doc.short_description || null,
 
             images: this.transformImages(doc.images || []),
+
+            simple_sales: doc.simple_sales || null,
 
             search_keywords: doc.search_keywords || [],
 
@@ -90,6 +93,7 @@ class ProductMapper {
             slug: doc.slug,
             category_id: doc.category_id?.toString(),
             brand: doc.brand || null,
+            product_type: doc.product_type || 'VARIABLE',
 
             min_price: doc.min_price || 0,
             max_price: doc.max_price || 0,

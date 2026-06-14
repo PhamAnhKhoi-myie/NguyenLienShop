@@ -135,6 +135,24 @@ class CartService {
         const unitsById = new Map(
             units.map((unit) => [unit._id.toString(), unit])
         );
+        const productIds = [
+            ...new Set(cart.items.map((item) => item.product_id.toString())),
+        ];
+        const productQuery = Product.find(
+            { _id: { $in: productIds } },
+            { product_type: 1 }
+        );
+        if (options.session) {
+            productQuery.session(options.session);
+        }
+
+        const products = await productQuery;
+        const productTypesById = new Map(
+            products.map((product) => [
+                product._id.toString(),
+                product.product_type || 'VARIABLE',
+            ])
+        );
 
         let pricingChanged = false;
 
@@ -149,6 +167,12 @@ class CartService {
                     400,
                     'UNIT_UNAVAILABLE'
                 );
+            }
+            const productType =
+                productTypesById.get(item.product_id.toString()) || 'VARIABLE';
+            if (item.product_type !== productType) {
+                pricingChanged = true;
+                item.product_type = productType;
             }
 
             if (
@@ -187,11 +211,11 @@ class CartService {
             if (
                 item.price_at_added !== pricing.unit_price ||
                 item.original_price_at_added !==
-                    pricing.original_unit_price ||
+                pricing.original_unit_price ||
                 item.promotion_discount_amount !==
-                    pricing.promotion_discount_amount ||
+                pricing.promotion_discount_amount ||
                 item.promotion_discount_percent !==
-                    pricing.promotion_discount_percent ||
+                pricing.promotion_discount_percent ||
                 item.is_on_sale !== pricing.is_on_sale ||
                 item.voucher_allowed !== pricing.voucher_allowed ||
                 item.pack_size !== unit.pack_size ||
@@ -429,9 +453,13 @@ class CartService {
             variant_id,
             unit_id,
             category_id: product.category_id,
+            product_type: product.product_type || 'VARIABLE',
 
             sku: variant.sku,
-            variant_label: `${variant.size} - ${variant.fabric_type}`,
+            variant_label:
+                product.product_type === 'SIMPLE'
+                    ? unit.display_name
+                    : `${variant.size} - ${variant.fabric_type}`,
             product_name: product.name,
             product_image: product.images?.[0]?.url || null,
             display_name: unit.display_name,

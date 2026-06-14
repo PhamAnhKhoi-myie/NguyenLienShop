@@ -8,9 +8,27 @@ const ProductAuditLogService = require('../audit_logs/product_audit_log/product_
 const { AUDIT_ACTIONS } = require('../../constants/audit');
 const { summarizePriceTiers } = require('./pricing.util');
 
+const SIMPLE_PRODUCT_TYPE = 'SIMPLE';
+const INTERNAL_SIMPLE_SIZE = 'Mặc định';
+const INTERNAL_SIMPLE_FABRIC_TYPE = 'Tiêu chuẩn';
+const SIMPLE_PRODUCT_FIELD_KEYS = [
+    'simple_unit_type',
+    'simple_unit_display_name',
+    'simple_pack_size',
+    'simple_price',
+    'simple_stock',
+    'simple_min_order_qty',
+    'simple_max_order_qty',
+    'simple_qty_step',
+];
+
 class ProductService {
     static async createProduct(data, actorId = null, metadata = {}) {
-        const { name, category_id, ...rest } = data;
+        const {
+            productData,
+            simpleConfig,
+        } = this._splitProductPayload(data);
+        const { name, category_id, ...rest } = productData;
 
         if (category_id) {
             const Category = require('../categories/category.model');
@@ -24,14 +42,26 @@ class ProductService {
             }
         }
 
+        const session = await mongoose.startSession();
+
         try {
+            session.startTransaction();
+
             const product = new Product({
                 name,
                 category_id,
                 ...rest,
             });
 
-            await product.save();
+            await product.save({ session });
+
+            if (product.product_type === SIMPLE_PRODUCT_TYPE) {
+                await this._upsertSimpleSalesSetup(product, simpleConfig, {
+                    session,
+                });
+            }
+
+            await session.commitTransaction();
 
             await this._createProductAuditLog({
                 action: AUDIT_ACTIONS.CREATE_PRODUCT,
@@ -56,12 +86,20 @@ class ProductService {
                         from: null,
                         to: product.slug,
                     },
+                    product_type: {
+                        from: null,
+                        to: product.product_type,
+                    },
                 },
             });
 
-            return ProductMapper.toResponseDTO(product);
+            return this.getProductById(product._id, { includeUnits: true });
 
         } catch (error) {
+            if (session.inTransaction()) {
+                await session.abortTransaction();
+            }
+
             if (error.code === 11000) {
                 throw new AppError(
                     'Slug already exists',
@@ -71,6 +109,8 @@ class ProductService {
             }
 
             throw error;
+        } finally {
+            session.endSession();
         }
     }
 
@@ -228,7 +268,16 @@ class ProductService {
     }
 
     static async updateProduct(productId, updateData, actorId = null, metadata = {}) {
-        if (!updateData || Object.keys(updateData).length === 0) {
+        const {
+            productData,
+            simpleConfig,
+            hasSimpleConfig,
+        } = this._splitProductPayload(updateData || {});
+
+        if (
+            (!productData || Object.keys(productData).length === 0) &&
+            !hasSimpleConfig
+        ) {
             throw new AppError(
                 'No valid fields to update',
                 400,
@@ -236,8 +285,16 @@ class ProductService {
             );
         }
 
+        const session = await mongoose.startSession();
+        let productForAudit = null;
+        let changesForAudit = {};
+
         try {
-            const currentProduct = await Product.findById(productId);
+            session.startTransaction();
+
+            const currentProduct = await Product.findById(productId).session(
+                session
+            );
 
             if (!currentProduct) {
                 throw new AppError(
@@ -247,11 +304,15 @@ class ProductService {
                 );
             }
 
-            const product = await Product.findByIdAndUpdate(
-                productId,
-                { $set: updateData },
-                { new: true, runValidators: true }
-            );
+            let product = currentProduct;
+
+            if (Object.keys(productData).length > 0) {
+                product = await Product.findByIdAndUpdate(
+                    productId,
+                    { $set: productData },
+                    { new: true, runValidators: true, session }
+                );
+            }
 
             if (!product) {
                 throw new AppError(
@@ -261,21 +322,40 @@ class ProductService {
                 );
             }
 
+            if (
+                product.product_type === SIMPLE_PRODUCT_TYPE &&
+                (hasSimpleConfig || productData.product_type === SIMPLE_PRODUCT_TYPE)
+            ) {
+                await this._upsertSimpleSalesSetup(product, simpleConfig, {
+                    session,
+                });
+                product = await Product.findById(productId).session(session);
+            }
+
+            productForAudit = product;
+            changesForAudit = this._buildFieldChanges(
+                currentProduct,
+                product,
+                Object.keys(productData)
+            );
+
+            await session.commitTransaction();
+
             await this._createProductAuditLog({
                 action: AUDIT_ACTIONS.UPDATE_PRODUCT,
                 targetType: 'PRODUCT',
-                product,
+                product: productForAudit,
                 actorId,
                 metadata,
-                changes: this._buildFieldChanges(
-                    currentProduct,
-                    product,
-                    Object.keys(updateData)
-                ),
+                changes: changesForAudit,
             });
 
-            return ProductMapper.toResponseDTO(product);
+            return this.getProductById(productId, { includeUnits: true });
         } catch (error) {
+            if (session.inTransaction()) {
+                await session.abortTransaction();
+            }
+
             if (error.code === 11000) {
                 throw new AppError(
                     'Slug already exists',
@@ -284,6 +364,8 @@ class ProductService {
                 );
             }
             throw error;
+        } finally {
+            session.endSession();
         }
     }
 
@@ -426,6 +508,12 @@ class ProductService {
             decoratedVariants
         );
 
+        if (decoratedProduct.product_type === SIMPLE_PRODUCT_TYPE) {
+            decoratedProduct.simple_sales = this._buildSimpleSalesSummary(
+                decoratedVariants[0]
+            );
+        }
+
         const responseVariants = includeUnits
             ? decoratedVariants
             : decoratedVariants.map((variant) => ({
@@ -499,7 +587,7 @@ class ProductService {
             (unit) =>
                 variant.status === 'ACTIVE' &&
                 variant.stock?.available >=
-                    unit.pack_size * (unit.min_order_qty || 1)
+                unit.pack_size * (unit.min_order_qty || 1)
         );
 
         return {
@@ -623,7 +711,7 @@ class ProductService {
             return sorted.sort(
                 (a, b) =>
                     Number(Boolean(b.is_best_seller)) -
-                        Number(Boolean(a.is_best_seller)) ||
+                    Number(Boolean(a.is_best_seller)) ||
                     (b.sold_count || 0) - (a.sold_count || 0) ||
                     (b.rating_avg || 0) - (a.rating_avg || 0)
             );
@@ -651,6 +739,248 @@ class ProductService {
         }
 
         return sorted.sort(compareNewest);
+    }
+
+    static _splitProductPayload(data = {}) {
+        const productData = { ...data };
+        const simpleConfig = {};
+        let hasSimpleConfig = false;
+
+        for (const key of SIMPLE_PRODUCT_FIELD_KEYS) {
+            if (Object.prototype.hasOwnProperty.call(productData, key)) {
+                simpleConfig[key] = productData[key];
+                delete productData[key];
+                hasSimpleConfig = true;
+            }
+        }
+
+        return {
+            productData,
+            simpleConfig,
+            hasSimpleConfig,
+        };
+    }
+
+    static _generateSimpleSku(product) {
+        const source = product.slug || product.name || product._id?.toString();
+        const clean = String(source)
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '')
+            .slice(0, 40);
+
+        return `${clean || 'PRODUCT'}-SIMPLE`;
+    }
+
+    static _resolveSimpleConfig(simpleConfig = {}, currentUnit = null, currentVariant = null) {
+        const pick = (key, fallback) =>
+            simpleConfig[key] !== undefined && simpleConfig[key] !== null
+                ? simpleConfig[key]
+                : fallback;
+
+        const price = Number(
+            pick(
+                'simple_price',
+                currentUnit?.price_tiers?.[0]?.unit_price || 0
+            )
+        );
+        const packSize = Number(pick('simple_pack_size', currentUnit?.pack_size || 1));
+        const minOrderQty = Number(
+            pick('simple_min_order_qty', currentUnit?.min_order_qty || 1)
+        );
+        const maxOrderQty = pick(
+            'simple_max_order_qty',
+            currentUnit?.max_order_qty || null
+        );
+        const qtyStep = Number(pick('simple_qty_step', currentUnit?.qty_step || 1));
+        const availableStock = Number(
+            pick('simple_stock', currentVariant?.stock?.available || 0)
+        );
+
+        if (!Number.isInteger(price) || price <= 0) {
+            throw new AppError(
+                'Simple product price must be greater than 0',
+                400,
+                'INVALID_SIMPLE_PRODUCT_PRICE'
+            );
+        }
+
+        return {
+            unit_type: pick('simple_unit_type', currentUnit?.unit_type || 'PACK'),
+            display_name:
+                String(
+                    pick(
+                        'simple_unit_display_name',
+                        currentUnit?.display_name || 'Đơn vị'
+                    )
+                ).trim() || 'Đơn vị',
+            pack_size: Number.isInteger(packSize) && packSize > 0 ? packSize : 1,
+            price,
+            stock: Number.isInteger(availableStock) && availableStock >= 0
+                ? availableStock
+                : 0,
+            min_order_qty:
+                Number.isInteger(minOrderQty) && minOrderQty > 0 ? minOrderQty : 1,
+            max_order_qty:
+                maxOrderQty === '' || maxOrderQty === undefined
+                    ? null
+                    : maxOrderQty,
+            qty_step: Number.isInteger(qtyStep) && qtyStep > 0 ? qtyStep : 1,
+        };
+    }
+
+    static _buildSimplePriceCache(config) {
+        const pricePerUnit = Math.round(config.price / config.pack_size);
+
+        return {
+            min_price: config.price,
+            max_price: config.price,
+            min_price_per_unit: pricePerUnit,
+            max_price_per_unit: pricePerUnit,
+        };
+    }
+
+    static _buildSimpleSalesSummary(variant) {
+        if (!variant) {
+            return null;
+        }
+
+        const unit = Array.isArray(variant.units)
+            ? variant.units.find((item) => item.is_default) || variant.units[0]
+            : null;
+
+        if (!unit) {
+            return null;
+        }
+
+        return {
+            variant_id: variant._id?.toString(),
+            unit_id: unit._id?.toString(),
+            unit_type: unit.unit_type,
+            display_name: unit.display_name,
+            pack_size: unit.pack_size,
+            price: unit.price_tiers?.[0]?.unit_price || 0,
+            stock: variant.stock?.available || 0,
+            min_order_qty: unit.min_order_qty || 1,
+            max_order_qty: unit.max_order_qty || null,
+            qty_step: unit.qty_step || 1,
+        };
+    }
+
+    static async _upsertSimpleSalesSetup(product, simpleConfig = {}, options = {}) {
+        const { session = null } = options;
+        const variants = await Variant.find(
+            { product_id: product._id },
+            null,
+            { includeDeleted: false, session }
+        );
+
+        if (variants.length > 1) {
+            throw new AppError(
+                'Cannot use SIMPLE product type when product has multiple variants',
+                409,
+                'SIMPLE_PRODUCT_HAS_MULTIPLE_VARIANTS'
+            );
+        }
+
+        let variant = variants[0] || null;
+        const units = variant
+            ? await VariantUnit.find({ variant_id: variant._id }, null, { session })
+            : [];
+
+        if (units.length > 1) {
+            throw new AppError(
+                'Cannot use SIMPLE product type when product has multiple units',
+                409,
+                'SIMPLE_PRODUCT_HAS_MULTIPLE_UNITS'
+            );
+        }
+
+        const currentUnit = units[0] || null;
+        const config = this._resolveSimpleConfig(
+            simpleConfig,
+            currentUnit,
+            variant
+        );
+        const priceCache = this._buildSimplePriceCache(config);
+
+        if (!variant) {
+            variant = new Variant({
+                product_id: product._id,
+                sku: this._generateSimpleSku(product),
+                size: INTERNAL_SIMPLE_SIZE,
+                fabric_type: INTERNAL_SIMPLE_FABRIC_TYPE,
+                stock: {
+                    available: config.stock,
+                    reserved: 0,
+                    sold: 0,
+                },
+                status: 'ACTIVE',
+                ...priceCache,
+            });
+        } else {
+            variant.set({
+                sku: variant.sku || this._generateSimpleSku(product),
+                size: INTERNAL_SIMPLE_SIZE,
+                fabric_type: INTERNAL_SIMPLE_FABRIC_TYPE,
+                stock: {
+                    available: config.stock,
+                    reserved: variant.stock?.reserved || 0,
+                    sold: variant.stock?.sold || 0,
+                },
+                status: 'ACTIVE',
+                ...priceCache,
+            });
+        }
+
+        await variant.save({ session });
+
+        if (!currentUnit) {
+            const unit = new VariantUnit({
+                variant_id: variant._id,
+                unit_type: config.unit_type,
+                display_name: config.display_name,
+                pack_size: config.pack_size,
+                price_tiers: [
+                    {
+                        min_qty: 1,
+                        max_qty: null,
+                        unit_price: config.price,
+                    },
+                ],
+                min_order_qty: config.min_order_qty,
+                max_order_qty: config.max_order_qty,
+                qty_step: config.qty_step,
+                is_default: true,
+                currency: 'VND',
+            });
+
+            await unit.save({ session });
+        } else {
+            currentUnit.set({
+                unit_type: config.unit_type,
+                display_name: config.display_name,
+                pack_size: config.pack_size,
+                price_tiers: [
+                    {
+                        min_qty: 1,
+                        max_qty: null,
+                        unit_price: config.price,
+                    },
+                ],
+                min_order_qty: config.min_order_qty,
+                max_order_qty: config.max_order_qty,
+                qty_step: config.qty_step,
+                is_default: true,
+                currency: currentUnit.currency || 'VND',
+            });
+
+            await currentUnit.save({ session });
+        }
+
+        product.set(priceCache);
+        await product.save({ session });
+
+        return variant;
     }
 
     static _buildFieldChanges(before, after, fields) {

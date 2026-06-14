@@ -112,6 +112,7 @@ class OrderService {
                 product_id: cartItem.product_id,
                 variant_id: cartItem.variant_id,
                 unit_id: cartItem.unit_id,
+                product_type: cartItem.product_type || 'VARIABLE',
 
                 product_name: cartItem.product_name,
                 product_image: cartItem.product_image,

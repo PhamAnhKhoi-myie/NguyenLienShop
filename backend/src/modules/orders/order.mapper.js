@@ -277,6 +277,7 @@ class OrderMapper {
 
             product_name: item.product_name,
             product_image: item.product_image,
+            product_type: item.product_type || 'VARIABLE',
             variant_label: item.variant_label,
             sku: item.sku,
 
@@ -357,6 +358,7 @@ class OrderMapper {
 
         return items.map((item) => ({
             product_name: item.product_name,
+            product_type: item.product_type || 'VARIABLE',
             variant_label: item.variant_label,
             unit_label: item.unit_label,
             quantity: `${item.quantity_ordered} ${item.unit_label}`,

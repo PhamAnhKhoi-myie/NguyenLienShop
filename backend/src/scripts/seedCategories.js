@@ -72,6 +72,13 @@ const seedCategoriesData = [
             "Túi dùng cho mướp, bầu, bí, khổ qua và các loại quả dài, có kích thước dài hơn túi bao trái thông thường.",
         display_order: 10,
     },
+    {
+        name: "Sản phẩm khác",
+        slug: "san-pham-khac",
+        description:
+            "Các vật tư phụ trợ dùng trong vườn và đóng gói như dây thun, dây buộc, tem nhãn và dụng cụ nhỏ.",
+        display_order: 11,
+    },
 ];
 
 const seedCategories = async () => {

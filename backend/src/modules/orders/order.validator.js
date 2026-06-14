@@ -44,6 +44,7 @@ const orderItemSchema = z.object({
     product_id: objectIdSchema,
     variant_id: objectIdSchema,
     unit_id: objectIdSchema,
+    product_type: z.enum(['SIMPLE', 'VARIABLE']).default('VARIABLE'),
 
     product_name: z.string().min(1).max(200).trim(),
     product_image: z.string().url().optional(),

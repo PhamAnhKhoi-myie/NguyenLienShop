@@ -57,6 +57,16 @@ const productSchema = new mongoose.Schema(
             maxlength: [100, 'Brand must not exceed 100 characters'],
         },
 
+        product_type: {
+            type: String,
+            enum: {
+                values: ['SIMPLE', 'VARIABLE'],
+                message: 'Product type must be either SIMPLE or VARIABLE',
+            },
+            default: 'VARIABLE',
+            index: true,
+        },
+
 
         min_price: {
             type: Number,

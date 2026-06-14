@@ -52,8 +52,9 @@ function FieldRenderer({
     currentId,
     mode,
     initialData,
+    values,
 }) {
-    const fieldContext = { mode, initialData };
+    const fieldContext = { mode, initialData, values };
     const disabled = resolveFieldFlag(field.disabled, fieldContext);
     const readOnly = resolveFieldFlag(field.readOnly, fieldContext);
 
@@ -149,6 +150,7 @@ export default function AdminResourceForm({
         register,
         handleSubmit,
         reset,
+        watch,
         formState: { errors },
     } = useForm({
         resolver: zodResolver(form.schema),
@@ -160,23 +162,33 @@ export default function AdminResourceForm({
     }, [form, initialData, reset]);
 
     const currentId = initialData?.id || initialData?._id;
+    const values = watch();
 
     return (
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="grid gap-5 lg:grid-cols-2">
-                {form.fields.map((field) => (
-                    <div key={field.name} className={cn(field.className)}>
-                        <FieldRenderer
-                            field={field}
-                            register={register}
-                            error={errors[field.name]}
-                            optionData={optionData}
-                            currentId={currentId}
-                            mode={mode}
-                            initialData={initialData}
-                        />
-                    </div>
-                ))}
+                {form.fields.map((field) => {
+                    const fieldContext = { mode, initialData, values };
+
+                    if (resolveFieldFlag(field.hidden, fieldContext)) {
+                        return null;
+                    }
+
+                    return (
+                        <div key={field.name} className={cn(field.className)}>
+                            <FieldRenderer
+                                field={field}
+                                register={register}
+                                error={errors[field.name]}
+                                optionData={optionData}
+                                currentId={currentId}
+                                mode={mode}
+                                initialData={initialData}
+                                values={values}
+                            />
+                        </div>
+                    );
+                })}
             </div>
 
             {error && (

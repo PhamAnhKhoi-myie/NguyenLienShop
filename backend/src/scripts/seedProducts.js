@@ -16,6 +16,7 @@ const CATEGORY_SLUGS = {
     banana: "tui-bao-trai-chuoi",
     custardApple: "tui-bao-trai-na-mang-cau",
     longVegetable: "tui-bao-rau-cu-qua-dai",
+    supplies: "san-pham-khac",
 };
 
 const MATERIAL_NAMES_VI = {
@@ -1008,6 +1009,39 @@ const productsData = [
     },
 ];
 
+const simpleProductsData = [
+    {
+        name: "Dây thun đen",
+        slug: "day-thun-den",
+        category_slug: CATEGORY_SLUGS.supplies,
+        brand: "Nguyen Lien",
+        short_description:
+            "Dây thun đen đóng bịch, dùng để buộc túi bao trái cây, bó hàng và cố định vật tư nhỏ.",
+        description:
+            "Dây thun đen dạng bịch, phù hợp sử dụng trong vườn, đóng gói hàng và buộc các loại túi bao trái cây. Sản phẩm thuộc nhóm đơn giản, khách chỉ cần chọn số lượng bịch khi mua.",
+        keywords: [
+            "day thun den",
+            "day thun",
+            "thun buoc tui",
+            "vat tu nong nghiep",
+            "day buoc",
+        ],
+        price: 50000,
+        stock: 120,
+        unit_type: "PACK",
+        unit_display_name: "Bịch",
+        pack_size: 1,
+        min_order_qty: 1,
+        max_order_qty: null,
+        qty_step: 1,
+        sold_count: 18,
+        rating_avg: 4.6,
+        rating_count: 5,
+        is_best_seller: false,
+        status: "ACTIVE",
+    },
+];
+
 const toSkuPart = (value) => {
     return value
         .normalize("NFD")
@@ -1108,6 +1142,164 @@ const buildVariants = (product, promotionEnabled = false) => {
     ];
 };
 
+const normalizeBrand = (brand) =>
+    brand === "Nguyen Lien" ? "Nguyễn Liên" : brand;
+
+const buildSimpleSku = (product) => `NL-${toSkuPart(product.slug)}-SIMPLE`;
+
+const seedSimpleProduct = async (item, categoryId) => {
+    const existingProduct = await Product.findOne(
+        { slug: item.slug },
+        null,
+        { includeDeleted: true }
+    );
+
+    const productPayload = {
+        name: item.name,
+        slug: item.slug,
+        category_id: categoryId,
+        brand: normalizeBrand(item.brand),
+        product_type: "SIMPLE",
+        short_description: item.short_description,
+        description: item.description,
+        images: [],
+        search_keywords: item.keywords,
+        rating_avg: item.rating_avg || 0,
+        rating_count: item.rating_count || 0,
+        sold_count: item.sold_count || 0,
+        is_best_seller: Boolean(item.is_best_seller),
+        new_until: item.new_until || null,
+        status: item.status || "ACTIVE",
+        is_deleted: false,
+        deleted_at: null,
+    };
+
+    let product;
+
+    if (existingProduct) {
+        await Product.updateOne(
+            { _id: existingProduct._id },
+            { $set: productPayload },
+            { runValidators: true }
+        );
+
+        product = await Product.findById(existingProduct._id);
+        console.log(`↻ Updated simple product: ${item.slug}`);
+    } else {
+        product = await Product.create(productPayload);
+        console.log(`✓ Created simple product: ${item.slug}`);
+    }
+
+    const sku = buildSimpleSku(item);
+    const existingVariants = await Variant.find(
+        { product_id: product._id },
+        null,
+        { includeDeleted: true }
+    );
+    const matchingVariant =
+        existingVariants.find((variant) => variant.sku === sku) ||
+        existingVariants[0];
+    const variantPayload = {
+        product_id: product._id,
+        sku,
+        size: "Mặc định",
+        fabric_type: "Tiêu chuẩn",
+        stock: {
+            available: item.stock,
+            reserved: 0,
+            sold: item.sold_count || 0,
+        },
+        status: product.status,
+        is_deleted: false,
+        deleted_at: null,
+    };
+
+    let variant;
+
+    if (matchingVariant) {
+        await Variant.updateOne(
+            { _id: matchingVariant._id },
+            { $set: variantPayload },
+            { runValidators: true }
+        );
+
+        variant = await Variant.findById(matchingVariant._id);
+        console.log(`  ↻ Updated simple variant: ${sku}`);
+    } else {
+        variant = await Variant.create(variantPayload);
+        console.log(`  ✓ Created simple variant: ${sku}`);
+    }
+
+    const extraVariantIds = existingVariants
+        .filter((variantItem) => !variantItem._id.equals(variant._id))
+        .map((variantItem) => variantItem._id);
+
+    if (extraVariantIds.length > 0) {
+        await Variant.updateMany(
+            { _id: { $in: extraVariantIds } },
+            {
+                $set: {
+                    status: "INACTIVE",
+                    is_deleted: true,
+                    deleted_at: new Date(),
+                },
+            }
+        );
+    }
+
+    const priceTiers = [
+        {
+            min_qty: 1,
+            max_qty: null,
+            unit_price: item.price,
+        },
+    ];
+    VariantUnit.validatePriceTiers(priceTiers);
+
+    const unitPayload = {
+        variant_id: variant._id,
+        unit_type: item.unit_type,
+        display_name: item.unit_display_name,
+        pack_size: item.pack_size,
+        price_tiers: priceTiers,
+        promotion: buildPromotion(false),
+        min_order_qty: item.min_order_qty,
+        max_order_qty: item.max_order_qty,
+        qty_step: item.qty_step,
+        is_default: true,
+        currency: "VND",
+    };
+
+    const existingUnit = await VariantUnit.findOne({
+        variant_id: variant._id,
+        pack_size: item.pack_size,
+    });
+
+    if (existingUnit) {
+        await VariantUnit.updateOne(
+            { _id: existingUnit._id },
+            { $set: unitPayload },
+            { runValidators: true }
+        );
+
+        console.log(`    ↻ Updated simple unit: ${item.unit_display_name}`);
+    } else {
+        await VariantUnit.create(unitPayload);
+        console.log(`    ✓ Created simple unit: ${item.unit_display_name}`);
+    }
+
+    await VariantUnit.updateMany(
+        {
+            variant_id: variant._id,
+            pack_size: { $ne: item.pack_size },
+        },
+        { $set: { is_default: false } }
+    );
+
+    await Variant.updatePriceCache(variant._id);
+    await Product.updatePriceCache(product._id);
+};
+
 const seedProducts = async () => {
     console.log("== Seeding products ==");
 
@@ -1145,7 +1337,7 @@ const seedProducts = async () => {
             name: item.name,
             slug: item.slug,
             category_id: categoryId,
-            brand: item.brand === "Nguyen Lien" ? "Nguyễn Liên" : item.brand,
+            brand: normalizeBrand(item.brand),
             short_description: item.short_description,
             description: item.description,
             images: [],
@@ -1275,6 +1467,11 @@ const seedProducts = async () => {
         }
 
         await Product.updatePriceCache(product._id);
+    }
+
+    for (const item of simpleProductsData) {
+        const categoryId = categoryMap.get(item.category_slug);
+        await seedSimpleProduct(item, categoryId);
     }
 
     console.log("✓ Products seeding completed");

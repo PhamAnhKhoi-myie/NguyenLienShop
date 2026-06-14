@@ -250,6 +250,14 @@ export default function OrderDetailPage() {
                         <CardBody className="space-y-4">
                             {(order.items || []).map((item) => {
                                 const canReview = canReviewOrderItem(order, item);
+                                const isSimpleProduct =
+                                    item.product_type === 'SIMPLE';
+                                const itemMeta = isSimpleProduct
+                                    ? `${item.unit_label} ${translate('text.sku_faa83bbe')} ${item.sku}`
+                                    : `${item.variant_label} · ${item.unit_label} ${translate('text.sku_faa83bbe')} ${item.sku}`;
+                                const quantityLabel = isSimpleProduct
+                                    ? `${item.quantity_ordered} ${item.unit_label} x`
+                                    : `${item.quantity_ordered} ${translate('text.package_x')}`;
 
                                 return (
                                     <div
@@ -261,10 +269,10 @@ export default function OrderDetailPage() {
                                                 {item.product_name}
                                             </p>
                                             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                                {item.variant_label} · {item.unit_label} {translate('text.sku_faa83bbe')} {item.sku}
+                                                {itemMeta}
                                             </p>
                                             <p className="mt-1 text-sm text-[var(--color-text-main)]">
-                                                {item.quantity_ordered} {translate('text.package_x')} {formatCurrency(item.unit_price || 0)}
+                                                {quantityLabel} {formatCurrency(item.unit_price || 0)}
                                             </p>
                                             {item.is_on_sale && (
                                                 <p className="mt-1 text-sm text-[var(--color-text-muted)] line-through">
