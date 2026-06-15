@@ -311,6 +311,7 @@ class PaymentMapper {
         return (
             providerData.vnp_txn_ref ||
             providerData.stripe_pi_id ||
+            providerData.paypal_capture_id ||
             providerData.paypal_order_id ||
             providerData.payos_reference ||
             providerData.payos_payment_link_id ||
@@ -347,6 +348,10 @@ class PaymentMapper {
 
         if (provider === 'paypal') {
             filtered.paypal_order_id = providerData.paypal_order_id;
+            filtered.paypal_capture_id = providerData.paypal_capture_id;
+            filtered.paypal_status = providerData.paypal_status;
+            filtered.paypal_amount_value = providerData.paypal_amount_value;
+            filtered.paypal_currency = providerData.paypal_currency;
         }
 
         if (provider === 'payos') {
@@ -382,7 +387,13 @@ class PaymentMapper {
 
         if (provider === 'paypal') {
             filtered.paypal_order_id = providerData.paypal_order_id;
+            filtered.paypal_capture_id = providerData.paypal_capture_id;
+            filtered.paypal_checkout_url = providerData.paypal_checkout_url;
             filtered.paypal_payer_id = providerData.paypal_payer_id;
+            filtered.paypal_status = providerData.paypal_status;
+            filtered.paypal_amount_value = providerData.paypal_amount_value;
+            filtered.paypal_currency = providerData.paypal_currency;
+            filtered.paypal_exchange_rate = providerData.paypal_exchange_rate;
         }
 
         if (provider === 'payos') {

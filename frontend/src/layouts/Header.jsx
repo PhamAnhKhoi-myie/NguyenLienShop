@@ -1,5 +1,5 @@
 import { translate } from '../shared/i18n/index';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useClickOutside } from '../shared/hooks/useClickOutside';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -19,6 +19,7 @@ import { useUnreadNotificationCount } from '../features/notifications/hooks/useN
 import { ROUTES } from '../shared/constants/routes';
 import { ADMIN_ENTRY_ROLES } from '../shared/constants/roles';
 import { useCartSummary } from '../features/cart/hooks/useCart';
+import { useCategoryTree } from '../features/categories/hooks/useCategories';
 import LanguageSwitcher from '../shared/components/LanguageSwitcher';
 
 function getUserDisplayName(user) {
@@ -86,56 +87,164 @@ function hasAdminAccess(user) {
 }
 
 const navItemBaseClass =
-    'inline-flex h-10 items-center rounded-full px-4 text-sm font-semibold transition-colors duration-200';
+    'inline-flex h-11 items-center rounded-full border border-transparent px-4 text-sm font-semibold transition-colors duration-200';
 
-function getNavLinkClass({ isActive }) {
+function getNavItemClass(isActive) {
     return [
         navItemBaseClass,
         isActive
-            ? 'bg-[var(--color-primary)] text-white shadow-sm hover:bg-[var(--color-primary-hover)] hover:text-white'
-            : 'text-[var(--color-text-main)] hover:bg-green-50 hover:text-[var(--color-primary)]',
+            ? 'border-green-200 bg-green-100 text-[var(--color-primary)] shadow-sm hover:border-green-300 hover:bg-green-100 hover:text-[var(--color-primary-hover)]'
+            : 'text-[var(--color-text-main)] hover:border-green-100 hover:bg-green-50 hover:text-[var(--color-primary)]',
     ].join(' ');
+}
+
+function getNavLinkClass({ isActive }) {
+    return getNavItemClass(isActive);
 }
 
 function getStaticNavItemClass() {
     return [
         navItemBaseClass,
-        'cursor-default text-[var(--color-text-main)] hover:bg-green-50 hover:text-[var(--color-primary)]',
+        'cursor-default text-[var(--color-text-main)] hover:border-green-100 hover:bg-green-50 hover:text-[var(--color-primary)]',
     ].join(' ');
 }
 
-const navItems = [
+const SHOPEE_STORE_URL = 'https://shopee.vn/nguyenlien.shop';
+const SUPPLIES_CATEGORY_SLUG = 'san-pham-khac';
+const FRUIT_CATEGORY_SLUGS = [
+    'tui-bao-trai-xoai',
+    'tui-bao-trai-buoi',
+    'tui-bao-trai-oi',
+    'tui-bao-trai-thanh-long',
+    'tui-bao-trai-mit',
+    'tui-bao-trai-nho',
+    'tui-bao-nhan-vai',
+    'tui-bao-trai-chuoi',
+    'tui-bao-trai-na-mang-cau',
+    'tui-bao-rau-cu-qua-dai',
+];
+const BAG_TYPE_OPTIONS = [
+    { label: 'Túi lưới sọc', value: 'Túi lưới sọc' },
+    { label: 'Túi mùng', value: 'Túi mùng' },
+    { label: 'Vải không dệt', value: 'Vải không dệt' },
+    { label: 'Túi giấy kraft', value: 'Giấy kraft' },
+    { label: 'Túi xốp lưới', value: 'Xốp lưới' },
+];
+
+function buildProductsUrl(params = {}) {
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            searchParams.set(key, String(value));
+        }
+    });
+
+    if ([...searchParams.keys()].length > 0) {
+        searchParams.set('page', '1');
+    }
+
+    const query = searchParams.toString();
+    return query ? `${ROUTES.PRODUCTS}?${query}` : ROUTES.PRODUCTS;
+}
+
+function flattenCategoryTree(categories = []) {
+    return categories.flatMap((category) => [
+        category,
+        ...flattenCategoryTree(category.children || []),
+    ]);
+}
+
+function findCategoryBySlug(categories, slug) {
+    return flattenCategoryTree(categories).find(
+        (category) => category.slug === slug
+    );
+}
+
+function HeaderDropdown({ label, to, items = [], isActive = false }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const hasItems = items.length > 0;
+
+    const openDropdown = () => {
+        if (hasItems) {
+            setIsOpen(true);
+        }
+    };
+
+    const closeDropdown = () => {
+        setIsOpen(false);
+    };
+
+    const handleBlur = (event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+            closeDropdown();
+        }
+    };
+
+    return (
+        <div
+            className="relative flex h-16 items-center"
+            onMouseEnter={openDropdown}
+            onMouseLeave={closeDropdown}
+            onFocus={openDropdown}
+            onBlur={handleBlur}
+        >
+            <Link
+                to={to}
+                className={`${getNavItemClass(isActive || isOpen)} gap-1.5`}
+                aria-haspopup={hasItems ? 'menu' : undefined}
+                aria-expanded={hasItems ? isOpen : undefined}
+            >
+                <span>{label}</span>
+                {hasItems && (
+                    <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                )}
+            </Link>
+
+            {hasItems && (
+                <div
+                    className={[
+                        'absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-2 transition-all duration-150',
+                        isOpen
+                            ? 'visible translate-y-0 opacity-100'
+                            : 'invisible translate-y-1 opacity-0',
+                    ].join(' ')}
+                >
+                    <div className="overflow-hidden rounded-lg border border-green-100 bg-[var(--color-surface)] py-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
+                        {items.map((item) => (
+                            <Link
+                                key={`${item.label}-${item.to}`}
+                                to={item.to}
+                                className="block px-4 py-2.5 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-green-50 hover:text-[var(--color-primary)]"
+                            >
+                                {item.label}
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+const productMenuItems = [
     {
-        label: translate('text.product'),
+        label: 'Tất cả sản phẩm',
         to: ROUTES.PRODUCTS,
     },
     {
-        label: translate('text.bag_type'),
+        label: 'Sản phẩm mới',
+        to: buildProductsUrl({ badge: 'new', sortBy: 'newest' }),
     },
     {
-        label: translate('text.fruit_type'),
+        label: 'Sản phẩm bán chạy',
+        to: buildProductsUrl({ badge: 'best_seller', sortBy: 'popular' }),
     },
     {
-        label: translate('text.other_products'),
-    },
-    {
-        label: translate('text.home'),
-        to: ROUTES.HOME,
-        end: true,
-    },
-    {
-        label: translate('text.about'),
-    },
-    {
-        label: translate('text.blog'),
-        to: ROUTES.BLOGS,
-    },
-    {
-        label: translate('text.shopee_store'),
-    },
-    {
-        label: translate('text.google_maps'),
-        to: ROUTES.STORE_LOCATION,
+        label: 'Sản phẩm đang giảm giá',
+        to: buildProductsUrl({ badge: 'on_sale', sortBy: 'newest' }),
     },
 ];
 
@@ -255,6 +364,82 @@ function Header() {
         cart?.totals?.item_count ??
         cart?.items?.length ??
         0;
+    const categoryTreeQuery = useCategoryTree();
+    const categories = useMemo(
+        () => categoryTreeQuery.data?.data || [],
+        [categoryTreeQuery.data?.data]
+    );
+    const flatCategories = useMemo(
+        () => flattenCategoryTree(categories),
+        [categories]
+    );
+    const fruitMenuItems = useMemo(
+        () => [
+            { label: 'Tất cả loại trái cây', to: ROUTES.PRODUCTS },
+            ...FRUIT_CATEGORY_SLUGS
+                .map((slug) =>
+                    flatCategories.find((category) => category.slug === slug)
+                )
+                .filter(Boolean)
+                .map((category) => ({
+                    label: category.name,
+                    to: buildProductsUrl({ category_id: category.id }),
+                    categoryId: category.id,
+                })),
+        ],
+        [flatCategories]
+    );
+    const suppliesCategory = useMemo(
+        () => findCategoryBySlug(categories, SUPPLIES_CATEGORY_SLUG),
+        [categories]
+    );
+    const otherProductMenuItems = useMemo(
+        () => [
+            {
+                label: 'Tất cả sản phẩm khác',
+                to: buildProductsUrl({
+                    category_id: suppliesCategory?.id,
+                }),
+                categoryId: suppliesCategory?.id,
+            },
+            {
+                label: 'Dây thun đen',
+                to: buildProductsUrl({
+                    category_id: suppliesCategory?.id,
+                    search: 'day thun den',
+                }),
+                categoryId: suppliesCategory?.id,
+            },
+        ],
+        [suppliesCategory?.id]
+    );
+    const bagTypeMenuItems = useMemo(
+        () => [
+            { label: 'Tất cả loại túi', to: ROUTES.PRODUCTS },
+            ...BAG_TYPE_OPTIONS.map((option) => ({
+                label: option.label,
+                to: buildProductsUrl({ bag_type: option.value }),
+            })),
+        ],
+        []
+    );
+    const currentParams = new URLSearchParams(location.search);
+    const activeCategoryId = currentParams.get('category_id') || '';
+    const isProductsRoute = location.pathname === ROUTES.PRODUCTS;
+    const isBagTypeActive = isProductsRoute && Boolean(currentParams.get('bag_type'));
+    const isSuppliesActive =
+        isProductsRoute &&
+        Boolean(suppliesCategory?.id) &&
+        activeCategoryId === suppliesCategory.id;
+    const isFruitTypeActive =
+        isProductsRoute &&
+        !isSuppliesActive &&
+        fruitMenuItems.some((item) => item.categoryId === activeCategoryId);
+    const isProductNavActive =
+        isProductsRoute &&
+        !isBagTypeActive &&
+        !isFruitTypeActive &&
+        !isSuppliesActive;
 
     const closeAccountMenu = () => {
         setIsAccountOpen(false);
@@ -452,32 +637,68 @@ function Header() {
             </div>
             <div
                 className={[
-                    'fixed left-0 right-0 top-16 z-30 hidden h-12 overflow-hidden border-b border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm transition-transform duration-300 ease-out will-change-transform sm:block',
+                    'fixed left-0 right-0 top-16 z-30 hidden h-16 overflow-visible border-b border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm transition-transform duration-300 ease-out will-change-transform sm:block',
                     isNavVisible
                         ? 'translate-y-0'
                         : 'pointer-events-none -translate-y-full',
                 ].join(' ')}
             >
-                <nav className="mx-auto flex h-12 max-w-7xl items-center justify-center gap-3 px-4 text-sm font-medium">
-                    {navItems.map((item) =>
-                        item.to ? (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end={item.end}
-                                className={getNavLinkClass}
-                            >
-                                {item.label}
-                            </NavLink>
-                        ) : (
-                            <span
-                                key={item.label}
-                                className={getStaticNavItemClass()}
-                            >
-                                {item.label}
-                            </span>
-                        )
-                    )}
+                <nav className="mx-auto flex h-16 max-w-7xl items-center justify-center gap-3 px-4 text-sm font-medium">
+                    <HeaderDropdown
+                        label={translate('text.product')}
+                        to={ROUTES.PRODUCTS}
+                        items={productMenuItems}
+                        isActive={isProductNavActive}
+                    />
+
+                    <HeaderDropdown
+                        label={translate('text.bag_type')}
+                        to={ROUTES.PRODUCTS}
+                        items={bagTypeMenuItems}
+                        isActive={isBagTypeActive}
+                    />
+
+                    <HeaderDropdown
+                        label={translate('text.fruit_type')}
+                        to={ROUTES.PRODUCTS}
+                        items={fruitMenuItems}
+                        isActive={isFruitTypeActive}
+                    />
+
+                    <HeaderDropdown
+                        label={translate('text.other_products')}
+                        to={ROUTES.PRODUCTS}
+                        items={otherProductMenuItems}
+                        isActive={isSuppliesActive}
+                    />
+
+                    <NavLink to={ROUTES.HOME} end className={getNavLinkClass}>
+                        {translate('text.home')}
+                    </NavLink>
+
+                    <span className={getStaticNavItemClass()}>
+                        {translate('text.about')}
+                    </span>
+
+                    <NavLink to={ROUTES.BLOGS} className={getNavLinkClass}>
+                        {translate('text.blog')}
+                    </NavLink>
+
+                    <a
+                        href={SHOPEE_STORE_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={getNavItemClass(false)}
+                    >
+                        {translate('text.shopee_store')}
+                    </a>
+
+                    <NavLink
+                        to={ROUTES.STORE_LOCATION}
+                        className={getNavLinkClass}
+                    >
+                        {translate('text.google_maps')}
+                    </NavLink>
                 </nav>
             </div>
         </header>

@@ -11,6 +11,9 @@ export const uploadApi = {
             invalidate: true,
         }),
 
+    createAvatarSignature: () =>
+        axiosClient.post('/uploads/cloudinary/avatar-signature', {}),
+
     uploadToCloudinary: async ({ file, signatureData }) => {
         const formData = new FormData();
 
@@ -46,13 +49,19 @@ export const uploadApi = {
         };
     },
 
-    uploadAvatar: (file) =>
-        uploadApi.uploadImage({
+    uploadAvatar: async (file) => {
+        const signatureResponse = await uploadApi.createAvatarSignature();
+
+        const cloudinaryResult = await uploadApi.uploadToCloudinary({
             file,
-            asset_type: 'avatar',
-            folder: 'avatars',
-            tags: ['avatar', 'user'],
-        }),
+            signatureData: signatureResponse.data,
+        });
+
+        return {
+            url: cloudinaryResult.secure_url,
+            public_id: cloudinaryResult.public_id,
+        };
+    },
 
     uploadBanner: (file) =>
         uploadApi.uploadImage({

@@ -113,7 +113,7 @@ const discountSchema = z.object({
 
 
 const paymentSchema = z.object({
-    method: z.enum(['COD', 'VNPAY', 'PAYOS', 'MOMO', 'CARD']),
+    method: z.enum(['COD', 'VNPAY', 'PAYPAL', 'PAYOS', 'MOMO', 'CARD']),
     status: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).default('PENDING'),
     paid_at: z.date().optional().nullable(),
     refunded_at: z.date().optional().nullable(),
@@ -153,7 +153,7 @@ const createOrderBodySchema = z.object({
     address_snapshot: addressSnapshotSchema,
 
     payment_method: z
-        .enum(['COD', 'VNPAY', 'PAYOS', 'MOMO', 'CARD'])
+        .enum(['COD', 'VNPAY', 'PAYPAL', 'PAYOS', 'MOMO', 'CARD'])
         .default('COD'),
 
     customer_notes: z

@@ -96,11 +96,8 @@ const seedBanners = async () => {
         };
 
         if (existing) {
-            await Banner.updateOne(
-                { _id: existing._id },
-                { $set: bannerPayload },
-                { runValidators: true }
-            );
+            Object.assign(existing, bannerPayload);
+            await existing.save();
 
             console.log(
                 `[banners] Updated: ${item.location} #${item.sort_order}`

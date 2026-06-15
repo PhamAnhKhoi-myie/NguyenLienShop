@@ -1776,7 +1776,7 @@ const swaggerSpec = {
             OrderPayment: {
                 type: "object",
                 properties: {
-                    method: { type: "string", enum: ["COD", "VNPAY", "PAYOS", "MOMO", "CARD"], example: "COD" },
+                    method: { type: "string", enum: ["COD", "VNPAY", "PAYPAL", "PAYOS", "MOMO", "CARD"], example: "COD" },
                     status: { type: "string", enum: ["PENDING", "PAID", "FAILED", "REFUNDED"], example: "PENDING" },
                     paid_at: { type: "string", format: "date-time", nullable: true },
                     refunded_at: { type: "string", format: "date-time", nullable: true },
@@ -1964,7 +1964,7 @@ const swaggerSpec = {
                     },
                     payment_method: {
                         type: "string",
-                        enum: ["COD", "VNPAY", "PAYOS", "MOMO", "CARD"],
+                        enum: ["COD", "VNPAY", "PAYPAL", "PAYOS", "MOMO", "CARD"],
                         description: "Payment method",
                         example: "COD",
                     },
@@ -2299,6 +2299,9 @@ const swaggerSpec = {
                                     stripe_pi_id: { type: "string", nullable: true },
                                     stripe_status: { type: "string", nullable: true },
                                     paypal_order_id: { type: "string", nullable: true },
+                                    paypal_capture_id: { type: "string", nullable: true },
+                                    paypal_checkout_url: { type: "string", nullable: true },
+                                    paypal_status: { type: "string", nullable: true },
                                 },
                             },
                             can_retry: { type: "boolean", example: false, description: "Can customer retry payment" },
@@ -2321,7 +2324,7 @@ const swaggerSpec = {
                     },
                     provider: {
                         type: "string",
-                        enum: ["vnpay", "payos"],
+                        enum: ["vnpay", "paypal", "payos"],
                         default: "vnpay",
                         description: "Payment provider",
                     },

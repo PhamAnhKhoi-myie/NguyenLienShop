@@ -1,7 +1,7 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
 const orderStatusEnum = ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "FAILED", "CANCELED"];
 const paymentStatusEnum = ["PENDING", "PAID", "FAILED", "REFUNDED"];
-const paymentMethodEnum = ["COD", "VNPAY", "PAYOS", "MOMO", "CARD"];
+const paymentMethodEnum = ["COD", "VNPAY", "PAYPAL", "PAYOS", "MOMO", "CARD"];
 
 module.exports = {
     OrderAddressSnapshot: {

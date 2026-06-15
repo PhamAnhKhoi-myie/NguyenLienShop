@@ -43,7 +43,7 @@ const addressFormSchema = z.object({
     ward_code: z.string().trim().min(1, translate('text.please_select_ward_commune')),
     detail: z.string().trim().min(5, translate('text.specific_address_of_at_least_5_characters')),
     note: z.string().trim().max(500, translate('text.note_maximum_500_characters')).optional(),
-    payment_method: z.enum(['COD', 'VNPAY', 'PAYOS']),
+    payment_method: z.enum(['COD', 'VNPAY', 'PAYPAL', 'PAYOS']),
 });
 
 const emptyAddressValues = {
@@ -58,6 +58,7 @@ const emptyAddressValues = {
 
 const onlinePaymentProviders = {
     VNPAY: 'vnpay',
+    PAYPAL: 'paypal',
     PAYOS: 'payos',
 };
 
@@ -139,6 +140,7 @@ function AddressForm({
     isSaving,
     isOrdering,
     isVNPayEnabled,
+    isPayPalEnabled,
     isPayOSEnabled,
 }) {
     const {
@@ -168,6 +170,7 @@ function AddressForm({
     const paymentMethodField = register('payment_method');
     const isSelectedPaymentDisabled =
         (paymentMethod === 'VNPAY' && !isVNPayEnabled) ||
+        (paymentMethod === 'PAYPAL' && !isPayPalEnabled) ||
         (paymentMethod === 'PAYOS' && !isPayOSEnabled);
 
     const handleSave = async () => {
@@ -264,6 +267,9 @@ function AddressForm({
                 <option value="COD">{translate('text.cod')}</option>
                 <option value="VNPAY" disabled={!isVNPayEnabled}>
                     {isVNPayEnabled ? 'VNPAY' : translate('text.vnpay_temporarily_disabled')}
+                </option>
+                <option value="PAYPAL" disabled={!isPayPalEnabled}>
+                    {isPayPalEnabled ? translate('text.paypal') : translate('text.paypal_temporarily_disabled')}
                 </option>
                 <option value="PAYOS" disabled={!isPayOSEnabled}>
                     {isPayOSEnabled ? 'PayOS' : translate('text.payos_temporarily_disabled')}
@@ -461,6 +467,14 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (values.payment_method === 'PAYPAL' && !ENV.PAYPAL_CHECKOUT_ENABLED) {
+            setNotice({
+                type: 'error',
+                message: translate('text.paypal_is_temporarily_disabled'),
+            });
+            return;
+        }
+
         try {
             const validation = await validateCartMutation.mutateAsync();
             if (validation.data?.isValid === false) {
@@ -521,6 +535,14 @@ export default function CheckoutPage() {
                 setNotice({
                     type: 'error',
                     message: translate('text.payos_is_temporarily_disabled'),
+                });
+                return;
+            }
+
+            if (error.raw?.code === 'PAYPAL_CHECKOUT_DISABLED') {
+                setNotice({
+                    type: 'error',
+                    message: translate('text.paypal_is_temporarily_disabled'),
                 });
                 return;
             }
@@ -681,6 +703,7 @@ export default function CheckoutPage() {
                                 }
                                 isOrdering={isBusy}
                                 isVNPayEnabled={ENV.VNPAY_CHECKOUT_ENABLED}
+                                isPayPalEnabled={ENV.PAYPAL_CHECKOUT_ENABLED}
                                 isPayOSEnabled={ENV.PAYOS_CHECKOUT_ENABLED}
                             />
                         </CardBody>
@@ -850,7 +873,7 @@ export default function CheckoutPage() {
                                 <div>
                                     <p className="font-semibold text-[var(--color-text-main)]"> {translate('text.cod_and_online_payment')} </p>
                                     <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                        {ENV.VNPAY_CHECKOUT_ENABLED || ENV.PAYOS_CHECKOUT_ENABLED
+                                        {ENV.VNPAY_CHECKOUT_ENABLED || ENV.PAYPAL_CHECKOUT_ENABLED || ENV.PAYOS_CHECKOUT_ENABLED
                                             ? translate('text.cod_creates_orders_directly_online_payment_will_redirect_to_the_selected_provider')
                                             : translate('text.online_payment_is_temporarily_disabled')}
                                     </p>

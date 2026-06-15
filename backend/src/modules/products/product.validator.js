@@ -216,6 +216,8 @@ const getProductsSchema = z.object({
 
     search: z.string().max(100).optional(),
 
+    bag_type: z.string().trim().max(100).optional(),
+
     sortBy: z
         .enum(['popular', 'rating', 'price_asc', 'price_desc', 'newest'])
         .default('newest'),

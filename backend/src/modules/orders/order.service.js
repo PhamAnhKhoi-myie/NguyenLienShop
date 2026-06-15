@@ -48,12 +48,14 @@ class OrderService {
 
         const paymentMethod = shippingData?.payment_method || 'COD';
 
-        if (paymentMethod === 'VNPAY') {
-            assertPaymentProviderEnabled('vnpay');
-        }
+        const onlineProviderByMethod = {
+            VNPAY: 'vnpay',
+            PAYPAL: 'paypal',
+            PAYOS: 'payos',
+        };
 
-        if (paymentMethod === 'PAYOS') {
-            assertPaymentProviderEnabled('payos');
+        if (onlineProviderByMethod[paymentMethod]) {
+            assertPaymentProviderEnabled(onlineProviderByMethod[paymentMethod]);
         }
 
         const session = await mongoose.startSession();
@@ -190,7 +192,10 @@ class OrderService {
                 }
             }
 
-            const paymentExpiresAt = ['VNPAY', 'PAYOS'].includes(paymentMethod)
+            const paymentExpiresAt = Object.prototype.hasOwnProperty.call(
+                onlineProviderByMethod,
+                paymentMethod
+            )
                 ? new Date(Date.now() + 15 * 60000)
                 : undefined;
 

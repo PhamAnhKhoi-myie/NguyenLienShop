@@ -19,6 +19,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
             status: filters.status,
             badge: filters.badge,
             search: filters.search,
+            bag_type: filters.bag_type,
             sortBy: filters.sortBy,
         }
     );

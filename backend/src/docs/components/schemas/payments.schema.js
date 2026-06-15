@@ -17,7 +17,13 @@ module.exports = {
             stripe_status: { type: "string", nullable: true, example: "succeeded" },
             stripe_client_secret: { type: "string", nullable: true, example: "***" },
             paypal_order_id: { type: "string", nullable: true, example: "EC-123456789" },
+            paypal_capture_id: { type: "string", nullable: true, example: "8MC585209K746392H" },
+            paypal_checkout_url: { type: "string", format: "uri", nullable: true },
             paypal_payer_id: { type: "string", nullable: true, example: "PAYER123" },
+            paypal_status: { type: "string", nullable: true, example: "COMPLETED" },
+            paypal_amount_value: { type: "string", nullable: true, example: "12.50" },
+            paypal_currency: { type: "string", nullable: true, example: "USD" },
+            paypal_exchange_rate: { type: "number", nullable: true, example: 25000 },
             payos_order_code: { type: "integer", nullable: true, example: 123456789012 },
             payos_payment_link_id: { type: "string", nullable: true, example: "124c33293c934a85be5b7f8761a27a07" },
             payos_checkout_url: { type: "string", nullable: true, example: "https://pay.payos.vn/web/124c33293c934a85be5b7f8761a27a07" },
@@ -197,7 +203,7 @@ module.exports = {
         required: ["order_id"],
         properties: {
             order_id: { type: "string", pattern: objectIdPattern, example: "507f1f77bcf86cd799439020" },
-            provider: { type: "string", enum: ["vnpay", "payos"], default: "vnpay", example: "payos" },
+            provider: { type: "string", enum: ["vnpay", "paypal", "payos"], default: "vnpay", example: "paypal" },
         },
     },
 

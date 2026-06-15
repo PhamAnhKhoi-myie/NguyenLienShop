@@ -33,6 +33,7 @@ export default function ProductListPage() {
             search: searchParams.get('search') || '',
             category_id: searchParams.get('category_id') || '',
             badge: searchParams.get('badge') || '',
+            bag_type: searchParams.get('bag_type') || '',
             sortBy: searchParams.get('sortBy') || 'newest',
             status: 'ACTIVE',
         }),

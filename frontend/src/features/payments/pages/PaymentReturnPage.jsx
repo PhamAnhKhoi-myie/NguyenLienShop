@@ -173,7 +173,11 @@ export default function PaymentReturnPage() {
     const isLoading = orderQuery.isLoading || activePaymentQuery.isLoading;
     const paymentError = activePaymentQuery.error?.message;
     const orderError = orderQuery.error?.message;
-    const providerFallbackLabel = provider === 'payos' ? 'PayOS' : 'VNPAY';
+    const providerFallbackLabel = {
+        payos: 'PayOS',
+        paypal: 'PayPal',
+        vnpay: 'VNPAY',
+    }[provider] || provider;
     const providerTransactionRef = txnRef || paymentLinkId || providerOrderCode;
 
     const handleRefetch = () => {

@@ -49,6 +49,11 @@ router.post(
     PaymentController.handlePayPalWebhook
 );
 
+router.get(
+    '/paypal-return',
+    PaymentController.handlePayPalReturn
+);
+
 router.post(
     '/webhook/payos',
     validate({ body: payosWebhookBodySchema }),

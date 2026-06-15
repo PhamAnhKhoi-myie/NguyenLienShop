@@ -2769,7 +2769,7 @@ describe("swaggerSpec", () => {
         const createInput = swaggerSpec.components.schemas.CreatePaymentInput;
         const payment = swaggerSpec.components.schemas.Payment;
 
-        expect(createInput.properties.provider.enum).toEqual(["vnpay", "payos"]);
+        expect(createInput.properties.provider.enum).toEqual(["vnpay", "paypal", "payos"]);
         expect(payment.properties.provider.enum).toEqual([
             "vnpay",
             "stripe",

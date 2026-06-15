@@ -50,6 +50,7 @@ function CategoryDropdown({ value, options, isLoading, onChange }) {
     const handleSelect = (nextValue) => {
         onChange({
             category_id: nextValue || null,
+            bag_type: null,
             page: 1,
         });
         setIsOpen(false);

@@ -22,6 +22,9 @@ const SIMPLE_PRODUCT_FIELD_KEYS = [
     'simple_qty_step',
 ];
 
+const escapeRegExp = (value) =>
+    String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 class ProductService {
     static async createProduct(data, actorId = null, metadata = {}) {
         const {
@@ -163,6 +166,30 @@ class ProductService {
 
         if (filters.status) {
             query.status = filters.status;
+        }
+
+        const bagType = filters.bag_type?.trim();
+        if (bagType) {
+            const variants = await Variant.find(
+                {
+                    fabric_type: {
+                        $regex: escapeRegExp(bagType),
+                        $options: 'i',
+                    },
+                    status: 'ACTIVE',
+                },
+                'product_id'
+            ).lean();
+
+            query._id = {
+                $in: [
+                    ...new Set(
+                        variants.map((variant) =>
+                            variant.product_id.toString()
+                        )
+                    ),
+                ],
+            };
         }
 
 

@@ -489,8 +489,10 @@ class PaymentService {
         await this._verifyPayPalWebhook(webhookEvent, webhookHeaders);
 
         const { event_type, resource } = webhookEvent;
+        const paypalOrderId = this._extractPayPalOrderId(resource);
+        const paypalCaptureId = this._extractPayPalCaptureId(resource);
 
-        if (!event_type || !resource?.id) {
+        if (!event_type || (!paypalOrderId && !paypalCaptureId)) {
             throw new AppError(
                 'Invalid PayPal webhook payload',
                 400,
@@ -498,10 +500,20 @@ class PaymentService {
             );
         }
 
+        const lookup = [];
+
+        if (paypalOrderId) {
+            lookup.push({ 'provider_data.paypal_order_id': paypalOrderId });
+        }
+
+        if (paypalCaptureId) {
+            lookup.push({ 'provider_data.paypal_capture_id': paypalCaptureId });
+        }
+
         const payment = await Payment.findOne({
-            'provider_data.paypal_order_id': resource.id,
             provider: 'paypal',
             is_deleted: false,
+            $or: lookup,
         });
 
         if (!payment) {
@@ -516,15 +528,25 @@ class PaymentService {
             event_type === 'CHECKOUT.ORDER.COMPLETED' ||
             event_type === 'PAYMENT.CAPTURE.COMPLETED'
         ) {
+            await this._assertPayPalAmountMatches(payment, resource, metadata);
+
             return await this._processPaymentSuccess(payment, {
-                paypal_order_id: resource.id,
+                paypal_order_id: paypalOrderId || payment.provider_data?.paypal_order_id,
+                paypal_capture_id: paypalCaptureId,
+                paypal_payer_id: resource.payer?.payer_id,
                 paypal_status: resource.status,
-                raw_return: webhookEvent,
+                ...this._getPayPalProviderAmount(payment, resource),
+                raw_ipn: webhookEvent,
                 audit_action: AUDIT_ACTIONS.PAYPAL_WEBHOOK_PAYMENT,
                 audit_metadata: metadata,
             });
-        } else if (event_type === 'PAYMENT.CAPTURE.DENIED') {
+        } else if (
+            event_type === 'PAYMENT.CAPTURE.DENIED' ||
+            event_type === 'PAYMENT.CAPTURE.REFUNDED' ||
+            event_type === 'CHECKOUT.ORDER.VOIDED'
+        ) {
             return await this._processPaymentFailure(payment, {
+                paypal_capture_id: paypalCaptureId,
                 paypal_status: resource.status,
                 raw_ipn: webhookEvent,
                 audit_action: AUDIT_ACTIONS.PAYPAL_WEBHOOK_PAYMENT,
@@ -534,7 +556,109 @@ class PaymentService {
 
         return {
             status: 'pending',
-            transactionRef: resource.id,
+            transactionRef: paypalCaptureId || paypalOrderId,
+        };
+    }
+
+    static async handlePayPalReturn(returnData = {}, metadata = {}) {
+        const paypalOrderId = returnData.token || returnData.orderId;
+
+        if (!paypalOrderId) {
+            throw new AppError(
+                'PayPal return token is missing',
+                400,
+                'PAYPAL_RETURN_TOKEN_MISSING'
+            );
+        }
+
+        const payment = await Payment.findOne({
+            'provider_data.paypal_order_id': paypalOrderId,
+            provider: 'paypal',
+            is_deleted: false,
+        });
+
+        if (!payment) {
+            throw new AppError(
+                'Payment not found',
+                404,
+                'PAYMENT_NOT_FOUND'
+            );
+        }
+
+        if (payment.status === 'paid') {
+            return {
+                isSuccess: true,
+                status: 'paid',
+                orderId: payment.order_id.toString(),
+                paymentId: payment._id.toString(),
+                transactionRef:
+                    payment.provider_data?.paypal_capture_id ||
+                    payment.provider_data?.paypal_order_id,
+                code: 'ALREADY_PAID',
+            };
+        }
+
+        if (payment.status !== 'pending') {
+            return {
+                isSuccess: false,
+                status: payment.status,
+                orderId: payment.order_id.toString(),
+                paymentId: payment._id.toString(),
+                transactionRef: payment.provider_data?.paypal_order_id,
+                code: 'PAYMENT_NOT_PENDING',
+            };
+        }
+
+        const capture = await this._capturePayPalOrder(paypalOrderId);
+        await this._assertPayPalAmountMatches(payment, capture, metadata);
+
+        const captureId = this._extractPayPalCaptureId(capture);
+        const payerId =
+            capture.payer?.payer_id ||
+            capture.payment_source?.paypal?.account_id ||
+            returnData.PayerID;
+        const isSuccess = capture.status === 'COMPLETED';
+        const providerAmount = this._getPayPalProviderAmount(payment, capture);
+
+        if (isSuccess) {
+            const result = await this._processPaymentSuccess(payment, {
+                paypal_order_id: paypalOrderId,
+                paypal_capture_id: captureId,
+                paypal_payer_id: payerId,
+                paypal_status: capture.status,
+                ...providerAmount,
+                raw_return: capture,
+                audit_action: AUDIT_ACTIONS.PAYPAL_WEBHOOK_PAYMENT,
+                audit_metadata: metadata,
+            });
+
+            return {
+                isSuccess: true,
+                status: result.status,
+                orderId: result.orderId,
+                paymentId: result.paymentId,
+                transactionRef: captureId || paypalOrderId,
+                code: capture.status,
+            };
+        }
+
+        const result = await this._processPaymentFailure(payment, {
+            paypal_capture_id: captureId,
+            paypal_status: capture.status,
+            failure_reason: 'PAYPAL_PAYMENT_REJECTED',
+            failure_message: `PayPal order ended with status: ${capture.status}`,
+            raw_return: capture,
+            audit_action: AUDIT_ACTIONS.PAYPAL_WEBHOOK_PAYMENT,
+            audit_metadata: metadata,
+        });
+
+        return {
+            isSuccess: false,
+            status: result.status,
+            orderId: payment.order_id.toString(),
+            paymentId: payment._id.toString(),
+            transactionRef: captureId || paypalOrderId,
+            code: capture.status,
         };
     }
 
@@ -671,6 +795,18 @@ class PaymentService {
                             providerData.stripe_status,
                         'provider_data.paypal_status':
                             providerData.paypal_status,
+                        'provider_data.paypal_order_id':
+                            providerData.paypal_order_id,
+                        'provider_data.paypal_capture_id':
+                            providerData.paypal_capture_id,
+                        'provider_data.paypal_payer_id':
+                            providerData.paypal_payer_id,
+                        'provider_data.paypal_amount_value':
+                            providerData.paypal_amount_value,
+                        'provider_data.paypal_currency':
+                            providerData.paypal_currency,
+                        'provider_data.paypal_exchange_rate':
+                            providerData.paypal_exchange_rate,
                         'provider_data.payos_order_code':
                             providerData.payos_order_code,
                         'provider_data.payos_payment_link_id':
@@ -748,6 +884,7 @@ class PaymentService {
                             from: null,
                             to: providerData.vnp_TxnRef ||
                                 providerData.stripe_pi_id ||
+                                providerData.paypal_capture_id ||
                                 providerData.paypal_order_id ||
                                 providerData.payos_reference ||
                                 providerData.payos_payment_link_id ||
@@ -767,6 +904,7 @@ class PaymentService {
                 transactionRef:
                     providerData.vnp_TxnRef ||
                     providerData.stripe_pi_id ||
+                    providerData.paypal_capture_id ||
                     providerData.paypal_order_id ||
                     providerData.payos_reference ||
                     providerData.payos_payment_link_id ||
@@ -806,8 +944,11 @@ class PaymentService {
                         failure_message:
                             failureData.failure_message ||
                             `Payment failed with code: ${failureData.vnp_ResponseCode || failureData.stripe_status || failureData.paypal_status || failureData.payos_status || 'UNKNOWN'}`,
+                        'provider_data.paypal_status': failureData.paypal_status,
+                        'provider_data.paypal_capture_id': failureData.paypal_capture_id,
                         'provider_data.payos_status': failureData.payos_status,
                         raw_ipn: failureData.raw_ipn,
+                        raw_return: failureData.raw_return,
                     },
                     $unset: {
                         expires_at: 1,
@@ -1042,6 +1183,17 @@ class PaymentService {
                 delete providerData.payos_status;
                 delete providerData.payos_reference;
                 delete providerData.payos_transaction_date_time;
+            }
+
+            if (payment.provider === 'paypal') {
+                delete providerData.paypal_order_id;
+                delete providerData.paypal_capture_id;
+                delete providerData.paypal_checkout_url;
+                delete providerData.paypal_payer_id;
+                delete providerData.paypal_status;
+                delete providerData.paypal_amount_value;
+                delete providerData.paypal_currency;
+                delete providerData.paypal_exchange_rate;
             }
 
             const updatedPayment = await Payment.findOneAndUpdate(
@@ -1861,6 +2013,242 @@ class PaymentService {
             : 'https://api-m.sandbox.paypal.com';
     }
 
+    static _getPayPalCurrency() {
+        return String(process.env.PAYPAL_CURRENCY || 'USD')
+            .trim()
+            .toUpperCase();
+    }
+
+    static _buildPayPalAmount(payment) {
+        const paypalCurrency = this._getPayPalCurrency();
+        const paymentCurrency = String(payment.currency || 'VND').toUpperCase();
+        const amount = Number(payment.amount);
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+            throw new AppError(
+                'Invalid payment amount for PayPal',
+                500,
+                'INVALID_PAYMENT_DATA'
+            );
+        }
+
+        if (paymentCurrency === paypalCurrency) {
+            return {
+                currency: paypalCurrency,
+                value: this._formatPayPalAmount(amount, paypalCurrency),
+                exchangeRate: null,
+            };
+        }
+
+        if (paymentCurrency === 'VND' && paypalCurrency === 'USD') {
+            const exchangeRate = Number(process.env.PAYPAL_VND_PER_USD);
+
+            if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
+                throw new AppError(
+                    'PayPal VND to USD exchange rate config is missing',
+                    500,
+                    'PAYPAL_EXCHANGE_RATE_MISSING'
+                );
+            }
+
+            return {
+                currency: paypalCurrency,
+                value: this._formatPayPalAmount(amount / exchangeRate, paypalCurrency),
+                exchangeRate,
+            };
+        }
+
+        throw new AppError(
+            `PayPal currency conversion from ${paymentCurrency} to ${paypalCurrency} is not configured`,
+            400,
+            'PAYPAL_UNSUPPORTED_CURRENCY'
+        );
+    }
+
+    static _formatPayPalAmount(amount, currency) {
+        const zeroDecimalCurrencies = new Set(['HUF', 'JPY', 'TWD']);
+        const normalizedCurrency = String(currency || '').toUpperCase();
+
+        if (zeroDecimalCurrencies.has(normalizedCurrency)) {
+            return String(Math.round(amount));
+        }
+
+        return (Math.ceil(amount * 100) / 100).toFixed(2);
+    }
+
+    static _extractPayPalApprovalUrl(paypalOrder) {
+        const links = Array.isArray(paypalOrder?.links) ? paypalOrder.links : [];
+        const approvalLink = links.find((link) =>
+            ['approve', 'payer-action'].includes(String(link.rel || '').toLowerCase())
+        );
+
+        return approvalLink?.href || null;
+    }
+
+    static _buildPayPalDescription(order) {
+        return `NguyenLien ${order.order_code || order._id.toString()}`.slice(0, 127);
+    }
+
+    static _buildPayPalReturnUrl(type, payment) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const backendUrl =
+            process.env.BACKEND_URL ||
+            `http://localhost:${process.env.PORT || 5000}`;
+        const baseUrl = type === 'cancel'
+            ? process.env.PAYPAL_CANCEL_URL || `${frontendUrl}/payment-return`
+            : process.env.PAYPAL_RETURN_URL || `${backendUrl}/api/v1/payments/paypal-return`;
+
+        return this._appendUrlParams(baseUrl, {
+            provider: 'paypal',
+            status: type === 'cancel' ? 'failed' : undefined,
+            code: type === 'cancel' ? 'CANCELLED' : undefined,
+            order_id: payment.order_id.toString(),
+            payment_id: payment._id.toString(),
+        });
+    }
+
+    static async _capturePayPalOrder(paypalOrderId) {
+        const accessToken = await this._getPayPalAccessToken();
+        const paypalApiBaseUrl = this._getPayPalApiBaseUrl();
+        const response = await fetch(
+            `${paypalApiBaseUrl}/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}/capture`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'PayPal-Request-Id': `capture-${paypalOrderId}`,
+                },
+            }
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            logger.error({
+                event: 'paypal_capture_order_failed',
+                paypal_order_id: paypalOrderId,
+                status: response.status,
+                response: errorText,
+            });
+
+            throw new AppError(
+                'PayPal capture failed',
+                502,
+                'PAYPAL_CAPTURE_FAILED'
+            );
+        }
+
+        return await response.json();
+    }
+
+    static _extractPayPalOrderId(resource = {}) {
+        if (resource.amount) {
+            return resource.supplementary_data?.related_ids?.order_id || null;
+        }
+
+        return (
+            resource.supplementary_data?.related_ids?.order_id ||
+            resource.purchase_units?.[0]?.payments?.captures?.[0]?.supplementary_data?.related_ids?.order_id ||
+            resource.id ||
+            null
+        );
+    }
+
+    static _extractPayPalCaptureId(resource = {}) {
+        return (
+            resource.purchase_units?.[0]?.payments?.captures?.[0]?.id ||
+            (String(resource?.id || '').startsWith('CAPTURE-') ? resource.id : null) ||
+            (resource?.amount ? resource.id : null)
+        );
+    }
+
+    static _getPayPalProviderAmount(payment, resource = {}) {
+        const capture =
+            resource.purchase_units?.[0]?.payments?.captures?.[0] ||
+            resource;
+        const amount = capture?.amount || resource.purchase_units?.[0]?.amount;
+        const providerData = this._getProviderDataObject(payment.provider_data);
+
+        return {
+            paypal_amount_value:
+                amount?.value ||
+                providerData.paypal_amount_value ||
+                null,
+            paypal_currency:
+                amount?.currency_code ||
+                providerData.paypal_currency ||
+                null,
+            paypal_exchange_rate:
+                providerData.paypal_exchange_rate ||
+                null,
+        };
+    }
+
+    static async _assertPayPalAmountMatches(payment, resource = {}, metadata = {}) {
+        const providerData = this._getProviderDataObject(payment.provider_data);
+        const received = this._getPayPalProviderAmount(payment, resource);
+        const fallbackExpected = (!providerData.paypal_currency || !providerData.paypal_amount_value)
+            ? this._buildPayPalAmount(payment)
+            : null;
+        const expectedCurrency =
+            providerData.paypal_currency ||
+            fallbackExpected?.currency;
+        const expectedAmount =
+            providerData.paypal_amount_value ||
+            fallbackExpected?.value;
+
+        if (!received.paypal_amount_value || !received.paypal_currency) {
+            return true;
+        }
+
+        const receivedAmount = Number(received.paypal_amount_value);
+        const normalizedReceived = receivedAmount.toFixed(2);
+        const normalizedExpected = Number(expectedAmount).toFixed(2);
+        const isMatch =
+            received.paypal_currency === expectedCurrency &&
+            normalizedReceived === normalizedExpected;
+
+        if (isMatch) {
+            return true;
+        }
+
+        await Payment.updateOne(
+            { _id: payment._id },
+            {
+                $set: {
+                    verification_status: 'failed',
+                    failure_reason: 'AMOUNT_MISMATCH',
+                    failure_code: 'FRAUD_ATTEMPT',
+                    failure_message:
+                        `Expected ${expectedAmount} ${expectedCurrency}, received ${received.paypal_amount_value} ${received.paypal_currency}`,
+                    webhook_verified_at: new Date(),
+                },
+            }
+        );
+
+        await this._createPaymentAuditLog({
+            action: AUDIT_ACTIONS.PAYMENT_WEBHOOK_AMOUNT_MISMATCH,
+            payment,
+            metadata,
+            changes: {
+                amount: {
+                    from: `${expectedAmount} ${expectedCurrency}`,
+                    to: `${received.paypal_amount_value} ${received.paypal_currency}`,
+                },
+                provider: {
+                    from: null,
+                    to: 'paypal',
+                },
+            },
+        });
+
+        throw new AppError(
+            'PayPal payment amount mismatch',
+            409,
+            'AMOUNT_MISMATCH_FRAUD_ATTEMPT'
+        );
+    }
+
     static _isDuplicateKeyError(error) {
         return error?.code === 11000;
     }
@@ -1870,6 +2258,10 @@ class PaymentService {
 
         if (String(provider || '').trim().toLowerCase() === 'vnpay') {
             return this._generateVNPayPaymentUrl(payment, metadata);
+        }
+
+        if (String(provider || '').trim().toLowerCase() === 'paypal') {
+            return await this._generatePayPalPaymentUrl(payment, metadata, options);
         }
 
         if (String(provider || '').trim().toLowerCase() === 'payos') {
@@ -1885,6 +2277,144 @@ class PaymentService {
 
     static _assertPaymentProviderEnabled(provider) {
         assertPaymentProviderEnabled(provider);
+    }
+
+    static async _generatePayPalPaymentUrl(payment, metadata = {}, options = {}) {
+        const providerData = this._getProviderDataObject(payment.provider_data);
+
+        if (providerData.paypal_checkout_url) {
+            return providerData.paypal_checkout_url;
+        }
+
+        const order = await Order.findById(payment.order_id)
+            .session(options.session || null)
+            .lean();
+
+        if (!order) {
+            throw new AppError(
+                'Order not found',
+                404,
+                'ORDER_NOT_FOUND'
+            );
+        }
+
+        const paypalAmount = this._buildPayPalAmount(payment);
+        const accessToken = await this._getPayPalAccessToken();
+        const paypalApiBaseUrl = this._getPayPalApiBaseUrl();
+        const returnUrl = this._buildPayPalReturnUrl('return', payment);
+        const cancelUrl = this._buildPayPalReturnUrl('cancel', payment);
+
+        let paypalOrder;
+
+        try {
+            const response = await fetch(`${paypalApiBaseUrl}/v2/checkout/orders`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'PayPal-Request-Id': `payment-${payment._id.toString()}-${payment.retry_count || 0}`,
+                },
+                body: JSON.stringify({
+                    intent: 'CAPTURE',
+                    purchase_units: [
+                        {
+                            reference_id: payment._id.toString(),
+                            custom_id: payment.order_id.toString(),
+                            invoice_id: `${payment._id.toString()}-${payment.retry_count || 0}`,
+                            description: this._buildPayPalDescription(order),
+                            amount: {
+                                currency_code: paypalAmount.currency,
+                                value: paypalAmount.value,
+                            },
+                        },
+                    ],
+                    payment_source: {
+                        paypal: {
+                            experience_context: {
+                                payment_method_preference: 'IMMEDIATE_PAYMENT_REQUIRED',
+                                brand_name: 'NguyenLien Shop',
+                                locale: 'en-US',
+                                landing_page: 'LOGIN',
+                                shipping_preference: 'NO_SHIPPING',
+                                user_action: 'PAY_NOW',
+                                return_url: returnUrl,
+                                cancel_url: cancelUrl,
+                            },
+                        },
+                    },
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                logger.error({
+                    event: 'paypal_create_order_failed',
+                    payment_id: payment._id.toString(),
+                    order_id: payment.order_id.toString(),
+                    status: response.status,
+                    response: errorText,
+                });
+
+                throw new AppError(
+                    'PayPal order creation failed',
+                    502,
+                    'PAYPAL_CREATE_ORDER_FAILED'
+                );
+            }
+
+            paypalOrder = await response.json();
+        } catch (error) {
+            if (error instanceof AppError) {
+                throw error;
+            }
+
+            logger.error({
+                event: 'paypal_create_order_request_failed',
+                payment_id: payment._id.toString(),
+                order_id: payment.order_id.toString(),
+                error: error.message,
+            });
+
+            throw new AppError(
+                'PayPal order creation failed',
+                502,
+                'PAYPAL_CREATE_ORDER_FAILED'
+            );
+        }
+
+        const approvalUrl = this._extractPayPalApprovalUrl(paypalOrder);
+
+        if (!paypalOrder.id || !approvalUrl) {
+            throw new AppError(
+                'PayPal approval URL missing',
+                502,
+                'PAYPAL_APPROVAL_URL_MISSING'
+            );
+        }
+
+        const nextProviderData = {
+            ...providerData,
+            paypal_order_id: paypalOrder.id,
+            paypal_checkout_url: approvalUrl,
+            paypal_status: paypalOrder.status,
+            paypal_amount_value: paypalAmount.value,
+            paypal_currency: paypalAmount.currency,
+            paypal_exchange_rate: paypalAmount.exchangeRate,
+        };
+
+        payment.provider_data = nextProviderData;
+
+        await Payment.updateOne(
+            { _id: payment._id },
+            {
+                $set: {
+                    provider_data: nextProviderData,
+                },
+            },
+            options.session ? { session: options.session } : undefined
+        );
+
+        return approvalUrl;
     }
 
     static async _generatePayOSPaymentUrl(payment, metadata = {}, options = {}) {
@@ -2086,8 +2616,12 @@ class PaymentService {
 
     static _getPaymentExpiresAt(provider) {
         const normalizedProvider = String(provider || '').trim().toLowerCase();
-        const minutes = normalizedProvider === 'payos'
-            ? Number(process.env.PAYOS_PAYMENT_EXPIRE_MINUTES || 15)
+        const providerExpiryMinutes = {
+            payos: process.env.PAYOS_PAYMENT_EXPIRE_MINUTES,
+            paypal: process.env.PAYPAL_PAYMENT_EXPIRE_MINUTES,
+        };
+        const minutes = providerExpiryMinutes[normalizedProvider] !== undefined
+            ? Number(providerExpiryMinutes[normalizedProvider] || 15)
             : 30;
         const expiresAt = new Date();
         expiresAt.setMinutes(expiresAt.getMinutes() + minutes);
@@ -2103,6 +2637,7 @@ class PaymentService {
     static _assertProviderMatchesOrder(order, provider) {
         const providerByPaymentMethod = {
             VNPAY: 'vnpay',
+            PAYPAL: 'paypal',
             PAYOS: 'payos',
         };
         const expectedProvider = providerByPaymentMethod[order.payment?.method];

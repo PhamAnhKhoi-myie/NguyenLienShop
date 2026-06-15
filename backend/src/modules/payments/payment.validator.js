@@ -25,7 +25,7 @@ const OrderIdParamSchema = z.object({
 
 
 const providerSchema = z.enum(['vnpay', 'stripe', 'paypal', 'payos']).default('vnpay');
-const createPaymentProviderSchema = z.enum(['vnpay', 'payos']).default('vnpay');
+const createPaymentProviderSchema = z.enum(['vnpay', 'paypal', 'payos']).default('vnpay');
 
 const paymentStatusSchema = z.enum(['pending', 'paid', 'failed']);
 
@@ -134,19 +134,19 @@ const paypalWebhookBodySchema = z.object({
     event_type: z.string().min(1),
 
     resource: z.object({
-        id: z.string().regex(/^EC-/),
-        status: z.enum(['APPROVED', 'CAPTURED', 'DECLINED', 'EXPIRED', 'VOIDED']),
+        id: z.string().min(1),
+        status: z.string().min(1).optional(),
 
         amount: z.object({
             value: z.string().regex(/^\d+(\.\d{2})?$/),
             currency_code: currencySchema,
-        }),
+        }).optional(),
 
         payer: z.object({
             email_address: z.string().email(),
             payer_id: z.string().optional(),
         }).optional(),
-    }),
+    }).passthrough(),
 
     create_time: z.string().datetime(),
 
@@ -156,7 +156,7 @@ const paypalWebhookBodySchema = z.object({
             href: z.string().url(),
         })
     ).optional(),
-});
+}).passthrough();
 
 const payosWebhookBodySchema = z.object({
     code: z.string().min(1),

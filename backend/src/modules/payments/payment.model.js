@@ -31,7 +31,17 @@ const providerDataSchema = new mongoose.Schema(
             sparse: true,
         },
 
+        paypal_capture_id: {
+            type: String,
+            sparse: true,
+        },
+
+        paypal_checkout_url: String,
         paypal_payer_id: String,
+        paypal_status: String,
+        paypal_amount_value: String,
+        paypal_currency: String,
+        paypal_exchange_rate: Number,
 
         payos_order_code: {
             type: Number,
@@ -181,6 +191,24 @@ paymentSchema.index(
         unique: true,
         sparse: true,
         name: 'stripe_pi_id_unique',
+    }
+);
+
+paymentSchema.index(
+    { 'provider_data.paypal_order_id': 1 },
+    {
+        unique: true,
+        sparse: true,
+        name: 'paypal_order_id_unique',
+    }
+);
+
+paymentSchema.index(
+    { 'provider_data.paypal_capture_id': 1 },
+    {
+        unique: true,
+        sparse: true,
+        name: 'paypal_capture_id_unique',
     }
 );
 

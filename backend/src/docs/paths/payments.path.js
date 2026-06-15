@@ -107,6 +107,34 @@ module.exports = {
         },
     },
 
+    "/payments/paypal-return": {
+        get: {
+            tags: ["Payments"],
+            summary: "Handle PayPal browser return",
+            security: [],
+            description: "Captures the approved PayPal order and redirects to the frontend payment return page.",
+            parameters: [
+                {
+                    in: "query",
+                    name: "token",
+                    required: true,
+                    schema: { type: "string" },
+                    description: "PayPal order ID returned as token.",
+                },
+                {
+                    in: "query",
+                    name: "PayerID",
+                    required: false,
+                    schema: { type: "string" },
+                },
+            ],
+            responses: {
+                302: { description: "Redirects to frontend payment return page." },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
     "/payments/webhook/vnpay": {
         get: {
             tags: ["Payments"],

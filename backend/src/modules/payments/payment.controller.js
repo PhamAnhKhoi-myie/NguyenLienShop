@@ -187,6 +187,46 @@ const handlePayPalWebhook = asyncHandler(async (req, res) => {
     });
 });
 
+const handlePayPalReturn = asyncHandler(async (req, res) => {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    try {
+        const result = await PaymentService.handlePayPalReturn(
+            req.query,
+            buildAuditMetadata(req)
+        );
+
+        const params = new URLSearchParams({
+            provider: 'paypal',
+            status: result.isSuccess ? 'success' : 'failed',
+            order_id: result.orderId,
+            payment_id: result.paymentId,
+            txn_ref: result.transactionRef || '',
+            code: result.code || 'UNKNOWN',
+        });
+
+        return res.redirect(`${frontendUrl}/payment-return?${params.toString()}`);
+    } catch (error) {
+        console.error('[PayPal Return Error]', error.message);
+
+        const params = new URLSearchParams({
+            provider: 'paypal',
+            status: 'invalid',
+            code: error.errorCode || error.code || 'PAYPAL_RETURN_FAILED',
+        });
+
+        if (req.query.order_id) {
+            params.set('order_id', req.query.order_id);
+        }
+
+        if (req.query.payment_id) {
+            params.set('payment_id', req.query.payment_id);
+        }
+
+        return res.redirect(`${frontendUrl}/payment-return?${params.toString()}`);
+    }
+});
+
 const handlePayOSWebhook = asyncHandler(async (req, res) => {
     const metadata = buildAuditMetadata(req);
 
@@ -464,6 +504,7 @@ module.exports = {
     handleVNPayReturn,
     handleStripeWebhook,
     handlePayPalWebhook,
+    handlePayPalReturn,
     handlePayOSWebhook,
 
     createPayment,

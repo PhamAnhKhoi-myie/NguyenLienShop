@@ -15,12 +15,26 @@ const hasPayOSConfig = () =>
         process.env.PAYOS_CHECKSUM_KEY
     );
 
+const hasPayPalConfig = () =>
+    Boolean(
+        process.env.PAYPAL_CLIENT_ID &&
+        process.env.PAYPAL_CLIENT_SECRET
+    );
+
 const isPayOSCheckoutEnabled = () => {
     if (process.env.PAYOS_CHECKOUT_ENABLED !== undefined) {
         return isTruthy(process.env.PAYOS_CHECKOUT_ENABLED) && hasPayOSConfig();
     }
 
     return hasPayOSConfig();
+};
+
+const isPayPalCheckoutEnabled = () => {
+    if (process.env.PAYPAL_CHECKOUT_ENABLED !== undefined) {
+        return isTruthy(process.env.PAYPAL_CHECKOUT_ENABLED) && hasPayPalConfig();
+    }
+
+    return hasPayPalConfig();
 };
 
 const assertPaymentProviderEnabled = (provider) => {
@@ -58,6 +72,26 @@ const assertPaymentProviderEnabled = (provider) => {
         );
     }
 
+    if (normalizedProvider === 'paypal') {
+        if (!hasPayPalConfig()) {
+            throw new AppError(
+                'PayPal config is missing',
+                500,
+                'PAYPAL_CONFIG_MISSING'
+            );
+        }
+
+        if (isPayPalCheckoutEnabled()) {
+            return;
+        }
+
+        throw new AppError(
+            'PayPal checkout is temporarily disabled',
+            503,
+            'PAYPAL_CHECKOUT_DISABLED'
+        );
+    }
+
     throw new AppError(
         'Payment provider is not enabled',
         400,
@@ -67,7 +101,9 @@ const assertPaymentProviderEnabled = (provider) => {
 
 module.exports = {
     assertPaymentProviderEnabled,
+    hasPayPalConfig,
     hasPayOSConfig,
+    isPayPalCheckoutEnabled,
     isPayOSCheckoutEnabled,
     isVNPayCheckoutEnabled,
 };
