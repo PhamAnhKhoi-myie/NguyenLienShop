@@ -86,6 +86,7 @@ function AddressForm({ address, isSaving, onSubmit }) {
         handleSubmit,
         control,
         setValue,
+        clearErrors,
         formState: { errors },
     } = useForm({
         resolver: zodResolver(addressSchema),
@@ -158,6 +159,10 @@ function AddressForm({ address, isSaving, onSubmit }) {
                     error={errors.ward_code?.message}
                     disabled={!selectedProvinceCode || wardsQuery.isLoading}
                     {...wardField}
+                    onChange={(event) => {
+                        wardField.onChange(event);
+                        clearErrors('ward_code');
+                    }}
                 >
                     <option value="">{translate('text.select_ward_commune')}</option>
                     {wards.map((ward) => (

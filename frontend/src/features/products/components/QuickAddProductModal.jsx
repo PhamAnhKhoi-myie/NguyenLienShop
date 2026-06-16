@@ -151,10 +151,7 @@ export default function QuickAddProductModal({
                 return;
             }
 
-            setNotice({
-                type: 'success',
-                message: translate('text.product_added_to_cart'),
-            });
+            handleClose();
         } catch (error) {
             setNotice({
                 type: 'error',

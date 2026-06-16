@@ -1058,18 +1058,8 @@ const buildPriceTiers = (basePrice) => {
     return [
         {
             min_qty: 1,
-            max_qty: 4,
-            unit_price: basePrice,
-        },
-        {
-            min_qty: 5,
-            max_qty: 9,
-            unit_price: Math.round(basePrice * 0.94),
-        },
-        {
-            min_qty: 10,
             max_qty: null,
-            unit_price: Math.round(basePrice * 0.88),
+            unit_price: basePrice,
         },
     ];
 };

@@ -15,6 +15,7 @@
     "seed:banners": "node src/scripts/seedBanners.js",
     "seed:announcements": "node src/scripts/seedAnnouncements.js",
     "seed:reviews:dev": "node src/scripts/seedReviewsDev.js",
+    "db:disable-quantity-tiers": "node src/scripts/disableQuantityPriceTiers.js",
     "db:sync:phone-auth": "node src/scripts/syncPhoneAuthIndexes.js",
     "payos:confirm-webhook": "node src/scripts/confirmPayOSWebhook.js",
     "db:reset:dev": "node src/scripts/resetDevDatabase.js",

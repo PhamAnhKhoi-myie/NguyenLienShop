@@ -1,6 +1,12 @@
 import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, CreditCard, MapPin, TicketPercent } from 'lucide-react';
+import {
+    ArrowLeft,
+    CheckCircle2,
+    CreditCard,
+    MapPin,
+    TicketPercent,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
@@ -12,9 +18,15 @@ import Input from '../../../shared/components/Input';
 import Loading from '../../../shared/components/Loading';
 import Select from '../../../shared/components/Select';
 import Textarea from '../../../shared/components/Textarea';
+import codIcon from '../../../assets/images/cod-icon.png';
+import momoIcon from '../../../assets/images/momo-icon.png';
+import payosIcon from '../../../assets/images/payos-icon.png';
+import paypalIcon from '../../../assets/images/paypal-icon.png';
+import vnpayIcon from '../../../assets/images/vnpay-icon.png';
 import { ENV } from '../../../shared/config/env';
 import { ROUTES } from '../../../shared/constants/routes';
 import { useProvinces, useWards } from '../../../shared/hooks/useLocations';
+import { cn } from '../../../shared/utils/cn';
 import { formatCurrency } from '../../../shared/utils/formatCurrency';
 import {
     useApplyCartDiscount,
@@ -43,7 +55,7 @@ const addressFormSchema = z.object({
     ward_code: z.string().trim().min(1, translate('text.please_select_ward_commune')),
     detail: z.string().trim().min(5, translate('text.specific_address_of_at_least_5_characters')),
     note: z.string().trim().max(500, translate('text.note_maximum_500_characters')).optional(),
-    payment_method: z.enum(['COD', 'VNPAY', 'PAYPAL', 'PAYOS']),
+    payment_method: z.enum(['COD', 'VNPAY', 'MOMO', 'PAYOS', 'PAYPAL']),
 });
 
 const emptyAddressValues = {
@@ -61,6 +73,44 @@ const onlinePaymentProviders = {
     PAYPAL: 'paypal',
     PAYOS: 'payos',
 };
+
+const paymentMethodOptions = [
+    {
+        value: 'COD',
+        labelKey: 'text.cash_payment',
+        imageSrc: codIcon,
+        iconClassName: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        selectedClassName: 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500/40',
+    },
+    {
+        value: 'VNPAY',
+        labelKey: 'text.vnpay_app_payment',
+        imageSrc: vnpayIcon,
+        iconClassName: 'border-sky-200 bg-sky-50 text-sky-700',
+        selectedClassName: 'border-sky-500 bg-sky-50 ring-1 ring-sky-500/40',
+    },
+    {
+        value: 'MOMO',
+        labelKey: 'text.momo_app_payment',
+        imageSrc: momoIcon,
+        iconClassName: 'border-[#a50064]/20 bg-[#a50064]/10 text-[#a50064]',
+        selectedClassName: 'border-[#a50064] bg-[#a50064]/10 ring-1 ring-[#a50064]/40',
+    },
+    {
+        value: 'PAYOS',
+        labelKey: 'text.bank_app_payment',
+        imageSrc: payosIcon,
+        iconClassName: 'border-cyan-200 bg-cyan-50 text-cyan-700',
+        selectedClassName: 'border-cyan-500 bg-cyan-50 ring-1 ring-cyan-500/40',
+    },
+    {
+        value: 'PAYPAL',
+        labelKey: 'text.international_card_payment',
+        imageSrc: paypalIcon,
+        iconClassName: 'border-blue-200 bg-blue-50 text-blue-800',
+        selectedClassName: 'border-blue-600 bg-blue-50 ring-1 ring-blue-600/40',
+    },
+];
 
 function toFormValues(address) {
     if (!address) {
@@ -150,17 +200,21 @@ function AddressForm({
         trigger,
         control,
         setValue,
+        clearErrors,
         formState: { errors },
     } = useForm({
         resolver: zodResolver(addressFormSchema),
         defaultValues: toFormValues(selectedAddress),
     });
 
-    const [paymentMethod, setPaymentMethod] = useState('COD');
     const selectedProvinceCode = useWatch({
         control,
         name: 'province_code',
     });
+    const paymentMethod = useWatch({
+        control,
+        name: 'payment_method',
+    }) || 'COD';
     const provincesQuery = useProvinces();
     const wardsQuery = useWards(selectedProvinceCode);
     const provinces = provincesQuery.data?.data || [];
@@ -168,7 +222,9 @@ function AddressForm({
     const provinceField = register('province_code');
     const wardField = register('ward_code');
     const paymentMethodField = register('payment_method');
+    const isMomoSelected = paymentMethod === 'MOMO';
     const isSelectedPaymentDisabled =
+        isMomoSelected ||
         (paymentMethod === 'VNPAY' && !isVNPayEnabled) ||
         (paymentMethod === 'PAYPAL' && !isPayPalEnabled) ||
         (paymentMethod === 'PAYOS' && !isPayOSEnabled);
@@ -233,6 +289,10 @@ function AddressForm({
                     error={errors.ward_code?.message}
                     disabled={!selectedProvinceCode || wardsQuery.isLoading}
                     {...wardField}
+                    onChange={(event) => {
+                        wardField.onChange(event);
+                        clearErrors('ward_code');
+                    }}
                 >
                     <option value="">{translate('text.select_ward_commune')}</option>
                     {wards.map((ward) => (
@@ -250,31 +310,79 @@ function AddressForm({
                 {...register('detail')}
             />
 
-            <Select
-                label={translate('text.checkout')}
-                error={errors.payment_method?.message}
-                helperText={
-                    isSelectedPaymentDisabled
-                        ? translate('text.selected_payment_method_is_temporarily_unavailable')
-                        : undefined
-                }
-                {...paymentMethodField}
-                onChange={(event) => {
-                    paymentMethodField.onChange(event);
-                    setPaymentMethod(event.target.value);
-                }}
-            >
-                <option value="COD">{translate('text.cod')}</option>
-                <option value="VNPAY" disabled={!isVNPayEnabled}>
-                    {isVNPayEnabled ? 'VNPAY' : translate('text.vnpay_temporarily_disabled')}
-                </option>
-                <option value="PAYPAL" disabled={!isPayPalEnabled}>
-                    {isPayPalEnabled ? translate('text.paypal') : translate('text.paypal_temporarily_disabled')}
-                </option>
-                <option value="PAYOS" disabled={!isPayOSEnabled}>
-                    {isPayOSEnabled ? 'PayOS' : translate('text.payos_temporarily_disabled')}
-                </option>
-            </Select>
+            <div className="space-y-2">
+                <p className="text-sm font-medium text-[var(--color-text-main)]">
+                    {translate('text.payment_method')}
+                </p>
+                <input type="hidden" {...paymentMethodField} />
+                <div
+                    role="radiogroup"
+                    aria-label={translate('text.payment_method')}
+                    className="grid gap-2 sm:grid-cols-2"
+                >
+                    {paymentMethodOptions.map((option) => {
+                        const isSelected = paymentMethod === option.value;
+                        const label = translate(option.labelKey);
+
+                        return (
+                            <button
+                                key={option.value}
+                                type="button"
+                                role="radio"
+                                aria-checked={isSelected}
+                                aria-label={label}
+                                className={cn(
+                                    'flex min-h-[52px] items-center gap-3 rounded-md border px-3 py-2 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
+                                    isSelected
+                                        ? option.selectedClassName
+                                        : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)] hover:bg-[var(--color-background)]'
+                                )}
+                                onClick={() =>
+                                    setValue('payment_method', option.value, {
+                                        shouldDirty: true,
+                                        shouldValidate: true,
+                                    })
+                                }
+                            >
+                                <span
+                                    className={cn(
+                                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-md border',
+                                        option.iconClassName
+                                    )}
+                                >
+                                    <img
+                                        src={option.imageSrc}
+                                        alt=""
+                                        aria-hidden="true"
+                                        className="h-7 w-7 object-contain"
+                                    />
+                                </span>
+                                <span className="min-w-0 flex-1 text-sm font-medium leading-5 text-[var(--color-text-main)]">
+                                    {label}
+                                </span>
+                                {isSelected && (
+                                    <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+                {isMomoSelected && (
+                    <p className="rounded-md border border-[#a50064]/20 bg-[#a50064]/10 px-3 py-2 text-sm font-medium text-[#a50064]">
+                        {translate('text.momo_payment_under_maintenance')}
+                    </p>
+                )}
+                {!isMomoSelected && isSelectedPaymentDisabled && (
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                        {translate('text.selected_payment_method_is_temporarily_unavailable')}
+                    </p>
+                )}
+                {errors.payment_method?.message && (
+                    <p className="text-sm text-[var(--color-error)]">
+                        {errors.payment_method.message}
+                    </p>
+                )}
+            </div>
 
             <Textarea
                 label={translate('text.delivery_notes')}
@@ -289,9 +397,7 @@ function AddressForm({
                     isLoading={isOrdering}
                     disabled={isSelectedPaymentDisabled}
                 >
-                    {paymentMethod in onlinePaymentProviders
-                        ? translate('text.pay_online')
-                        : translate('text.order_cod')}
+                    {translate('text.payment_b41a92be')}
                 </Button>
                 <Button
                     type="button"
@@ -334,6 +440,7 @@ export default function CheckoutPage() {
         return window.localStorage.getItem(CLAIMED_DISCOUNT_CODE_KEY) || '';
     });
     const [notice, setNotice] = useState(null);
+    const [discountNotice, setDiscountNotice] = useState(null);
 
     const cart = cartQuery.data?.data;
     const items = cart?.items || [];
@@ -365,9 +472,10 @@ export default function CheckoutPage() {
     const applyDiscountCode = async (rawCode) => {
         const code = String(rawCode || '').trim().toUpperCase();
         setNotice(null);
+        setDiscountNotice(null);
 
         if (!code) {
-            setNotice({
+            setDiscountNotice({
                 type: 'error',
                 message: translate('text.please_enter_discount_code'),
             });
@@ -378,12 +486,13 @@ export default function CheckoutPage() {
             await applyDiscountMutation.mutateAsync({ code });
             setDiscountCode('');
             window.localStorage.removeItem(CLAIMED_DISCOUNT_CODE_KEY);
+            setDiscountNotice(null);
             setNotice({
                 type: 'success',
                 message: translate('text.discount_code_applied'),
             });
         } catch (error) {
-            setNotice({
+            setDiscountNotice({
                 type: 'error',
                 message: error.message || translate('text.discount_code_cannot_be_applied'),
             });
@@ -396,6 +505,7 @@ export default function CheckoutPage() {
 
     const handleRemoveDiscount = async () => {
         setNotice(null);
+        setDiscountNotice(null);
 
         try {
             await removeDiscountMutation.mutateAsync();
@@ -441,6 +551,14 @@ export default function CheckoutPage() {
         let createdOrder = null;
         const selectedProvider = onlinePaymentProviders[values.payment_method];
         const isOnlinePayment = Boolean(selectedProvider);
+
+        if (values.payment_method === 'MOMO') {
+            setNotice({
+                type: 'error',
+                message: translate('text.momo_payment_under_maintenance'),
+            });
+            return;
+        }
 
         if (!cart?.id || items.length === 0) {
             setNotice({
@@ -733,8 +851,8 @@ export default function CheckoutPage() {
                                                 <p className="text-xs text-[var(--color-text-muted)] line-through">
                                                     {formatCurrency(
                                                         item.original_price_at_added ||
-                                                            item.price_at_added ||
-                                                            0
+                                                        item.price_at_added ||
+                                                        0
                                                     )}
                                                 </p>
                                             )}
@@ -862,7 +980,11 @@ export default function CheckoutPage() {
                                     </div>
                                 </div>
                             )}
-                            <p className="text-xs text-[var(--color-text-muted)]"> {translate('text.discount_will_be_checked_again_when_order_is_created')} </p>
+                            {discountNotice && (
+                                <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
+                                    {discountNotice.message}
+                                </p>
+                            )}
                         </CardBody>
                     </Card>
 

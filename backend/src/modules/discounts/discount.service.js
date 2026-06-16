@@ -1138,7 +1138,13 @@ class DiscountService {
 
         for (const discount of discounts) {
             try {
+                const discountId = discount._id.toString();
+
                 if (!this.hasClaimCapacity(discount)) {
+                    continue;
+                }
+
+                if (claimedDiscountIds.has(discountId)) {
                     continue;
                 }
 
@@ -1163,7 +1169,7 @@ class DiscountService {
 
                 visibleDiscounts.push({
                     ...DiscountMapper.toCustomerDTO(discount),
-                    is_claimed: claimedDiscountIds.has(discount._id.toString()),
+                    is_claimed: false,
                 });
             } catch (error) {
                 if (!(error instanceof AppError)) {

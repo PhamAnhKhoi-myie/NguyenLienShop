@@ -10,7 +10,6 @@ import {
     ShieldCheck,
     ShoppingCart,
     Star,
-    Tag,
     ThumbsDown,
     ThumbsUp,
     Zap,
@@ -60,22 +59,6 @@ const FLAG_REASON_OPTIONS = [
     { value: 'duplicate', label: translate('text.duplicate_review') },
     { value: 'other', label: translate('text.other_reasons') },
 ];
-
-function formatTierQuantity(tier) {
-    if (!tier?.max_qty) {
-        return translate('text.from_value', { value0: tier?.min_qty || 1 });
-    }
-
-    return `${tier.min_qty} - ${tier.max_qty}`;
-}
-
-function getUnitPricePerItem(tier, packSize, currency) {
-    if (!tier?.unit_price || !packSize) {
-        return null;
-    }
-
-    return formatCurrency(tier.unit_price / packSize, currency);
-}
 
 function getReviewRating(review) {
     return Number(review?.rating?.overall || review?.rating || 0);
@@ -192,7 +175,6 @@ export default function ProductDetailPage() {
             units[0],
         [selectedUnitId, units]
     );
-    const priceTiers = selectedUnit?.price_tiers || [];
     const currency = selectedUnit?.currency || 'VND';
     const minOrderQuantity = selectedUnit?.min_order_qty || 1;
     const availableItems = Math.max(
@@ -967,80 +949,6 @@ export default function ProductDetailPage() {
                             totalPages={reviewsTotalPages}
                             onPageChange={setReviewsPage}
                         />
-                    )}
-                </CardBody>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-[var(--color-primary)]" />
-                        <h2 className="text-base font-semibold text-[var(--color-text-main)]"> {translate('text.price_based_on_quantity')} </h2>
-                    </div>
-                </CardHeader>
-                <CardBody>
-                    {priceTiers.length === 0 ? (
-                        <p className="text-sm text-[var(--color-text-muted)]"> {translate('text.this_unit_does_not_have_a_price_list_based_on_quantity')} </p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[560px] border-collapse text-left text-sm">
-                                <thead>
-                                    <tr className="border-b border-[var(--color-border)] text-[var(--color-text-muted)]">
-                                        <th className="py-3 pr-4 font-medium"> {translate('text.number_of_packages')} </th>
-                                        <th className="py-3 pr-4 font-medium"> {translate('text.selling_price_unit')} </th>
-                                        <th className="py-3 pr-4 font-medium"> {translate('text.conversion_price_piece')} </th>
-                                        <th className="py-3 font-medium"> {translate('text.specification')} </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {priceTiers.map((tier) => (
-                                        <tr
-                                            key={`${tier.min_qty}-${tier.max_qty || 'plus'}`}
-                                            className="border-b border-[var(--color-border)] last:border-0"
-                                        >
-                                            <td className="py-3 pr-4 font-medium text-[var(--color-text-main)]">
-                                                {formatTierQuantity(tier)}
-                                            </td>
-                                            <td className="py-3 pr-4 text-[var(--color-primary-hover)]">
-                                                <div className="flex flex-wrap items-baseline gap-2">
-                                                    <span
-                                                        className={
-                                                            tier.is_on_sale
-                                                                ? 'font-semibold text-[var(--color-error)]'
-                                                                : ''
-                                                        }
-                                                    >
-                                                        {formatCurrency(
-                                                            tier.unit_price,
-                                                            currency
-                                                        )}
-                                                    </span>
-                                                    {tier.is_on_sale && (
-                                                        <span className="text-xs text-[var(--color-text-muted)] line-through">
-                                                            {formatCurrency(
-                                                                tier.original_unit_price,
-                                                                currency
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="py-3 pr-4 text-[var(--color-text-muted)]">
-                                                {getUnitPricePerItem(
-                                                    tier,
-                                                    selectedUnit?.pack_size,
-                                                    currency
-                                                ) || translate('text.updating')}
-                                            </td>
-                                            <td className="py-3 text-[var(--color-text-muted)]">
-                                                {selectedUnit?.display_name ||
-                                                    translate('text.updating')}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
                     )}
                 </CardBody>
             </Card>

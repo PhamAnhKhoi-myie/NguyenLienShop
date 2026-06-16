@@ -1,6 +1,6 @@
 import { translate } from '../../../shared/i18n/index';
 import { Check, Copy, Loader2, ShoppingBag, TicketPercent } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { ROUTES } from '../../../shared/constants/routes';
@@ -96,6 +96,19 @@ export default function HomeDiscountsSection() {
     const [claimMessage, setClaimMessage] = useState('');
     const [claimMessageType, setClaimMessageType] = useState('success');
     const [localClaimedIds, setLocalClaimedIds] = useState([]);
+    const visibleDiscounts = useMemo(
+        () =>
+            discounts.filter((discount) => {
+                const discountId = getDiscountId(discount);
+
+                return !(
+                    discount.is_claimed ||
+                    claimedCode === discount.code ||
+                    localClaimedIds.includes(discountId)
+                );
+            }),
+        [discounts, claimedCode, localClaimedIds]
+    );
     const pendingClaimProcessedRef = useRef(false);
     const claimDiscountForUserRef = useRef(null);
 
@@ -191,7 +204,7 @@ export default function HomeDiscountsSection() {
 
     if (
         discountsQuery.isError ||
-        (!discountsQuery.isLoading && discounts.length === 0 && !claimMessage)
+        (!discountsQuery.isLoading && visibleDiscounts.length === 0 && !claimMessage)
     ) {
         return null;
     }
@@ -223,7 +236,7 @@ export default function HomeDiscountsSection() {
                 </div>
             ) : (
                 <div className="flex snap-x gap-3 overflow-x-auto pb-3">
-                    {discounts.map((discount) => {
+                    {visibleDiscounts.map((discount) => {
                         const discountId = getDiscountId(discount);
                         const isClaimed =
                             discount.is_claimed ||

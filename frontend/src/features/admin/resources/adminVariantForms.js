@@ -13,42 +13,28 @@ const nonNegativeInt = (label) =>
         .int(translate('text.value_must_be_an_integer', { value0: label }))
         .min(0, translate('text.value_cannot_be_negative_4e5c385c', { value0: label }));
 
-function splitTierLine(line) {
-    return line.split('|').map((part) => part.trim());
+function getUnitBasePrice(unit = {}) {
+    const tiers = Array.isArray(unit.price_tiers) ? unit.price_tiers : [];
+    const firstTier = [...tiers].sort(
+        (left, right) => Number(left.min_qty || 1) - Number(right.min_qty || 1)
+    )[0];
+
+    return (
+        firstTier?.original_unit_price ??
+        firstTier?.unit_price ??
+        unit.pricing?.min_price ??
+        0
+    );
 }
 
-export function parsePriceTiers(value) {
-    return String(value || '')
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-            const [minQty, maxQty, unitPrice] = splitTierLine(line);
-
-            return {
-                min_qty: Number(minQty),
-                max_qty: maxQty ? Number(maxQty) : null,
-                unit_price: Number(unitPrice),
-            };
-        });
-}
-
-function priceTiersToText(priceTiers = []) {
-    if (!Array.isArray(priceTiers)) {
-        return '';
-    }
-
-    return priceTiers
-        .map((tier) =>
-            [
-                tier.min_qty,
-                tier.max_qty === null || tier.max_qty === undefined
-                    ? ''
-                    : tier.max_qty,
-                tier.original_unit_price ?? tier.unit_price,
-            ].join('|')
-        )
-        .join('\n');
+function buildSinglePriceTier(unitPrice) {
+    return [
+        {
+            min_qty: 1,
+            max_qty: null,
+            unit_price: Number(unitPrice),
+        },
+    ];
 }
 
 function toDateTimeLocal(value) {
@@ -74,79 +60,6 @@ function toIsoDateOrNull(value) {
     return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function validatePriceTierText(value, ctx) {
-    const lines = String(value || '')
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-    if (lines.length === 0) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: translate('text.please_enter_at_least_one_price_tier'),
-        });
-        return;
-    }
-
-    const tiers = parsePriceTiers(value);
-
-    tiers.forEach((tier, index) => {
-        if (!Number.isInteger(tier.min_qty) || tier.min_qty <= 0) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: translate('text.line_value_min_qty_must_be_a_positive_integer', { value0: index + 1 }),
-            });
-        }
-
-        if (
-            tier.max_qty !== null &&
-            (!Number.isInteger(tier.max_qty) || tier.max_qty <= 0)
-        ) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: translate('text.line_value_max_qty_must_be_a_positive_integer_or_blank', { value0: index + 1 }),
-            });
-        }
-
-        if (
-            !Number.isInteger(tier.unit_price) ||
-            tier.unit_price <= 0
-        ) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: translate('text.line_value_unit_price_must_be_greater_than_0', { value0: index + 1 }),
-            });
-        }
-    });
-
-    const lastTier = tiers[tiers.length - 1];
-    if (lastTier?.max_qty !== null) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: translate('text.the_last_price_tier_must_leave_max_qty_empty_for_unlimited'),
-        });
-    }
-
-    for (let index = 1; index < tiers.length; index += 1) {
-        const previous = tiers[index - 1];
-        const current = tiers[index];
-
-        if (current.min_qty <= previous.min_qty) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: translate('text.price_tiers_must_increase_according_to_min_qty'),
-            });
-        }
-
-        if (previous.max_qty !== null && previous.max_qty >= current.min_qty) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: translate('text.price_tiers_cannot_overlap_the'),
-            });
-        }
-    }
-}
-
 const variantFormSchema = z.object({
     size: z.string().trim().min(1, translate('text.please_enter_size')).max(50),
     fabric_type: z.string().trim().min(1, translate('text.please_enter_material')).max(100),
@@ -163,7 +76,7 @@ const variantUnitFormSchema = z
             .min(1, translate('text.please_enter_the_unit_name'))
             .max(100),
         pack_size: positiveInt(translate('text.specification')),
-        price_tiers_text: z.string().superRefine(validatePriceTierText),
+        unit_price: positiveInt(translate('text.selling_price_unit')),
         min_order_qty: positiveInt(translate('text.minimum_number_of_packages')),
         max_order_qty: z.string().trim(),
         qty_step: positiveInt(translate('text.quantity_jump')),
@@ -215,13 +128,7 @@ const variantUnitFormSchema = z
             }
 
             if (values.promotion_type === 'FIXED') {
-                const tiers = parsePriceTiers(values.price_tiers_text);
-                if (
-                    tiers.some(
-                        (tier) =>
-                            values.promotion_value >= tier.unit_price
-                    )
-                ) {
+                if (values.promotion_value >= values.unit_price) {
                     ctx.addIssue({
                         code: z.ZodIssueCode.custom,
                         path: ['promotion_value'],
@@ -320,7 +227,7 @@ export const variantUnitFormConfig = {
         unit_type: 'PACK',
         display_name: '',
         pack_size: 1,
-        price_tiers_text: '',
+        unit_price: 0,
         min_order_qty: 1,
         max_order_qty: '',
         qty_step: 1,
@@ -337,7 +244,7 @@ export const variantUnitFormConfig = {
         unit_type: unit.unit_type || 'PACK',
         display_name: unit.display_name || '',
         pack_size: unit.pack_size || 1,
-        price_tiers_text: priceTiersToText(unit.price_tiers),
+        unit_price: getUnitBasePrice(unit),
         min_order_qty:
             unit.min_order_qty || unit.constraints?.min_order_qty || 1,
         max_order_qty:
@@ -361,7 +268,7 @@ export const variantUnitFormConfig = {
         const payload = {
             unit_type: values.unit_type,
             display_name: values.display_name.trim(),
-            price_tiers: parsePriceTiers(values.price_tiers_text),
+            price_tiers: buildSinglePriceTier(values.unit_price),
             min_order_qty: Number(values.min_order_qty),
             max_order_qty: values.max_order_qty
                 ? Number(values.max_order_qty)
@@ -424,13 +331,9 @@ export const variantUnitFormConfig = {
             ],
         },
         {
-            name: 'price_tiers_text',
-            label: translate('text.price_tiers'),
-            type: 'textarea',
-            rows: 5,
-            placeholder: '1|9|25000\n10||23000',
-            helperText: translate('text.each_line_min_qty_max_qty_unit_price_the_last_line_leaves_max_qty_blank'),
-            className: 'md:col-span-2',
+            name: 'unit_price',
+            label: translate('text.selling_price_unit'),
+            type: 'number',
         },
         {
             name: 'min_order_qty',
