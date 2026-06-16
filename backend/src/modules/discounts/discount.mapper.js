@@ -39,6 +39,12 @@ class DiscountMapper {
                 doc.usage_count,
                 doc.usage_limit
             ),
+            claim_limit: doc.claim_limit || null,
+            claim_count: doc.claim_count || 0,
+            claim_remaining: this.calculateClaimRemaining(
+                doc.claim_count,
+                doc.claim_limit
+            ),
 
 
             is_stackable: doc.is_stackable,
@@ -118,6 +124,12 @@ class DiscountMapper {
                 doc.usage_limit
             ),
             remaining_uses: Math.max(0, doc.usage_limit - doc.usage_count),
+            claim_limit: doc.claim_limit || null,
+            claim_count: doc.claim_count || 0,
+            claim_remaining: this.calculateClaimRemaining(
+                doc.claim_count,
+                doc.claim_limit
+            ),
 
 
             is_stackable: doc.is_stackable,
@@ -173,6 +185,12 @@ class DiscountMapper {
                 doc.usage_count,
                 doc.usage_limit
             ),
+            claim_limit: doc.claim_limit || null,
+            claim_count: doc.claim_count || 0,
+            claim_remaining: this.calculateClaimRemaining(
+                doc.claim_count,
+                doc.claim_limit
+            ),
 
 
             status: doc.status,
@@ -214,10 +232,27 @@ class DiscountMapper {
 
 
             application_strategy: doc.application_strategy,
+            application_strategy_label: this.getApplicationStrategyLabel(
+                doc.application_strategy
+            ),
+            applicable_targets: this.transformCustomerApplicableTargets(
+                doc.applicable_targets
+            ),
+            user_eligibility: this.transformCustomerUserEligibility(
+                doc.user_eligibility
+            ),
             requires_claim: Boolean(doc.requires_claim || doc.show_on_homepage),
 
 
             min_order_value: doc.min_order_value || 0,
+            usage_per_user_limit: doc.usage_per_user_limit || 1,
+            is_stackable: Boolean(doc.is_stackable),
+            claim_limit: doc.claim_limit || null,
+            claim_count: doc.claim_count || 0,
+            claim_remaining: this.calculateClaimRemaining(
+                doc.claim_count,
+                doc.claim_limit
+            ),
 
 
             is_valid: this.isDiscountValid(doc),
@@ -362,6 +397,8 @@ class DiscountMapper {
             usage_limit: doc.usage_limit,
             usage_per_user_limit: doc.usage_per_user_limit,
             usage_count: doc.usage_count,
+            claim_limit: doc.claim_limit || '',
+            claim_count: doc.claim_count || 0,
             is_stackable: doc.is_stackable ? 'Yes' : 'No',
             stack_priority: doc.stack_priority,
             started_at: new Date(doc.started_at).toISOString(),
@@ -414,6 +451,29 @@ class DiscountMapper {
         }
 
         return result;
+    }
+
+    static transformCustomerApplicableTargets(targets) {
+        const normalizedTargets = targets || {};
+        const productIds = normalizedTargets.product_ids || [];
+        const categoryIds = normalizedTargets.category_ids || [];
+        const variantIds = normalizedTargets.variant_ids || [];
+
+        return {
+            type: normalizedTargets.type || 'all',
+            product_count: productIds.length,
+            category_count: categoryIds.length,
+            variant_count: variantIds.length,
+        };
+    }
+
+    static transformCustomerUserEligibility(eligibility) {
+        const normalizedEligibility = eligibility || {};
+
+        return {
+            type: normalizedEligibility.type || 'all',
+            min_user_tier: normalizedEligibility.min_user_tier || null,
+        };
     }
 
     static getTypeLabel(type) {
@@ -558,6 +618,14 @@ class DiscountMapper {
         }
 
         return Math.min(100, Math.round((usageCount / usageLimit) * 100));
+    }
+
+    static calculateClaimRemaining(claimCount = 0, claimLimit = null) {
+        if (!claimLimit) {
+            return null;
+        }
+
+        return Math.max(0, claimLimit - (claimCount || 0));
     }
 
     static countTargets(targets) {

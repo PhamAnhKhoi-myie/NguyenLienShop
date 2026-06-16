@@ -64,6 +64,88 @@ function formatVoucherValue(claim) {
     return '-';
 }
 
+function isVietnameseLocale() {
+    return getLocale().toLowerCase().startsWith('vi');
+}
+
+function getTargetLabel(discount = {}) {
+    const targets = discount.applicable_targets || {};
+    const type = targets.type || 'all';
+    const isVietnamese = isVietnameseLocale();
+
+    if (type === 'specific_products') {
+        const count = targets.product_count || 0;
+        return isVietnamese
+            ? `${count} sản phẩm được chọn`
+            : `${count} selected product${count === 1 ? '' : 's'}`;
+    }
+
+    if (type === 'specific_categories') {
+        const count = targets.category_count || 0;
+        return isVietnamese
+            ? `${count} danh mục được chọn`
+            : `${count} selected categor${count === 1 ? 'y' : 'ies'}`;
+    }
+
+    if (type === 'specific_variants') {
+        const count = targets.variant_count || 0;
+        return isVietnamese
+            ? `${count} biến thể được chọn`
+            : `${count} selected variant${count === 1 ? '' : 's'}`;
+    }
+
+    return translate('text.all_products');
+}
+
+function getEligibilityLabel(discount = {}) {
+    const eligibility = discount.user_eligibility || {};
+    const type = eligibility.type || 'all';
+    const isVietnamese = isVietnameseLocale();
+
+    if (type === 'first_time_only') {
+        return isVietnamese ? 'Khách mua lần đầu' : 'First-time customers';
+    }
+
+    if (type === 'specific_users') {
+        return isVietnamese ? 'Tài khoản được chọn' : 'Selected accounts';
+    }
+
+    if (type === 'vip_users') {
+        if (eligibility.min_user_tier) {
+            const tierLabel = translate(`text.${eligibility.min_user_tier}`);
+            return isVietnamese
+                ? `Khách VIP từ hạng ${tierLabel}`
+                : `VIP customers from ${tierLabel} tier`;
+        }
+
+        return isVietnamese ? 'Khách VIP' : 'VIP customers';
+    }
+
+    return isVietnamese ? 'Mọi khách hàng' : 'All customers';
+}
+
+function getApplicationLabel(discount = {}) {
+    const strategy = discount.application_strategy || 'apply_all';
+    const isVietnamese = isVietnameseLocale();
+
+    const labels = {
+        apply_all: isVietnamese
+            ? 'Áp dụng cho toàn bộ sản phẩm hợp lệ'
+            : 'Applies to all eligible items',
+        apply_once: isVietnamese
+            ? 'Áp dụng một lần trên sản phẩm hợp lệ'
+            : 'Applies once to an eligible item',
+        apply_cheapest: isVietnamese
+            ? 'Áp dụng cho sản phẩm hợp lệ rẻ nhất'
+            : 'Applies to the cheapest eligible item',
+        apply_most_expensive: isVietnamese
+            ? 'Áp dụng cho sản phẩm hợp lệ đắt nhất'
+            : 'Applies to the most expensive eligible item',
+    };
+
+    return labels[strategy] || discount.application_strategy_label || strategy;
+}
+
 export default function ProfileVouchersPage() {
     const vouchersQuery = useClaimedDiscounts({
         status: 'all',
@@ -125,6 +207,10 @@ export default function ProfileVouchersPage() {
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             {vouchers.map((voucher) => {
                                 const status = voucher.effective_status || voucher.status;
+                                const discount = voucher.discount || {};
+                                const usageGuide = isVietnameseLocale()
+                                    ? 'Chọn voucher này ở bước thanh toán. Hệ thống sẽ kiểm tra lại giỏ hàng, điều kiện đơn và lượt dùng trước khi tạo đơn.'
+                                    : 'Select this voucher at checkout. The system will recheck cart items, order conditions, and usage limits before creating the order.';
 
                                 return (
                                     <article
@@ -148,14 +234,14 @@ export default function ProfileVouchersPage() {
                                             <div className="flex justify-between gap-3">
                                                 <span>{translate('text.minimum_order')}</span>
                                                 <span className="font-medium text-[var(--color-text-main)]">
-                                                    {formatCurrency(voucher.discount?.min_order_value || 0)}
+                                                    {formatCurrency(discount.min_order_value || 0)}
                                                 </span>
                                             </div>
-                                            {voucher.discount?.max_discount_amount ? (
+                                            {discount.max_discount_amount ? (
                                                 <div className="flex justify-between gap-3">
                                                     <span>{translate('text.maximum')}</span>
                                                     <span className="font-medium text-[var(--color-text-main)]">
-                                                        {formatCurrency(voucher.discount.max_discount_amount)}
+                                                        {formatCurrency(discount.max_discount_amount)}
                                                     </span>
                                                 </div>
                                             ) : null}
@@ -168,9 +254,46 @@ export default function ProfileVouchersPage() {
                                             <div className="flex justify-between gap-3">
                                                 <span>{translate('text.expiry_date')}</span>
                                                 <span className="font-medium text-[var(--color-text-main)]">
-                                                    {formatDate(voucher.discount?.expiry_date)}
+                                                    {formatDate(discount.expiry_date)}
                                                 </span>
                                             </div>
+                                        </div>
+
+                                        <div className="mt-4 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+                                            <p className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+                                                {isVietnameseLocale() ? 'Điều kiện áp dụng' : 'Conditions'}
+                                            </p>
+                                            <div className="mt-2 space-y-2 text-xs text-[var(--color-text-muted)]">
+                                                <div className="flex justify-between gap-3">
+                                                    <span>{translate('text.product_range')}</span>
+                                                    <span className="text-right font-medium text-[var(--color-text-main)]">
+                                                        {getTargetLabel(discount)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between gap-3">
+                                                    <span>{translate('text.user_condition')}</span>
+                                                    <span className="text-right font-medium text-[var(--color-text-main)]">
+                                                        {getEligibilityLabel(discount)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between gap-3">
+                                                    <span>{translate('text.how_to_apply')}</span>
+                                                    <span className="text-right font-medium text-[var(--color-text-main)]">
+                                                        {getApplicationLabel(discount)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between gap-3">
+                                                    <span>{translate('text.number_of_uses_per_user')}</span>
+                                                    <span className="text-right font-medium text-[var(--color-text-main)]">
+                                                        {discount.usage_per_user_limit || 1}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 rounded-md bg-green-50 px-3 py-2 text-xs leading-5 text-green-700">
+                                            <p className="font-semibold">{translate('text.instructions_for_use')}</p>
+                                            <p className="mt-1">{usageGuide}</p>
                                         </div>
 
                                         {voucher.is_available && (

@@ -21,7 +21,7 @@ const shopInfoData = {
         facebook: "https://facebook.com/nguyenlien.shop",
         zalo: "https://zalo.me/0909123456",
         instagram: "https://instagram.com/nguyenlien.shop",
-        shoppe: "https://shopee.vn/nguyenlien.shop",
+        shoppe: "https://shopee.vn/minhthu9999_#product_list",
         tiktok: "https://www.tiktok.com/@nguyenlien.shop",
     },
     certification_links: {

@@ -164,6 +164,65 @@ class DiscountService {
         return Boolean(discount?.requires_claim || discount?.show_on_homepage);
     }
 
+    static hasClaimCapacity(discount) {
+        if (!discount?.claim_limit) {
+            return true;
+        }
+
+        return (discount.claim_count || 0) < discount.claim_limit;
+    }
+
+    static claimCapacityExpression() {
+        return {
+            $or: [
+                { $eq: [{ $ifNull: ['$claim_limit', null] }, null] },
+                {
+                    $lt: [
+                        { $ifNull: ['$claim_count', 0] },
+                        '$claim_limit',
+                    ],
+                },
+            ],
+        };
+    }
+
+    static async reserveClaimSlot(discountId, now = new Date()) {
+        const updateResult = await Discount.updateOne(
+            {
+                _id: discountId,
+                status: 'active',
+                is_deleted: false,
+                started_at: { $lte: now },
+                expiry_date: { $gt: now },
+                $expr: {
+                    $and: [
+                        { $lt: ['$usage_count', '$usage_limit'] },
+                        this.claimCapacityExpression(),
+                    ],
+                },
+            },
+            { $inc: { claim_count: 1 } }
+        );
+
+        if (updateResult.modifiedCount === 0) {
+            throw new AppError(
+                'Voucher claim limit exceeded',
+                400,
+                'DISCOUNT_CLAIM_LIMIT_EXCEEDED'
+            );
+        }
+    }
+
+    static async releaseClaimSlot(discountId) {
+        await Discount.updateOne(
+            {
+                _id: discountId,
+                claim_count: { $gt: 0 },
+            },
+            { $inc: { claim_count: -1 } }
+        );
+    }
+
     static async assertClaimedIfRequired(discount, userId, options = {}) {
         if (!this.discountRequiresClaim(discount)) {
             return null;
@@ -293,6 +352,14 @@ class DiscountService {
             );
         }
 
+        if (!existingClaim && !this.hasClaimCapacity(discount)) {
+            throw new AppError(
+                'Voucher claim limit exceeded',
+                400,
+                'DISCOUNT_CLAIM_LIMIT_EXCEEDED'
+            );
+        }
+
         const claimPayload = {
             user_id: userId,
             discount_id: discount._id,
@@ -302,6 +369,7 @@ class DiscountService {
         };
 
         let claim;
+        let reservedClaimSlot = false;
 
         if (existingClaim) {
             claim = await UserClaimedDiscount.findByIdAndUpdate(
@@ -314,8 +382,15 @@ class DiscountService {
             );
         } else {
             try {
+                await this.reserveClaimSlot(discount._id, now);
+                reservedClaimSlot = true;
+
                 claim = await UserClaimedDiscount.create(claimPayload);
             } catch (error) {
+                if (reservedClaimSlot) {
+                    await this.releaseClaimSlot(discount._id);
+                }
+
                 if (error?.code !== 11000) {
                     throw error;
                 }
@@ -946,6 +1021,8 @@ class DiscountService {
                 'usage_limit',
                 'usage_per_user_limit',
                 'usage_count',
+                'claim_limit',
+                'claim_count',
                 'is_stackable',
                 'stack_priority',
                 'show_on_homepage',
@@ -1028,7 +1105,12 @@ class DiscountService {
             is_deleted: false,
             started_at: { $lte: now },
             expiry_date: { $gt: now },
-            $expr: { $lt: ['$usage_count', '$usage_limit'] },
+            $expr: {
+                $and: [
+                    { $lt: ['$usage_count', '$usage_limit'] },
+                    this.claimCapacityExpression(),
+                ],
+            },
         })
             .sort({
                 homepage_priority: -1,
@@ -1056,11 +1138,17 @@ class DiscountService {
 
         for (const discount of discounts) {
             try {
-                this.assertUserEligible(
-                    discount,
-                    options.userId,
-                    eligibilityContext || {}
-                );
+                if (!this.hasClaimCapacity(discount)) {
+                    continue;
+                }
+
+                if (options.userId) {
+                    this.assertUserEligible(
+                        discount,
+                        options.userId,
+                        eligibilityContext || {}
+                    );
+                }
 
                 if (options.userId) {
                     const userUsageCount = await DiscountUsageLog.countDocuments({
@@ -1140,6 +1228,29 @@ class DiscountService {
             );
         }
 
+        const currentClaimCount =
+            data.claim_limit !== undefined
+                ? await UserClaimedDiscount.countDocuments({
+                      discount_id: existingDiscount._id,
+                  })
+                : existingDiscount.claim_count || 0;
+
+        const nextClaimLimit =
+            data.claim_limit !== undefined
+                ? data.claim_limit
+                : existingDiscount.claim_limit;
+
+        if (
+            nextClaimLimit &&
+            nextClaimLimit < currentClaimCount
+        ) {
+            throw new AppError(
+                'Claim limit cannot be less than current claim count',
+                400,
+                'CLAIM_LIMIT_BELOW_CURRENT_CLAIMS'
+            );
+        }
+
         const nextType = data.type || existingDiscount.type;
         const nextValue =
             data.value !== undefined
@@ -1184,6 +1295,10 @@ class DiscountService {
             updated_by: updatedBy,
             updated_at: new Date(),
         };
+
+        if (data.claim_limit !== undefined) {
+            updateData.claim_count = currentClaimCount;
+        }
 
         if (updateData.code) {
             updateData.code = updateData.code.toUpperCase().trim();
@@ -1426,6 +1541,8 @@ class DiscountService {
 
         return {
             total_used: discount.usage_count,
+            total_claimed: discount.claim_count || 0,
+            claim_limit: discount.claim_limit || null,
             unique_users: uniqueUsers,
             last_used_at: lastUsed,
             usage_percentage: Math.round(

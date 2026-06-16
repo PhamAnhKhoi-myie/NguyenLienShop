@@ -26,7 +26,7 @@ const links = [
     },
     {
         to: ROUTES.CHANGE_PASSWORD,
-        label: translate('text.password'),
+        label: translate('text.change_password'),
         icon: KeyRound,
     },
     {

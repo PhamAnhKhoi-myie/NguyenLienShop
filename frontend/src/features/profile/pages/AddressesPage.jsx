@@ -2,7 +2,7 @@ import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Edit3, MapPin, Plus, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import Badge from '../../../shared/components/Badge';
 import Button from '../../../shared/components/Button';
@@ -84,7 +84,7 @@ function AddressForm({ address, isSaving, onSubmit }) {
     const {
         register,
         handleSubmit,
-        watch,
+        control,
         setValue,
         formState: { errors },
     } = useForm({
@@ -92,7 +92,10 @@ function AddressForm({ address, isSaving, onSubmit }) {
         defaultValues: toFormValues(address),
     });
 
-    const selectedProvinceCode = watch('province_code');
+    const selectedProvinceCode = useWatch({
+        control,
+        name: 'province_code',
+    });
     const provincesQuery = useProvinces();
     const wardsQuery = useWards(selectedProvinceCode);
     const provinces = provincesQuery.data?.data || [];

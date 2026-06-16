@@ -89,6 +89,7 @@ const createDiscountBodySchema = z
 
         usage_limit: z.number().min(1).int(),
         usage_per_user_limit: z.number().min(1).int(),
+        claim_limit: z.number().min(1).int().optional().nullable(),
 
         is_stackable: z.boolean().default(false),
         stack_priority: z.number().int().default(0),
@@ -137,6 +138,7 @@ const updateDiscountBodySchema = z
 
         usage_limit: z.number().min(1).int().optional(),
         usage_per_user_limit: z.number().min(1).int().optional(),
+        claim_limit: z.number().min(1).int().optional().nullable(),
 
         is_stackable: z.boolean().optional(),
         stack_priority: z.number().int().optional(),
@@ -202,6 +204,7 @@ const bulkDiscountSchema = z
         min_order_value: z.number().min(0).optional(),
         usage_limit: z.number().min(1).int(),
         usage_per_user_limit: z.number().min(1).int(),
+        claim_limit: z.number().min(1).int().optional().nullable(),
         is_stackable: z.boolean().optional(),
         stack_priority: z.number().int().optional(),
         show_on_homepage: z.boolean().optional(),

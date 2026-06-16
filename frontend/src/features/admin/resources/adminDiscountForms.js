@@ -96,6 +96,7 @@ const discountBaseSchema = z
             .number()
             .int()
             .min(1, translate('text.limit_each_user_to_1')),
+        claim_limit: nullableNumberSchema,
         is_stackable: z.enum(['true', 'false']),
         stack_priority: z.coerce.number().int(),
         show_on_homepage: z.enum(['true', 'false']),
@@ -155,6 +156,18 @@ const discountBaseSchema = z
         }
 
         if (
+            value.claim_limit !== null &&
+            value.claim_limit !== undefined &&
+            (!Number.isInteger(value.claim_limit) || value.claim_limit < 1)
+        ) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['claim_limit'],
+                message: translate('text.usage_limit_must_be_1'),
+            });
+        }
+
+        if (
             value.applicable_targets_type === 'specific_products' &&
             splitIds(value.product_ids_text).length === 0
         ) {
@@ -210,6 +223,7 @@ const bulkDiscountSchema = z.object({
     min_order_value: z.number().min(0).optional(),
     usage_limit: z.number().int().min(1),
     usage_per_user_limit: z.number().int().min(1),
+    claim_limit: z.number().int().min(1).nullable().optional(),
     is_stackable: z.boolean().optional(),
     stack_priority: z.number().int().optional(),
     show_on_homepage: z.boolean().optional(),
@@ -308,6 +322,12 @@ function buildDiscountPayload(values) {
         min_order_value: Number(values.min_order_value || 0),
         usage_limit: Number(values.usage_limit),
         usage_per_user_limit: Number(values.usage_per_user_limit),
+        claim_limit:
+            values.claim_limit === null ||
+            values.claim_limit === undefined ||
+            values.claim_limit === ''
+                ? null
+                : Number(values.claim_limit),
         is_stackable:
             values.is_stackable === true || values.is_stackable === 'true',
         stack_priority: Number(values.stack_priority || 0),
@@ -347,6 +367,7 @@ export const discountFormConfig = {
         min_order_value: 0,
         usage_limit: 100,
         usage_per_user_limit: 1,
+        claim_limit: '',
         is_stackable: 'false',
         stack_priority: 0,
         show_on_homepage: 'false',
@@ -372,6 +393,7 @@ export const discountFormConfig = {
         min_order_value: discount.min_order_value ?? 0,
         usage_limit: discount.usage_limit ?? 100,
         usage_per_user_limit: discount.usage_per_user_limit ?? 1,
+        claim_limit: discount.claim_limit ?? '',
         is_stackable: discount.is_stackable ? 'true' : 'false',
         stack_priority: discount.stack_priority ?? 0,
         show_on_homepage: discount.show_on_homepage ? 'true' : 'false',
@@ -413,6 +435,12 @@ export const discountFormConfig = {
             name: 'usage_per_user_limit',
             label: translate('text.number_of_uses_per_user'),
             type: 'number',
+        },
+        {
+            name: 'claim_limit',
+            label: translate('text.total_claims'),
+            type: 'number',
+            helperText: translate('text.leave_blank_if_not_limited_to'),
         },
         {
             name: 'application_strategy',

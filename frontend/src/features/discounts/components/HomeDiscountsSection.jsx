@@ -1,12 +1,15 @@
-import { getLocale, translate } from '../../../shared/i18n/index';
+import { translate } from '../../../shared/i18n/index';
 import { Check, Copy, Loader2, ShoppingBag, TicketPercent } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { ROUTES } from '../../../shared/constants/routes';
 import { formatCurrency } from '../../../shared/utils/formatCurrency';
 import { useAuthStore } from '../../auth/store/auth.store';
-import { CLAIMED_DISCOUNT_CODE_KEY } from '../constants';
+import {
+    CLAIMED_DISCOUNT_CODE_KEY,
+    PENDING_DISCOUNT_CLAIM_KEY,
+} from '../constants';
 import {
     useClaimDiscount,
     useHomepageDiscounts,
@@ -20,24 +23,6 @@ function formatDiscountValue(discount) {
     return formatCurrency(discount.value);
 }
 
-function formatDate(value) {
-    if (!value) {
-        return '';
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return '';
-    }
-
-    return new Intl.DateTimeFormat(getLocale(), {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-    }).format(date);
-}
-
 function saveClaimedCode(code) {
     if (typeof window === 'undefined') {
         return;
@@ -46,12 +31,63 @@ function saveClaimedCode(code) {
     window.localStorage.setItem(CLAIMED_DISCOUNT_CODE_KEY, code);
 }
 
+function getDiscountId(discount) {
+    return discount?.id || discount?._id || discount?.discountId;
+}
+
+function savePendingDiscountClaim(discount) {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    const discountId = getDiscountId(discount);
+
+    if (!discountId) {
+        return;
+    }
+
+    window.sessionStorage.setItem(
+        PENDING_DISCOUNT_CLAIM_KEY,
+        JSON.stringify({
+            discountId,
+            code: discount.code || '',
+        })
+    );
+}
+
+function getPendingDiscountClaim() {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const rawValue = window.sessionStorage.getItem(PENDING_DISCOUNT_CLAIM_KEY);
+
+    if (!rawValue) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(rawValue);
+    } catch {
+        window.sessionStorage.removeItem(PENDING_DISCOUNT_CLAIM_KEY);
+        return null;
+    }
+}
+
+function clearPendingDiscountClaim() {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    window.sessionStorage.removeItem(PENDING_DISCOUNT_CLAIM_KEY);
+}
+
 export default function HomeDiscountsSection() {
     const navigate = useNavigate();
     const location = useLocation();
     const accessToken = useAuthStore((state) => state.accessToken);
     const discountsQuery = useHomepageDiscounts(
-        4,
+        12,
         accessToken ? 'user' : 'guest'
     );
     const claimMutation = useClaimDiscount();
@@ -60,22 +96,15 @@ export default function HomeDiscountsSection() {
     const [claimMessage, setClaimMessage] = useState('');
     const [claimMessageType, setClaimMessageType] = useState('success');
     const [localClaimedIds, setLocalClaimedIds] = useState([]);
+    const pendingClaimProcessedRef = useRef(false);
+    const claimDiscountForUserRef = useRef(null);
 
-    const handleClaim = async (discount) => {
-        const discountId = discount.id || discount._id;
+    const claimDiscountForUser = useCallback(async (discount, options = {}) => {
+        const discountId = getDiscountId(discount);
         const code = discount.code;
 
         setClaimMessage('');
         setClaimMessageType('success');
-
-        if (!accessToken) {
-            navigate(ROUTES.LOGIN, {
-                state: {
-                    from: location,
-                },
-            });
-            return;
-        }
 
         if (!discountId) {
             setClaimMessageType('error');
@@ -91,6 +120,11 @@ export default function HomeDiscountsSection() {
                 current.includes(discountId) ? current : [...current, discountId]
             );
 
+            if (options.auto) {
+                setClaimMessage(translate('text.received_code_value_the_code_has_been_saved_for_use_at_checkout', { value0: code }));
+                return;
+            }
+
             try {
                 await navigator.clipboard?.writeText(code);
                 setClaimMessage(translate('text.received_code_value_the_code_has_been_copied_for_use_at_checkout', { value0: code }));
@@ -101,41 +135,96 @@ export default function HomeDiscountsSection() {
             setClaimMessageType('error');
             setClaimMessage(error.message || translate('text.did_not_receive_this_voucher'));
         }
+    }, [claimMutation]);
+
+    useEffect(() => {
+        claimDiscountForUserRef.current = claimDiscountForUser;
+    }, [claimDiscountForUser]);
+
+    useEffect(() => {
+        if (!accessToken || pendingClaimProcessedRef.current) {
+            return;
+        }
+
+        const pendingClaim = getPendingDiscountClaim();
+
+        if (!pendingClaim?.discountId) {
+            return;
+        }
+
+        pendingClaimProcessedRef.current = true;
+
+        const timerId = window.setTimeout(() => {
+            const claimPromise = claimDiscountForUserRef.current?.(
+                pendingClaim,
+                { auto: true }
+            );
+
+            if (!claimPromise) {
+                clearPendingDiscountClaim();
+                return;
+            }
+
+            claimPromise.finally(() => {
+                clearPendingDiscountClaim();
+            });
+        }, 0);
+
+        return () => window.clearTimeout(timerId);
+    }, [accessToken]);
+
+    const handleClaim = async (discount) => {
+        if (!accessToken) {
+            savePendingDiscountClaim(discount);
+            navigate(ROUTES.LOGIN, {
+                state: {
+                    from: location,
+                    pendingDiscountId: getDiscountId(discount),
+                    pendingDiscountCode: discount.code,
+                },
+            });
+            return;
+        }
+
+        await claimDiscountForUser(discount);
     };
 
-    if (discountsQuery.isError || (!discountsQuery.isLoading && discounts.length === 0)) {
+    if (
+        discountsQuery.isError ||
+        (!discountsQuery.isLoading && discounts.length === 0 && !claimMessage)
+    ) {
         return null;
     }
 
     return (
-        <section className="border-y border-[var(--color-border)] py-10">
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <section className="border-y border-[var(--color-border)] py-7">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-sm font-semibold text-[var(--color-primary-hover)]"> {translate('text.discount_code')} </p>
-                    <h2 className="mt-1 text-2xl font-bold text-[var(--color-text-main)]"> {translate('text.offer_is_open_for_customers')} </h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]"> {translate('text.get_code_before_buying_to_save_more_on_the_right_order')} </p>
+                    <p className="text-xs font-semibold uppercase text-[var(--color-primary-hover)]"> {translate('text.discount_code')} </p>
+                    <h2 className="mt-1 text-xl font-bold text-[var(--color-text-main)]"> {translate('text.offer_is_open_for_customers')} </h2>
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-[var(--color-text-muted)]"> {translate('text.get_code_before_buying_to_save_more_on_the_right_order')} </p>
                 </div>
 
                 <Link
                     to={ROUTES.PRODUCTS}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm font-semibold text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)]"
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-xs font-semibold text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)]"
                 >
-                    <ShoppingBag className="h-4 w-4" /> {translate('text.purchase')} </Link>
+                    <ShoppingBag className="h-3.5 w-3.5" /> {translate('text.purchase')} </Link>
             </div>
 
             {discountsQuery.isLoading ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {[0, 1, 2, 3].map((item) => (
+                <div className="flex gap-3 overflow-x-auto pb-3">
+                    {[0, 1, 2, 3, 4].map((item) => (
                         <div
                             key={item}
-                            className="h-48 animate-pulse rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]"
+                            className="h-32 w-[270px] shrink-0 animate-pulse rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] sm:w-[300px]"
                         />
                     ))}
                 </div>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="flex snap-x gap-3 overflow-x-auto pb-3">
                     {discounts.map((discount) => {
-                        const discountId = discount.id || discount._id;
+                        const discountId = getDiscountId(discount);
                         const isClaimed =
                             discount.is_claimed ||
                             claimedCode === discount.code ||
@@ -147,58 +236,63 @@ export default function HomeDiscountsSection() {
                         return (
                             <article
                                 key={discountId || discount.code}
-                                className="relative overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm"
+                                className="relative flex h-32 w-[270px] shrink-0 snap-start overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm sm:w-[300px]"
                             >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-50 text-[var(--color-primary)]">
-                                        <TicketPercent className="h-5 w-5" />
-                                    </div>
+                                <span className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-[var(--color-border)] bg-[var(--color-background)]" />
+                                <span className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-[var(--color-border)] bg-[var(--color-background)]" />
 
-                                    <span className="rounded-full bg-[var(--color-secondary)] px-3 py-1 text-xs font-semibold text-[var(--color-primary-hover)]">
+                                <div className="flex w-[90px] shrink-0 flex-col items-center justify-center border-r border-dashed border-[var(--color-border)] bg-green-50 px-2 text-center text-[var(--color-primary)]">
+                                    <TicketPercent className="h-6 w-6" />
+                                    <span className="mt-2 break-all text-[11px] font-bold leading-4 text-[var(--color-primary-hover)]">
                                         {discount.code}
                                     </span>
                                 </div>
 
-                                <h3 className="mt-5 text-xl font-bold text-[var(--color-text-main)]"> {translate('text.reduce')} {formatDiscountValue(discount)}
-                                </h3>
+                                <div className="flex min-w-0 flex-1 flex-col p-3">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[11px] font-semibold uppercase text-[var(--color-text-muted)]">
+                                            {translate('text.discount_code')}
+                                        </p>
+                                        <h3 className="mt-1 truncate text-lg font-bold leading-6 text-[var(--color-text-main)]">
+                                            {translate('text.reduce')} {formatDiscountValue(discount)}
+                                        </h3>
+                                    </div>
 
-                                <div className="mt-3 space-y-1 text-sm text-[var(--color-text-muted)]">
-                                    <p> {translate('text.minimum_order')}{' '}
-                                        <span className="font-medium text-[var(--color-text-main)]">
-                                            {formatCurrency(discount.min_order_value || 0)}
-                                        </span>
-                                    </p>
-                                    {discount.max_discount_amount ? (
-                                        <p> {translate('text.maximum')}{' '}
+                                    <div className="mt-2 space-y-0.5 text-[11px] leading-4 text-[var(--color-text-muted)]">
+                                        <p className="truncate"> {translate('text.minimum_order')}{' '}
                                             <span className="font-medium text-[var(--color-text-main)]">
-                                                {formatCurrency(discount.max_discount_amount)}
+                                                {formatCurrency(discount.min_order_value || 0)}
                                             </span>
                                         </p>
-                                    ) : null}
-                                    {discount.expiry_date ? (
-                                        <p>{translate('text.expires_until')} {formatDate(discount.expiry_date)}</p>
-                                    ) : null}
-                                </div>
+                                        {discount.max_discount_amount ? (
+                                            <p className="truncate"> {translate('text.maximum')}{' '}
+                                                <span className="font-medium text-[var(--color-text-main)]">
+                                                    {formatCurrency(discount.max_discount_amount)}
+                                                </span>
+                                            </p>
+                                        ) : null}
+                                    </div>
 
-                                <button
-                                    type="button"
-                                    disabled={isClaimed || isClaiming}
-                                    onClick={() => handleClaim(discount)}
-                                    className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--color-primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-70"
-                                >
-                                    {isClaiming ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : isClaimed ? (
-                                        <Check className="h-4 w-4" />
-                                    ) : (
-                                        <Copy className="h-4 w-4" />
-                                    )}
-                                    {isClaiming
-                                        ? translate('text.receiving')
-                                        : isClaimed
-                                          ? translate('text.received_code')
-                                          : translate('text.get_code')}
-                                </button>
+                                    <button
+                                        type="button"
+                                        disabled={isClaimed || isClaiming}
+                                        onClick={() => handleClaim(discount)}
+                                        className="mt-auto inline-flex h-6 w-full items-center justify-center gap-1 rounded-md bg-[var(--color-primary)] px-2 text-[11px] font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                                    >
+                                        {isClaiming ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : isClaimed ? (
+                                            <Check className="h-3 w-3" />
+                                        ) : (
+                                            <Copy className="h-3 w-3" />
+                                        )}
+                                        {isClaiming
+                                            ? translate('text.receiving')
+                                            : isClaimed
+                                                ? translate('text.received_code')
+                                                : translate('text.get_code')}
+                                    </button>
+                                </div>
                             </article>
                         );
                     })}

@@ -2,7 +2,7 @@ import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 
 import Button from '../../../shared/components/Button';
 import Input from '../../../shared/components/Input';
@@ -150,7 +150,7 @@ export default function AdminResourceForm({
         register,
         handleSubmit,
         reset,
-        watch,
+        control,
         formState: { errors },
     } = useForm({
         resolver: zodResolver(form.schema),
@@ -162,7 +162,7 @@ export default function AdminResourceForm({
     }, [form, initialData, reset]);
 
     const currentId = initialData?.id || initialData?._id;
-    const values = watch();
+    const values = useWatch({ control }) || {};
 
     return (
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>

@@ -325,6 +325,11 @@ function DiscountDetailPanel({
                         <DetailRow label={translate('text.used')}>
                             {discount.usage_count || 0}/{discount.usage_limit}
                         </DetailRow>
+                        <DetailRow label={translate('text.total_claims')}>
+                            {discount.claim_limit
+                                ? `${discount.claim_count || 0}/${discount.claim_limit}`
+                                : discount.claim_count || 0}
+                        </DetailRow>
                         <DetailRow label={translate('text.per_user')}>
                             {discount.usage_per_user_limit}
                         </DetailRow>
@@ -724,7 +729,13 @@ export default function AdminDiscountsPage() {
                                                     {formatDiscountValue(discount)}
                                                 </td>
                                                 <td className="px-4 py-3 text-[var(--color-text-main)]">
-                                                    {discount.usage_count || 0}/{discount.usage_limit}
+                                                    <div>{discount.usage_count || 0}/{discount.usage_limit}</div>
+                                                    <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+                                                        {translate('text.claim_voucher')}:{' '}
+                                                        {discount.claim_limit
+                                                            ? `${discount.claim_count || 0}/${discount.claim_limit}`
+                                                            : discount.claim_count || 0}
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex flex-wrap gap-2">

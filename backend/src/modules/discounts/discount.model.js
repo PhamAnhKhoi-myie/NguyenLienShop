@@ -191,6 +191,22 @@ const discountSchema = new mongoose.Schema(
 
         },
 
+        claim_limit: {
+            type: Number,
+            default: null,
+            min: [1, 'Claim limit must be at least 1'],
+
+
+        },
+
+        claim_count: {
+            type: Number,
+            default: 0,
+            min: [0, 'Claim count cannot be negative'],
+
+
+        },
+
 
 
         is_stackable: {
@@ -360,6 +376,17 @@ discountSchema.index(
 );
 
 discountSchema.index(
+    { show_on_homepage: 1, claim_limit: 1, claim_count: 1 },
+    {
+        name: 'homepage_claim_capacity_idx',
+        partialFilterExpression: {
+            show_on_homepage: true,
+            is_deleted: false,
+        },
+    }
+);
+
+discountSchema.index(
     { is_deleted: 1, created_at: -1 },
     {
         name: 'soft_delete_idx',
@@ -441,6 +468,17 @@ discountSchema.pre('validate', function (next) {
                 'Expiry date must be after start date'
             );
         }
+    }
+
+    if (
+        this.claim_limit &&
+        this.claim_count !== undefined &&
+        this.claim_count > this.claim_limit
+    ) {
+        this.invalidate(
+            'claim_limit',
+            'Claim limit cannot be less than current claim count'
+        );
     }
 
     next();
