@@ -67,6 +67,15 @@ router.post(
 );
 
 router.post(
+    '/:order_id/confirm-received',
+    authenticate,
+    validate({
+        params: IdParamSchema,
+    }),
+    OrderController.confirmReceived
+);
+
+router.post(
     '/:order_id/review',
     authenticate,
     validate({

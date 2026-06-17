@@ -223,6 +223,13 @@ const orderSchema = new mongoose.Schema(
 
         shipment_id: mongoose.Schema.Types.ObjectId,
 
+        customer_receipt: {
+            confirmed_at: Date,
+            confirmed_by: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User'
+            }
+        },
 
         status: {
             type: String,

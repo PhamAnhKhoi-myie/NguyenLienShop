@@ -21,6 +21,7 @@ const {
     DEFAULT_CURRENCY,
     getDefaultShippingFee,
 } = require('../../config/commerce');
+const { isReviewWindowOpen } = require('./order_review_window.util');
 
 class OrderService {
     static getCheckoutSettings() {
@@ -800,6 +801,56 @@ class OrderService {
         return OrderMapper.toDetailDTO(order);
     }
 
+    static async confirmCustomerReceived(orderId, userId, metadata = {}) {
+        const order = await Order.findOne({
+            _id: orderId,
+            user_id: userId,
+        });
+
+        if (!order) {
+            throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
+        }
+
+        if (order.status !== 'DELIVERED') {
+            throw new AppError(
+                'Can only confirm receipt for delivered orders',
+                409,
+                'ORDER_NOT_DELIVERED'
+            );
+        }
+
+        if (order.customer_receipt?.confirmed_at) {
+            return OrderMapper.toDetailDTO(order);
+        }
+
+        const confirmedAt = new Date();
+
+        order.customer_receipt = {
+            confirmed_at: confirmedAt,
+            confirmed_by: userId,
+        };
+
+        await order.save();
+
+        await this._createOrderAuditLog({
+            action: AUDIT_ACTIONS.CONFIRM_ORDER_RECEIPT,
+            order,
+            actorId: userId,
+            metadata,
+            changes: {
+                customer_receipt: {
+                    from: null,
+                    to: {
+                        confirmed_at: confirmedAt,
+                        confirmed_by: userId,
+                    },
+                },
+            },
+        });
+
+        return OrderMapper.toDetailDTO(order);
+    }
+
     static async cancelCustomerOrder(orderId, reason, userId, metadata = {}) {
         return this.cancelOrder(orderId, reason, userId, metadata, {
             allowedStatuses: ['PENDING', 'PAID'],
@@ -1393,6 +1444,22 @@ class OrderService {
                 'Can only review delivered orders',
                 409,
                 'ORDER_NOT_DELIVERED'
+            );
+        }
+
+        if (!order.customer_receipt?.confirmed_at) {
+            throw new AppError(
+                'Please confirm that you received the order before reviewing',
+                409,
+                'ORDER_RECEIPT_NOT_CONFIRMED'
+            );
+        }
+
+        if (!isReviewWindowOpen(order)) {
+            throw new AppError(
+                'Review period has expired',
+                409,
+                'ORDER_REVIEW_EXPIRED'
             );
         }
 

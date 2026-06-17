@@ -33,6 +33,20 @@ export function useCancelOrder() {
     });
 }
 
+export function useConfirmOrderReceived() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (orderId) => orderApi.confirmReceived(orderId),
+        onSuccess: (_response, orderId) => {
+            queryClient.invalidateQueries({ queryKey: ORDER_QUERY_KEY });
+            queryClient.invalidateQueries({
+                queryKey: [...ORDER_QUERY_KEY, orderId],
+            });
+        },
+    });
+}
+
 export function useWriteOrderReview() {
     const queryClient = useQueryClient();
 

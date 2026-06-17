@@ -2,6 +2,7 @@ import { getLocale, translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
     ArrowLeft,
+    CheckCircle2,
     Star,
     Truck,
     XCircle,
@@ -23,6 +24,7 @@ import { formatCurrency } from '../../../shared/utils/formatCurrency';
 import AccountNav from '../../profile/components/AccountNav';
 import {
     useCancelOrder,
+    useConfirmOrderReceived,
     useOrder,
     useWriteOrderReview,
 } from '../hooks/useOrders';
@@ -65,9 +67,69 @@ function canCancelOrder(status) {
     return ['PENDING', 'PAID'].includes(status);
 }
 
+function hasConfirmedReceipt(order) {
+    return Boolean(order?.customer_receipt?.confirmed_at);
+}
+
+function canConfirmReceipt(order) {
+    return order?.status === 'DELIVERED' && !hasConfirmedReceipt(order);
+}
+
+function getReviewExpiresAt(order) {
+    const expiresAt = order?.review_window?.expires_at;
+
+    if (expiresAt) {
+        return expiresAt;
+    }
+
+    const confirmedAt = order?.customer_receipt?.confirmed_at;
+
+    if (!confirmedAt) {
+        return null;
+    }
+
+    const confirmedTime = new Date(confirmedAt).getTime();
+
+    if (Number.isNaN(confirmedTime)) {
+        return null;
+    }
+
+    return new Date(confirmedTime + 3 * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function isReviewWindowOpen(order) {
+    const expiresAt = getReviewExpiresAt(order);
+
+    if (!expiresAt) {
+        return false;
+    }
+
+    const expiresTime = new Date(expiresAt).getTime();
+
+    return !Number.isNaN(expiresTime) && Date.now() <= expiresTime;
+}
+
+function getReviewExpiryText(order) {
+    const expiresAt = getReviewExpiresAt(order);
+
+    if (!expiresAt) {
+        return '';
+    }
+
+    if (!isReviewWindowOpen(order)) {
+        return translate('text.review_expired');
+    }
+
+    return translate('text.review_expires_at', {
+        value0: formatDateTime(expiresAt),
+    });
+}
+
 function canReviewOrderItem(order, item) {
     return (
         order?.status === 'DELIVERED' &&
+        hasConfirmedReceipt(order) &&
+        isReviewWindowOpen(order) &&
         String(item?.review_status || 'pending').toLowerCase() !== 'reviewed'
     );
 }
@@ -101,6 +163,7 @@ export default function OrderDetailPage() {
     const { orderId } = useParams();
     const orderQuery = useOrder(orderId);
     const cancelOrderMutation = useCancelOrder();
+    const confirmReceivedMutation = useConfirmOrderReceived();
     const writeReviewMutation = useWriteOrderReview();
     const [isCancelOpen, setIsCancelOpen] = useState(false);
     const [reviewItem, setReviewItem] = useState(null);
@@ -167,6 +230,24 @@ export default function OrderDetailPage() {
         });
         closeCancelModal();
     });
+
+    const handleConfirmReceived = async () => {
+        if (!order?.id) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            translate('text.confirm_order_value_has_been_received', {
+                value0: order.order_code,
+            })
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        await confirmReceivedMutation.mutateAsync(order.id);
+    };
 
     const handleSubmitReview = handleReviewSubmit(async (values) => {
         if (!order?.id || !reviewItem?.id) {
@@ -239,14 +320,28 @@ export default function OrderDetailPage() {
                             </p>
                         </div>
 
-                        {canCancelOrder(order.status) && (
-                            <Button
-                                variant="danger"
-                                onClick={openCancelModal}
-                            >
-                                <XCircle className="h-4 w-4" /> {translate('text.cancel_order')} </Button>
-                        )}
+                        <div className="flex flex-wrap gap-2">
+                            {canConfirmReceipt(order) && (
+                                <Button
+                                    onClick={handleConfirmReceived}
+                                    isLoading={confirmReceivedMutation.isPending}
+                                >
+                                    <CheckCircle2 className="h-4 w-4" /> {translate('text.confirm_received_goods')} </Button>
+                            )}
+                            {canCancelOrder(order.status) && (
+                                <Button
+                                    variant="danger"
+                                    onClick={openCancelModal}
+                                >
+                                    <XCircle className="h-4 w-4" /> {translate('text.cancel_order')} </Button>
+                            )}
+                        </div>
                     </div>
+                    {confirmReceivedMutation.isError && (
+                        <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
+                            {confirmReceivedMutation.error.message}
+                        </p>
+                    )}
                 </CardBody>
             </Card>
 
@@ -259,6 +354,10 @@ export default function OrderDetailPage() {
                         <CardBody className="space-y-4">
                             {(order.items || []).map((item) => {
                                 const canReview = canReviewOrderItem(order, item);
+                                const reviewExpiryText =
+                                    item.review_status === 'reviewed'
+                                        ? ''
+                                        : getReviewExpiryText(order);
                                 const isSimpleProduct =
                                     item.product_type === 'SIMPLE';
                                 const itemMeta = isSimpleProduct
@@ -309,6 +408,11 @@ export default function OrderDetailPage() {
                                                 >
                                                     <Star className="h-4 w-4" /> {translate('text.review')} </Button>
                                             ) : null}
+                                            {reviewExpiryText && (
+                                                <p className="text-right text-xs text-[var(--color-text-muted)]">
+                                                    {reviewExpiryText}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -442,6 +546,10 @@ export default function OrderDetailPage() {
                                         .filter(Boolean)
                                         .join(', ')
                                 }
+                            />
+                            <InfoRow
+                                label={translate('text.received_confirmed_at')}
+                                value={formatDateTime(order.customer_receipt?.confirmed_at)}
                             />
                         </CardBody>
                     </Card>

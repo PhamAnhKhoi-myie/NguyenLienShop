@@ -290,6 +290,10 @@ const buildOrderPayload = ({ code, user, combo, quantity = 1 }) => {
             shipped_at: shippedAt,
             delivered_at: deliveredAt,
         },
+        customer_receipt: {
+            confirmed_at: deliveredAt,
+            confirmed_by: user._id,
+        },
         status: "DELIVERED",
         status_history: [
             { from: null, to: "PENDING", changed_at: now, changed_by: null, note: "Dev fixture created" },

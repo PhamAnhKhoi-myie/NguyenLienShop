@@ -176,6 +176,24 @@ module.exports = {
         },
     },
 
+    "/orders/{order_id}/confirm-received": {
+        post: {
+            tags: ["Orders"],
+            summary: "Confirm customer received the delivered order",
+            security: [{ bearerAuth: [] }],
+            parameters: [orderIdParam],
+            responses: {
+                200: ok("#/components/schemas/OrderDetailResponse"),
+                400: { $ref: "#/components/responses/BadRequest" },
+                401: { $ref: "#/components/responses/Unauthorized" },
+                403: { $ref: "#/components/responses/Forbidden" },
+                404: { $ref: "#/components/responses/NotFound" },
+                409: { $ref: "#/components/responses/Conflict" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
     "/orders/{order_id}/review": {
         post: {
             tags: ["Orders"],

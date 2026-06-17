@@ -6,6 +6,7 @@ const AppError = require('../../utils/appError.util');
 const logger = require('../../utils/logger.util');
 const ReviewAuditLogService = require('../audit_logs/review_audit_log/review_log.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
+const { isReviewWindowOpen } = require('../orders/order_review_window.util');
 
 class ReviewService {
     static async createReview(userId, productId, variantId, orderId, data, metadata = {}) {
@@ -24,6 +25,22 @@ class ReviewService {
                     'Cannot review unverified purchase',
                     403,
                     'INVALID_REVIEW_PURCHASE'
+                );
+            }
+
+            if (!order.customer_receipt?.confirmed_at) {
+                throw new AppError(
+                    'Please confirm that you received the order before reviewing',
+                    409,
+                    'ORDER_RECEIPT_NOT_CONFIRMED'
+                );
+            }
+
+            if (!isReviewWindowOpen(order)) {
+                throw new AppError(
+                    'Review period has expired',
+                    409,
+                    'ORDER_REVIEW_EXPIRED'
                 );
             }
 

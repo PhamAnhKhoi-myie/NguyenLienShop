@@ -122,6 +122,24 @@ const cancelOrder = asyncHandler(async (req, res) => {
     });
 });
 
+const confirmReceived = asyncHandler(async (req, res) => {
+    const user = assertAuthenticated(req.user);
+
+    const { order_id } = req.params;
+
+    const updatedOrder = await OrderService.confirmCustomerReceived(
+        order_id,
+        user.userId,
+        buildAuditMetadata(req)
+    );
+
+    res.status(200).json({
+        success: true,
+        data: updatedOrder,
+        message: 'Order receipt confirmed successfully',
+    });
+});
+
 const writeReview = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
 
@@ -350,6 +368,7 @@ module.exports = {
     getOrders,
     getOrderDetail,
     cancelOrder,
+    confirmReceived,
     writeReview,
     updateOrderStatus,
     adminUpdateOrder,

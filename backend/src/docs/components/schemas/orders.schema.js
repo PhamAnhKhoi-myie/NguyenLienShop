@@ -142,6 +142,27 @@ module.exports = {
         },
     },
 
+    OrderCustomerReceipt: {
+        type: "object",
+        required: ["confirmed", "confirmed_at", "confirmed_by"],
+        properties: {
+            confirmed: { type: "boolean", example: false },
+            confirmed_at: { type: "string", format: "date-time", nullable: true, example: null },
+            confirmed_by: { type: "string", pattern: objectIdPattern, nullable: true, example: null },
+        },
+    },
+
+    OrderReviewWindow: {
+        type: "object",
+        required: ["days", "expires_at", "open", "expired"],
+        properties: {
+            days: { type: "integer", example: 3 },
+            expires_at: { type: "string", format: "date-time", nullable: true, example: null },
+            open: { type: "boolean", example: false },
+            expired: { type: "boolean", example: false },
+        },
+    },
+
     OrderStatusHistoryRecord: {
         type: "object",
         required: ["to", "changed_at"],
@@ -179,6 +200,8 @@ module.exports = {
             "pricing",
             "payment",
             "shipment",
+            "customer_receipt",
+            "review_window",
             "status",
             "status_history",
             "created_at",
@@ -207,6 +230,8 @@ module.exports = {
                 nullable: true,
                 allOf: [{ $ref: "#/components/schemas/OrderShipment" }],
             },
+            customer_receipt: { $ref: "#/components/schemas/OrderCustomerReceipt" },
+            review_window: { $ref: "#/components/schemas/OrderReviewWindow" },
             status: { type: "string", enum: orderStatusEnum, example: "PENDING" },
             status_history: {
                 type: "array",
@@ -251,7 +276,7 @@ module.exports = {
 
     OrderListItem: {
         type: "object",
-        required: ["id", "order_code", "item_count", "total_items", "total_amount", "status", "payment_status", "created_at", "delivered_at"],
+        required: ["id", "order_code", "item_count", "total_items", "total_amount", "status", "payment_status", "created_at", "delivered_at", "customer_receipt", "review_window"],
         properties: {
             id: { type: "string", pattern: objectIdPattern, example: "507f1f77bcf86cd799439020" },
             order_code: { type: "string", pattern: "^ORD-\\d{8}-[A-Z0-9]{5}$", example: "ORD-20240415-ABC12" },
@@ -262,6 +287,8 @@ module.exports = {
             payment_status: { type: "string", enum: paymentStatusEnum, example: "PENDING" },
             created_at: { type: "string", format: "date-time" },
             delivered_at: { type: "string", format: "date-time", nullable: true, example: null },
+            customer_receipt: { $ref: "#/components/schemas/OrderCustomerReceipt" },
+            review_window: { $ref: "#/components/schemas/OrderReviewWindow" },
         },
     },
 

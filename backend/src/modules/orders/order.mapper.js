@@ -1,3 +1,5 @@
+const { toReviewWindowDTO } = require('./order_review_window.util');
+
 class OrderMapper {
 
     static toResponseDTO(order) {
@@ -60,6 +62,9 @@ class OrderMapper {
                 }
                 : null,
 
+            customer_receipt: this.transformCustomerReceipt(doc.customer_receipt),
+            review_window: this.transformReviewWindow(doc),
+
             status: doc.status,
             status_history: this.transformStatusHistory(doc.status_history || []),
 
@@ -96,6 +101,8 @@ class OrderMapper {
 
             created_at: this.getCreatedAt(doc),
             delivered_at: doc.shipment?.delivered_at || null,
+            customer_receipt: this.transformCustomerReceipt(doc.customer_receipt),
+            review_window: this.transformReviewWindow(doc),
         };
     }
 
@@ -153,6 +160,7 @@ class OrderMapper {
                 status: detailDTO.payment.status,
             },
             shipment: detailDTO.shipment,
+            customer_receipt: detailDTO.customer_receipt,
 
             status: detailDTO.status,
             fulfillment: detailDTO.fulfillment,
@@ -329,6 +337,20 @@ class OrderMapper {
         }
 
         return user.toString();
+    }
+
+    static transformCustomerReceipt(receipt) {
+        const confirmedAt = receipt?.confirmed_at || null;
+
+        return {
+            confirmed: Boolean(confirmedAt),
+            confirmed_at: confirmedAt,
+            confirmed_by: receipt?.confirmed_by?.toString?.() || receipt?.confirmed_by || null,
+        };
+    }
+
+    static transformReviewWindow(order) {
+        return toReviewWindowDTO(order);
     }
 
     static transformCustomer(user) {

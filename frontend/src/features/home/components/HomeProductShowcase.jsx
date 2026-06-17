@@ -18,6 +18,11 @@ import { useCategoryTree } from '../../categories/hooks/useCategories';
 import QuickAddProductModal from '../../products/components/QuickAddProductModal';
 import { useProducts } from '../../products/hooks/useProducts';
 
+import bannerBanChay from '../../../assets/images/banner-ban-chay.jpg';
+import bannerGiamGia from '../../../assets/images/banner-giam-gia.jpg';
+import bannerMoiVe from '../../../assets/images/banner-hang-moi.jpg';
+import bannerDanhMuc from '../../../assets/images/banner-danh-muc.jpg';
+
 const HOME_PRODUCT_LIMIT = 12;
 const HOME_GRID_LIMIT = 8;
 
@@ -46,7 +51,7 @@ const merchandisingSections = [
         key: 'on-sale',
         title: translate('text.discounted'),
         bannerTone: 'sale',
-        imageSrc: null,
+        imageSrc: bannerGiamGia,
         params: { badge: 'on_sale', sortBy: 'newest' },
         linkParams: { badge: 'on_sale', sortBy: 'newest' },
     },
@@ -54,7 +59,7 @@ const merchandisingSections = [
         key: 'best-seller',
         title: translate('text.best_seller'),
         bannerTone: 'popular',
-        imageSrc: null,
+        imageSrc: bannerBanChay,
         params: { badge: 'best_seller', sortBy: 'popular' },
         linkParams: { badge: 'best_seller', sortBy: 'popular' },
     },
@@ -62,7 +67,7 @@ const merchandisingSections = [
         key: 'new-arrivals',
         title: translate('text.new_arrival'),
         bannerTone: 'new',
-        imageSrc: null,
+        imageSrc: bannerMoiVe,
         params: { badge: 'new', sortBy: 'newest' },
         linkParams: { badge: 'new', sortBy: 'newest' },
     },
@@ -103,7 +108,7 @@ function flattenCategoryTree(categories = []) {
 function ProductSectionBanner({
     title,
     tone = 'default',
-    imageSrc = null,
+    imageSrc = bannerDanhMuc,
     imageAlt = '',
     className,
 }) {

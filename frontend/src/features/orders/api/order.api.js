@@ -5,6 +5,8 @@ export const orderApi = {
     getOrder: (orderId) => axiosClient.get(`/orders/${orderId}`),
     cancelOrder: (orderId, payload) =>
         axiosClient.post(`/orders/${orderId}/cancel`, payload),
+    confirmReceived: (orderId) =>
+        axiosClient.post(`/orders/${orderId}/confirm-received`),
     writeReview: (orderId, payload) =>
         axiosClient.post(`/orders/${orderId}/review`, payload),
 };
