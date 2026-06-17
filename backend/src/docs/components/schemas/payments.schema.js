@@ -1,6 +1,6 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
 const providerEnum = ["vnpay", "stripe", "paypal", "payos"];
-const paymentStatusEnum = ["pending", "paid", "failed"];
+const paymentStatusEnum = ["pending", "paid", "failed", "refund_pending", "refunded"];
 const verificationStatusEnum = ["pending", "verified", "failed"];
 
 module.exports = {
@@ -72,6 +72,9 @@ module.exports = {
             failure_reason: { type: "string", nullable: true, example: null },
             failure_message: { type: "string", nullable: true, example: null },
             paid_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_requested_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_completed_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_reference: { type: "string", nullable: true, example: "VNPAY-RF-123456" },
             created_at: { type: "string", format: "date-time" },
             updated_at: { type: "string", format: "date-time" },
         },
@@ -136,6 +139,8 @@ module.exports = {
             can_cancel: { type: "boolean", example: true },
             created_at: { type: "string", format: "date-time" },
             paid_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_requested_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_completed_at: { type: "string", format: "date-time", nullable: true, example: null },
         },
     },
 
@@ -152,6 +157,10 @@ module.exports = {
                 ],
                 properties: {
                     idempotency_key: { type: "string", example: "507f1f77bcf86cd799439011-507f1f77bcf86cd799439020" },
+                    refund_reference: { type: "string", nullable: true, example: "VNPAY-RF-123456" },
+                    refund_note: { type: "string", nullable: true, example: "Refunded manually in provider dashboard." },
+                    refund_reason: { type: "string", nullable: true, example: "Customer cancelled order." },
+                    refund_completed_by: { type: "string", pattern: objectIdPattern, nullable: true },
                     webhook_data: {
                         type: "object",
                         required: ["raw_ipn_present", "raw_return_present"],
@@ -195,6 +204,9 @@ module.exports = {
             verification_status: { type: "string", enum: verificationStatusEnum, example: "pending" },
             created_at: { type: "string", format: "date-time" },
             paid_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_requested_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_completed_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_reference: { type: "string", nullable: true, example: "VNPAY-RF-123456" },
         },
     },
 

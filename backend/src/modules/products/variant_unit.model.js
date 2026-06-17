@@ -74,6 +74,37 @@ const promotionSchema = new mongoose.Schema(
     { _id: false }
 );
 
+function getUpdatedValue(context, path) {
+    if (!context || typeof context.getUpdate !== 'function') {
+        return undefined;
+    }
+
+    const update = context.getUpdate() || {};
+
+    if (Object.prototype.hasOwnProperty.call(update, path)) {
+        return update[path];
+    }
+
+    if (
+        update.$set &&
+        Object.prototype.hasOwnProperty.call(update.$set, path)
+    ) {
+        return update.$set[path];
+    }
+
+    return undefined;
+}
+
+function getMinOrderQtyForValidation(context) {
+    const updatedMinOrderQty = getUpdatedValue(context, 'min_order_qty');
+
+    if (updatedMinOrderQty !== undefined) {
+        return updatedMinOrderQty;
+    }
+
+    return context?.min_order_qty;
+}
+
 const variantUnitSchema = new mongoose.Schema(
     {
 
@@ -138,8 +169,15 @@ const variantUnitSchema = new mongoose.Schema(
 
             validate: {
                 validator: function (v) {
-                    if (v === null) return true;
-                    return v >= this.min_order_qty;
+                    if (v === null || v === undefined) return true;
+
+                    const minOrderQty = getMinOrderQtyForValidation(this);
+
+                    if (minOrderQty === undefined || minOrderQty === null) {
+                        return true;
+                    }
+
+                    return v >= minOrderQty;
                 },
                 message: 'max_order_qty must be >= min_order_qty',
             },

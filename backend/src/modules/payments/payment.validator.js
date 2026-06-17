@@ -27,7 +27,13 @@ const OrderIdParamSchema = z.object({
 const providerSchema = z.enum(['vnpay', 'stripe', 'paypal', 'payos']).default('vnpay');
 const createPaymentProviderSchema = z.enum(['vnpay', 'paypal', 'payos']).default('vnpay');
 
-const paymentStatusSchema = z.enum(['pending', 'paid', 'failed']);
+const paymentStatusSchema = z.enum([
+    'pending',
+    'paid',
+    'failed',
+    'refund_pending',
+    'refunded',
+]);
 
 const currencySchema = z.enum(['VND', 'USD']).default('VND');
 
@@ -196,7 +202,15 @@ const listPaymentsQuerySchema = z.object({
         .refine(
             (arr) =>
                 arr.length === 0 ||
-                arr.every((s) => ['pending', 'paid', 'failed'].includes(s))
+                arr.every((s) =>
+                    [
+                        'pending',
+                        'paid',
+                        'failed',
+                        'refund_pending',
+                        'refunded',
+                    ].includes(s)
+                )
         )
         .optional(),
 

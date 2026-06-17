@@ -1,5 +1,7 @@
 const {
     createOrderBodySchema,
+    completeRefundBodySchema,
+    getOrdersQuerySchema,
 } = require('../../modules/orders/order.validator');
 
 const validOrder = {
@@ -30,4 +32,23 @@ describe('create order validation', () => {
             ).toThrow();
         }
     );
+});
+
+describe('order refund validation', () => {
+    it('accepts refund pending as a payment status filter', () => {
+        const result = getOrdersQuerySchema.parse({
+            payment_status: 'REFUND_PENDING',
+        });
+
+        expect(result.payment_status).toBe('REFUND_PENDING');
+    });
+
+    it('accepts manual refund confirmation notes', () => {
+        const result = completeRefundBodySchema.parse({
+            refund_reference: 'VNPAY-RF-123456',
+            refund_note: 'Refunded manually in provider dashboard.',
+        });
+
+        expect(result.refund_reference).toBe('VNPAY-RF-123456');
+    });
 });

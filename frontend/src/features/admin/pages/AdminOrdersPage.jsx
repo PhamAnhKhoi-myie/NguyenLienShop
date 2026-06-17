@@ -26,6 +26,7 @@ import {
 } from '../hooks/useAdminResource';
 import {
     createFulfillmentFormConfig,
+    manualRefundFormConfig,
     orderNotesFormConfig,
     orderStatusFormConfig,
     orderStatusOptions,
@@ -43,6 +44,7 @@ const actionTitles = {
     notes: translate('text.internal_notes'),
     fulfill: translate('text.fulfill_product'),
     shipment: translate('text.create_bill_of_lading'),
+    refund: translate('text.confirm_refund_completed'),
 };
 
 function getOrderId(order) {
@@ -114,6 +116,33 @@ function buildFilterParams(filters) {
     });
 
     return params;
+}
+
+const paymentStatusLabels = {
+    PENDING: translate('text.pending_0a7b38b7'),
+    PAID: translate('text.paid_f3534db5'),
+    FAILED: translate('text.failed_8d33f306'),
+    REFUND_PENDING: translate('text.refund_pending'),
+    REFUNDED: translate('text.refunded'),
+};
+
+function getPaymentStatusLabel(status) {
+    return paymentStatusLabels[status] || status;
+}
+
+function OrderMetaRow({ label, value, children }) {
+    if (!children && !value && value !== 0) {
+        return null;
+    }
+
+    return (
+        <div className="flex justify-between gap-3">
+            <span className="text-[var(--color-text-muted)]">{label}</span>
+            <span className="text-right font-medium text-[var(--color-text-main)]">
+                {children || value}
+            </span>
+        </div>
+    );
 }
 
 function StatsPanel({ stats }) {
@@ -294,6 +323,8 @@ function OrderDetailPanel({
         order.status === 'PROCESSING' && getPendingItemCount(order) > 0;
     const canRecordShipment = order.status === 'PROCESSING';
     const canDeliver = order.status === 'SHIPPED';
+    const canCompleteRefund =
+        order.status === 'CANCELED' && order.payment?.status === 'REFUND_PENDING';
 
     return (
         <div className="space-y-5">
@@ -306,7 +337,7 @@ function OrderDetailPanel({
                         <StatusBadge value={order.status} />
                         <StatusBadge
                             value={order.payment?.status}
-                            label={translate('text.payment_value', { value0: order.payment?.status })}
+                            label={translate('text.payment_value', { value0: getPaymentStatusLabel(order.payment?.status) })}
                         />
                     </div>
                     <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.created_at')} {formatDateTime(order.created_at)}
@@ -349,6 +380,13 @@ function OrderDetailPanel({
                         >
                             <CheckCircle2 className="h-4 w-4" /> {translate('text.delivered')} </Button>
                     )}
+                    {canCompleteRefund && (
+                        <Button
+                            size="sm"
+                            onClick={() => onOpenAction('refund')}
+                        >
+                            <CheckCircle2 className="h-4 w-4" /> {translate('text.confirm_refund_completed')} </Button>
+                    )}
                 </div>
             </div>
 
@@ -388,18 +426,36 @@ function OrderDetailPanel({
                                 {order.payment?.method || '-'}
                             </span>
                         </div>
-                        <div className="flex justify-between gap-3">
-                            <span className="text-[var(--color-text-muted)]"> {translate('text.total_amount')} </span>
-                            <span className="font-semibold text-[var(--color-primary-hover)]">
-                                {formatMoney(order.pricing?.total_amount || 0)}
-                            </span>
-                        </div>
-                        <div className="flex justify-between gap-3">
-                            <span className="text-[var(--color-text-muted)]"> {translate('text.discount')} </span>
-                            <span className="font-medium text-[var(--color-text-main)]">
-                                {formatMoney(order.pricing?.discount_amount || 0)}
-                            </span>
-                        </div>
+                        <OrderMetaRow label={translate('text.payment_status_4032b469')}>
+                            <StatusBadge
+                                value={order.payment?.status}
+                                label={getPaymentStatusLabel(order.payment?.status)}
+                            />
+                        </OrderMetaRow>
+                        <OrderMetaRow
+                            label={translate('text.total_amount')}
+                            value={formatMoney(order.pricing?.total_amount || 0)}
+                        />
+                        <OrderMetaRow
+                            label={translate('text.discount')}
+                            value={formatMoney(order.pricing?.discount_amount || 0)}
+                        />
+                        <OrderMetaRow
+                            label={translate('text.payment_at')}
+                            value={formatDateTime(order.payment?.paid_at)}
+                        />
+                        <OrderMetaRow
+                            label={translate('text.refund_requested_at')}
+                            value={formatDateTime(order.payment?.refund_requested_at)}
+                        />
+                        <OrderMetaRow
+                            label={translate('text.refunded_at')}
+                            value={formatDateTime(order.payment?.refunded_at)}
+                        />
+                        <OrderMetaRow
+                            label={translate('text.refund_reference')}
+                            value={order.payment?.refund_reference}
+                        />
                     </CardBody>
                 </Card>
                 <Card>
@@ -521,6 +577,7 @@ export default function AdminOrdersPage() {
     const fulfillMutation = useAdminMutation({ method: 'post' });
     const shipmentMutation = useAdminMutation({ method: 'post' });
     const deliverMutation = useAdminMutation({ method: 'post' });
+    const refundMutation = useAdminMutation({ method: 'post' });
     const orders = getRows(ordersQuery.data);
     const pagination = ordersQuery.data?.pagination || {};
     const totalPages = getPages(pagination);
@@ -546,6 +603,10 @@ export default function AdminOrdersPage() {
             return shipmentFormConfig;
         }
 
+        if (actionType === 'refund') {
+            return manualRefundFormConfig;
+        }
+
         return null;
     }, [actionType, fulfillmentFormConfig]);
     const actionMutation =
@@ -555,7 +616,9 @@ export default function AdminOrdersPage() {
               ? notesMutation
               : actionType === 'fulfill'
                 ? fulfillMutation
-                : shipmentMutation;
+                : actionType === 'refund'
+                  ? refundMutation
+                  : shipmentMutation;
 
     const handleFilterChange = (name, value) => {
         setDraftFilters((current) => ({
@@ -596,6 +659,7 @@ export default function AdminOrdersPage() {
         notesMutation.reset();
         fulfillMutation.reset();
         shipmentMutation.reset();
+        refundMutation.reset();
     };
 
     const openDetail = (order) => {
@@ -652,6 +716,13 @@ export default function AdminOrdersPage() {
         if (actionType === 'shipment') {
             await shipmentMutation.mutateAsync({
                 endpoint: `/orders/admin/orders/${orderId}/shipment`,
+                payload,
+            });
+        }
+
+        if (actionType === 'refund') {
+            await refundMutation.mutateAsync({
+                endpoint: `/orders/admin/orders/${orderId}/refund`,
                 payload,
             });
         }
@@ -744,7 +815,10 @@ export default function AdminOrdersPage() {
                                                     <StatusBadge value={order.status} />
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <StatusBadge value={order.payment?.status || order.payment_status} />
+                                                    <StatusBadge
+                                                        value={order.payment?.status || order.payment_status}
+                                                        label={getPaymentStatusLabel(order.payment?.status || order.payment_status)}
+                                                    />
                                                 </td>
                                                 <td className="px-4 py-3 text-[var(--color-text-main)]">
                                                     {formatMoney(order.pricing?.total_amount ?? order.total_amount)}

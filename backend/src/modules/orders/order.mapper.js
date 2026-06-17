@@ -44,6 +44,11 @@ class OrderMapper {
                 method: doc.payment?.method,
                 status: doc.payment?.status,
                 paid_at: doc.payment?.paid_at,
+                refund_requested_at: doc.payment?.refund_requested_at,
+                refunded_at: doc.payment?.refunded_at,
+                refund_reference: doc.payment?.refund_reference,
+                refund_note: doc.payment?.refund_note,
+                refund_reason: doc.payment?.refund_reason,
             },
 
             shipment: doc.shipment
@@ -178,7 +183,15 @@ class OrderMapper {
                 method: order.payment?.method,
                 status: order.payment?.status,
                 paid_at: order.payment?.paid_at,
+                refund_requested_at: order.payment?.refund_requested_at,
                 refunded_at: order.payment?.refunded_at,
+                refund_reference: order.payment?.refund_reference,
+                refund_note: order.payment?.refund_note,
+                refund_reason: order.payment?.refund_reason,
+                refund_completed_by:
+                    order.payment?.refund_completed_by?.toString?.() ||
+                    order.payment?.refund_completed_by ||
+                    null,
             },
 
             payment_expires_at: detailDTO.payment_expires_at,

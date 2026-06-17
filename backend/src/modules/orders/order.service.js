@@ -6,8 +6,7 @@ const OrderAuditLogService = require('../audit_logs/order_audit_log/order_log.se
 const NotificationEventService = require('../notifications/notification_event.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
 const { assertPaymentProviderEnabled } = require('../payments/payment_provider.util');
-
-
+const Payment = require('../payments/payment.model');
 const Variant = require('../products/variant.model');
 const Product = require('../products/product.model');
 const Cart = require('../carts/cart.model');
@@ -22,12 +21,6 @@ const {
     DEFAULT_CURRENCY,
     getDefaultShippingFee,
 } = require('../../config/commerce');
-
-
-
-
-
-
 
 class OrderService {
     static getCheckoutSettings() {
@@ -448,7 +441,7 @@ class OrderService {
         order.addStatusTransition(
             'PAID',
             paymentData.changed_by || null,
-            paymentData.note || 'Payment confirmed'
+            paymentData.note || 'Đã thanh toán'
         );
 
         await order.save({ session: options.session });
@@ -508,7 +501,7 @@ class OrderService {
             order.addStatusTransition(
                 'FAILED',
                 null,
-                'Payment failed'
+                'Thanh toán thất bại'
             );
 
             await order.save({ session });
@@ -710,7 +703,7 @@ class OrderService {
         order.addStatusTransition(
             'SHIPPED',
             actorId,
-            `Shipped via ${carrier}`
+            `Đơn vị vận chuyển: ${carrier}`
         );
 
         await order.save();
@@ -772,7 +765,7 @@ class OrderService {
             order.payment_expires_at = undefined;
         }
 
-        order.addStatusTransition('DELIVERED', actorId, 'Delivery confirmed');
+        order.addStatusTransition('DELIVERED', actorId, 'Đã giao hàng');
 
         await order.save();
 
@@ -856,7 +849,107 @@ class OrderService {
 
             const fromStatus = order.status;
             const fromPaymentStatus = order.payment?.status || null;
+            const refundRequestedAt =
+                fromPaymentStatus === 'PAID' ? new Date() : null;
             const stockRestored = [];
+            const paymentRecordChanges = [];
+
+            if (fromPaymentStatus === 'PAID') {
+                order.payment.status = 'REFUND_PENDING';
+                order.payment.refund_requested_at = refundRequestedAt;
+                order.payment.refund_reason = reason;
+                order.payment.refunded_at = undefined;
+                order.payment.refund_reference = undefined;
+                order.payment.refund_note = undefined;
+                order.payment.refund_completed_by = undefined;
+                order.payment_expires_at = undefined;
+            } else if (fromPaymentStatus === 'PENDING') {
+                order.payment.status = 'FAILED';
+                order.payment_expires_at = undefined;
+            }
+
+            const paidPayments = refundRequestedAt
+                ? await Payment.find({
+                    order_id: order._id,
+                    status: 'paid',
+                }).session(session)
+                : [];
+
+            for (const payment of paidPayments) {
+                const paymentUpdate = await Payment.updateOne(
+                    {
+                        _id: payment._id,
+                        status: 'paid',
+                    },
+                    {
+                        $set: {
+                            status: 'refund_pending',
+                            refund_requested_at: refundRequestedAt,
+                            refund_reason: reason,
+                        },
+                        $unset: {
+                            refund_completed_at: 1,
+                            refund_completed_by: 1,
+                            refund_reference: 1,
+                            refund_note: 1,
+                        },
+                    },
+                    { session }
+                );
+
+                if (paymentUpdate.modifiedCount > 0) {
+                    paymentRecordChanges.push({
+                        payment_id: payment._id,
+                        provider: payment.provider,
+                        from: 'paid',
+                        to: 'refund_pending',
+                    });
+                }
+            }
+
+            const pendingPayments = await Payment.find({
+                order_id: order._id,
+                status: 'pending',
+            }).session(session);
+
+            for (const payment of pendingPayments) {
+                if (payment.provider === 'payos') {
+                    const PaymentService = require('../payments/payment.service');
+                    await PaymentService._cancelPayOSPaymentLink(
+                        payment,
+                        reason || 'Order cancelled'
+                    );
+                }
+
+                const paymentUpdate = await Payment.updateOne(
+                    {
+                        _id: payment._id,
+                        status: 'pending',
+                    },
+                    {
+                        $set: {
+                            status: 'failed',
+                            verification_status: 'verified',
+                            webhook_verified_at: new Date(),
+                            failure_reason: 'ORDER_CANCELLED',
+                            failure_message: reason,
+                        },
+                        $unset: {
+                            expires_at: 1,
+                        },
+                    },
+                    { session }
+                );
+
+                if (paymentUpdate.modifiedCount > 0) {
+                    paymentRecordChanges.push({
+                        payment_id: payment._id,
+                        provider: payment.provider,
+                        from: 'pending',
+                        to: 'failed',
+                    });
+                }
+            }
 
             if (['PENDING', 'PAID', 'PROCESSING'].includes(order.status)) {
                 for (const item of order.items) {
@@ -944,29 +1037,45 @@ class OrderService {
             await order.save({ session });
             await session.commitTransaction();
 
+            const changes = {
+                status: {
+                    from: fromStatus,
+                    to: order.status,
+                },
+                payment_status: {
+                    from: fromPaymentStatus,
+                    to: order.payment?.status || null,
+                },
+                reason: {
+                    from: null,
+                    to: reason,
+                },
+                stock_restored: {
+                    from: null,
+                    to: stockRestored,
+                },
+            };
+
+            if (refundRequestedAt) {
+                changes.refund_requested_at = {
+                    from: null,
+                    to: refundRequestedAt,
+                };
+            }
+
+            if (paymentRecordChanges.length > 0) {
+                changes.payment_records = {
+                    from: null,
+                    to: paymentRecordChanges,
+                };
+            }
+
             await this._createOrderAuditLog({
                 action: AUDIT_ACTIONS.CANCEL_ORDER,
                 order,
                 actorId: cancelledBy,
                 metadata,
-                changes: {
-                    status: {
-                        from: fromStatus,
-                        to: order.status,
-                    },
-                    payment_status: {
-                        from: fromPaymentStatus,
-                        to: order.payment?.status || null,
-                    },
-                    reason: {
-                        from: null,
-                        to: reason,
-                    },
-                    stock_restored: {
-                        from: null,
-                        to: stockRestored,
-                    },
-                },
+                changes,
             });
 
             await NotificationEventService.orderStatusChanged(order, 'CANCELED');
@@ -1036,6 +1145,142 @@ class OrderService {
         }
 
         return OrderMapper.toDetailDTO(order);
+    }
+
+    static async completeManualRefund(
+        orderId,
+        refundData = {},
+        adminUserId = null,
+        metadata = {}
+    ) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            const order = await Order.findById(orderId).session(session);
+
+            if (!order) {
+                throw new AppError('Order not found', 404, 'ORDER_NOT_FOUND');
+            }
+
+            if (order.status !== 'CANCELED') {
+                throw new AppError(
+                    'Only cancelled orders can be marked as refunded',
+                    409,
+                    'ORDER_NOT_CANCELLED'
+                );
+            }
+
+            if (order.payment?.status === 'REFUNDED') {
+                await session.commitTransaction();
+                return OrderMapper.toAdminDTO(order);
+            }
+
+            if (order.payment?.status !== 'REFUND_PENDING') {
+                throw new AppError(
+                    'Order payment is not waiting for refund',
+                    409,
+                    'ORDER_REFUND_NOT_PENDING'
+                );
+            }
+
+            const fromPaymentStatus = order.payment.status;
+            const refundCompletedAt = new Date();
+            const refundReference =
+                refundData.refund_reference?.trim?.() || null;
+            const refundNote = refundData.refund_note?.trim?.() || null;
+            const fromRefundRequestedAt =
+                order.payment.refund_requested_at || null;
+            const refundRequestedAt =
+                fromRefundRequestedAt || refundCompletedAt;
+
+            order.payment.status = 'REFUNDED';
+            order.payment.refund_requested_at = refundRequestedAt;
+            order.payment.refunded_at = refundCompletedAt;
+            order.payment.refund_reference = refundReference;
+            order.payment.refund_note = refundNote;
+            order.payment.refund_completed_by = adminUserId;
+
+            const relatedPayments = await Payment.find({
+                order_id: order._id,
+                status: { $in: ['refund_pending', 'paid'] },
+            }).session(session);
+            const paymentRecordChanges = [];
+
+            for (const payment of relatedPayments) {
+                const paymentUpdate = await Payment.updateOne(
+                    {
+                        _id: payment._id,
+                        status: { $in: ['refund_pending', 'paid'] },
+                    },
+                    {
+                        $set: {
+                            status: 'refunded',
+                            verification_status: 'verified',
+                            refund_requested_at:
+                                payment.refund_requested_at || refundRequestedAt,
+                            refund_completed_at: refundCompletedAt,
+                            refund_completed_by: adminUserId,
+                            refund_reference: refundReference,
+                            refund_note: refundNote,
+                        },
+                    },
+                    { session }
+                );
+
+                if (paymentUpdate.modifiedCount > 0) {
+                    paymentRecordChanges.push({
+                        payment_id: payment._id,
+                        provider: payment.provider,
+                        from: payment.status,
+                        to: 'refunded',
+                    });
+                }
+            }
+
+            await order.save({ session });
+            await session.commitTransaction();
+
+            await this._createOrderAuditLog({
+                action: AUDIT_ACTIONS.ADMIN_COMPLETE_ORDER_REFUND,
+                order,
+                actorId: adminUserId,
+                metadata,
+                changes: {
+                    payment_status: {
+                        from: fromPaymentStatus,
+                        to: order.payment.status,
+                    },
+                    refund_requested_at: {
+                        from: fromRefundRequestedAt,
+                        to: refundRequestedAt,
+                    },
+                    refunded_at: {
+                        from: null,
+                        to: refundCompletedAt,
+                    },
+                    refund_reference: {
+                        from: null,
+                        to: refundReference,
+                    },
+                    refund_note: {
+                        from: null,
+                        to: refundNote,
+                    },
+                    payment_records: {
+                        from: null,
+                        to: paymentRecordChanges,
+                    },
+                },
+            });
+
+            return OrderMapper.toAdminDTO(order);
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
     }
 
     static async adminUpdateOrder(orderId, updateData, adminUserId, metadata = {}) {

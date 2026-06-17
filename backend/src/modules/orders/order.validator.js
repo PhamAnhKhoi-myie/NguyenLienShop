@@ -114,9 +114,15 @@ const discountSchema = z.object({
 
 const paymentSchema = z.object({
     method: z.enum(['COD', 'VNPAY', 'PAYPAL', 'PAYOS', 'MOMO', 'CARD']),
-    status: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).default('PENDING'),
+    status: z
+        .enum(['PENDING', 'PAID', 'FAILED', 'REFUND_PENDING', 'REFUNDED'])
+        .default('PENDING'),
     paid_at: z.date().optional().nullable(),
+    refund_requested_at: z.date().optional().nullable(),
     refunded_at: z.date().optional().nullable(),
+    refund_reference: z.string().max(100).optional().nullable(),
+    refund_note: z.string().max(500).optional().nullable(),
+    refund_reason: z.string().max(500).optional().nullable(),
 });
 
 
@@ -194,6 +200,11 @@ const adminUpdateOrderBodySchema = z.object({
     admin_notes: z.string().max(1000).optional(),
 });
 
+const completeRefundBodySchema = z.object({
+    refund_reference: z.string().trim().max(100).optional(),
+    refund_note: z.string().trim().max(500).optional(),
+}).strict();
+
 
 
 
@@ -210,7 +221,9 @@ const getOrdersQuerySchema = z.object({
         )
         .optional(),
 
-    payment_status: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).optional(),
+    payment_status: z
+        .enum(['PENDING', 'PAID', 'FAILED', 'REFUND_PENDING', 'REFUNDED'])
+        .optional(),
 
     date_from: z.string().transform((v) => new Date(v)).refine((d) => !isNaN(d.getTime())).optional(),
     date_to: z.string().transform((v) => new Date(v)).refine((d) => !isNaN(d.getTime())).optional(),
@@ -229,6 +242,7 @@ module.exports = {
     fulfillItemsBodySchema,
     recordShipmentBodySchema,
     adminUpdateOrderBodySchema,
+    completeRefundBodySchema,
 
 
     getOrdersQuerySchema,

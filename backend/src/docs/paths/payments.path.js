@@ -1,5 +1,5 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
-const paymentStatusEnum = ["pending", "paid", "failed"];
+const paymentStatusEnum = ["pending", "paid", "failed", "refund_pending", "refunded"];
 const providerEnum = ["vnpay", "stripe", "paypal", "payos"];
 
 const paymentIdParam = {

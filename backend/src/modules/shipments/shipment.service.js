@@ -1314,7 +1314,7 @@ class ShipmentService {
         order.addStatusTransition(
             'SHIPPED',
             changedBy,
-            `Shipped via ${shipment.carrier}`
+            `Đơn vị vận chuyển: ${shipment.carrier}`
         );
 
         await order.save({ session: options.session });

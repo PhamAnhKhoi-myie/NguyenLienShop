@@ -8381,7 +8381,7 @@ const swaggerSpec = {
                 ],
                 responses: {
                     200: {
-                        description: 'Delivery confirmed',
+                        description: '',
                         content: {
                             'application/json': {
                                 schema: {

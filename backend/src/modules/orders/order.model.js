@@ -196,11 +196,19 @@ const orderSchema = new mongoose.Schema(
             },
             status: {
                 type: String,
-                enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+                enum: ['PENDING', 'PAID', 'FAILED', 'REFUND_PENDING', 'REFUNDED'],
                 default: 'PENDING'
             },
             paid_at: Date,
-            refunded_at: Date
+            refund_requested_at: Date,
+            refunded_at: Date,
+            refund_reference: String,
+            refund_note: String,
+            refund_reason: String,
+            refund_completed_by: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User'
+            }
         },
 
         payment_id: mongoose.Schema.Types.ObjectId,

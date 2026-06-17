@@ -1,6 +1,6 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
 const orderStatusEnum = ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "FAILED", "CANCELED"];
-const paymentStatusEnum = ["PENDING", "PAID", "FAILED", "REFUNDED"];
+const paymentStatusEnum = ["PENDING", "PAID", "FAILED", "REFUND_PENDING", "REFUNDED"];
 const paymentMethodEnum = ["COD", "VNPAY", "PAYPAL", "PAYOS", "MOMO", "CARD"];
 
 module.exports = {
@@ -123,7 +123,11 @@ module.exports = {
             method: { type: "string", enum: paymentMethodEnum, example: "COD" },
             status: { type: "string", enum: paymentStatusEnum, example: "PENDING" },
             paid_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_requested_at: { type: "string", format: "date-time", nullable: true, example: null },
             refunded_at: { type: "string", format: "date-time", nullable: true, example: null },
+            refund_reference: { type: "string", nullable: true, maxLength: 100, example: "VNPAY-RF-123456" },
+            refund_note: { type: "string", nullable: true, maxLength: 500, example: "Refunded manually in provider dashboard." },
+            refund_reason: { type: "string", nullable: true, maxLength: 500, example: "Customer cancelled order." },
         },
     },
 
@@ -401,6 +405,14 @@ module.exports = {
         properties: {
             status: { type: "string", enum: orderStatusEnum, example: "PROCESSING" },
             admin_notes: { type: "string", maxLength: 1000, example: "Customer requested priority shipping." },
+        },
+    },
+
+    CompleteRefundInput: {
+        type: "object",
+        properties: {
+            refund_reference: { type: "string", maxLength: 100, example: "VNPAY-RF-123456" },
+            refund_note: { type: "string", maxLength: 500, example: "Refunded manually in provider dashboard." },
         },
     },
 

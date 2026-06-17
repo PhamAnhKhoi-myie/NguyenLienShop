@@ -29,12 +29,6 @@ const logger = {
     }))
 };
 
-
-
-
-
-
-
 class PaymentService {
 
     static async createPayment(orderId, userId, provider = 'vnpay', metadata = {}) {
@@ -540,9 +534,22 @@ class PaymentService {
                 audit_action: AUDIT_ACTIONS.PAYPAL_WEBHOOK_PAYMENT,
                 audit_metadata: metadata,
             });
+        } else if (event_type === 'PAYMENT.CAPTURE.REFUNDED') {
+            return {
+                status:
+                    payment.status === 'refunded'
+                        ? 'refunded'
+                        : 'refund_pending',
+                orderId: payment.order_id.toString(),
+                paymentId: payment._id.toString(),
+                transactionRef:
+                    paypalCaptureId ||
+                    payment.provider_data?.paypal_capture_id ||
+                    payment.provider_data?.paypal_order_id,
+                code: resource.status || 'REFUNDED',
+            };
         } else if (
             event_type === 'PAYMENT.CAPTURE.DENIED' ||
-            event_type === 'PAYMENT.CAPTURE.REFUNDED' ||
             event_type === 'CHECKOUT.ORDER.VOIDED'
         ) {
             return await this._processPaymentFailure(payment, {

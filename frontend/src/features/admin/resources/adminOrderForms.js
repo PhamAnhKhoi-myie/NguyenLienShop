@@ -17,6 +17,7 @@ export const paymentStatusOptions = [
     { value: 'PENDING', label: translate('text.pending_0a7b38b7') },
     { value: 'PAID', label: translate('text.paid_f3534db5') },
     { value: 'FAILED', label: translate('text.failed_8d33f306') },
+    { value: 'REFUND_PENDING', label: translate('text.refund_pending') },
     { value: 'REFUNDED', label: translate('text.refunded') },
 ];
 
@@ -124,6 +125,46 @@ export const orderNotesFormConfig = {
             label: translate('text.internal_notes'),
             type: 'textarea',
             rows: 6,
+            className: 'md:col-span-2',
+        },
+    ],
+};
+
+export const manualRefundFormConfig = {
+    title: translate('text.confirm_refund_completed'),
+    schema: z.object({
+        refund_reference: z
+            .string()
+            .trim()
+            .max(100, translate('text.refund_reference_cannot_exceed_100_characters')),
+        refund_note: z
+            .string()
+            .trim()
+            .max(500, translate('text.refund_note_cannot_exceed_500_characters')),
+    }),
+    defaultValues: {
+        refund_reference: '',
+        refund_note: '',
+    },
+    toFormValues: (order = {}) => ({
+        refund_reference: order.payment?.refund_reference || '',
+        refund_note: order.payment?.refund_note || '',
+    }),
+    toPayload: (values) => ({
+        refund_reference: values.refund_reference.trim() || undefined,
+        refund_note: values.refund_note.trim() || undefined,
+    }),
+    fields: [
+        {
+            name: 'refund_reference',
+            label: translate('text.refund_reference'),
+            placeholder: translate('text.provider_refund_transaction_code'),
+        },
+        {
+            name: 'refund_note',
+            label: translate('text.refund_note'),
+            type: 'textarea',
+            rows: 4,
             className: 'md:col-span-2',
         },
     ],

@@ -33,6 +33,8 @@ const paymentStatusOptions = [
     { value: 'pending', label: translate('text.pending_e2258693') },
     { value: 'paid', label: translate('text.paid_9e1f1120') },
     { value: 'failed', label: translate('text.failed') },
+    { value: 'refund_pending', label: translate('text.refund_pending') },
+    { value: 'refunded', label: translate('text.refunded') },
 ];
 
 function imageCount(row) {
@@ -230,6 +232,7 @@ export const adminResources = {
                     { value: 'PENDING', label: translate('text.pending_0a7b38b7') },
                     { value: 'PAID', label: translate('text.paid_f3534db5') },
                     { value: 'FAILED', label: translate('text.failed_8d33f306') },
+                    { value: 'REFUND_PENDING', label: translate('text.refund_pending') },
                     { value: 'REFUNDED', label: translate('text.refunded') },
                 ],
             },
@@ -273,6 +276,7 @@ export const adminResources = {
                     { value: '', label: translate('text.all_providers') },
                     { value: 'vnpay', label: translate('text.vnpay') },
                     { value: 'payos', label: translate('text.payos') },
+                    { value: 'paypal', label: translate('text.paypal') },
                 ],
             },
         ],

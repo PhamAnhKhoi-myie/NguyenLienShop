@@ -1,6 +1,6 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
 const orderStatusEnum = ["PENDING", "PAID", "PROCESSING", "SHIPPED", "DELIVERED", "FAILED", "CANCELED"];
-const paymentStatusEnum = ["PENDING", "PAID", "FAILED", "REFUNDED"];
+const paymentStatusEnum = ["PENDING", "PAID", "FAILED", "REFUND_PENDING", "REFUNDED"];
 
 const orderIdParam = {
     in: "path",
@@ -270,6 +270,25 @@ module.exports = {
                 401: { $ref: "#/components/responses/Unauthorized" },
                 403: { $ref: "#/components/responses/Forbidden" },
                 404: { $ref: "#/components/responses/NotFound" },
+                500: { $ref: "#/components/responses/InternalError" },
+            },
+        },
+    },
+
+    "/orders/admin/orders/{order_id}/refund": {
+        post: {
+            tags: ["Orders"],
+            summary: "Mark manual refund completed",
+            security: [{ bearerAuth: [] }],
+            parameters: [orderIdParam],
+            requestBody: jsonBody("#/components/schemas/CompleteRefundInput"),
+            responses: {
+                200: ok("#/components/schemas/AdminOrderDetailResponse"),
+                400: { $ref: "#/components/responses/BadRequest" },
+                401: { $ref: "#/components/responses/Unauthorized" },
+                403: { $ref: "#/components/responses/Forbidden" },
+                404: { $ref: "#/components/responses/NotFound" },
+                409: { $ref: "#/components/responses/Conflict" },
                 500: { $ref: "#/components/responses/InternalError" },
             },
         },

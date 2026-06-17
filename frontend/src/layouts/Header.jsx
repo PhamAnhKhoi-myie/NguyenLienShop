@@ -109,7 +109,7 @@ function getStaticNavItemClass() {
     ].join(' ');
 }
 
-const SHOPEE_STORE_URL = 'https://shopee.vn/nguyenlien.shop';
+const SHOPEE_STORE_URL = 'https://shopee.vn/minhthu9999_#product_list';
 const SUPPLIES_CATEGORY_SLUG = 'san-pham-khac';
 const FRUIT_CATEGORY_SLUGS = [
     'tui-bao-trai-xoai',

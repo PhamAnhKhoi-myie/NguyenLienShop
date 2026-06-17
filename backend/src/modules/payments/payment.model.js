@@ -106,8 +106,8 @@ const paymentSchema = new mongoose.Schema(
         status: {
             type: String,
             enum: {
-                values: ['pending', 'paid', 'failed'],
-                message: 'Status must be pending, paid, or failed',
+                values: ['pending', 'paid', 'failed', 'refund_pending', 'refunded'],
+                message: 'Status must be pending, paid, failed, refund_pending, or refunded',
             },
             default: 'pending',
             index: true,
@@ -157,6 +157,21 @@ const paymentSchema = new mongoose.Schema(
         raw_return: mongoose.Schema.Types.Mixed,
 
         paid_at: Date,
+
+        refund_requested_at: Date,
+
+        refund_completed_at: Date,
+
+        refund_completed_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+
+        refund_reference: String,
+
+        refund_note: String,
+
+        refund_reason: String,
 
         is_deleted: {
             type: Boolean,

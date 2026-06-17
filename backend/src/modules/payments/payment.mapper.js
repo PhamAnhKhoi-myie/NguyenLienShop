@@ -27,6 +27,9 @@ class PaymentMapper {
             failure_message: doc.failure_message,
 
             paid_at: doc.paid_at,
+            refund_requested_at: doc.refund_requested_at,
+            refund_completed_at: doc.refund_completed_at,
+            refund_reference: doc.refund_reference,
             created_at: doc.created_at,
             updated_at: doc.updated_at,
         };
@@ -76,6 +79,11 @@ class PaymentMapper {
             is_expired: doc.status === 'pending' && this.isExpired(doc),
 
             paid_at: doc.paid_at,
+            refund_requested_at: doc.refund_requested_at,
+            refund_completed_at: doc.refund_completed_at,
+            refund_reference: doc.refund_reference,
+            refund_note: doc.refund_note,
+            refund_reason: doc.refund_reason,
             created_at: doc.created_at,
             updated_at: doc.updated_at,
         };
@@ -109,6 +117,8 @@ class PaymentMapper {
 
             created_at: doc.created_at,
             paid_at: doc.paid_at,
+            refund_requested_at: doc.refund_requested_at,
+            refund_completed_at: doc.refund_completed_at,
         };
     }
 
@@ -163,6 +173,15 @@ class PaymentMapper {
             },
 
             paid_at: doc.paid_at,
+            refund_requested_at: doc.refund_requested_at,
+            refund_completed_at: doc.refund_completed_at,
+            refund_reference: doc.refund_reference,
+            refund_note: doc.refund_note,
+            refund_reason: doc.refund_reason,
+            refund_completed_by:
+                doc.refund_completed_by?.toString?.() ||
+                doc.refund_completed_by ||
+                null,
             created_at: doc.created_at,
             updated_at: doc.updated_at,
 
@@ -213,6 +232,9 @@ class PaymentMapper {
 
             created_at: doc.created_at,
             paid_at: doc.paid_at,
+            refund_requested_at: doc.refund_requested_at,
+            refund_completed_at: doc.refund_completed_at,
+            refund_reference: doc.refund_reference,
         };
     }
 
@@ -254,6 +276,12 @@ class PaymentMapper {
 
             paid_at: doc.paid_at
                 ? new Date(doc.paid_at).toISOString()
+                : '',
+            refund_requested_at: doc.refund_requested_at
+                ? new Date(doc.refund_requested_at).toISOString()
+                : '',
+            refund_completed_at: doc.refund_completed_at
+                ? new Date(doc.refund_completed_at).toISOString()
                 : '',
             created_at: new Date(doc.created_at).toISOString(),
             updated_at: new Date(doc.updated_at).toISOString(),
@@ -297,7 +325,11 @@ class PaymentMapper {
                     ? 'Payment successful. Thank you for your purchase!'
                     : doc.status === 'failed'
                         ? `Payment failed: ${doc.failure_message}. Please try again or contact support.`
-                        : 'Payment pending. Please complete the payment process.',
+                        : doc.status === 'refund_pending'
+                            ? 'Payment refund is waiting for confirmation.'
+                            : doc.status === 'refunded'
+                                ? 'Payment has been refunded.'
+                                : 'Payment pending. Please complete the payment process.',
         };
     }
 
@@ -415,6 +447,8 @@ class PaymentMapper {
             pending: 'Pending',
             paid: 'Paid',
             failed: 'Failed',
+            refund_pending: 'Refund pending',
+            refunded: 'Refunded',
         };
 
         return labels[status] || status;
@@ -467,6 +501,9 @@ class PaymentMapper {
             failed:
                 failureMessage ||
                 'Payment failed. Please check your payment details and try again.',
+            refund_pending:
+                'Your order was cancelled and the refund is waiting for shop confirmation.',
+            refunded: 'Your payment has been refunded.',
         };
 
         return messages[status] || 'Payment status unknown. Please contact support.';

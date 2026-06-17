@@ -25,12 +25,6 @@ const typeLabels = {
     promotion: translate('text.promotion'),
 };
 
-const priorityVariants = {
-    low: 'muted',
-    medium: 'warning',
-    high: 'error',
-};
-
 function formatDateTime(value) {
     if (!value) {
         return '';
@@ -47,6 +41,76 @@ function getReferenceLink(notification) {
     }
 
     return null;
+}
+
+function getOrderLabel(notification) {
+    const orderCode = notification.data?.extra?.order_code;
+    return orderCode ? `Đơn hàng ${orderCode}` : 'Đơn hàng của bạn';
+}
+
+function getNotificationContent(notification) {
+    const label = getOrderLabel(notification);
+    const event = notification.data?.extra?.event;
+
+    const contentByEvent = {
+        ORDER_CREATED: {
+            title: 'Đặt hàng thành công',
+            message: `${label} đã được tạo thành công.`,
+        },
+        PAYMENT_SUCCESS: {
+            title: 'Thanh toán thành công',
+            message: `Thanh toán cho ${label} đã thành công.`,
+        },
+        PAYMENT_FAILED: {
+            title: 'Thanh toán thất bại',
+            message: `Thanh toán cho ${label} thất bại. Vui lòng thử lại hoặc chọn phương thức khác.`,
+        },
+        ORDER_PROCESSING: {
+            title: 'Đơn hàng đang xử lý',
+            message: `${label} đang được xử lý.`,
+        },
+        ORDER_SHIPPED: {
+            title: 'Đơn hàng đang giao',
+            message: `${label} đang được giao.`,
+        },
+        ORDER_DELIVERED: {
+            title: 'Giao hàng thành công',
+            message: `${label} đã được giao thành công.`,
+        },
+        ORDER_CANCELED: {
+            title: 'Đơn hàng đã hủy',
+            message: `${label} đã được hủy.`,
+        },
+    };
+
+    if (contentByEvent[event]) {
+        return contentByEvent[event];
+    }
+
+    const legacyTitles = {
+        'Order successful': 'Đặt hàng thành công',
+        'Successful payment': 'Thanh toán thành công',
+        'Payment failed': 'Thanh toán thất bại',
+        'Order is being processed': 'Đơn hàng đang xử lý',
+        'Order is being delivered': 'Đơn hàng đang giao',
+        'Successfully delivered': 'Giao hàng thành công',
+        'Order has been canceled': 'Đơn hàng đã hủy',
+    };
+
+    const legacyMessages = {
+        'Order successful': `${label} đã được tạo thành công.`,
+        'Successful payment': `Thanh toán cho ${label} đã thành công.`,
+        'Payment failed': `Thanh toán cho ${label} thất bại. Vui lòng thử lại hoặc chọn phương thức khác.`,
+        'Order is being processed': `${label} đang được xử lý.`,
+        'Order is being delivered': `${label} đang được giao.`,
+        'Successfully delivered': `${label} đã được giao thành công.`,
+        'Order has been canceled': `${label} đã được hủy.`,
+    };
+
+    return {
+        title: legacyTitles[notification.title] || notification.title,
+        message: legacyMessages[notification.title] || notification.message,
+    };
 }
 
 export default function NotificationsPage() {
@@ -74,6 +138,12 @@ export default function NotificationsPage() {
     const handleFilterChange = (next) => {
         setPage(1);
         next();
+    };
+
+    const handleViewNotification = (notification) => {
+        if (!notification.is_read) {
+            markReadMutation.mutate(notification.id);
+        }
     };
 
     return (
@@ -141,6 +211,8 @@ export default function NotificationsPage() {
                             {notifications.map((notification) => {
                                 const referenceLink =
                                     getReferenceLink(notification);
+                                const content =
+                                    getNotificationContent(notification);
 
                                 return (
                                     <div
@@ -155,25 +227,16 @@ export default function NotificationsPage() {
                                             <div>
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <h2 className="font-semibold text-[var(--color-text-main)]">
-                                                        {notification.title}
+                                                        {content.title}
                                                     </h2>
                                                     <Badge>
                                                         {typeLabels[
                                                             notification.type
                                                         ] || notification.type}
                                                     </Badge>
-                                                    <Badge
-                                                        variant={
-                                                            priorityVariants[
-                                                                notification.priority
-                                                            ] || 'muted'
-                                                        }
-                                                    >
-                                                        {notification.priority}
-                                                    </Badge>
                                                 </div>
                                                 <p className="mt-2 text-sm text-[var(--color-text-main)]">
-                                                    {notification.message}
+                                                    {content.message}
                                                 </p>
                                                 <p className="mt-2 text-xs text-[var(--color-text-muted)]">
                                                     {formatDateTime(
@@ -186,6 +249,11 @@ export default function NotificationsPage() {
                                                 {referenceLink && (
                                                     <Link
                                                         to={referenceLink}
+                                                        onClick={() =>
+                                                            handleViewNotification(
+                                                                notification
+                                                            )
+                                                        }
                                                         className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-background)]"
                                                     >
                                                         <ExternalLink className="h-4 w-4" /> {translate('text.xem')} </Link>

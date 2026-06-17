@@ -37,10 +37,12 @@ const statusLabels = {
     DELIVERED: translate('text.delivered'),
     CANCELED: translate('text.canceled'),
     FAILED: translate('text.failure'),
+    REFUND_PENDING: translate('text.refund_pending'),
+    REFUNDED: translate('text.refunded'),
 };
 
 function getStatusVariant(status) {
-    if (status === 'DELIVERED' || status === 'PAID') {
+    if (status === 'DELIVERED' || status === 'PAID' || status === 'REFUNDED') {
         return 'success';
     }
 
@@ -48,7 +50,12 @@ function getStatusVariant(status) {
         return 'error';
     }
 
-    if (status === 'PENDING' || status === 'PROCESSING' || status === 'SHIPPED') {
+    if (
+        status === 'PENDING' ||
+        status === 'PROCESSING' ||
+        status === 'SHIPPED' ||
+        status === 'REFUND_PENDING'
+    ) {
         return 'warning';
     }
 
@@ -195,7 +202,10 @@ export default function OrderListPage() {
                                                             order.payment_status
                                                         )}
                                                     >
-                                                        {order.payment_status}
+                                                        {statusLabels[
+                                                            order.payment_status
+                                                        ] ||
+                                                            order.payment_status}
                                                     </Badge>
                                                 )}
                                             </div>

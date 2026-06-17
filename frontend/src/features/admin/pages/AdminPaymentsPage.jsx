@@ -33,13 +33,28 @@ const paymentStatusOptions = [
     { value: 'pending', label: translate('text.pending_e2258693') },
     { value: 'paid', label: translate('text.paid_9e1f1120') },
     { value: 'failed', label: translate('text.failed') },
+    { value: 'refund_pending', label: translate('text.refund_pending') },
+    { value: 'refunded', label: translate('text.refunded') },
 ];
 
 const providerOptions = [
     { value: '', label: translate('text.all_providers') },
     { value: 'vnpay', label: translate('text.vnpay') },
     { value: 'payos', label: translate('text.payos') },
+    { value: 'paypal', label: translate('text.paypal') },
 ];
+
+const paymentStatusLabels = {
+    pending: translate('text.pending_e2258693'),
+    paid: translate('text.paid_9e1f1120'),
+    failed: translate('text.failed'),
+    refund_pending: translate('text.refund_pending'),
+    refunded: translate('text.refunded'),
+};
+
+function getPaymentStatusLabel(status) {
+    return paymentStatusLabels[status] || status;
+}
 
 function getPaymentId(payment) {
     return payment?.id || payment?._id;
@@ -265,7 +280,10 @@ function PaymentDetailPanel({
                         <h2 className="break-all text-xl font-semibold text-[var(--color-text-main)]">
                             {getPaymentId(payment)}
                         </h2>
-                        <StatusBadge value={payment.status} />
+                        <StatusBadge
+                            value={payment.status}
+                            label={getPaymentStatusLabel(payment.status)}
+                        />
                         <StatusBadge
                             value={payment.verification_status}
                             label={translate('text.authentication_value', { value0: payment.verification_status })}
@@ -332,6 +350,16 @@ function PaymentDetailPanel({
                         <DetailRow label={translate('text.payment_at')}>
                             {formatDateTime(payment.paid_at) || '-'}
                         </DetailRow>
+                        <DetailRow label={translate('text.refund_requested_at')}>
+                            {formatDateTime(payment.refund_requested_at) || '-'}
+                        </DetailRow>
+                        <DetailRow label={translate('text.refunded_at')}>
+                            {formatDateTime(payment.refund_completed_at) || '-'}
+                        </DetailRow>
+                        <DetailRow
+                            label={translate('text.refund_reference')}
+                            value={payment.refund_reference}
+                        />
                     </CardBody>
                 </Card>
             </div>
@@ -573,7 +601,10 @@ export default function AdminPaymentsPage() {
                                                     {formatMoney(payment.amount)}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <StatusBadge value={payment.status} />
+                                                    <StatusBadge
+                                                        value={payment.status}
+                                                        label={getPaymentStatusLabel(payment.status)}
+                                                    />
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <StatusBadge

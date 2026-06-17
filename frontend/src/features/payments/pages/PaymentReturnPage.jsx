@@ -81,7 +81,7 @@ function normalizeReturnStatus({ provider, rawStatus, cancel, code }) {
 }
 
 function getBadgeVariant(status) {
-    if (['paid', 'PAID'].includes(status)) {
+    if (['paid', 'PAID', 'refunded', 'REFUNDED'].includes(status)) {
         return 'success';
     }
 
@@ -89,11 +89,29 @@ function getBadgeVariant(status) {
         return 'error';
     }
 
-    if (['pending', 'PENDING'].includes(status)) {
+    if (['pending', 'PENDING', 'refund_pending', 'REFUND_PENDING'].includes(status)) {
         return 'warning';
     }
 
     return 'muted';
+}
+
+const statusLabels = {
+    pending: translate('text.pending_e2258693'),
+    paid: translate('text.paid_9e1f1120'),
+    failed: translate('text.failed'),
+    refund_pending: translate('text.refund_pending'),
+    refunded: translate('text.refunded'),
+    PENDING: translate('text.pending'),
+    PAID: translate('text.paid'),
+    FAILED: translate('text.failure'),
+    REFUND_PENDING: translate('text.refund_pending'),
+    REFUNDED: translate('text.refunded'),
+    CANCELED: translate('text.canceled'),
+};
+
+function getStatusLabel(status) {
+    return statusLabels[status] || status;
 }
 
 function formatDateTime(value) {
@@ -279,7 +297,7 @@ export default function PaymentReturnPage() {
                             value={
                                 payment?.status ? (
                                     <Badge variant={getBadgeVariant(payment.status)}>
-                                        {payment.status_label || payment.status}
+                                        {payment.status_label || getStatusLabel(payment.status)}
                                     </Badge>
                                 ) : null
                             }
@@ -315,7 +333,7 @@ export default function PaymentReturnPage() {
                             value={
                                 order?.status ? (
                                     <Badge variant={getBadgeVariant(order.status)}>
-                                        {order.status}
+                                        {getStatusLabel(order.status)}
                                     </Badge>
                                 ) : null
                             }
@@ -329,7 +347,7 @@ export default function PaymentReturnPage() {
                                             order.payment.status
                                         )}
                                     >
-                                        {order.payment.status}
+                                        {getStatusLabel(order.payment.status)}
                                     </Badge>
                                 ) : null
                             }

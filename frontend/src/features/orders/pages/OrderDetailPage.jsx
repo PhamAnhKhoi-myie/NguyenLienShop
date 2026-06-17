@@ -36,10 +36,12 @@ const statusLabels = {
     DELIVERED: translate('text.delivered'),
     CANCELED: translate('text.canceled'),
     FAILED: translate('text.failure'),
+    REFUND_PENDING: translate('text.refund_pending'),
+    REFUNDED: translate('text.refunded'),
 };
 
 function getStatusVariant(status) {
-    if (status === 'DELIVERED' || status === 'PAID') {
+    if (status === 'DELIVERED' || status === 'PAID' || status === 'REFUNDED') {
         return 'success';
     }
 
@@ -47,7 +49,12 @@ function getStatusVariant(status) {
         return 'error';
     }
 
-    if (status === 'PENDING' || status === 'PROCESSING' || status === 'SHIPPED') {
+    if (
+        status === 'PENDING' ||
+        status === 'PROCESSING' ||
+        status === 'SHIPPED' ||
+        status === 'REFUND_PENDING'
+    ) {
         return 'warning';
     }
 
@@ -222,7 +229,9 @@ export default function OrderDetailPage() {
                                             order.payment.status
                                         )}
                                     >
-                                        {order.payment.status}
+                                        {statusLabels[
+                                            order.payment.status
+                                        ] || order.payment.status}
                                     </Badge>
                                 )}
                             </div>
@@ -381,6 +390,22 @@ export default function OrderDetailPage() {
                                 label={translate('text.order_total')}
                                 value={formatCurrency(
                                     order.pricing?.total_amount || 0
+                                )}
+                            />
+                            <InfoRow
+                                label={translate('text.payment_at')}
+                                value={formatDateTime(order.payment?.paid_at)}
+                            />
+                            <InfoRow
+                                label={translate('text.refund_requested_at')}
+                                value={formatDateTime(
+                                    order.payment?.refund_requested_at
+                                )}
+                            />
+                            <InfoRow
+                                label={translate('text.refunded_at')}
+                                value={formatDateTime(
+                                    order.payment?.refunded_at
                                 )}
                             />
                         </CardBody>

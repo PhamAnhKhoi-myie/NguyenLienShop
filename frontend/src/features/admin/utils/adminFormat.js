@@ -52,6 +52,8 @@ export function getStatusVariant(status) {
         [
             'ACTIVE',
             'PAID',
+            'REFUNDED',
+            'refunded',
             'DELIVERED',
             'verified',
             'paid',
@@ -91,7 +93,9 @@ export function getStatusVariant(status) {
             'PENDING',
             'PROCESSING',
             'SHIPPED',
+            'REFUND_PENDING',
             'pending',
+            'refund_pending',
             'picked_up',
             'in_transit',
             'at_destination',

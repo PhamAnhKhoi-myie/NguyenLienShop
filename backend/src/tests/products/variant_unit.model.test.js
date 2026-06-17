@@ -90,3 +90,45 @@ describe('VariantUnit pricing', () => {
         });
     });
 });
+
+describe('VariantUnit order quantity validation', () => {
+    const baseUnit = {
+        variant_id: '507f1f77bcf86cd799439011',
+        unit_type: 'PACK',
+        display_name: 'Goi 100 cai',
+        pack_size: 100,
+        price_tiers: [{ min_qty: 1, max_qty: null, unit_price: 45000 }],
+        min_order_qty: 2,
+        qty_step: 1,
+        is_default: true,
+        currency: 'VND',
+    };
+
+    it('rejects max_order_qty smaller than min_order_qty on documents', async () => {
+        const unit = new VariantUnit({
+            ...baseUnit,
+            max_order_qty: 1,
+        });
+
+        await expect(unit.validate()).rejects.toThrow(
+            'max_order_qty must be >= min_order_qty'
+        );
+    });
+
+    it('uses $set.min_order_qty when validating update queries', () => {
+        const validator = VariantUnit.schema.path('max_order_qty').validators
+            .find((item) => item.message === 'max_order_qty must be >= min_order_qty')
+            .validator;
+
+        const updateQueryContext = {
+            getUpdate: () => ({
+                $set: {
+                    min_order_qty: 1,
+                    max_order_qty: 1,
+                },
+            }),
+        };
+
+        expect(validator.call(updateQueryContext, 1)).toBe(true);
+    });
+});

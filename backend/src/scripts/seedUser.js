@@ -26,7 +26,7 @@ const seedUsers = [
     },
     {
         email: "nguyenvana.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Nguyễn Văn An",
@@ -36,7 +36,7 @@ const seedUsers = [
     },
     {
         email: "tranthibich.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Trần Thị Bích",
@@ -46,7 +46,7 @@ const seedUsers = [
     },
     {
         email: "levanbinh.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Lê Văn Bình",
@@ -56,7 +56,7 @@ const seedUsers = [
     },
     {
         email: "phamthicam.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Phạm Thị Cẩm",
@@ -66,7 +66,7 @@ const seedUsers = [
     },
     {
         email: "huynhvancuong.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Huỳnh Văn Cường",
@@ -76,7 +76,7 @@ const seedUsers = [
     },
     {
         email: "dangthidiem.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Đặng Thị Diễm",
@@ -86,7 +86,7 @@ const seedUsers = [
     },
     {
         email: "buitruonggiang.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Bùi Trường Giang",
@@ -96,7 +96,7 @@ const seedUsers = [
     },
     {
         email: "vothihan.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Võ Thị Hân",
@@ -106,7 +106,7 @@ const seedUsers = [
     },
     {
         email: "ngothuhoai.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Ngô Thu Hoài",
@@ -116,7 +116,7 @@ const seedUsers = [
     },
     {
         email: "dovanhung.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Đỗ Văn Hùng",
@@ -126,7 +126,7 @@ const seedUsers = [
     },
     {
         email: "nguyenthilan.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Nguyễn Thị Lan",
@@ -136,7 +136,7 @@ const seedUsers = [
     },
     {
         email: "tranvanloc.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Trần Văn Lộc",
@@ -146,7 +146,7 @@ const seedUsers = [
     },
     {
         email: "levanminh.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Lê Văn Minh",
@@ -156,7 +156,7 @@ const seedUsers = [
     },
     {
         email: "phamthimai.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Phạm Thị Mai",
@@ -166,7 +166,7 @@ const seedUsers = [
     },
     {
         email: "hoangvannghia.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Hoàng Văn Nghĩa",
@@ -176,7 +176,7 @@ const seedUsers = [
     },
     {
         email: "phanthioanh.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Phan Thị Oanh",
@@ -186,7 +186,7 @@ const seedUsers = [
     },
     {
         email: "truongvanphuc.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Trương Văn Phúc",
@@ -196,7 +196,7 @@ const seedUsers = [
     },
     {
         email: "maithiquyen.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Mai Thị Quyên",
@@ -206,7 +206,7 @@ const seedUsers = [
     },
     {
         email: "caovanson.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Cao Văn Sơn",
@@ -216,7 +216,7 @@ const seedUsers = [
     },
     {
         email: "dinhtithao.customer@gmail.com",
-        password: "Customer@123",
+        password: process.env.SEED_CUSTOMER_PASSWORD || "Customer@123",
         roles: ["CUSTOMER"],
         profile: {
             full_name: "Đinh Thị Thảo",

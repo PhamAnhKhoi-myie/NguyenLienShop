@@ -18,6 +18,7 @@ const {
     fulfillItemsBodySchema,
     recordShipmentBodySchema,
     adminUpdateOrderBodySchema,
+    completeRefundBodySchema,
 
 
     getOrdersQuerySchema,
@@ -109,6 +110,16 @@ router.patch(
         body: adminUpdateOrderBodySchema,
     }),
     OrderController.adminUpdateOrder
+);
+
+router.post(
+    '/admin/orders/:order_id/refund',
+    authenticate,
+    validate({
+        params: IdParamSchema,
+        body: completeRefundBodySchema,
+    }),
+    OrderController.completeManualRefund
 );
 
 router.post(

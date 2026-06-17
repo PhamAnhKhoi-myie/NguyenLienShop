@@ -1040,6 +1040,36 @@ const simpleProductsData = [
         is_best_seller: false,
         status: "ACTIVE",
     },
+
+    {
+        name: "Sản phẩm test thanh toán 2.000đ",
+        slug: "san-pham-test-thanh-toan-2000",
+        category_slug: CATEGORY_SLUGS.supplies,
+        brand: "Nguyen Lien",
+        short_description:
+            "Sản phẩm giá thấp dùng để test luồng đặt hàng và thanh toán thật.",
+        description:
+            "Sản phẩm chỉ dùng để kiểm thử thanh toán thật trong môi trường phát triển. Không dùng để bán chính thức.",
+        keywords: [
+            "san pham test",
+            "test thanh toan",
+            "test chuyen khoan",
+            "nguyen lien test",
+        ],
+        price: 2000,
+        stock: 999,
+        unit_type: "PACK",
+        unit_display_name: "Lần test",
+        pack_size: 1,
+        min_order_qty: 1,
+        max_order_qty: null,
+        qty_step: 1,
+        sold_count: 0,
+        rating_avg: 0,
+        rating_count: 0,
+        is_best_seller: false,
+        status: "ACTIVE",
+    },
 ];
 
 const toSkuPart = (value) => {

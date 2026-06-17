@@ -3,28 +3,28 @@ const logger = require('../../utils/logger.util');
 
 const ORDER_STATUS_NOTIFICATIONS = {
     PROCESSING: {
-        title: "Order is being processed",
+        title: "Đơn hàng đang xử lý",
         event: 'ORDER_PROCESSING',
         priority: 'medium',
-        message: (label) => `${label} is being processed.`,
+        message: (label) => `${label} đang được xử lý.`,
     },
     SHIPPED: {
-        title: "Order is being delivered",
+        title: "Đơn hàng đang giao",
         event: 'ORDER_SHIPPED',
         priority: 'medium',
-        message: (label) => `${label} is being delivered.`,
+        message: (label) => `${label} đang được giao.`,
     },
     DELIVERED: {
-        title: "Successfully delivered",
+        title: "Giao hàng thành công",
         event: 'ORDER_DELIVERED',
         priority: 'medium',
-        message: (label) => `${label} has been delivered successfully.`,
+        message: (label) => `${label} đã được giao thành công.`,
     },
     CANCELED: {
-        title: "Order has been canceled",
+        title: "Đơn hàng đã hủy",
         event: 'ORDER_CANCELED',
         priority: 'high',
-        message: (label) => `${label} has been cancelled.`,
+        message: (label) => `${label} đã được hủy.`,
     },
 };
 
@@ -69,7 +69,7 @@ function getOrderCode(order) {
 
 function getOrderLabel(order) {
     const orderCode = getOrderCode(order);
-    return orderCode ? `Order ${orderCode}` : "Your order";
+    return orderCode ? `Đơn hàng ${orderCode}` : "Đơn hàng của bạn";
 }
 
 function getUserDisplayName(user) {
@@ -130,8 +130,8 @@ class NotificationEventService {
         return this._create('REGISTER_SUCCESS', {
             user_id: getUserId(user),
             type: 'system',
-            title: "Account created successfully",
-            message: `Welcome ${displayName} has successfully created an account.`,
+            title: "Tạo tài khoản thành công",
+            message: `Chào ${displayName}, tài khoản của bạn đã được tạo thành công.`,
             priority: 'low',
             data: {
                 ref_type: null,
@@ -147,8 +147,8 @@ class NotificationEventService {
         return this._create('PASSWORD_CHANGED', {
             user_id: getUserId(user),
             type: 'system',
-            title: "Password changed successfully",
-            message: "Your account password has been changed successfully.",
+            title: "Đổi mật khẩu thành công",
+            message: "Mật khẩu tài khoản của bạn đã được thay đổi thành công.",
             priority: 'low',
             data: {
                 ref_type: null,
@@ -166,8 +166,8 @@ class NotificationEventService {
         return this._create('ORDER_CREATED', {
             user_id: getOrderUserId(order),
             type: 'order',
-            title: "Order successful",
-            message: `${label} was created successfully.`,
+            title: "Đặt hàng thành công",
+            message: `${label} đã được tạo thành công.`,
             priority: 'low',
             data: getOrderData(order, 'ORDER_CREATED', {
                 status: 'PENDING',
@@ -181,8 +181,8 @@ class NotificationEventService {
         return this._create('PAYMENT_SUCCESS', {
             user_id: getOrderUserId(order, payment),
             type: 'order',
-            title: "Successful payment",
-            message: `Payment for ${label.toLowerCase()} was successful.`,
+            title: "Thanh toán thành công",
+            message: `Thanh toán cho ${label} đã thành công.`,
             priority: 'medium',
             data: getOrderData(order, 'PAYMENT_SUCCESS', {
                 status: 'PAID',
@@ -198,8 +198,8 @@ class NotificationEventService {
         return this._create('PAYMENT_FAILED', {
             user_id: getOrderUserId(order, payment),
             type: 'order',
-            title: "Payment failed",
-            message: `Payment for ${label.toLowerCase()} failed. Please try again or choose another method.`,
+            title: "Thanh toán thất bại",
+            message: `Thanh toán cho ${label} thất bại. Vui lòng thử lại hoặc chọn phương thức khác.`,
             priority: 'high',
             data: getOrderData(order, 'PAYMENT_FAILED', {
                 status: 'FAILED',

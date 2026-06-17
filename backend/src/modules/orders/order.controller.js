@@ -200,6 +200,26 @@ const adminUpdateOrder = asyncHandler(async (req, res) => {
     });
 });
 
+const completeManualRefund = asyncHandler(async (req, res) => {
+    const user = assertAuthenticated(req.user);
+    assertRole(user, ['ADMIN']);
+
+    const { order_id } = req.params;
+
+    const updatedOrder = await OrderService.completeManualRefund(
+        order_id,
+        req.body,
+        user.userId,
+        buildAuditMetadata(req)
+    );
+
+    res.status(200).json({
+        success: true,
+        data: updatedOrder,
+        message: 'Order refund marked as completed',
+    });
+});
+
 const fulfillItems = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
     assertRole(user, ['ADMIN']);
@@ -333,6 +353,7 @@ module.exports = {
     writeReview,
     updateOrderStatus,
     adminUpdateOrder,
+    completeManualRefund,
     fulfillItems,
     recordShipment,
     confirmDelivery,
