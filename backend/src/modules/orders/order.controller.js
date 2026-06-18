@@ -3,6 +3,7 @@ const AppError = require('../../utils/appError.util');
 const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const OrderService = require('./order.service');
 const { buildAuditMetadata } = require('../../utils/audit.util');
+const { ORDER_MANAGER_ROLES, FINANCE_ADMIN_ROLES } = require('../../constants/roles');
 
 
 
@@ -177,7 +178,7 @@ const writeReview = asyncHandler(async (req, res) => {
 
 const updateOrderStatus = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, ORDER_MANAGER_ROLES);
 
     const { order_id } = req.params;
     const { status, note } = req.body;
@@ -199,7 +200,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 
 const adminUpdateOrder = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, ORDER_MANAGER_ROLES);
 
     const { order_id } = req.params;
     const updateData = req.body;
@@ -220,7 +221,7 @@ const adminUpdateOrder = asyncHandler(async (req, res) => {
 
 const completeManualRefund = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, FINANCE_ADMIN_ROLES);
 
     const { order_id } = req.params;
 
@@ -240,7 +241,7 @@ const completeManualRefund = asyncHandler(async (req, res) => {
 
 const fulfillItems = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, ORDER_MANAGER_ROLES);
 
     const { order_id } = req.params;
     const { item_id, quantity_fulfilled } = req.body;
@@ -262,7 +263,7 @@ const fulfillItems = asyncHandler(async (req, res) => {
 
 const recordShipment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, ORDER_MANAGER_ROLES);
 
     const { order_id } = req.params;
     const { carrier, tracking_code } = req.body;
@@ -286,7 +287,7 @@ const recordShipment = asyncHandler(async (req, res) => {
 
 const confirmDelivery = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, ORDER_MANAGER_ROLES);
 
     const { order_id } = req.params;
 
@@ -305,7 +306,7 @@ const confirmDelivery = asyncHandler(async (req, res) => {
 
 const getAllOrders = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, ORDER_MANAGER_ROLES);
 
     const filters = req.query;
 
@@ -330,7 +331,7 @@ const getAllOrders = asyncHandler(async (req, res) => {
 
 const getOrderStats = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, ORDER_MANAGER_ROLES);
 
     const filters = req.query;
 
@@ -349,7 +350,7 @@ const getOrderStats = asyncHandler(async (req, res) => {
 
 const getAdminOrderDetail = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, ORDER_MANAGER_ROLES);
 
     const { order_id } = req.params;
 

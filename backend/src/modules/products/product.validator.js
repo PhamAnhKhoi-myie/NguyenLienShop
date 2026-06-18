@@ -97,6 +97,7 @@ const createProductSchema = z.object({
 
     images: z
         .array(imageSchema)
+        .max(6, 'A product can have at most 6 images')
         .default([])
         .refine(
             (images) => images.filter((i) => i.is_primary).length <= 1,
@@ -138,6 +139,7 @@ const updateProductSchema = z.object({
 
     images: z
         .array(imageSchema)
+        .max(6, 'A product can have at most 6 images')
         .optional()
         .refine(
             (images) =>

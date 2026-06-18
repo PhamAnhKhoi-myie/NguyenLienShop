@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../../modules/orders/order.model');
 const OrderService = require('../../modules/orders/order.service');
 const ReviewService = require('../../modules/reviews/review.service');
+const NotificationEventService = require('../../modules/notifications/notification_event.service');
 
 function buildOrder(overrides = {}) {
     const orderId = new mongoose.Types.ObjectId();
@@ -117,6 +118,7 @@ describe('OrderService customer receipt confirmation', () => {
 
         jest.spyOn(Order, 'findOne').mockResolvedValue(order);
         jest.spyOn(OrderService, '_createOrderAuditLog').mockResolvedValue();
+        jest.spyOn(NotificationEventService, 'reviewReminder').mockResolvedValue();
 
         const result = await OrderService.confirmCustomerReceived(
             order._id.toString(),
@@ -133,7 +135,33 @@ describe('OrderService customer receipt confirmation', () => {
                 actorId: order.user_id.toString(),
             })
         );
+        expect(NotificationEventService.reviewReminder).toHaveBeenCalledWith(
+            order,
+            expect.objectContaining({
+                expires_at: expect.any(Date),
+            })
+        );
         expect(result.customer_receipt.confirmed).toBe(true);
+    });
+
+    it('does not create another review reminder when receipt was already confirmed', async () => {
+        const order = buildOrder({
+            customer_receipt: {
+                confirmed_at: new Date('2026-01-02T00:00:00.000Z'),
+                confirmed_by: 'user',
+            },
+        });
+
+        jest.spyOn(Order, 'findOne').mockResolvedValue(order);
+        jest.spyOn(NotificationEventService, 'reviewReminder').mockResolvedValue();
+
+        await OrderService.confirmCustomerReceived(
+            order._id.toString(),
+            order.user_id.toString()
+        );
+
+        expect(order.save).not.toHaveBeenCalled();
+        expect(NotificationEventService.reviewReminder).not.toHaveBeenCalled();
     });
 
     it('rejects customer receipt confirmation before delivery', async () => {

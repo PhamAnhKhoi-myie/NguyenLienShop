@@ -97,6 +97,8 @@ export const categoryFormSchema = z.object({
         .min(0, translate('text.order_cannot_be_negative')),
 });
 
+const MAX_PRODUCT_IMAGES = 6;
+
 export const productFormSchema = z.object({
     name: z.string().trim().min(2, translate('text.product_name_needs_to_be_at_least_2_characters')).max(200),
     slug: optionalSlugSchema,
@@ -111,7 +113,16 @@ export const productFormSchema = z.object({
         .string()
         .trim()
         .max(2000, translate('text.detailed_description_must_not_exceed_2000_characters')),
-    image_files: z.any().optional(),
+    image_files: z
+        .any()
+        .refine(
+            (files) =>
+                !Array.isArray(files) || files.length <= MAX_PRODUCT_IMAGES,
+            translate('text.maximum_value_photos_can_be_selected', {
+                value0: MAX_PRODUCT_IMAGES,
+            })
+        )
+        .optional(),
     search_keywords_text: keywordsSchema,
     is_best_seller: z.enum(['true', 'false']),
     new_until: z.string(),
@@ -460,6 +471,7 @@ export const productFormConfig = {
             type: 'file',
             accept: 'image/*',
             multiple: true,
+            maxFiles: MAX_PRODUCT_IMAGES,
             previewUrls: (product) =>
                 Array.isArray(product?.images)
                     ? product.images.map((image) => image.url).filter(Boolean)

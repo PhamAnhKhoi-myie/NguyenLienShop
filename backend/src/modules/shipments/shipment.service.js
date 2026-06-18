@@ -1510,6 +1510,7 @@ class ShipmentService {
     }) {
         await ShipmentAuditLogService.createLog({
             actor_id: actorId,
+            actor_type: metadata.actorType || (actorId ? 'USER' : null),
             action,
             shipment_id: shipment?._id || null,
             order_id: shipment?.order_id || null,

@@ -110,6 +110,7 @@ function FieldRenderer({
                 error={error?.message}
                 disabled={disabled}
                 multiple={field.multiple}
+                maxFiles={field.maxFiles}
                 previewUrl={field.previewUrl?.(initialData)}
                 previewUrls={field.previewUrls?.(initialData) || []}
                 className={field.inputClassName}

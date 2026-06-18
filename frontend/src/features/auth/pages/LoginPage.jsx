@@ -1,5 +1,6 @@
 import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -24,10 +25,36 @@ const loginSchema = z.object({
     password: z.string().min(1, translate('text.please_enter_password')),
 });
 
+const REMEMBERED_LOGIN_KEY = 'remembered_login';
+
+function getRememberedLogin() {
+    try {
+        const rememberedLogin = JSON.parse(
+            window.localStorage.getItem(REMEMBERED_LOGIN_KEY)
+        );
+
+        if (
+            typeof rememberedLogin?.phone_number === 'string' &&
+            typeof rememberedLogin?.password === 'string'
+        ) {
+            return rememberedLogin;
+        }
+    } catch {
+        window.localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+    }
+
+    return null;
+}
+
 function LoginPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const [countdown, setCountdown] = useState(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [rememberPassword, setRememberPassword] = useState(
+        () => getRememberedLogin() !== null
+    );
+    const [rememberedLogin] = useState(getRememberedLogin);
     const from = location.state?.from;
     const redirectTo = from
         ? `${from.pathname}${from.search || ''}`
@@ -41,8 +68,8 @@ function LoginPage() {
     } = useForm({
         resolver: zodResolver(loginSchema),
         defaultValues: {
-            phone_number: '',
-            password: '',
+            phone_number: rememberedLogin?.phone_number || '',
+            password: rememberedLogin?.password || '',
         },
     });
 
@@ -72,6 +99,20 @@ function LoginPage() {
             },
             {
                 onSuccess: () => {
+                    if (rememberPassword) {
+                        window.localStorage.setItem(
+                            REMEMBERED_LOGIN_KEY,
+                            JSON.stringify({
+                                phone_number: normalizePhoneNumber(
+                                    values.phone_number
+                                ),
+                                password: values.password,
+                            })
+                        );
+                    } else {
+                        window.localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+                    }
+
                     setCountdown(3);
                 },
             }
@@ -101,13 +142,46 @@ function LoginPage() {
 
                 <Input
                     label={translate('text.password')}
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     placeholder={translate('text.enter_password')}
                     disabled={isLocked}
                     error={errors.password?.message}
+                    endAdornment={
+                        <button
+                            type="button"
+                            className="rounded p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--color-text-main)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)] disabled:pointer-events-none disabled:opacity-50"
+                            onClick={() => setShowPassword((current) => !current)}
+                            aria-label={translate(
+                                showPassword
+                                    ? 'text.hide_password'
+                                    : 'text.show_password'
+                            )}
+                            aria-pressed={showPassword}
+                            disabled={isLocked}
+                        >
+                            {showPassword ? (
+                                <EyeOff className="h-4 w-4" aria-hidden="true" />
+                            ) : (
+                                <Eye className="h-4 w-4" aria-hidden="true" />
+                            )}
+                        </button>
+                    }
                     {...register('password')}
                 />
+
+                <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-[var(--color-text-main)]">
+                    <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
+                        checked={rememberPassword}
+                        onChange={(event) =>
+                            setRememberPassword(event.target.checked)
+                        }
+                        disabled={isLocked}
+                    />
+                    <span>{translate('text.remember_password')}</span>
+                </label>
 
                 {location.state?.message && countdown === null && (
                     <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">

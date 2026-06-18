@@ -21,7 +21,10 @@ const {
     DEFAULT_CURRENCY,
     getDefaultShippingFee,
 } = require('../../config/commerce');
-const { isReviewWindowOpen } = require('./order_review_window.util');
+const {
+    getReviewExpiresAt,
+    isReviewWindowOpen,
+} = require('./order_review_window.util');
 
 class OrderService {
     static getCheckoutSettings() {
@@ -846,6 +849,10 @@ class OrderService {
                     },
                 },
             },
+        });
+
+        await NotificationEventService.reviewReminder(order, {
+            expires_at: getReviewExpiresAt(order),
         });
 
         return OrderMapper.toDetailDTO(order);
@@ -1830,6 +1837,7 @@ class OrderService {
     }) {
         await OrderAuditLogService.createLog({
             actor_id: actorId,
+            actor_type: metadata.actorType || (actorId ? 'USER' : null),
             action,
             order_id: order._id,
             user_id: order.user_id || null,

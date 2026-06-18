@@ -22,33 +22,44 @@ const passwordSchema = z
     .regex(/[a-z]/, translate('text.password_must_have_at_least_one_lowercase_letter'))
     .regex(/[0-9]/, translate('text.password_must_contain_at_least_one'));
 
-const registerSchema = z.object({
-    full_name: z
-        .string()
-        .trim()
-        .refine((value) => value.length === 0 || value.length >= 2, {
-            message: translate('text.name_must_have_at_least_2_characters'),
-        }),
-    phone_number: z
-        .string()
-        .trim()
-        .min(1, translate('text.please_enter_phone_number'))
-        .refine(isValidVietnamPhoneNumber, translate('text.invalid_phone_number')),
-    email: z
-        .string()
-        .trim()
-        .refine(
-            (value) =>
-                value === '' || z.string().email().safeParse(value).success,
-            translate('text.invalid_email')
-        ),
-    otp: z
-        .string()
-        .trim()
-        .length(6, translate('text.otp_must_have_6_digits'))
-        .regex(/^\d+$/, translate('text.otp_must_only_contain_the_number')),
-    password: passwordSchema,
-});
+const registerSchema = z
+    .object({
+        full_name: z
+            .string()
+            .trim()
+            .refine((value) => value.length === 0 || value.length >= 2, {
+                message: translate('text.name_must_have_at_least_2_characters'),
+            }),
+        phone_number: z
+            .string()
+            .trim()
+            .min(1, translate('text.please_enter_phone_number'))
+            .refine(
+                isValidVietnamPhoneNumber,
+                translate('text.invalid_phone_number')
+            ),
+        email: z
+            .string()
+            .trim()
+            .refine(
+                (value) =>
+                    value === '' || z.string().email().safeParse(value).success,
+                translate('text.invalid_email')
+            ),
+        otp: z
+            .string()
+            .trim()
+            .length(6, translate('text.otp_must_have_6_digits'))
+            .regex(/^\d+$/, translate('text.otp_must_only_contain_the_number')),
+        password: passwordSchema,
+        confirmPassword: z
+            .string()
+            .min(1, translate('text.please_re_enter_password')),
+    })
+    .refine((values) => values.password === values.confirmPassword, {
+        path: ['confirmPassword'],
+        message: translate('text.confirmation_password_does_not_match'),
+    });
 
 export default function RegisterPage() {
     const navigate = useNavigate();
@@ -76,6 +87,7 @@ export default function RegisterPage() {
             email: '',
             otp: '',
             password: '',
+            confirmPassword: '',
         },
     });
 
@@ -250,6 +262,16 @@ export default function RegisterPage() {
                     disabled={isLocked}
                     error={errors.password?.message}
                     {...register('password')}
+                />
+
+                <Input
+                    label={translate('text.confirm_password')}
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={translate('text.re_enter_password')}
+                    disabled={isLocked}
+                    error={errors.confirmPassword?.message}
+                    {...register('confirmPassword')}
                 />
 
                 {registerMutation.isError && (

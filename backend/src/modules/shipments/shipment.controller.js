@@ -3,6 +3,7 @@ const AppError = require('../../utils/appError.util');
 const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const ShipmentService = require('./shipment.service');
 const { buildAuditMetadata } = require('../../utils/audit.util');
+const { SHIPMENT_MANAGER_ROLES, ADMIN_ONLY_ROLES } = require('../../constants/roles');
 
 const hasRole = (user, role) =>
     Array.isArray(user?.roles) &&
@@ -150,7 +151,7 @@ const cancelShipment = asyncHandler(async (req, res) => {
     const { shipmentId } = req.params;
     const { reason } = req.body;
 
-    if (hasRole(user, 'ADMIN')) {
+    if (hasRole(user, 'ADMIN') || hasRole(user, 'MANAGER')) {
         await ShipmentService.getAdminShipment(shipmentId);
     } else {
         await ShipmentService.getShipment(
@@ -177,7 +178,7 @@ const retryShipment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
     const { shipmentId } = req.params;
 
-    if (hasRole(user, 'ADMIN')) {
+    if (hasRole(user, 'ADMIN') || hasRole(user, 'MANAGER')) {
         await ShipmentService.getAdminShipment(shipmentId);
     } else {
         await ShipmentService.getShipment(
@@ -203,7 +204,7 @@ const retryShipment = asyncHandler(async (req, res) => {
 
 const createShipment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, SHIPMENT_MANAGER_ROLES);
 
     const shipmentData = req.body;
 
@@ -223,7 +224,7 @@ const createShipment = asyncHandler(async (req, res) => {
 
 const updateShipmentStatus = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, SHIPMENT_MANAGER_ROLES);
 
     const { shipmentId } = req.params;
     const { status, notes } = req.body;
@@ -247,7 +248,7 @@ const updateShipmentStatus = asyncHandler(async (req, res) => {
 
 const recordShipmentFailure = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, SHIPMENT_MANAGER_ROLES);
 
     const { shipmentId } = req.params;
     const { failure_reason, failure_notes } = req.body;
@@ -269,7 +270,7 @@ const recordShipmentFailure = asyncHandler(async (req, res) => {
 
 const confirmDelivery = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, SHIPMENT_MANAGER_ROLES);
 
     const { shipmentId } = req.params;
 
@@ -288,7 +289,7 @@ const confirmDelivery = asyncHandler(async (req, res) => {
 
 const getAllShipments = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, SHIPMENT_MANAGER_ROLES);
 
     const {
         page = 1,
@@ -323,7 +324,7 @@ const getAllShipments = asyncHandler(async (req, res) => {
 
 const getAdminShipmentDetail = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, SHIPMENT_MANAGER_ROLES);
 
     const { shipmentId } = req.params;
 
@@ -337,7 +338,7 @@ const getAdminShipmentDetail = asyncHandler(async (req, res) => {
 
 const adminUpdateShipment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, SHIPMENT_MANAGER_ROLES);
 
     const { shipmentId } = req.params;
 
@@ -357,7 +358,7 @@ const adminUpdateShipment = asyncHandler(async (req, res) => {
 
 const getShipmentStats = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, SHIPMENT_MANAGER_ROLES);
 
     const {
         status,
@@ -385,7 +386,7 @@ const getShipmentStats = asyncHandler(async (req, res) => {
 
 const deleteShipment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, ADMIN_ONLY_ROLES);
 
     const { shipmentId } = req.params;
 

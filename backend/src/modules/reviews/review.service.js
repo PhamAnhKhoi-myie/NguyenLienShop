@@ -381,7 +381,7 @@ class ReviewService {
             action: AUDIT_ACTIONS.APPROVE_REVIEW,
             review,
             actorId: adminId,
-            actorType: 'ADMIN',
+            actorType: metadata.actorType || 'ADMIN',
             metadata,
             changes: this._buildUpdatedChanges(
                 before,
@@ -420,7 +420,7 @@ class ReviewService {
             action: AUDIT_ACTIONS.REJECT_REVIEW,
             review,
             actorId: adminId,
-            actorType: 'ADMIN',
+            actorType: metadata.actorType || 'ADMIN',
             metadata,
             changes: this._buildUpdatedChanges(
                 before,

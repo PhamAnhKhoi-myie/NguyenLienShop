@@ -1721,7 +1721,7 @@ class DiscountService {
         discount = null,
         sourceDiscountId = null,
         actorId = null,
-        actorType = 'USER',
+        actorType = null,
         orderId = null,
         userId = null,
         metadata = {},
@@ -1730,7 +1730,7 @@ class DiscountService {
     }) {
         await DiscountAuditLogService.createLog({
             actor_id: actorId,
-            actor_type: actorType,
+            actor_type: actorType || metadata.actorType || (actorId ? 'USER' : null),
             action,
             discount_id: discount?._id || null,
             source_discount_id: sourceDiscountId || null,

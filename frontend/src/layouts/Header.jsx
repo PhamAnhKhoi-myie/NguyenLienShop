@@ -485,20 +485,28 @@ function Header() {
                         className="ml-auto hidden w-full max-w-sm items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 md:flex"
                         onSubmit={handleSearchSubmit}
                     >
-                        <button
-                            type="submit"
-                            className="text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
-                            aria-label={translate('text.search_for_product')}
-                        >
-                            <Search size={18} />
-                        </button>
+                        <Search
+                            size={18}
+                            aria-hidden="true"
+                            className="shrink-0 text-[var(--color-text-muted)]"
+                        />
 
                         <input
                             key={searchInputKey}
                             name="search"
                             type="search"
-                            placeholder={translate('text.find_fruit_bags')}
+                            placeholder={translate('text.product_search_examples')}
+                            aria-label={translate('text.search_for_product')}
                             defaultValue={searchValueFromUrl}
+                            onKeyDown={(event) => {
+                                if (
+                                    event.key === 'Enter' &&
+                                    !event.nativeEvent.isComposing
+                                ) {
+                                    event.preventDefault();
+                                    event.currentTarget.form?.requestSubmit();
+                                }
+                            }}
                             className="w-full bg-transparent px-2 py-2 text-sm outline-none"
                         />
                     </form>

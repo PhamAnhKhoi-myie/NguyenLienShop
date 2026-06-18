@@ -2,6 +2,7 @@ const router = require('express').Router();
 const ReviewController = require('./review.controller');
 const { authenticate } = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/authorize.middleware');
+const { REVIEW_MANAGER_ROLES } = require('../../constants/roles');
 const validate = require('../../middlewares/validate.middleware');
 const {
     reviewIdParamSchema,
@@ -88,21 +89,21 @@ router.post(
 router.get(
     '/admin/pending',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(REVIEW_MANAGER_ROLES),
     ReviewController.getPendingReviews
 );
 
 router.get(
     '/admin/flagged',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(REVIEW_MANAGER_ROLES),
     ReviewController.getFlaggedReviews
 );
 
 router.post(
     '/:reviewId/approve',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(REVIEW_MANAGER_ROLES),
     validate({ params: reviewIdParamSchema }),
     ReviewController.approveReview
 );
@@ -110,7 +111,7 @@ router.post(
 router.post(
     '/:reviewId/reject',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(REVIEW_MANAGER_ROLES),
     validate({ params: reviewIdParamSchema, body: rejectReviewSchema }),
     ReviewController.rejectReview
 );

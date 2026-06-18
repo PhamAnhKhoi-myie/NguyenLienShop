@@ -4,6 +4,7 @@ const { assertAuthenticated, assertRole } = require('../../utils/auth.util');
 const PaymentService = require('./payment.service');
 const PaymentMapper = require('./payment.mapper');
 const { buildAuditMetadata } = require('../../utils/audit.util');
+const { FINANCE_VIEW_ROLES, FINANCE_ADMIN_ROLES } = require('../../constants/roles');
 
 const shouldAuditWebhookRejection = (error) =>
     (error?.code || error?.errorCode) !== 'AMOUNT_MISMATCH_FRAUD_ATTEMPT';
@@ -279,10 +280,13 @@ const getPayment = asyncHandler(async (req, res) => {
     const payment = await PaymentService.getPaymentById(paymentId);
 
     const paymentUserId = payment.user_id?.toString();
+    const canViewFinance = FINANCE_VIEW_ROLES.some((role) =>
+        (user.roles || []).includes(role)
+    );
 
     if (
         paymentUserId !== user.userId &&
-        !user.roles.includes('ADMIN')
+        !canViewFinance
     ) {
         throw new AppError(
             'You do not have permission to view this payment',
@@ -291,7 +295,7 @@ const getPayment = asyncHandler(async (req, res) => {
         );
     }
 
-    const dto = user.roles.includes('ADMIN')
+    const dto = canViewFinance
         ? PaymentMapper.toAdminDTO(payment)
         : PaymentMapper.toCustomerDTO(payment);
 
@@ -411,7 +415,7 @@ const cancelPayment = asyncHandler(async (req, res) => {
 
 const adminListPayments = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, FINANCE_VIEW_ROLES);
 
     const { page, limit, status, provider, date_from, date_to } = req.query;
 
@@ -431,7 +435,7 @@ const adminListPayments = asyncHandler(async (req, res) => {
 
 const getPaymentStats = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, FINANCE_VIEW_ROLES);
 
     const { status, provider, date_from, date_to } = req.query;
 
@@ -450,7 +454,7 @@ const getPaymentStats = asyncHandler(async (req, res) => {
 
 const adminVerifyPayment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, FINANCE_ADMIN_ROLES);
 
     const { payment_id: paymentId } = req.params;
 
@@ -483,7 +487,7 @@ const adminVerifyPayment = asyncHandler(async (req, res) => {
 
 const adminDeletePayment = asyncHandler(async (req, res) => {
     const user = assertAuthenticated(req.user);
-    assertRole(user, ['ADMIN']);
+    assertRole(user, FINANCE_ADMIN_ROLES);
 
     const { payment_id: paymentId } = req.params;
 

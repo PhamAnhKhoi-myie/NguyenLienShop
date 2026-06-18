@@ -33,6 +33,7 @@ function FileUploadBoxContent({
     error,
     disabled = false,
     multiple = false,
+    maxFiles,
     onChange,
     externalPreviews = [],
     className,
@@ -40,6 +41,7 @@ function FileUploadBoxContent({
     const inputRef = useRef(null);
     const objectUrlsRef = useRef([]);
     const [localPreviews, setLocalPreviews] = useState([]);
+    const [selectionError, setSelectionError] = useState('');
 
     const previews = localPreviews.length
         ? localPreviews.map((item) => item.url)
@@ -72,9 +74,24 @@ function FileUploadBoxContent({
         if (disabled) return;
 
         const files = Array.from(fileList || []);
-        const nextFiles = multiple ? files : files.slice(0, 1);
+        const currentFiles = multiple
+            ? localPreviews.map((item) => item.file)
+            : [];
+        const nextFiles = multiple
+            ? [...currentFiles, ...files]
+            : files.slice(0, 1);
 
         if (!nextFiles.length) {
+            return;
+        }
+
+        if (multiple && maxFiles && nextFiles.length > maxFiles) {
+            setSelectionError(
+                translate('text.maximum_value_photos_can_be_selected', {
+                    value0: maxFiles,
+                })
+            );
+            clearInputValue();
             return;
         }
 
@@ -88,6 +105,7 @@ function FileUploadBoxContent({
         });
 
         setLocalPreviews(nextPreviews);
+        setSelectionError('');
         clearInputValue();
         emitChange(nextFiles);
     };
@@ -106,6 +124,7 @@ function FileUploadBoxContent({
 
         revokeObjectUrls();
         setLocalPreviews([]);
+        setSelectionError('');
         clearInputValue();
         emitChange([]);
     };
@@ -128,6 +147,7 @@ function FileUploadBoxContent({
         const nextFiles = nextPreviews.map((item) => item.file);
 
         setLocalPreviews(nextPreviews);
+        setSelectionError('');
         clearInputValue();
         emitChange(nextFiles);
     };
@@ -206,19 +226,32 @@ function FileUploadBoxContent({
 
                         <div className="flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
                             <p className="text-sm text-[var(--color-text-muted)]">
-                                {hasLocalPreviews
+                                {multiple
+                                    ? translate('text.click_on_the_frame_to_add_more_photos')
+                                    : hasLocalPreviews
                                     ? translate('text.click_on_the_frame_to_select_the_image_again')
                                     : translate('text.click_on_the_frame_to_select_a_new_image')}
                             </p>
 
-                            {hasLocalPreviews && !disabled && (
-                                <button
-                                    type="button"
-                                    onClick={handleRemoveAll}
-                                    className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-[var(--color-text-main)] shadow"
-                                >
-                                    <X className="h-4 w-4" /> {translate('text.delete_selected_photo')} </button>
-                            )}
+                            <div className="flex items-center gap-3">
+                                {multiple && maxFiles && (
+                                    <span className="text-sm font-medium text-[var(--color-text-muted)]">
+                                        {translate('text.photo_count_value', {
+                                            value0: previews.length,
+                                            value1: maxFiles,
+                                        })}
+                                    </span>
+                                )}
+
+                                {hasLocalPreviews && !disabled && (
+                                    <button
+                                        type="button"
+                                        onClick={handleRemoveAll}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-[var(--color-text-main)] shadow"
+                                    >
+                                        <X className="h-4 w-4" /> {translate('text.delete_selected_photo')} </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -246,9 +279,9 @@ function FileUploadBoxContent({
                 />
             </div>
 
-            {error && (
+            {(selectionError || error) && (
                 <p className="mt-2 text-sm text-[var(--color-error)]">
-                    {error}
+                    {selectionError || error}
                 </p>
             )}
         </div>

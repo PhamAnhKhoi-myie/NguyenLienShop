@@ -29,6 +29,11 @@ import { useAuthStore } from '../features/auth/store/auth.store';
 import {
     ADMIN_ONLY_ROLES,
     CONTENT_MANAGER_ROLES,
+    DISCOUNT_MANAGER_ROLES,
+    FINANCE_VIEW_ROLES,
+    ORDER_MANAGER_ROLES,
+    REVIEW_MANAGER_ROLES,
+    SHIPMENT_MANAGER_ROLES,
 } from '../shared/constants/roles';
 
 const adminNavItems = [
@@ -73,7 +78,7 @@ const adminNavItems = [
         label: translate('text.review'),
         to: ROUTES.ADMIN_REVIEWS,
         icon: MessageSquare,
-        roles: ADMIN_ONLY_ROLES,
+        roles: REVIEW_MANAGER_ROLES,
     },
     {
         label: translate('text.shop_information'),
@@ -85,25 +90,25 @@ const adminNavItems = [
         label: translate('text.order_0aba562f'),
         to: ROUTES.ADMIN_ORDERS,
         icon: ShoppingBag,
-        roles: ADMIN_ONLY_ROLES,
+        roles: ORDER_MANAGER_ROLES,
     },
     {
         label: translate('text.shipping'),
         to: ROUTES.ADMIN_SHIPMENTS,
         icon: Truck,
-        roles: ADMIN_ONLY_ROLES,
+        roles: SHIPMENT_MANAGER_ROLES,
     },
     {
         label: translate('text.checkout'),
         to: ROUTES.ADMIN_PAYMENTS,
         icon: CreditCard,
-        roles: ADMIN_ONLY_ROLES,
+        roles: FINANCE_VIEW_ROLES,
     },
     {
         label: translate('text.discount_code'),
         to: ROUTES.ADMIN_DISCOUNTS,
         icon: Percent,
-        roles: ADMIN_ONLY_ROLES,
+        roles: DISCOUNT_MANAGER_ROLES,
     },
     {
         label: translate('text.user'),

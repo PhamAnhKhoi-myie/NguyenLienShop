@@ -91,7 +91,7 @@ module.exports = {
             brand: { type: "string", maxLength: 100, example: "Nguyen Lien" },
             short_description: { type: "string", maxLength: 500, example: "Durable agricultural fruit bag" },
             description: { type: "string", maxLength: 2000, example: "Used to protect fruit during growth." },
-            images: { type: "array", items: productImage, default: [] },
+            images: { type: "array", maxItems: 6, items: productImage, default: [] },
             search_keywords: {
                 type: "array",
                 maxItems: 10,
@@ -120,7 +120,7 @@ module.exports = {
             brand: { type: "string", maxLength: 100, example: "Nguyen Lien" },
             short_description: { type: "string", maxLength: 500, example: "Updated short description" },
             description: { type: "string", maxLength: 2000, example: "Updated product description" },
-            images: { type: "array", items: productImage },
+            images: { type: "array", maxItems: 6, items: productImage },
             search_keywords: {
                 type: "array",
                 maxItems: 10,

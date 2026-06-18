@@ -48,6 +48,11 @@ import {
     ADMIN_ENTRY_ROLES,
     ADMIN_ONLY_ROLES,
     CONTENT_MANAGER_ROLES,
+    DISCOUNT_MANAGER_ROLES,
+    FINANCE_VIEW_ROLES,
+    ORDER_MANAGER_ROLES,
+    REVIEW_MANAGER_ROLES,
+    SHIPMENT_MANAGER_ROLES,
 } from '../shared/constants/roles';
 
 function routePage(element) {
@@ -266,19 +271,19 @@ export const router = createBrowserRouter([
                     },
                     {
                         path: 'orders',
-                        element: adminRoute(<AdminOrdersPage />, ADMIN_ONLY_ROLES),
+                        element: adminRoute(<AdminOrdersPage />, ORDER_MANAGER_ROLES),
                     },
                     {
                         path: 'payments',
-                        element: adminRoute(<AdminPaymentsPage />, ADMIN_ONLY_ROLES),
+                        element: adminRoute(<AdminPaymentsPage />, FINANCE_VIEW_ROLES),
                     },
                     {
                         path: 'shipments',
-                        element: adminRoute(<AdminShipmentsPage />, ADMIN_ONLY_ROLES),
+                        element: adminRoute(<AdminShipmentsPage />, SHIPMENT_MANAGER_ROLES),
                     },
                     {
                         path: 'discounts',
-                        element: adminRoute(<AdminDiscountsPage />, ADMIN_ONLY_ROLES),
+                        element: adminRoute(<AdminDiscountsPage />, DISCOUNT_MANAGER_ROLES),
                     },
                     {
                         path: 'banners',
@@ -290,7 +295,7 @@ export const router = createBrowserRouter([
                     },
                     {
                         path: 'reviews',
-                        element: adminRoute(<AdminReviewsPage />, ADMIN_ONLY_ROLES),
+                        element: adminRoute(<AdminReviewsPage />, REVIEW_MANAGER_ROLES),
                     },
                     {
                         path: 'shop-info',

@@ -1,6 +1,41 @@
 import { translate } from '../i18n/index';
 import { X } from 'lucide-react';
+import { useEffect } from 'react';
 import Button from './Button';
+
+let openModalCount = 0;
+let originalBodyOverflow = '';
+let originalBodyPaddingRight = '';
+
+function lockPageScroll() {
+    if (openModalCount === 0) {
+        originalBodyOverflow = document.body.style.overflow;
+        originalBodyPaddingRight = document.body.style.paddingRight;
+
+        const scrollbarWidth =
+            window.innerWidth - document.documentElement.clientWidth;
+        const currentPaddingRight = Number.parseFloat(
+            window.getComputedStyle(document.body).paddingRight
+        );
+
+        document.body.style.overflow = 'hidden';
+
+        if (scrollbarWidth > 0) {
+            document.body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`;
+        }
+    }
+
+    openModalCount += 1;
+}
+
+function unlockPageScroll() {
+    openModalCount = Math.max(0, openModalCount - 1);
+
+    if (openModalCount === 0) {
+        document.body.style.overflow = originalBodyOverflow;
+        document.body.style.paddingRight = originalBodyPaddingRight;
+    }
+}
 
 export default function Modal({
     open,
@@ -11,6 +46,14 @@ export default function Modal({
     panelClassName = '',
     bodyClassName = '',
 }) {
+    useEffect(() => {
+        if (!open) return undefined;
+
+        lockPageScroll();
+
+        return unlockPageScroll;
+    }, [open]);
+
     if (!open) {
         return null;
     }
@@ -18,7 +61,7 @@ export default function Modal({
     const resolvedPanelClassName = panelClassName || 'max-w-3xl';
 
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-3 py-5 sm:px-6 lg:px-8">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-5 sm:px-6 lg:px-8">
             <div
                 role="dialog"
                 aria-modal="true"
@@ -39,7 +82,7 @@ export default function Modal({
                     </Button>
                 </div>
 
-                <div className={`min-h-0 flex-1 overflow-y-auto px-6 py-6 sm:px-7 ${bodyClassName}`}>
+                <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6 sm:px-7 ${bodyClassName}`}>
                     {children}
                 </div>
 

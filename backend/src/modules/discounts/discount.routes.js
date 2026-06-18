@@ -6,6 +6,7 @@ const {
 } = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/authorize.middleware');
 const DiscountController = require('./discount.controller');
+const { DISCOUNT_MANAGER_ROLES, ADMIN_ONLY_ROLES } = require('../../constants/roles');
 
 const {
 
@@ -71,7 +72,7 @@ router.post(
 router.post(
     '/',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({ body: createDiscountBodySchema }),
     DiscountController.createDiscount
 );
@@ -79,7 +80,7 @@ router.post(
 router.get(
     '/',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({ query: listDiscountsQuerySchema }),
     DiscountController.listDiscounts
 );
@@ -87,7 +88,7 @@ router.get(
 router.post(
     '/bulk/import',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({ body: bulkCreateBodySchema }),
     DiscountController.bulkImport
 );
@@ -95,7 +96,7 @@ router.post(
 router.get(
     '/near-expiry',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({ query: nearExpiryQuerySchema }),
     DiscountController.getNearExpiryDiscounts
 );
@@ -103,7 +104,7 @@ router.get(
 router.get(
     '/user/:userId',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({
         params: UserIdParamSchema,
         query: listDiscountsQuerySchema.pick({ page: true, limit: true }),
@@ -116,7 +117,7 @@ router.get(
 router.post(
     '/:discountId/revoke',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({ params: IdParamSchema }),
     DiscountController.revokeDiscount
 );
@@ -124,7 +125,7 @@ router.post(
 router.post(
     '/:discountId/duplicate',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({
         params: IdParamSchema,
         body: duplicateDiscountBodySchema,
@@ -135,7 +136,7 @@ router.post(
 router.get(
     '/:discountId/stats',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({ params: IdParamSchema }),
     DiscountController.getStatistics
 );
@@ -143,7 +144,7 @@ router.get(
 router.patch(
     '/:discountId',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({
         params: IdParamSchema,
         body: updateDiscountBodySchema,
@@ -154,7 +155,7 @@ router.patch(
 router.delete(
     '/:discountId',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(ADMIN_ONLY_ROLES),
     validate({ params: IdParamSchema }),
     DiscountController.deleteDiscount
 );
@@ -162,7 +163,7 @@ router.delete(
 router.get(
     '/:discountId',
     authenticate,
-    authorize(['ADMIN']),
+    authorize(DISCOUNT_MANAGER_ROLES),
     validate({ params: IdParamSchema }),
     DiscountController.getDiscount
 );

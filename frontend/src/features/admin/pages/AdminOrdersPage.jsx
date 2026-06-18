@@ -18,6 +18,8 @@ import Loading from '../../../shared/components/Loading';
 import Modal from '../../../shared/components/Modal';
 import Pagination from '../../../shared/components/Pagination';
 import Select from '../../../shared/components/Select';
+import { ROLES } from '../../../shared/constants/roles';
+import { useAuthStore } from '../../auth/store/auth.store';
 import AdminResourceForm from '../components/AdminResourceForm';
 import {
     useAdminDetail,
@@ -318,13 +320,16 @@ function OrderDetailPanel({
     onOpenAction,
     onConfirmDelivery,
     isDelivering,
+    isAdmin,
 }) {
     const canFulfill =
         order.status === 'PROCESSING' && getPendingItemCount(order) > 0;
     const canRecordShipment = order.status === 'PROCESSING';
     const canDeliver = order.status === 'SHIPPED';
     const canCompleteRefund =
-        order.status === 'CANCELED' && order.payment?.status === 'REFUND_PENDING';
+        isAdmin &&
+        order.status === 'CANCELED' &&
+        order.payment?.status === 'REFUND_PENDING';
 
     return (
         <div className="space-y-5">
@@ -544,6 +549,8 @@ function OrderDetailPanel({
 }
 
 export default function AdminOrdersPage() {
+    const roles = useAuthStore((state) => state.user?.roles || []);
+    const isAdmin = roles.includes(ROLES.ADMIN);
     const [page, setPage] = useState(1);
     const [draftFilters, setDraftFilters] = useState({
         status: '',
@@ -868,6 +875,7 @@ export default function AdminOrdersPage() {
                     />
                 ) : (
                     <OrderDetailPanel
+                        isAdmin={isAdmin}
                         order={orderDetail}
                         isDelivering={deliverMutation.isPending}
                         onOpenAction={openAction}

@@ -1,9 +1,8 @@
 import { translate } from '../../../shared/i18n/index';
 import { ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Button from '../../../shared/components/Button';
 import Select from '../../../shared/components/Select';
-import useDebounce from '../../../shared/hooks/useDebounce';
 import { useClickOutside } from '../../../shared/hooks/useClickOutside';
 import { useCategoryTree } from '../../categories/hooks/useCategories';
 
@@ -114,7 +113,6 @@ function CategoryDropdown({ value, options, isLoading, onChange }) {
 
 export default function ProductFilter({ filters, onChange, onReset }) {
     const [search, setSearch] = useState(filters.search || '');
-    const debouncedSearch = useDebounce(search, 350);
     const categoryTreeQuery = useCategoryTree();
     const categoryOptions = useMemo(
         () => flattenCategories(categoryTreeQuery.data?.data || []),
@@ -149,8 +147,9 @@ export default function ProductFilter({ filters, onChange, onReset }) {
         });
     };
 
-    useEffect(() => {
-        const nextSearch = debouncedSearch || null;
+    const handleSearchSubmit = (event) => {
+        event.preventDefault();
+        const nextSearch = search.trim() || null;
         const currentSearch = filters.search || null;
 
         if (nextSearch !== currentSearch) {
@@ -159,23 +158,48 @@ export default function ProductFilter({ filters, onChange, onReset }) {
                 page: 1,
             });
         }
-    }, [debouncedSearch, filters.search, onChange]);
+    };
 
     return (
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-main)]">
                 <SlidersHorizontal className="h-4 w-4 text-[var(--color-primary)]" /> {translate('text.product_filter')} </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_220px_220px_auto]">
-                <div className="relative">
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(360px,1fr)_220px_220px_auto]">
+                <form
+                    className="flex min-w-0"
+                    role="search"
+                    onSubmit={handleSearchSubmit}
+                >
+                    <div className="relative min-w-0 flex-1">
                     <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-[var(--color-text-muted)]" />
                     <input
+                        type="search"
+                        name="search"
+                        aria-label={translate('text.search_for_product')}
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
-                        placeholder={translate('text.search_by_product_name')}
-                        className="h-10 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]"
+                        onKeyDown={(event) => {
+                            if (
+                                event.key === 'Enter' &&
+                                !event.nativeEvent.isComposing
+                            ) {
+                                event.preventDefault();
+                                event.currentTarget.form?.requestSubmit();
+                            }
+                        }}
+                        placeholder={translate('text.product_search_examples')}
+                        className="h-10 w-full rounded-l-md border border-r-0 border-[var(--color-border)] bg-[var(--color-surface)] pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]"
                     />
-                </div>
+                    </div>
+                    <Button
+                        type="submit"
+                        className="shrink-0 rounded-l-none px-4"
+                    >
+                        <Search className="h-4 w-4" />
+                        {translate('text.search')}
+                    </Button>
+                </form>
 
                 <CategoryDropdown
                     value={filters.category_id}

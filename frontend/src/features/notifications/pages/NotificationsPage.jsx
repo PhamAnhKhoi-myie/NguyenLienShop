@@ -77,6 +77,10 @@ function getNotificationContent(notification) {
             title: 'Giao hàng thành công',
             message: `${label} đã được giao thành công.`,
         },
+        ORDER_REVIEW_REMINDER: {
+            title: 'Đánh giá sản phẩm',
+            message: `${label} đã được xác nhận nhận hàng. Hãy đánh giá sản phẩm trong 3 ngày để chia sẻ trải nghiệm của bạn.`,
+        },
         ORDER_CANCELED: {
             title: 'Đơn hàng đã hủy',
             message: `${label} đã được hủy.`,

@@ -231,6 +231,22 @@ class NotificationEventService {
             }),
         });
     }
+
+    static async reviewReminder(order, reviewWindow = {}) {
+        const label = getOrderLabel(order);
+
+        return this._create('ORDER_REVIEW_REMINDER', {
+            user_id: getOrderUserId(order),
+            type: 'order',
+            title: "\u0110\u00e1nh gi\u00e1 s\u1ea3n ph\u1ea9m",
+            message: `${label} \u0111\u00e3 \u0111\u01b0\u1ee3c x\u00e1c nh\u1eadn nh\u1eadn h\u00e0ng. H\u00e3y \u0111\u00e1nh gi\u00e1 s\u1ea3n ph\u1ea9m trong 3 ng\u00e0y \u0111\u1ec3 chia s\u1ebb tr\u1ea3i nghi\u1ec7m c\u1ee7a b\u1ea1n.`,
+            priority: 'medium',
+            data: getOrderData(order, 'ORDER_REVIEW_REMINDER', {
+                status: 'DELIVERED',
+                review_expires_at: reviewWindow.expires_at || null,
+            }),
+        });
+    }
 }
 
 module.exports = NotificationEventService;

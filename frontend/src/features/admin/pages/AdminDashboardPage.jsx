@@ -18,6 +18,7 @@ import { ROUTES } from '../../../shared/constants/routes';
 import {
     ADMIN_ONLY_ROLES,
     CONTENT_MANAGER_ROLES,
+    ORDER_MANAGER_ROLES,
 } from '../../../shared/constants/roles';
 import { useAuthStore } from '../../auth/store/auth.store';
 
@@ -50,7 +51,7 @@ const dashboardSections = [
             { label: translate('text.payments'), to: ROUTES.ADMIN_PAYMENTS, icon: CreditCard },
             { label: translate('text.discounts'), to: ROUTES.ADMIN_DISCOUNTS, icon: Percent },
         ],
-        roles: ADMIN_ONLY_ROLES,
+        roles: ORDER_MANAGER_ROLES,
     },
     {
         title: translate('text.security_f25ce1b8'),

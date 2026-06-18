@@ -17,6 +17,8 @@ import Loading from '../../../shared/components/Loading';
 import Modal from '../../../shared/components/Modal';
 import Pagination from '../../../shared/components/Pagination';
 import Select from '../../../shared/components/Select';
+import { ROLES } from '../../../shared/constants/roles';
+import { useAuthStore } from '../../auth/store/auth.store';
 import {
     useAdminDetail,
     useAdminList,
@@ -265,6 +267,7 @@ function PaymentDetailPanel({
     onDelete,
     isVerifying,
     isDeleting,
+    isAdmin,
 }) {
     const webhookData = payment.webhook_data || {};
     const transactionRef =
@@ -292,7 +295,7 @@ function PaymentDetailPanel({
                     <p className="mt-2 text-sm text-[var(--color-text-muted)]"> {translate('text.order')} {payment.order_id}
                     </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                {isAdmin && <div className="flex flex-wrap gap-2">
                     <Button
                         size="sm"
                         variant="outline"
@@ -307,7 +310,7 @@ function PaymentDetailPanel({
                         onClick={onDelete}
                     >
                         <Trash2 className="h-4 w-4" /> {translate('text.soft_delete')} </Button>
-                </div>
+                </div>}
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3">
@@ -407,6 +410,8 @@ function PaymentDetailPanel({
 }
 
 export default function AdminPaymentsPage() {
+    const roles = useAuthStore((state) => state.user?.roles || []);
+    const isAdmin = roles.includes(ROLES.ADMIN);
     const [page, setPage] = useState(1);
     const [draftFilters, setDraftFilters] = useState({
         status: '',
@@ -654,6 +659,7 @@ export default function AdminPaymentsPage() {
                 ) : (
                     <div className="space-y-4">
                         <PaymentDetailPanel
+                            isAdmin={isAdmin}
                             payment={paymentDetail}
                             isVerifying={verifyMutation.isPending}
                             isDeleting={deleteMutation.isPending}

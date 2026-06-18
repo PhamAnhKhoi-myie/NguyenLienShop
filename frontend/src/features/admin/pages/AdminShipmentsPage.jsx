@@ -21,6 +21,8 @@ import Loading from '../../../shared/components/Loading';
 import Modal from '../../../shared/components/Modal';
 import Pagination from '../../../shared/components/Pagination';
 import Select from '../../../shared/components/Select';
+import { ROLES } from '../../../shared/constants/roles';
+import { useAuthStore } from '../../auth/store/auth.store';
 import AdminResourceForm from '../components/AdminResourceForm';
 import {
     useAdminDetail,
@@ -320,6 +322,7 @@ function ShipmentDetailPanel({
     isRetrying,
     isConfirming,
     isDeleting,
+    isAdmin,
 }) {
     return (
         <div className="space-y-5">
@@ -383,13 +386,15 @@ function ShipmentDetailPanel({
                         >
                             <CheckCircle2 className="h-4 w-4" /> {translate('text.delivered')} </Button>
                     )}
-                    <Button
-                        size="sm"
-                        variant="danger"
-                        isLoading={isDeleting}
-                        onClick={onDelete}
-                    >
-                        <Trash2 className="h-4 w-4" /> {translate('text.soft_delete')} </Button>
+                    {isAdmin && (
+                        <Button
+                            size="sm"
+                            variant="danger"
+                            isLoading={isDeleting}
+                            onClick={onDelete}
+                        >
+                            <Trash2 className="h-4 w-4" /> {translate('text.soft_delete')} </Button>
+                    )}
                 </div>
             </div>
 
@@ -472,6 +477,8 @@ function ShipmentDetailPanel({
 }
 
 export default function AdminShipmentsPage() {
+    const roles = useAuthStore((state) => state.user?.roles || []);
+    const isAdmin = roles.includes(ROLES.ADMIN);
     const [page, setPage] = useState(1);
     const [draftFilters, setDraftFilters] = useState({
         status: '',
@@ -819,6 +826,7 @@ export default function AdminShipmentsPage() {
                     />
                 ) : (
                     <ShipmentDetailPanel
+                        isAdmin={isAdmin}
                         shipment={shipmentDetail}
                         isRetrying={retryMutation.isPending}
                         isConfirming={confirmMutation.isPending}
