@@ -15,7 +15,6 @@ import Badge from '../../../shared/components/Badge';
 import Button from '../../../shared/components/Button';
 import Card, { CardBody, CardHeader } from '../../../shared/components/Card';
 import EmptyState from '../../../shared/components/EmptyState';
-import Input from '../../../shared/components/Input';
 import Loading from '../../../shared/components/Loading';
 import Modal from '../../../shared/components/Modal';
 import Select from '../../../shared/components/Select';
@@ -43,6 +42,34 @@ const statusLabels = {
     REFUND_PENDING: translate('text.refund_pending'),
     REFUNDED: translate('text.refunded'),
 };
+
+const reviewQuickFeedbackOptions = [
+    { value: '', label: translate('text.review_quick_feedback_placeholder') },
+    {
+        value: translate('text.review_option_excellent'),
+        label: translate('text.review_option_excellent'),
+    },
+    {
+        value: translate('text.review_option_good_quality'),
+        label: translate('text.review_option_good_quality'),
+    },
+    {
+        value: translate('text.review_option_good_value'),
+        label: translate('text.review_option_good_value'),
+    },
+    {
+        value: translate('text.review_option_fast_delivery'),
+        label: translate('text.review_option_fast_delivery'),
+    },
+    {
+        value: translate('text.review_option_as_described'),
+        label: translate('text.review_option_as_described'),
+    },
+    {
+        value: translate('text.review_option_needs_improvement'),
+        label: translate('text.review_option_needs_improvement'),
+    },
+];
 
 function getStatusVariant(status) {
     if (status === 'DELIVERED' || status === 'PAID' || status === 'REFUNDED') {
@@ -198,8 +225,8 @@ export default function OrderDetailPage() {
     });
     const cancelReason =
         useWatch({ control: cancelControl, name: 'reason' }) || '';
-    const reviewComment =
-        useWatch({ control: reviewControl, name: 'comment' }) || '';
+    const reviewTitle =
+        useWatch({ control: reviewControl, name: 'title' }) || '';
 
     const openCancelModal = () => {
         resetCancelForm({ reason: '' });
@@ -262,7 +289,7 @@ export default function OrderDetailPage() {
                 item_id: reviewItem.id,
                 rating: values.rating,
                 title: values.title?.trim() || null,
-                comment: values.comment.trim(),
+                comment: values.comment?.trim() || null,
             },
         });
         closeReviewModal();
@@ -645,7 +672,7 @@ export default function OrderDetailPage() {
                     <>
                         <Button variant="outline" onClick={closeReviewModal}> {translate('text.close')} </Button>
                         <Button
-                            disabled={reviewComment.trim().length < 10}
+                            disabled={!reviewTitle.trim()}
                             isLoading={writeReviewMutation.isPending}
                             onClick={handleSubmitReview}
                         > {translate('text.send_review')} </Button>
@@ -667,16 +694,21 @@ export default function OrderDetailPage() {
                         <option value="2">{translate('text.2_sao')}</option>
                         <option value="1">{translate('text.1_sao')}</option>
                     </Select>
-                    <Input
-                        label={translate('text.title')}
-                        placeholder={translate('text.summary_of_your_experience')}
+                    <Select
+                        label={translate('text.review_quick_feedback')}
                         error={reviewErrors.title?.message}
                         {...registerReview('title')}
-                    />
+                    >
+                        {reviewQuickFeedbackOptions.map((option) => (
+                            <option key={option.label} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </Select>
                     <Textarea
-                        label={translate('text.content')}
-                        rows={5}
-                        placeholder={translate('text.share_your_feelings_after_using_the_product')}
+                        label={translate('text.review_detail_feedback')}
+                        rows={4}
+                        placeholder={translate('text.review_detail_feedback_placeholder')}
                         error={reviewErrors.comment?.message}
                         {...registerReview('comment')}
                     />

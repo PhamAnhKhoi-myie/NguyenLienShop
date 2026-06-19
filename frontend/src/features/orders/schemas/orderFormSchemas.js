@@ -18,11 +18,12 @@ export const reviewSchema = z.object({
     title: z
         .string()
         .trim()
-        .max(200, translate('text.review_title_must_not_exceed_200_characters'))
-        .optional(),
+        .min(1, translate('text.please_choose_quick_feedback'))
+        .max(200, translate('text.review_title_must_not_exceed_200_characters')),
     comment: z
         .string()
         .trim()
-        .min(10, translate('text.review_content_must_be_at_least_10_characters'))
-        .max(500, translate('text.review_content_must_not_exceed_500_characters')),
+        .max(500, translate('text.review_content_must_not_exceed_500_characters'))
+        .optional()
+        .nullable(),
 });

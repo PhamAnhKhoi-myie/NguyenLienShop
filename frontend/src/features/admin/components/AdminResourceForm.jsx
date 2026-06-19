@@ -1,7 +1,7 @@
 import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import Button from '../../../shared/components/Button';
@@ -111,8 +111,8 @@ function FieldRenderer({
                 disabled={disabled}
                 multiple={field.multiple}
                 maxFiles={field.maxFiles}
-                previewUrl={field.previewUrl?.(initialData)}
-                previewUrls={field.previewUrls?.(initialData) || []}
+                previewUrl={initialData ? field.previewUrl?.(initialData) : undefined}
+                previewUrls={initialData ? field.previewUrls?.(initialData) || [] : []}
                 className={field.inputClassName}
                 onChange={(file) => {
                     const eventValue = field.multiple ? file : file ? [file] : [];
@@ -137,6 +137,45 @@ function FieldRenderer({
     );
 }
 
+function SectionTabs({ sections, activeKey, errors, onChange }) {
+    return (
+        <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-3">
+            {sections.map((section) => {
+                const isActive = section.key === activeKey;
+                const errorCount = section.fields.filter((name) => errors[name]).length;
+
+                return (
+                    <button
+                        key={section.key}
+                        type="button"
+                        onClick={() => onChange(section.key)}
+                        className={cn(
+                            'inline-flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
+                            isActive
+                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
+                                : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-main)] hover:bg-[var(--color-background)]'
+                        )}
+                    >
+                        {section.label}
+                        {errorCount > 0 && (
+                            <span
+                                className={cn(
+                                    'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-semibold',
+                                    isActive
+                                        ? 'bg-white text-[var(--color-primary)]'
+                                        : 'bg-red-100 text-[var(--color-error)]'
+                                )}
+                            >
+                                {errorCount}
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function AdminResourceForm({
     form,
     mode,
@@ -147,6 +186,10 @@ export default function AdminResourceForm({
     onCancel,
     onSubmit,
 }) {
+    const sections = useMemo(() => form.sections || [], [form.sections]);
+    const [activeSectionKey, setActiveSectionKey] = useState(
+        sections[0]?.key || 'all'
+    );
     const {
         register,
         handleSubmit,
@@ -156,6 +199,7 @@ export default function AdminResourceForm({
     } = useForm({
         resolver: zodResolver(form.schema),
         defaultValues: form.defaultValues,
+        shouldUnregister: false,
     });
 
     useEffect(() => {
@@ -164,11 +208,52 @@ export default function AdminResourceForm({
 
     const currentId = initialData?.id || initialData?._id;
     const values = useWatch({ control }) || {};
+    const fieldsByName = useMemo(
+        () => new Map(form.fields.map((field) => [field.name, field])),
+        [form.fields]
+    );
+    const activeSection = sections.find(
+        (section) => section.key === activeSectionKey
+    );
+    const visibleFields = activeSection
+        ? activeSection.fields
+              .map((name) => fieldsByName.get(name))
+              .filter(Boolean)
+        : form.fields;
+    const handleInvalidSubmit = (formErrors) => {
+        if (!sections.length) {
+            return;
+        }
+
+        const firstSectionWithError = sections.find((section) =>
+            section.fields.some((name) => formErrors[name])
+        );
+
+        if (firstSectionWithError) {
+            setActiveSectionKey(firstSectionWithError.key);
+        }
+    };
+    const handleFormSubmit = handleSubmit(onSubmit, handleInvalidSubmit);
 
     return (
-        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="space-y-6" onSubmit={handleFormSubmit}>
+            {sections.length > 0 && (
+                <SectionTabs
+                    sections={sections}
+                    activeKey={activeSectionKey}
+                    errors={errors}
+                    onChange={setActiveSectionKey}
+                />
+            )}
+
+            {activeSection?.description && (
+                <p className="text-sm leading-6 text-[var(--color-text-muted)]">
+                    {activeSection.description}
+                </p>
+            )}
+
             <div className="grid gap-5 lg:grid-cols-2">
-                {form.fields.map((field) => {
+                {visibleFields.map((field) => {
                     const fieldContext = { mode, initialData, values };
 
                     if (resolveFieldFlag(field.hidden, fieldContext)) {

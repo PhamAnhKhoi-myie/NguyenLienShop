@@ -1577,6 +1577,9 @@ class OrderService {
             );
         }
 
+        const normalizedTitle = typeof title === 'string' ? title.trim() || null : null;
+        const normalizedComment = typeof comment === 'string' ? comment.trim() || null : null;
+
         await ReviewService.createReview(
             userId,
             item.product_id.toString(),
@@ -1584,8 +1587,8 @@ class OrderService {
             orderId,
             {
                 rating,
-                title,
-                content: comment
+                title: normalizedTitle,
+                content: normalizedComment
             },
             metadata
         );

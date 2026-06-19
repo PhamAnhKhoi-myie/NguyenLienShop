@@ -39,8 +39,9 @@ const createReviewSchema = z.object({
 
     content: z
         .string()
-        .min(10, 'Review content must be at least 10 characters')
         .max(5000, 'Review content must be at most 5000 characters')
+        .optional()
+        .nullable()
 });
 
 const updateReviewSchema = z.object({
@@ -59,9 +60,9 @@ const updateReviewSchema = z.object({
 
     content: z
         .string()
-        .min(10, 'Review content must be at least 10 characters')
         .max(5000, 'Review content must be at most 5000 characters')
         .optional()
+        .nullable()
 });
 
 const markHelpfulSchema = z.object({

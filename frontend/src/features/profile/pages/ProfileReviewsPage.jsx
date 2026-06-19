@@ -160,9 +160,11 @@ export default function ProfileReviewsPage() {
                                                 </p>
                                             </div>
 
-                                            <p className="whitespace-pre-line break-words text-sm leading-6 text-[var(--color-text-main)]">
-                                                {review.content}
-                                            </p>
+                                            {review.content && (
+                                                <p className="whitespace-pre-line break-words text-sm leading-6 text-[var(--color-text-main)]">
+                                                    {review.content}
+                                                </p>
+                                            )}
 
                                             <div className="flex flex-wrap gap-2 text-xs text-[var(--color-text-muted)]">
                                                 <span> {translate('text.useful_7938ab5c')}{' '}

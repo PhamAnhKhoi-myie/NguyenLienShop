@@ -59,6 +59,38 @@ const formatFaqItems = (items = []) =>
         .filter((line) => line.trim() !== '|')
         .join('\n');
 
+const hasHtmlTags = (value) => /<\/?[a-z][\s\S]*>/i.test(value);
+
+const escapeHtml = (value) =>
+    value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+const formatBlogContent = (value) => {
+    const content = value.trim();
+
+    if (hasHtmlTags(content)) {
+        return content;
+    }
+
+    return content
+        .split(/\n{2,}/)
+        .map((paragraph) =>
+            paragraph
+                .trim()
+                .split('\n')
+                .map((line) => escapeHtml(line.trim()))
+                .filter(Boolean)
+                .join('<br>')
+        )
+        .filter(Boolean)
+        .map((paragraph) => `<p>${paragraph}</p>`)
+        .join('\n');
+};
+
 export const blogFormConfig = {
     title: translate('text.article_eda8942f'),
     schema: z.object({
@@ -130,21 +162,72 @@ export const blogFormConfig = {
         meta_description: blog.seo?.meta_description || '',
         seo_keywords: (blog.seo?.keywords || []).join(', '),
     }),
-    toPayload: async (values) => {
+    sections: [
+        {
+            key: 'content',
+            label: translate('text.blog_section_content'),
+            description: translate('text.blog_section_content_description'),
+            fields: [
+                'title',
+                'slug',
+                'excerpt',
+                'content',
+                'thumbnail_file',
+                'thumbnail_url',
+                'thumbnail_alt',
+            ],
+        },
+        {
+            key: 'display',
+            label: translate('text.blog_section_display'),
+            description: translate('text.blog_section_display_description'),
+            fields: [
+                'status',
+                'content_type',
+                'is_pinned',
+                'sort_order',
+                'category',
+                'tags',
+            ],
+        },
+        {
+            key: 'links',
+            label: translate('text.blog_section_links_faq'),
+            description: translate('text.blog_section_links_faq_description'),
+            fields: [
+                'related_product_ids',
+                'related_category_ids',
+                'faq_items_text',
+            ],
+        },
+        {
+            key: 'seo',
+            label: translate('text.blog_section_seo'),
+            description: translate('text.blog_section_seo_description'),
+            fields: ['meta_title', 'meta_description', 'seo_keywords'],
+        },
+    ],
+    toPayload: async (values, context = {}) => {
         let thumbnailUrl = values.thumbnail_url;
-        let thumbnailPublicId = values.thumbnail_public_id;
+        const initialThumbnailUrl = context.initialData?.thumbnail?.url || '';
+        let thumbnailPublicId =
+            values.thumbnail_public_id ||
+            context.initialData?.thumbnail?.public_id ||
+            '';
         const file = values.thumbnail_file?.[0];
 
         if (file) {
             const uploadedImage = await uploadApi.uploadBlogThumbnail(file);
             thumbnailUrl = uploadedImage.url;
             thumbnailPublicId = uploadedImage.public_id;
+        } else if ((thumbnailUrl || '').trim() !== initialThumbnailUrl) {
+            thumbnailPublicId = '';
         }
 
         const payload = {
             title: values.title.trim(),
             excerpt: values.excerpt.trim(),
-            content: values.content.trim(),
+            content: formatBlogContent(values.content),
             thumbnail: {
                 url: thumbnailUrl?.trim() || '',
                 public_id: thumbnailPublicId?.trim() || '',
@@ -174,7 +257,12 @@ export const blogFormConfig = {
     },
     fields: [
         { name: 'title', label: translate('text.title'), placeholder: translate('text.how_to_use_fruit_bags'), className: 'md:col-span-2' },
-        { name: 'slug', label: translate('text.slug'), placeholder: translate('text.cach_su_dung_tui_bao_trai_cay') },
+        {
+            name: 'slug',
+            label: translate('text.slug'),
+            placeholder: translate('text.cach_su_dung_tui_bao_trai_cay'),
+            helperText: translate('text.blog_slug_helper'),
+        },
         {
             name: 'status',
             label: translate('text.status'),
@@ -210,9 +298,10 @@ export const blogFormConfig = {
         },
         {
             name: 'content',
-            label: translate('text.html_content'),
+            label: translate('text.article_content'),
             type: 'textarea',
             rows: 12,
+            helperText: translate('text.blog_content_helper'),
             className: 'md:col-span-2',
         },
         {
@@ -220,24 +309,43 @@ export const blogFormConfig = {
             label: translate('text.thumbnail'),
             type: 'file',
             accept: 'image/*',
-            previewUrl: (blog) => blog.thumbnail?.url,
+            helperText: translate('text.blog_thumbnail_file_helper'),
+            previewUrl: (blog) => blog?.thumbnail?.url,
             className: 'md:col-span-2',
         },
-        { name: 'thumbnail_url', label: translate('text.thumbnail_url'), placeholder: 'https://...' },
+        {
+            name: 'thumbnail_url',
+            label: translate('text.thumbnail_url'),
+            placeholder: 'https://...',
+            helperText: translate('text.blog_thumbnail_url_helper'),
+        },
         { name: 'thumbnail_alt', label: translate('text.alt_text') },
-        { name: 'thumbnail_public_id', label: translate('text.cloudinary_public_id') },
-        { name: 'category', label: translate('text.category'), placeholder: translate('text.instructions_for_use') },
-        { name: 'tags', label: translate('text.tags'), placeholder: translate('text.bag_grapefruit_instructions'), className: 'md:col-span-2' },
+        { name: 'thumbnail_public_id', label: translate('text.cloudinary_public_id'), hidden: true },
+        {
+            name: 'category',
+            label: translate('text.category'),
+            placeholder: translate('text.instructions_for_use'),
+            helperText: translate('text.blog_category_helper'),
+        },
+        {
+            name: 'tags',
+            label: translate('text.tags'),
+            placeholder: translate('text.bag_grapefruit_instructions'),
+            helperText: translate('text.blog_tags_helper'),
+            className: 'md:col-span-2',
+        },
         {
             name: 'related_product_ids',
             label: translate('text.related_product_ids'),
             placeholder: translate('text.related_ids_placeholder'),
+            helperText: translate('text.blog_related_product_ids_helper'),
             className: 'md:col-span-2',
         },
         {
             name: 'related_category_ids',
             label: translate('text.related_category_ids'),
             placeholder: translate('text.related_ids_placeholder'),
+            helperText: translate('text.blog_related_category_ids_helper'),
             className: 'md:col-span-2',
         },
         {
@@ -249,8 +357,16 @@ export const blogFormConfig = {
             helperText: translate('text.faq_items_helper'),
             className: 'md:col-span-2',
         },
-        { name: 'meta_title', label: translate('text.meta_title') },
-        { name: 'meta_description', label: translate('text.meta_description') },
+        {
+            name: 'meta_title',
+            label: translate('text.meta_title'),
+            helperText: translate('text.blog_meta_title_helper'),
+        },
+        {
+            name: 'meta_description',
+            label: translate('text.meta_description'),
+            helperText: translate('text.blog_meta_description_helper'),
+        },
         { name: 'seo_keywords', label: translate('text.seo_keywords'), placeholder: translate('text.fruit_bags_grapefruit_bags'), className: 'md:col-span-2' },
     ],
 };

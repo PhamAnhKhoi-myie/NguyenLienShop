@@ -65,7 +65,6 @@ export default function RegisterPage() {
     const navigate = useNavigate();
     const registerMutation = useRegister();
     const requestOtpMutation = useRequestRegistrationOtp();
-    const [successCountdown, setSuccessCountdown] = useState(null);
     const [resendCountdown, setResendCountdown] = useState(0);
     const [otpPhone, setOtpPhone] = useState('');
     const [mockOtp, setMockOtp] = useState('');
@@ -99,26 +98,6 @@ export default function RegisterPage() {
     const hasOtpForCurrentPhone = Boolean(
         otpPhone && currentPhone === otpPhone
     );
-
-    useEffect(() => {
-        if (successCountdown === null) return;
-
-        if (successCountdown <= 0) {
-            navigate(ROUTES.LOGIN, {
-                replace: true,
-                state: {
-                    message: translate('text.registration_successful_please_log_in'),
-                },
-            });
-            return;
-        }
-
-        const timerId = setTimeout(() => {
-            setSuccessCountdown((current) => current - 1);
-        }, 1000);
-
-        return () => clearTimeout(timerId);
-    }, [navigate, successCountdown]);
 
     useEffect(() => {
         if (resendCountdown <= 0) return;
@@ -172,14 +151,18 @@ export default function RegisterPage() {
             },
             {
                 onSuccess: () => {
-                    setSuccessCountdown(5);
+                    navigate(ROUTES.LOGIN, {
+                        replace: true,
+                        state: {
+                            message: translate('text.registration_successful_please_log_in'),
+                        },
+                    });
                 },
             }
         );
     };
 
-    const isLocked =
-        registerMutation.isPending || successCountdown !== null;
+    const isLocked = registerMutation.isPending;
     const canResend =
         !requestOtpMutation.isPending &&
         (!hasOtpForCurrentPhone || resendCountdown <= 0);
@@ -281,17 +264,10 @@ export default function RegisterPage() {
                     </p>
                 )}
 
-                {successCountdown !== null && (
-                    <p className="w-full rounded-md border border-green-200 bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700"> {translate('text.account_created_successfully_switch_to_the_following_login')}{' '}
-                        {successCountdown}s.
-                    </p>
-                )}
-
                 <Button
                     type="submit"
                     fullWidth
                     isLoading={registerMutation.isPending}
-                    disabled={successCountdown !== null}
                 >
                     {registerMutation.isPending
                         ? translate('text.creating')

@@ -1,7 +1,7 @@
 import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -49,7 +49,6 @@ function getRememberedLogin() {
 function LoginPage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const [countdown, setCountdown] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
     const [rememberPassword, setRememberPassword] = useState(
         () => getRememberedLogin() !== null
@@ -73,23 +72,8 @@ function LoginPage() {
         },
     });
 
-    useEffect(() => {
-        if (countdown === null) return;
-
-        if (countdown <= 0) {
-            navigate(redirectTo, { replace: true });
-            return;
-        }
-
-        const timerId = setTimeout(() => {
-            setCountdown((current) => current - 1);
-        }, 1000);
-
-        return () => clearTimeout(timerId);
-    }, [countdown, navigate, redirectTo]);
-
     const apiError = loginMutation.error?.message;
-    const isLocked = loginMutation.isPending || countdown !== null;
+    const isLocked = loginMutation.isPending;
 
     const onSubmit = (values) => {
         loginMutation.mutate(
@@ -113,7 +97,7 @@ function LoginPage() {
                         window.localStorage.removeItem(REMEMBERED_LOGIN_KEY);
                     }
 
-                    setCountdown(3);
+                    navigate(redirectTo, { replace: true });
                 },
             }
         );
@@ -183,28 +167,22 @@ function LoginPage() {
                     <span>{translate('text.remember_password')}</span>
                 </label>
 
-                {location.state?.message && countdown === null && (
+                {location.state?.message && (
                     <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
                         {location.state.message}
                     </p>
                 )}
 
-                {apiError && countdown === null && (
+                {apiError && (
                     <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--color-error)]">
                         {apiError}
                     </p>
-                )}
-
-                {countdown !== null && (
-                    <div className="w-full cursor-not-allowed rounded-md border border-green-200 bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700"> {translate('text.successful_login')} {countdown}s.
-                    </div>
                 )}
 
                 <Button
                     type="submit"
                     className="w-full"
                     isLoading={loginMutation.isPending}
-                    disabled={countdown !== null}
                 >
                     {loginMutation.isPending ? translate('text.logging_in') : translate('text.login')}
                 </Button>

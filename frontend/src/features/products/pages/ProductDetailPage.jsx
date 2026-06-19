@@ -876,9 +876,11 @@ export default function ProductDetailPage() {
                                         </time>
                                     </div>
 
-                                    <p className="whitespace-pre-line break-words text-sm leading-6 text-[var(--color-text-main)]">
-                                        {review.content}
-                                    </p>
+                                    {review.content && (
+                                        <p className="whitespace-pre-line break-words text-sm leading-6 text-[var(--color-text-main)]">
+                                            {review.content}
+                                        </p>
+                                    )}
 
                                     <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
                                         {accessToken && (

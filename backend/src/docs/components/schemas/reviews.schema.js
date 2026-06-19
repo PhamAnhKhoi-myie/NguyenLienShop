@@ -40,7 +40,6 @@ module.exports = {
             "is_verified_purchase",
             "rating",
             "title",
-            "content",
             "edit_count",
             "edited_at",
             "helpful_count",
@@ -59,8 +58,8 @@ module.exports = {
             title: { type: "string", maxLength: 200, nullable: true, example: "Great product" },
             content: {
                 type: "string",
-                minLength: 10,
                 maxLength: 5000,
+                nullable: true,
                 example: "This product exceeded my expectations. Quality is excellent.",
             },
             edit_count: { type: "integer", minimum: 0, example: 0 },
@@ -111,7 +110,7 @@ module.exports = {
 
     CreateReviewInput: {
         type: "object",
-        required: ["product_id", "variant_id", "order_id", "rating", "content"],
+        required: ["product_id", "variant_id", "order_id", "rating"],
         properties: {
             product_id: objectId("507f1f77bcf86cd799439010"),
             variant_id: objectId("507f1f77bcf86cd799439013"),
@@ -120,8 +119,8 @@ module.exports = {
             title: { type: "string", maxLength: 200, nullable: true, example: "Great product" },
             content: {
                 type: "string",
-                minLength: 10,
                 maxLength: 5000,
+                nullable: true,
                 example: "This product exceeded my expectations. Quality is excellent.",
             },
         },
@@ -134,8 +133,8 @@ module.exports = {
             title: { type: "string", maxLength: 200, nullable: true, example: "Updated title" },
             content: {
                 type: "string",
-                minLength: 10,
                 maxLength: 5000,
+                nullable: true,
                 example: "Updated review content with enough detail.",
             },
         },

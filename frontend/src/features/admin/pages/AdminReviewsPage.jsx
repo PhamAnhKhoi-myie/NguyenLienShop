@@ -161,9 +161,11 @@ function ReviewCard({
                         </p>
                     </div>
 
-                    <p className="whitespace-pre-line break-words text-sm leading-6 text-[var(--color-text-main)]">
-                        {review.content}
-                    </p>
+                    {review.content && (
+                        <p className="whitespace-pre-line break-words text-sm leading-6 text-[var(--color-text-main)]">
+                            {review.content}
+                        </p>
+                    )}
 
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <ReviewMeta label={translate('text.user')} value={review.user_id} />

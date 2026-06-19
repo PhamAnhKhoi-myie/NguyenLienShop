@@ -417,12 +417,17 @@ module.exports = {
 
     WriteReviewInput: {
         type: "object",
-        required: ["item_id", "rating", "comment"],
+        required: ["item_id", "rating", "title"],
         properties: {
             item_id: { type: "string", pattern: objectIdPattern, example: "507f1f77bcf86cd799439021" },
             rating: { type: "integer", minimum: 1, maximum: 5, example: 5 },
-            title: { type: "string", maxLength: 200, nullable: true, example: "Product meets expectations" },
-            comment: { type: "string", minLength: 10, maxLength: 500, example: "Product quality is good and delivery was fast." },
+            title: { type: "string", minLength: 1, maxLength: 200, example: "Product meets expectations" },
+            comment: {
+                type: "string",
+                maxLength: 500,
+                nullable: true,
+                example: "Product quality is good and delivery was fast.",
+            },
         },
     },
 

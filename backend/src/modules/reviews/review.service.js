@@ -10,6 +10,10 @@ const { isReviewWindowOpen } = require('../orders/order_review_window.util');
 const LoyaltyService = require('../loyalty/loyalty.service');
 
 class ReviewService {
+    static _normalizeOptionalText(value) {
+        return typeof value === 'string' ? value.trim() || null : null;
+    }
+
     static async createReview(userId, productId, variantId, orderId, data, metadata = {}) {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -88,8 +92,8 @@ class ReviewService {
                     rating: {
                         overall: data.rating
                     },
-                    title: data.title || null,
-                    content: data.content,
+                    title: this._normalizeOptionalText(data.title),
+                    content: this._normalizeOptionalText(data.content),
 
                     is_approved: false,
                     created_at: new Date(),
@@ -208,11 +212,11 @@ class ReviewService {
             review.original_content = review.content;
         }
 
-        if (data.content) {
-            review.content = data.content;
+        if (data.content !== undefined) {
+            review.content = this._normalizeOptionalText(data.content);
         }
         if (data.title !== undefined) {
-            review.title = data.title;
+            review.title = this._normalizeOptionalText(data.title);
         }
         if (data.rating) {
             review.rating.overall = data.rating;

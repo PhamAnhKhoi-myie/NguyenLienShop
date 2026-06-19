@@ -91,7 +91,8 @@ export default function HomeDiscountsSection() {
         accessToken ? 'user' : 'guest'
     );
     const claimMutation = useClaimDiscount();
-    const discounts = discountsQuery.data?.data || [];
+    const discountsData = discountsQuery.data?.data;
+    const discounts = useMemo(() => discountsData || [], [discountsData]);
     const [claimedCode, setClaimedCode] = useState('');
     const [claimMessage, setClaimMessage] = useState('');
     const [claimMessageType, setClaimMessageType] = useState('success');
