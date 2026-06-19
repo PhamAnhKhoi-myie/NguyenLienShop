@@ -152,6 +152,11 @@ const orderSchema = new mongoose.Schema(
                 default: 0,
                 validate: Number.isInteger
             },
+            shipping_discount_amount: {
+                type: Number,
+                default: 0,
+                validate: Number.isInteger
+            },
             discount_amount: {
                 type: Number,
                 default: 0,
@@ -243,7 +248,13 @@ const orderSchema = new mongoose.Schema(
                 to: String,
                 changed_at: { type: Date, default: Date.now },
                 changed_by: mongoose.Schema.Types.ObjectId,
-                note: String
+                note: String,
+                note_type: {
+                    type: String,
+                    enum: ['system', 'manual']
+                },
+                note_key: String,
+                note_params: mongoose.Schema.Types.Mixed
             }
         ],
 
@@ -289,15 +300,34 @@ orderSchema.statics.generateOrderCode = async function () {
 orderSchema.methods.addStatusTransition = function (
     toStatus,
     changedBy = null,
-    note = ''
+    note = '',
+    noteMetadata = {}
 ) {
-    this.status_history.push({
+    const statusRecord = {
         from: this.status,
         to: toStatus,
         changed_at: new Date(),
         changed_by: changedBy,
         note
-    });
+    };
+
+    if (noteMetadata.note_type) {
+        statusRecord.note_type = noteMetadata.note_type;
+    } else if (noteMetadata.note_key) {
+        statusRecord.note_type = 'system';
+    } else if (note) {
+        statusRecord.note_type = 'manual';
+    }
+
+    if (noteMetadata.note_key) {
+        statusRecord.note_key = noteMetadata.note_key;
+    }
+
+    if (noteMetadata.note_params) {
+        statusRecord.note_params = noteMetadata.note_params;
+    }
+
+    this.status_history.push(statusRecord);
 
     this.status = toStatus;
 };

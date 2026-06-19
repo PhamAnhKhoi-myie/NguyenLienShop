@@ -10,6 +10,10 @@ import {
     contentFilterOptions,
 } from './adminContentForms';
 import { blogFormConfig, blogStatusOptions } from './adminBlogForms';
+import {
+    blogContentTypeFilterOptions,
+    getBlogContentTypeLabel,
+} from '../../blogs/constants/blogContentTypes';
 
 const activeStatusOptions = [
     { value: '', label: translate('text.all_statuses') },
@@ -202,12 +206,16 @@ export const adminResources = {
         filters: [
             { name: 'search', label: translate('text.search'), placeholder: translate('text.title_or_content') },
             { name: 'status', label: translate('text.status'), type: 'select', options: blogStatusOptions },
+            { name: 'content_type', label: translate('text.content_type'), type: 'select', options: blogContentTypeFilterOptions },
             { name: 'category', label: translate('text.category'), placeholder: translate('text.instructions_for_use') },
             { name: 'tag', label: translate('text.tag'), placeholder: translate('text.bag') },
         ],
         columns: [
             { key: 'title', header: translate('text.title'), value: 'title' },
+            { key: 'content_type', header: translate('text.content_type'), value: (row) => getBlogContentTypeLabel(row.content_type) },
             { key: 'category', header: translate('text.category'), value: 'category' },
+            { key: 'is_pinned', header: translate('text.pinned'), value: 'is_pinned' },
+            { key: 'sort_order', header: translate('text.order'), value: 'sort_order' },
             { key: 'status', header: translate('text.status'), value: 'status', type: 'status' },
             { key: 'published_at', header: translate('text.publish'), value: 'published_at', type: 'date' },
             { key: 'view_count', header: translate('text.views'), value: 'view_count' },

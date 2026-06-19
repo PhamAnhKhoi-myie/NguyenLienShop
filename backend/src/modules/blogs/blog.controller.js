@@ -10,6 +10,7 @@ const getPublishedBlogs = asyncHandler(async (req, res) => {
         {
             category: req.query.category,
             tag: req.query.tag,
+            content_type: req.query.content_type,
             search: req.query.search,
         }
     );
@@ -22,10 +23,15 @@ const getPublishedBlogs = asyncHandler(async (req, res) => {
 });
 
 const getPublishedBlogsByCategory = asyncHandler(async (req, res) => {
-    const result = await BlogService.getPublishedBlogsByCategory(
-        req.params.category,
+    const result = await BlogService.getPublishedBlogs(
         req.query.page,
-        req.query.limit
+        req.query.limit,
+        {
+            category: req.params.category,
+            tag: req.query.tag,
+            content_type: req.query.content_type,
+            search: req.query.search,
+        }
     );
 
     res.status(200).json({
@@ -50,6 +56,7 @@ const getAdminBlogs = asyncHandler(async (req, res) => {
         req.query.limit,
         {
             status: req.query.status,
+            content_type: req.query.content_type,
             category: req.query.category,
             tag: req.query.tag,
             search: req.query.search,

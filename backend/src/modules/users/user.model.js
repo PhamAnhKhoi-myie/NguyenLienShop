@@ -54,8 +54,64 @@ const userSchema = new mongoose.Schema(
 
         tier: {
             type: String,
-            enum: ['bronze', 'silver', 'gold', 'platinum'],
+            enum: ['bronze', 'silver', 'gold', 'platinum', 'diamond'],
             default: 'bronze',
+        },
+
+        loyalty: {
+            points: {
+                type: Number,
+                default: 0,
+                min: 0,
+                validate: {
+                    validator: Number.isInteger,
+                    message: 'Loyalty points must be an integer',
+                },
+            },
+            lifetime_points: {
+                type: Number,
+                default: 0,
+                min: 0,
+                validate: {
+                    validator: Number.isInteger,
+                    message: 'Lifetime points must be an integer',
+                },
+            },
+            coins_balance: {
+                type: Number,
+                default: 0,
+                min: 0,
+                validate: {
+                    validator: Number.isInteger,
+                    message: 'Coins balance must be an integer',
+                },
+            },
+            earned_tier: {
+                type: String,
+                enum: ['bronze', 'silver', 'gold', 'platinum', 'diamond'],
+                default: 'bronze',
+            },
+            current_tier: {
+                type: String,
+                enum: ['bronze', 'silver', 'gold', 'platinum', 'diamond'],
+                default: 'bronze',
+            },
+            last_qualified_order_at: {
+                type: Date,
+                default: null,
+            },
+            last_tier_review_at: {
+                type: Date,
+                default: null,
+            },
+            last_tier_downgraded_at: {
+                type: Date,
+                default: null,
+            },
+            next_tier_review_at: {
+                type: Date,
+                default: null,
+            },
         },
 
         status: {
@@ -134,6 +190,8 @@ userSchema.index({ deleted_at: 1 });
 userSchema.index({ status: 1, deleted_at: 1 });
 userSchema.index({ is_email_verified: 1, deleted_at: 1 });
 userSchema.index({ is_phone_verified: 1, deleted_at: 1 });
+userSchema.index({ tier: 1, deleted_at: 1 });
+userSchema.index({ 'loyalty.next_tier_review_at': 1 });
 userSchema.index(
     { 'profile.phone_number': 1 },
     {

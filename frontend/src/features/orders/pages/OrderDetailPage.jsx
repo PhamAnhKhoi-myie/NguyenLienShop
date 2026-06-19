@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
     ArrowLeft,
     CheckCircle2,
+    Coins,
     Star,
     Truck,
     XCircle,
@@ -29,6 +30,7 @@ import {
     useWriteOrderReview,
 } from '../hooks/useOrders';
 import { cancelOrderSchema, reviewSchema } from '../schemas/orderFormSchemas';
+import { getStatusHistoryNote } from '../utils/statusHistory';
 
 const statusLabels = {
     PENDING: translate('text.pending'),
@@ -429,31 +431,35 @@ export default function OrderDetailPage() {
                         </CardHeader>
                         <CardBody>
                             <div className="space-y-3">
-                                {(order.status_history || []).map((record) => (
-                                    <div
-                                        key={`${record.to}-${record.changed_at}`}
-                                        className="rounded-lg border border-[var(--color-border)] p-3"
-                                    >
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <Badge
-                                                variant={getStatusVariant(
-                                                    record.to
-                                                )}
-                                            >
-                                                {statusLabels[record.to] ||
-                                                    record.to}
-                                            </Badge>
-                                            <span className="text-sm text-[var(--color-text-muted)]">
-                                                {formatDateTime(record.changed_at)}
-                                            </span>
+                                {(order.status_history || []).map((record) => {
+                                    const note = getStatusHistoryNote(record);
+
+                                    return (
+                                        <div
+                                            key={`${record.to}-${record.changed_at}`}
+                                            className="rounded-lg border border-[var(--color-border)] p-3"
+                                        >
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Badge
+                                                    variant={getStatusVariant(
+                                                        record.to
+                                                    )}
+                                                >
+                                                    {statusLabels[record.to] ||
+                                                        record.to}
+                                                </Badge>
+                                                <span className="text-sm text-[var(--color-text-muted)]">
+                                                    {formatDateTime(record.changed_at)}
+                                                </span>
+                                            </div>
+                                            {note && (
+                                                <p className="mt-2 text-sm text-[var(--color-text-main)]">
+                                                    {note}
+                                                </p>
+                                            )}
                                         </div>
-                                        {record.note && (
-                                            <p className="mt-2 text-sm text-[var(--color-text-main)]">
-                                                {record.note}
-                                            </p>
-                                        )}
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </CardBody>
                     </Card>
@@ -512,6 +518,46 @@ export default function OrderDetailPage() {
                                     order.payment?.refunded_at
                                 )}
                             />
+                        </CardBody>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <Coins className="h-4 w-4 text-[var(--color-primary)]" />
+                                <h2 className="font-semibold text-[var(--color-text-main)]"> Tích điểm & xu </h2>
+                            </div>
+                        </CardHeader>
+                        <CardBody>
+                            <InfoRow
+                                label="Điểm khi xác nhận"
+                                value={`+${order.loyalty?.points_on_receipt || 0} điểm`}
+                            />
+                            <InfoRow
+                                label="Xu khi xác nhận"
+                                value={`+${order.loyalty?.coins_on_receipt || 0} xu`}
+                            />
+                            <InfoRow
+                                label="Xu khi đánh giá"
+                                value={`+${order.loyalty?.coins_on_review || 0} xu`}
+                            />
+                            {order.loyalty?.receipt_reward_earned && (
+                                <p className="mt-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                                    Đã ghi nhận thưởng xác nhận nhận hàng.
+                                </p>
+                            )}
+                            {!order.loyalty?.review_reward_earned &&
+                                hasConfirmedReceipt(order) &&
+                                isReviewWindowOpen(order) && (
+                                    <p className="mt-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
+                                        Đánh giá đơn hàng để nhận thêm xu thưởng.
+                                    </p>
+                                )}
+                            {order.loyalty?.review_reward_earned && (
+                                <p className="mt-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                                    Đã ghi nhận thưởng đánh giá.
+                                </p>
+                            )}
                         </CardBody>
                     </Card>
 

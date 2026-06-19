@@ -4,24 +4,32 @@ const logger = require('../../utils/logger.util');
 const ORDER_STATUS_NOTIFICATIONS = {
     PROCESSING: {
         title: "Đơn hàng đang xử lý",
+        title_key: 'notification.order.processing.title',
+        message_key: 'notification.order.processing.message',
         event: 'ORDER_PROCESSING',
         priority: 'medium',
         message: (label) => `${label} đang được xử lý.`,
     },
     SHIPPED: {
         title: "Đơn hàng đang giao",
+        title_key: 'notification.order.shipped.title',
+        message_key: 'notification.order.shipped.message',
         event: 'ORDER_SHIPPED',
         priority: 'medium',
         message: (label) => `${label} đang được giao.`,
     },
     DELIVERED: {
         title: "Giao hàng thành công",
+        title_key: 'notification.order.delivered.title',
+        message_key: 'notification.order.delivered.message',
         event: 'ORDER_DELIVERED',
         priority: 'medium',
         message: (label) => `${label} đã được giao thành công.`,
     },
     CANCELED: {
         title: "Đơn hàng đã hủy",
+        title_key: 'notification.order.canceled.title',
+        message_key: 'notification.order.canceled.message',
         event: 'ORDER_CANCELED',
         priority: 'high',
         message: (label) => `${label} đã được hủy.`,
@@ -70,6 +78,12 @@ function getOrderCode(order) {
 function getOrderLabel(order) {
     const orderCode = getOrderCode(order);
     return orderCode ? `Đơn hàng ${orderCode}` : "Đơn hàng của bạn";
+}
+
+function getOrderMessageParams(order) {
+    return {
+        orderCode: getOrderCode(order),
+    };
 }
 
 function getUserDisplayName(user) {
@@ -131,7 +145,10 @@ class NotificationEventService {
             user_id: getUserId(user),
             type: 'system',
             title: "Tạo tài khoản thành công",
+            title_key: 'notification.account.created.title',
             message: `Chào ${displayName}, tài khoản của bạn đã được tạo thành công.`,
+            message_key: 'notification.account.created.message',
+            message_params: { displayName },
             priority: 'low',
             data: {
                 ref_type: null,
@@ -148,7 +165,10 @@ class NotificationEventService {
             user_id: getUserId(user),
             type: 'system',
             title: "Đổi mật khẩu thành công",
+            title_key: 'notification.account.password_changed.title',
             message: "Mật khẩu tài khoản của bạn đã được thay đổi thành công.",
+            message_key: 'notification.account.password_changed.message',
+            message_params: {},
             priority: 'low',
             data: {
                 ref_type: null,
@@ -167,7 +187,10 @@ class NotificationEventService {
             user_id: getOrderUserId(order),
             type: 'order',
             title: "Đặt hàng thành công",
+            title_key: 'notification.order.created.title',
             message: `${label} đã được tạo thành công.`,
+            message_key: 'notification.order.created.message',
+            message_params: getOrderMessageParams(order),
             priority: 'low',
             data: getOrderData(order, 'ORDER_CREATED', {
                 status: 'PENDING',
@@ -182,7 +205,10 @@ class NotificationEventService {
             user_id: getOrderUserId(order, payment),
             type: 'order',
             title: "Thanh toán thành công",
+            title_key: 'notification.payment.success.title',
             message: `Thanh toán cho ${label} đã thành công.`,
+            message_key: 'notification.payment.success.message',
+            message_params: getOrderMessageParams(order),
             priority: 'medium',
             data: getOrderData(order, 'PAYMENT_SUCCESS', {
                 status: 'PAID',
@@ -199,7 +225,10 @@ class NotificationEventService {
             user_id: getOrderUserId(order, payment),
             type: 'order',
             title: "Thanh toán thất bại",
+            title_key: 'notification.payment.failed.title',
             message: `Thanh toán cho ${label} thất bại. Vui lòng thử lại hoặc chọn phương thức khác.`,
+            message_key: 'notification.payment.failed.message',
+            message_params: getOrderMessageParams(order),
             priority: 'high',
             data: getOrderData(order, 'PAYMENT_FAILED', {
                 status: 'FAILED',
@@ -224,7 +253,10 @@ class NotificationEventService {
             user_id: getOrderUserId(order),
             type: 'order',
             title: notification.title,
+            title_key: notification.title_key,
             message: notification.message(label),
+            message_key: notification.message_key,
+            message_params: getOrderMessageParams(order),
             priority: notification.priority,
             data: getOrderData(order, notification.event, {
                 status,
@@ -239,7 +271,10 @@ class NotificationEventService {
             user_id: getOrderUserId(order),
             type: 'order',
             title: "\u0110\u00e1nh gi\u00e1 s\u1ea3n ph\u1ea9m",
+            title_key: 'notification.order.review_reminder.title',
             message: `${label} \u0111\u00e3 \u0111\u01b0\u1ee3c x\u00e1c nh\u1eadn nh\u1eadn h\u00e0ng. H\u00e3y \u0111\u00e1nh gi\u00e1 s\u1ea3n ph\u1ea9m trong 3 ng\u00e0y \u0111\u1ec3 chia s\u1ebb tr\u1ea3i nghi\u1ec7m c\u1ee7a b\u1ea1n.`,
+            message_key: 'notification.order.review_reminder.message',
+            message_params: getOrderMessageParams(order),
             priority: 'medium',
             data: getOrderData(order, 'ORDER_REVIEW_REMINDER', {
                 status: 'DELIVERED',

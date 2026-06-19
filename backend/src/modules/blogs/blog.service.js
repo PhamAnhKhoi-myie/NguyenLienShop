@@ -92,6 +92,24 @@ class BlogService {
         };
     }
 
+    static normalizeObjectIds(ids = []) {
+        return [...new Set((ids || []).map((id) => id.toString()).filter(Boolean))];
+    }
+
+    static normalizeFaqItems(items = []) {
+        return (items || [])
+            .map((item, index) => ({
+                question: item.question.trim(),
+                answer: item.answer.trim(),
+                sort_order: Number.isInteger(Number(item.sort_order))
+                    ? Number(item.sort_order)
+                    : index,
+            }))
+            .filter((item) => item.question && item.answer)
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .slice(0, 50);
+    }
+
     static buildSearchFilter(search) {
         if (!search) {
             return null;
@@ -103,6 +121,8 @@ class BlogService {
             $or: [
                 { title: { $regex: escapedSearch, $options: 'i' } },
                 { excerpt: { $regex: escapedSearch, $options: 'i' } },
+                { content: { $regex: escapedSearch, $options: 'i' } },
+                { category: { $regex: escapedSearch, $options: 'i' } },
                 { tags: { $regex: escapedSearch, $options: 'i' } },
             ],
         };
@@ -114,6 +134,16 @@ class BlogService {
             total_pages: Math.max(Math.ceil(total / limit), 1),
             total_items: total,
             per_page: limit,
+        };
+    }
+
+    static normalizePagination(page, limit, defaultLimit) {
+        const normalizedPage = Math.max(Number.parseInt(page, 10) || 1, 1);
+        const normalizedLimit = Math.max(Number.parseInt(limit, 10) || defaultLimit, 1);
+
+        return {
+            page: normalizedPage,
+            limit: normalizedLimit,
         };
     }
 
@@ -153,6 +183,30 @@ class BlogService {
             payload.tags = this.normalizeTags(data.tags);
         }
 
+        if (data.content_type !== undefined) {
+            payload.content_type = data.content_type;
+        }
+
+        if (data.is_pinned !== undefined) {
+            payload.is_pinned = Boolean(data.is_pinned);
+        }
+
+        if (data.sort_order !== undefined) {
+            payload.sort_order = data.sort_order;
+        }
+
+        if (data.related_product_ids !== undefined) {
+            payload.related_product_ids = this.normalizeObjectIds(data.related_product_ids);
+        }
+
+        if (data.related_category_ids !== undefined) {
+            payload.related_category_ids = this.normalizeObjectIds(data.related_category_ids);
+        }
+
+        if (data.faq_items !== undefined) {
+            payload.faq_items = this.normalizeFaqItems(data.faq_items);
+        }
+
         if (data.seo !== undefined) {
             payload.seo = this.normalizeSeo(data.seo);
         }
@@ -169,12 +223,17 @@ class BlogService {
     }
 
     static async getPublishedBlogs(page = 1, limit = 12, filters = {}) {
+        const pagination = this.normalizePagination(page, limit, 12);
         const query = {
             status: 'PUBLISHED',
         };
 
         if (filters.category) {
             query.category = filters.category;
+        }
+
+        if (filters.content_type) {
+            query.content_type = filters.content_type;
         }
 
         if (filters.tag) {
@@ -186,17 +245,22 @@ class BlogService {
             Object.assign(query, searchFilter);
         }
 
-        const skip = (page - 1) * limit;
+        const skip = (pagination.page - 1) * pagination.limit;
         const total = await Blog.countDocuments(query);
         const blogs = await Blog.find(query)
             .populate('author_id', 'email profile.full_name')
-            .sort({ published_at: -1, created_at: -1 })
+            .sort({
+                is_pinned: -1,
+                sort_order: 1,
+                published_at: -1,
+                created_at: -1,
+            })
             .skip(skip)
-            .limit(limit);
+            .limit(pagination.limit);
 
         return {
             data: BlogMapper.toResponseDTOList(blogs),
-            pagination: this.buildPagination(page, limit, total),
+            pagination: this.buildPagination(pagination.page, pagination.limit, total),
         };
     }
 
@@ -222,10 +286,15 @@ class BlogService {
     }
 
     static async getAdminBlogs(page = 1, limit = 20, filters = {}) {
+        const pagination = this.normalizePagination(page, limit, 20);
         const query = {};
 
         if (filters.status) {
             query.status = filters.status;
+        }
+
+        if (filters.content_type) {
+            query.content_type = filters.content_type;
         }
 
         if (filters.category) {
@@ -241,17 +310,22 @@ class BlogService {
             Object.assign(query, searchFilter);
         }
 
-        const skip = (page - 1) * limit;
+        const skip = (pagination.page - 1) * pagination.limit;
         const total = await Blog.countDocuments(query);
         const blogs = await Blog.find(query)
             .populate('author_id', 'email profile.full_name')
-            .sort({ updated_at: -1, created_at: -1 })
+            .sort({
+                is_pinned: -1,
+                sort_order: 1,
+                updated_at: -1,
+                created_at: -1,
+            })
             .skip(skip)
-            .limit(limit);
+            .limit(pagination.limit);
 
         return {
             data: BlogMapper.toResponseDTOList(blogs),
-            pagination: this.buildPagination(page, limit, total),
+            pagination: this.buildPagination(pagination.page, pagination.limit, total),
         };
     }
 

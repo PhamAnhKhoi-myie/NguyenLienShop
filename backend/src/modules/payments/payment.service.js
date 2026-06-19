@@ -859,7 +859,7 @@ class PaymentService {
                 {
                     paid_at: paidAt,
                     payment_id: payment._id,
-                    note: 'Payment confirmed',
+                    note_key: 'order.history.payment_confirmed',
                 },
                 { session }
             );

@@ -40,11 +40,11 @@ const createOrder = asyncHandler(async (req, res) => {
 });
 
 const getCheckoutSettings = asyncHandler(async (req, res) => {
-    assertAuthenticated(req.user);
+    const user = assertAuthenticated(req.user);
 
     res.status(200).json({
         success: true,
-        data: OrderService.getCheckoutSettings(),
+        data: await OrderService.getCheckoutSettings(user.userId),
     });
 });
 

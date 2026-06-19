@@ -1,4 +1,48 @@
+const {
+    TIER_ORDER,
+    TIER_THRESHOLDS,
+    TIER_SHIPPING_BENEFITS,
+    getNextTier,
+} = require('../loyalty/loyalty.config');
+
 class UserMapper {
+    static toLoyaltyDTO(doc) {
+        const loyalty = doc.loyalty || {};
+        const tier = doc.tier || loyalty.current_tier || 'bronze';
+        const lifetimePoints =
+            loyalty.lifetime_points || loyalty.points || 0;
+        const nextTier = getNextTier(tier);
+        const nextTierPoints = nextTier
+            ? TIER_THRESHOLDS[nextTier]
+            : null;
+
+        return {
+            points: loyalty.points || 0,
+            lifetime_points: lifetimePoints,
+            coins_balance: loyalty.coins_balance || 0,
+            current_tier: tier,
+            earned_tier: loyalty.earned_tier || tier,
+            next_tier: nextTier,
+            next_tier_points: nextTierPoints,
+            points_to_next_tier:
+                nextTierPoints == null
+                    ? 0
+                    : Math.max(nextTierPoints - lifetimePoints, 0),
+            tier_thresholds: TIER_THRESHOLDS,
+            tier_order: TIER_ORDER,
+            shipping_benefit:
+                TIER_SHIPPING_BENEFITS[tier] ||
+                TIER_SHIPPING_BENEFITS.bronze,
+            last_qualified_order_at:
+                loyalty.last_qualified_order_at || null,
+            last_tier_review_at:
+                loyalty.last_tier_review_at || null,
+            last_tier_downgraded_at:
+                loyalty.last_tier_downgraded_at || null,
+            next_tier_review_at:
+                loyalty.next_tier_review_at || null,
+        };
+    }
 
     static toUpdatePayload(data) {
         const update = {};
@@ -38,6 +82,7 @@ class UserMapper {
             },
             roles: doc.roles || [],
             tier: doc.tier || null,
+            loyalty: this.toLoyaltyDTO(doc),
             status: doc.status,
             is_email_verified: doc.is_email_verified,
             email_verified_at: doc.email_verified_at,

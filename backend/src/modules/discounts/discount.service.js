@@ -22,6 +22,7 @@ class DiscountService {
             silver: 2,
             gold: 3,
             platinum: 4,
+            diamond: 5,
         };
 
         return ranks[String(tier || '').toLowerCase()] || 0;

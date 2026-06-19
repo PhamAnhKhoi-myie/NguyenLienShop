@@ -79,6 +79,8 @@ const pricingSchema = z.object({
         z.number().int().nonnegative().default(0),
     subtotal: z.number().int().nonnegative(),
     shipping_fee: z.number().int().nonnegative().default(0),
+    shipping_discount_amount:
+        z.number().int().nonnegative().default(0),
     discount_amount: z.number().int().nonnegative().default(0),
     total_amount: z.number().int().nonnegative(),
 })
@@ -148,6 +150,9 @@ const statusHistoryRecordSchema = z.object({
     changed_at: z.date(),
     changed_by: objectIdOptionalSchema,
     note: z.string().max(500).optional(),
+    note_type: z.enum(['system', 'manual']).optional(),
+    note_key: z.string().max(200).optional(),
+    note_params: z.record(z.string(), z.any()).optional(),
 });
 
 

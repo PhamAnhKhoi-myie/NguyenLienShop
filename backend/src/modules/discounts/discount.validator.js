@@ -66,7 +66,7 @@ const applicableTargetsSchema = z.object({
 const userEligibilitySchema = z.object({
     type: userEligibilityTypeSchema.default('all'),
     user_ids: z.array(objectIdSchema).optional().default([]),
-    min_user_tier: z.enum(['bronze', 'silver', 'gold', 'platinum']).optional().nullable(),
+    min_user_tier: z.enum(['bronze', 'silver', 'gold', 'platinum', 'diamond']).optional().nullable(),
 });
 
 

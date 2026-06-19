@@ -21,13 +21,18 @@ import logo from '../assets/images/logo.png';
 import { useShopInfo } from '../features/shopInfo/hooks/useShopInfo';
 import { ROUTES } from '../shared/constants/routes';
 
+const blogContentPath = (slug) => `${ROUTES.BLOGS}/${slug}`;
+
 const infoLinks = [
-    { label: translate('text.shipping_policy'), href: '#' },
-    { label: translate('text.return_policy'), href: '#' },
-    { label: translate('text.ordering_regulations'), href: '#' },
-    { label: translate('text.warranty'), href: '#' },
-    { label: translate('text.faq'), href: '#' },
-    { label: translate('text.contact'), href: '#' },
+    { label: translate('text.shipping_policy'), href: blogContentPath('chinh-sach-van-chuyen') },
+    { label: translate('text.return_policy'), href: blogContentPath('chinh-sach-doi-tra') },
+    { label: translate('text.ordering_regulations'), href: blogContentPath('quy-dinh-dat-hang') },
+    { label: translate('text.warranty'), href: blogContentPath('bao-hanh') },
+    { label: translate('text.how_to_order'), href: blogContentPath('huong-dan-dat-hang') },
+    { label: translate('text.online_payment_guide'), href: blogContentPath('huong-dan-thanh-toan-online') },
+    { label: translate('text.cod_guide'), href: blogContentPath('huong-dan-cod') },
+    { label: translate('text.faq'), href: blogContentPath('faq') },
+    { label: translate('text.contact'), href: blogContentPath('lien-he') },
 ];
 
 const paymentMethods = [
@@ -267,13 +272,13 @@ function Footer() {
                             <FooterTitle>{translate('text.information')}</FooterTitle>
                             <nav className="grid gap-2 text-sm text-[var(--color-text-main)]">
                                 {infoLinks.map((item) => (
-                                    <a
+                                    <Link
                                         key={item.label}
-                                        href={item.href}
+                                        to={item.href}
                                         className="transition-colors hover:text-[var(--color-primary)]"
                                     >
                                         {item.label}
-                                    </a>
+                                    </Link>
                                 ))}
                             </nav>
                         </div>

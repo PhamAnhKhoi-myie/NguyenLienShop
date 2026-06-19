@@ -64,8 +64,8 @@ const userEligibilitySchema = new mongoose.Schema(
         min_user_tier: {
             type: String,
             enum: {
-                values: ['bronze', 'silver', 'gold', 'platinum'],
-                message: 'Tier must be bronze, silver, gold, or platinum',
+                values: ['bronze', 'silver', 'gold', 'platinum', 'diamond'],
+                message: 'Tier must be bronze, silver, gold, platinum, or diamond',
             },
             sparse: true,
         },

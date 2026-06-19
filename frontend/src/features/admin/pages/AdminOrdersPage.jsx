@@ -40,6 +40,7 @@ import {
     formatMoney,
     StatusBadge,
 } from '../utils/adminFormat';
+import { getStatusHistoryNote } from '../../orders/utils/statusHistory';
 
 const actionTitles = {
     status: translate('text.status_update'),
@@ -522,24 +523,28 @@ function OrderDetailPanel({
                     </CardHeader>
                     <CardBody>
                         <div className="space-y-3">
-                            {(order.status_history || []).map((record) => (
-                                <div
-                                    key={`${record.to}-${record.changed_at}`}
-                                    className="rounded-lg border border-[var(--color-border)] p-3"
-                                >
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <StatusBadge value={record.to} />
-                                        <span className="text-sm text-[var(--color-text-muted)]">
-                                            {formatDateTime(record.changed_at)}
-                                        </span>
+                            {(order.status_history || []).map((record) => {
+                                const note = getStatusHistoryNote(record);
+
+                                return (
+                                    <div
+                                        key={`${record.to}-${record.changed_at}`}
+                                        className="rounded-lg border border-[var(--color-border)] p-3"
+                                    >
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <StatusBadge value={record.to} />
+                                            <span className="text-sm text-[var(--color-text-muted)]">
+                                                {formatDateTime(record.changed_at)}
+                                            </span>
+                                        </div>
+                                        {note && (
+                                            <p className="mt-2 text-sm text-[var(--color-text-main)]">
+                                                {note}
+                                            </p>
+                                        )}
                                     </div>
-                                    {record.note && (
-                                        <p className="mt-2 text-sm text-[var(--color-text-main)]">
-                                            {record.note}
-                                        </p>
-                                    )}
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </CardBody>
                 </Card>

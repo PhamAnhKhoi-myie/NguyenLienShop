@@ -43,77 +43,147 @@ function getReferenceLink(notification) {
     return null;
 }
 
-function getOrderLabel(notification) {
-    const orderCode = notification.data?.extra?.order_code;
-    return orderCode ? `Đơn hàng ${orderCode}` : 'Đơn hàng của bạn';
+function getOrderLabel(notification, fallbackOrderCode = null) {
+    const orderCode =
+        fallbackOrderCode || notification.data?.extra?.order_code || null;
+    return orderCode
+        ? translate('notification.order.label', { orderCode })
+        : translate('notification.order.default_label');
+}
+
+function translateNotificationKey(key, params, fallback = '') {
+    if (!key) {
+        return fallback;
+    }
+
+    const translated = translate(key, params);
+
+    if (!translated || translated === key) {
+        return fallback || key;
+    }
+
+    return translated;
+}
+
+function getNotificationParams(notification) {
+    const orderCode =
+        notification.message_params?.orderCode ||
+        notification.data?.extra?.order_code ||
+        null;
+
+    return {
+        ...(notification.message_params || {}),
+        orderCode,
+        orderLabel: getOrderLabel(notification, orderCode),
+    };
 }
 
 function getNotificationContent(notification) {
-    const label = getOrderLabel(notification);
+    const params = getNotificationParams(notification);
     const event = notification.data?.extra?.event;
+
+    if (notification.title_key || notification.message_key) {
+        return {
+            title: translateNotificationKey(
+                notification.title_key,
+                params,
+                notification.title
+            ),
+            message: translateNotificationKey(
+                notification.message_key,
+                params,
+                notification.message
+            ),
+        };
+    }
 
     const contentByEvent = {
         ORDER_CREATED: {
-            title: 'Đặt hàng thành công',
-            message: `${label} đã được tạo thành công.`,
+            title_key: 'notification.order.created.title',
+            message_key: 'notification.order.created.message',
         },
         PAYMENT_SUCCESS: {
-            title: 'Thanh toán thành công',
-            message: `Thanh toán cho ${label} đã thành công.`,
+            title_key: 'notification.payment.success.title',
+            message_key: 'notification.payment.success.message',
         },
         PAYMENT_FAILED: {
-            title: 'Thanh toán thất bại',
-            message: `Thanh toán cho ${label} thất bại. Vui lòng thử lại hoặc chọn phương thức khác.`,
+            title_key: 'notification.payment.failed.title',
+            message_key: 'notification.payment.failed.message',
         },
         ORDER_PROCESSING: {
-            title: 'Đơn hàng đang xử lý',
-            message: `${label} đang được xử lý.`,
+            title_key: 'notification.order.processing.title',
+            message_key: 'notification.order.processing.message',
         },
         ORDER_SHIPPED: {
-            title: 'Đơn hàng đang giao',
-            message: `${label} đang được giao.`,
+            title_key: 'notification.order.shipped.title',
+            message_key: 'notification.order.shipped.message',
         },
         ORDER_DELIVERED: {
-            title: 'Giao hàng thành công',
-            message: `${label} đã được giao thành công.`,
+            title_key: 'notification.order.delivered.title',
+            message_key: 'notification.order.delivered.message',
         },
         ORDER_REVIEW_REMINDER: {
-            title: 'Đánh giá sản phẩm',
-            message: `${label} đã được xác nhận nhận hàng. Hãy đánh giá sản phẩm trong 3 ngày để chia sẻ trải nghiệm của bạn.`,
+            title_key: 'notification.order.review_reminder.title',
+            message_key: 'notification.order.review_reminder.message',
         },
         ORDER_CANCELED: {
-            title: 'Đơn hàng đã hủy',
-            message: `${label} đã được hủy.`,
+            title_key: 'notification.order.canceled.title',
+            message_key: 'notification.order.canceled.message',
         },
     };
 
     if (contentByEvent[event]) {
-        return contentByEvent[event];
+        const content = contentByEvent[event];
+
+        return {
+            title: translateNotificationKey(content.title_key, params),
+            message: translateNotificationKey(content.message_key, params),
+        };
     }
 
-    const legacyTitles = {
-        'Order successful': 'Đặt hàng thành công',
-        'Successful payment': 'Thanh toán thành công',
-        'Payment failed': 'Thanh toán thất bại',
-        'Order is being processed': 'Đơn hàng đang xử lý',
-        'Order is being delivered': 'Đơn hàng đang giao',
-        'Successfully delivered': 'Giao hàng thành công',
-        'Order has been canceled': 'Đơn hàng đã hủy',
+    const legacyContentByTitle = {
+        'Order successful': {
+            title_key: 'notification.order.created.title',
+            message_key: 'notification.order.created.message',
+        },
+        'Successful payment': {
+            title_key: 'notification.payment.success.title',
+            message_key: 'notification.payment.success.message',
+        },
+        'Payment failed': {
+            title_key: 'notification.payment.failed.title',
+            message_key: 'notification.payment.failed.message',
+        },
+        'Order is being processed': {
+            title_key: 'notification.order.processing.title',
+            message_key: 'notification.order.processing.message',
+        },
+        'Order is being delivered': {
+            title_key: 'notification.order.shipped.title',
+            message_key: 'notification.order.shipped.message',
+        },
+        'Successfully delivered': {
+            title_key: 'notification.order.delivered.title',
+            message_key: 'notification.order.delivered.message',
+        },
+        'Order has been canceled': {
+            title_key: 'notification.order.canceled.title',
+            message_key: 'notification.order.canceled.message',
+        },
     };
 
-    const legacyMessages = {
-        'Order successful': `${label} đã được tạo thành công.`,
-        'Successful payment': `Thanh toán cho ${label} đã thành công.`,
-        'Payment failed': `Thanh toán cho ${label} thất bại. Vui lòng thử lại hoặc chọn phương thức khác.`,
-        'Order is being processed': `${label} đang được xử lý.`,
-        'Order is being delivered': `${label} đang được giao.`,
-        'Successfully delivered': `${label} đã được giao thành công.`,
-        'Order has been canceled': `${label} đã được hủy.`,
-    };
+    const legacyContent = legacyContentByTitle[notification.title];
+
+    if (legacyContent) {
+        return {
+            title: translateNotificationKey(legacyContent.title_key, params),
+            message: translateNotificationKey(legacyContent.message_key, params),
+        };
+    }
 
     return {
-        title: legacyTitles[notification.title] || notification.title,
-        message: legacyMessages[notification.title] || notification.message,
+        title: notification.title,
+        message: notification.message,
     };
 }
 

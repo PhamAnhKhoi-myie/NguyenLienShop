@@ -66,11 +66,27 @@ module.exports = {
                 maxLength: 200,
                 example: "Order updated",
             },
+            title_key: {
+                type: "string",
+                nullable: true,
+                example: "notification.order.shipped.title",
+            },
             message: {
                 type: "string",
                 minLength: 1,
                 maxLength: 1000,
                 example: "Your order is being prepared.",
+            },
+            message_key: {
+                type: "string",
+                nullable: true,
+                example: "notification.order.shipped.message",
+            },
+            message_params: {
+                type: "object",
+                nullable: true,
+                additionalProperties: true,
+                example: { orderCode: "ORD-20260601-001" },
             },
             data: {
                 oneOf: [

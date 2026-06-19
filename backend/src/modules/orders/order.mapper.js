@@ -1,4 +1,10 @@
 const { toReviewWindowDTO } = require('./order_review_window.util');
+const {
+    ORDER_RECEIVED_COINS,
+    ORDER_REVIEW_COINS,
+    calculatePointsForOrder,
+    calculateRewardableAmount,
+} = require('../loyalty/loyalty.config');
 
 class OrderMapper {
 
@@ -27,6 +33,8 @@ class OrderMapper {
                     doc.pricing?.promotion_discount_amount || 0,
                 subtotal: doc.pricing?.subtotal || 0,
                 shipping_fee: doc.pricing?.shipping_fee || 0,
+                shipping_discount_amount:
+                    doc.pricing?.shipping_discount_amount || 0,
                 discount_amount: doc.pricing?.discount_amount || 0,
                 total_amount: doc.pricing?.total_amount || 0,
                 currency: doc.currency || 'VND',
@@ -64,6 +72,7 @@ class OrderMapper {
 
             customer_receipt: this.transformCustomerReceipt(doc.customer_receipt),
             review_window: this.transformReviewWindow(doc),
+            loyalty: this.transformLoyalty(doc),
 
             status: doc.status,
             status_history: this.transformStatusHistory(doc.status_history || []),
@@ -240,6 +249,9 @@ class OrderMapper {
                 ),
                 subtotal: this.formatPrice(doc.pricing?.subtotal || 0),
                 shipping_fee: this.formatPrice(doc.pricing?.shipping_fee || 0),
+                shipping_discount_amount: this.formatPrice(
+                    doc.pricing?.shipping_discount_amount || 0
+                ),
                 discount_amount: this.formatPrice(
                     doc.pricing?.discount_amount || 0
                 ),
@@ -353,6 +365,28 @@ class OrderMapper {
         return toReviewWindowDTO(order);
     }
 
+    static transformLoyalty(order) {
+        const canEarnReceiptRewards =
+            order?.status === 'DELIVERED' && !order?.customer_receipt?.confirmed_at;
+        const hasConfirmedReceipt = Boolean(order?.customer_receipt?.confirmed_at);
+        const hasReviewedItem = (order?.items || []).some(
+            (item) => item.review_status === 'reviewed'
+        );
+
+        return {
+            rewardable_amount: calculateRewardableAmount(order),
+            points_on_receipt: calculatePointsForOrder(order),
+            coins_on_receipt: ORDER_RECEIVED_COINS,
+            coins_on_review: ORDER_REVIEW_COINS,
+            max_coins: ORDER_RECEIVED_COINS + ORDER_REVIEW_COINS,
+            receipt_reward_earned: hasConfirmedReceipt,
+            review_reward_earned: hasReviewedItem,
+            can_earn_receipt_rewards: canEarnReceiptRewards,
+            can_earn_review_rewards:
+                hasConfirmedReceipt && !hasReviewedItem,
+        };
+    }
+
     static transformCustomer(user) {
         if (!user || !user._id) {
             return null;
@@ -415,6 +449,9 @@ class OrderMapper {
             changed_at: record.changed_at,
             changed_by_id: record.changed_by?.toString() || null,
             note: record.note || null,
+            note_type: record.note_type || null,
+            note_key: record.note_key || null,
+            note_params: record.note_params || null,
         }));
     }
 
@@ -432,7 +469,12 @@ class OrderMapper {
             changed_at_formatted: this.formatDate(record.changed_at),
             changed_by_id: record.changed_by?.toString() || null,
             note: record.note || null,
-            is_system: !record.changed_by,
+            note_type: record.note_type || null,
+            note_key: record.note_key || null,
+            note_params: record.note_params || null,
+            is_system: record.note_type
+                ? record.note_type === 'system'
+                : !record.changed_by,
         }));
     }
 

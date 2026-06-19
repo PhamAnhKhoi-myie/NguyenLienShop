@@ -7,6 +7,7 @@ const logger = require('../../utils/logger.util');
 const ReviewAuditLogService = require('../audit_logs/review_audit_log/review_log.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
 const { isReviewWindowOpen } = require('../orders/order_review_window.util');
+const LoyaltyService = require('../loyalty/loyalty.service');
 
 class ReviewService {
     static async createReview(userId, productId, variantId, orderId, data, metadata = {}) {
@@ -128,6 +129,8 @@ class ReviewService {
                     throwOnError: true,
                 },
             });
+
+            await LoyaltyService.awardOrderReviewRewards(order, { session });
 
             await session.commitTransaction();
 

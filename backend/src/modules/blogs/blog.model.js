@@ -40,6 +40,29 @@ const blogSeoSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const blogFaqItemSchema = new mongoose.Schema(
+    {
+        question: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 240,
+        },
+        answer: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 2000,
+        },
+        sort_order: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+    },
+    { _id: false }
+);
+
 const blogSchema = new mongoose.Schema(
     {
         title: {
@@ -82,6 +105,45 @@ const blogSchema = new mongoose.Schema(
             type: [String],
             default: [],
         },
+        content_type: {
+            type: String,
+            enum: ['POLICY', 'GUIDE', 'FAQ', 'ARTICLE', 'SUPPORT_PAGE'],
+            default: 'ARTICLE',
+            index: true,
+        },
+        is_pinned: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+        sort_order: {
+            type: Number,
+            default: 0,
+            min: 0,
+            index: true,
+        },
+        related_product_ids: {
+            type: [
+                {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Product',
+                },
+            ],
+            default: [],
+        },
+        related_category_ids: {
+            type: [
+                {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Category',
+                },
+            ],
+            default: [],
+        },
+        faq_items: {
+            type: [blogFaqItemSchema],
+            default: [],
+        },
         status: {
             type: String,
             enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'],
@@ -120,6 +182,13 @@ const blogSchema = new mongoose.Schema(
 
 blogSchema.index({ slug: 1 }, { unique: true });
 blogSchema.index({ status: 1, published_at: -1, created_at: -1 });
+blogSchema.index({
+    content_type: 1,
+    status: 1,
+    is_pinned: -1,
+    sort_order: 1,
+    published_at: -1,
+});
 blogSchema.index({ category: 1, status: 1, published_at: -1 });
 blogSchema.index({ tags: 1, status: 1 });
 blogSchema.index({ title: 'text', excerpt: 'text', tags: 'text' });

@@ -16,10 +16,15 @@ const createNotificationSchema = z.object({
         .min(1, 'Title is required')
         .max(200, 'Title max 200 chars'),
 
+    title_key: z.string().max(200).optional(),
+
     message: z
         .string()
         .min(1, 'Message is required')
         .max(1000, 'Message max 1000 chars'),
+
+    message_key: z.string().max(200).optional(),
+    message_params: z.record(z.string(), z.any()).optional(),
 
     data: z
         .object({

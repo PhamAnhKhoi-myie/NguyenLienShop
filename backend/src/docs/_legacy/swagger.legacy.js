@@ -2589,7 +2589,7 @@ const swaggerSpec = {
                             user_ids: { type: "array", items: { type: "string", pattern: "^[a-fA-F0-9]{24}$" } },
                             min_user_tier: {
                                 type: "string",
-                                enum: ["bronze", "silver", "gold", "platinum"],
+                                enum: ["bronze", "silver", "gold", "platinum", "diamond"],
                             },
                         },
                     },
@@ -2667,7 +2667,7 @@ const swaggerSpec = {
                         properties: {
                             type: { type: "string", enum: ["all", "first_time_only", "specific_users", "vip_users"] },
                             user_ids: { type: "array", items: { type: "string", pattern: "^[a-fA-F0-9]{24}$" } },
-                            min_user_tier: { type: "string", enum: ["bronze", "silver", "gold", "platinum"] },
+                            min_user_tier: { type: "string", enum: ["bronze", "silver", "gold", "platinum", "diamond"] },
                         },
                     },
                     min_order_value: { type: "number" },
@@ -2833,7 +2833,7 @@ const swaggerSpec = {
                             user_ids: { type: "array", items: { type: "string" }, default: [] },
                             min_user_tier: {
                                 type: "string",
-                                enum: ["bronze", "silver", "gold", "platinum"],
+                                enum: ["bronze", "silver", "gold", "platinum", "diamond"],
                                 nullable: true
                             },
                         },

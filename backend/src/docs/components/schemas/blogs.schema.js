@@ -1,4 +1,5 @@
 const blogStatusEnum = ["DRAFT", "PUBLISHED", "ARCHIVED"];
+const blogContentTypeEnum = ["POLICY", "GUIDE", "FAQ", "ARTICLE", "SUPPORT_PAGE"];
 
 const blogThumbnailSchema = {
     type: "object",
@@ -22,6 +23,16 @@ const blogSeoSchema = {
     },
 };
 
+const blogFaqItemSchema = {
+    type: "object",
+    required: ["question", "answer"],
+    properties: {
+        question: { type: "string", maxLength: 240, example: "How long does shipping take?" },
+        answer: { type: "string", maxLength: 2000, example: "Orders are usually delivered within 2-5 business days." },
+        sort_order: { type: "integer", minimum: 0, example: 0 },
+    },
+};
+
 module.exports = {
     BlogStatus: {
         type: "string",
@@ -29,9 +40,15 @@ module.exports = {
         example: "PUBLISHED",
     },
 
+    BlogContentType: {
+        type: "string",
+        enum: blogContentTypeEnum,
+        example: "ARTICLE",
+    },
+
     Blog: {
         type: "object",
-        required: ["id", "title", "slug", "excerpt", "content", "status", "author", "view_count", "created_at", "updated_at"],
+        required: ["id", "title", "slug", "excerpt", "content", "content_type", "status", "author", "view_count", "created_at", "updated_at"],
         properties: {
             id: { type: "string", pattern: "^[a-fA-F0-9]{24}$", example: "507f1f77bcf86cd799439041" },
             title: { type: "string", example: "How to use fruit bags" },
@@ -44,6 +61,21 @@ module.exports = {
                 type: "array",
                 items: { type: "string" },
                 example: ["bag", "grapefruit"],
+            },
+            content_type: { $ref: "#/components/schemas/BlogContentType" },
+            is_pinned: { type: "boolean", example: false },
+            sort_order: { type: "integer", minimum: 0, example: 0 },
+            related_product_ids: {
+                type: "array",
+                items: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+            },
+            related_category_ids: {
+                type: "array",
+                items: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+            },
+            faq_items: {
+                type: "array",
+                items: blogFaqItemSchema,
             },
             status: { $ref: "#/components/schemas/BlogStatus" },
             author: {
@@ -90,6 +122,24 @@ module.exports = {
                 maxItems: 12,
                 items: { type: "string" },
                 example: ["bag", "grapefruit"],
+            },
+            content_type: { $ref: "#/components/schemas/BlogContentType" },
+            is_pinned: { type: "boolean", example: false },
+            sort_order: { type: "integer", minimum: 0, maximum: 9999, example: 0 },
+            related_product_ids: {
+                type: "array",
+                maxItems: 50,
+                items: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+            },
+            related_category_ids: {
+                type: "array",
+                maxItems: 50,
+                items: { type: "string", pattern: "^[a-fA-F0-9]{24}$" },
+            },
+            faq_items: {
+                type: "array",
+                maxItems: 50,
+                items: blogFaqItemSchema,
             },
             status: { $ref: "#/components/schemas/BlogStatus" },
             seo: blogSeoSchema,

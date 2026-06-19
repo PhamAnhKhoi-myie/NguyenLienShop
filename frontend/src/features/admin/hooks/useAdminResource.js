@@ -19,6 +19,14 @@ export function useAdminDetail(endpoint, options = {}) {
     });
 }
 
+export function useAdminDashboardStats(params = {}, options = {}) {
+    return useQuery({
+        queryKey: [...ADMIN_QUERY_KEY, 'dashboard-stats', params],
+        queryFn: () => adminApi.getDashboardStats(params),
+        enabled: options.enabled ?? true,
+    });
+}
+
 export function useAdminMutation({ method = 'post', invalidate = ADMIN_QUERY_KEY } = {}) {
     const queryClient = useQueryClient();
 

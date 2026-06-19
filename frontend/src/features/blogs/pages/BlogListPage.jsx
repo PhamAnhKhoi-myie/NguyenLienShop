@@ -9,6 +9,7 @@ import Input from '../../../shared/components/Input';
 import Loading from '../../../shared/components/Loading';
 import Pagination from '../../../shared/components/Pagination';
 import BlogCard from '../components/BlogCard';
+import { blogContentTypeFilterOptions } from '../constants/blogContentTypes';
 import { useBlogs } from '../hooks/useBlogs';
 
 const DEFAULT_LIMIT = 9;
@@ -36,6 +37,7 @@ export default function BlogListPage() {
             search: searchParams.get('search') || '',
             category: searchParams.get('category') || '',
             tag: searchParams.get('tag') || '',
+            content_type: searchParams.get('content_type') || '',
         }),
         [searchParams]
     );
@@ -94,6 +96,33 @@ export default function BlogListPage() {
                     />
                     <Button type="button" variant="outline" onClick={resetFilters}> {translate('text.clear_filter')} </Button>
                 </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+                {blogContentTypeFilterOptions.map((tab) => {
+                    const active = filters.content_type === tab.value;
+
+                    return (
+                        <button
+                            key={tab.value || 'all'}
+                            type="button"
+                            className={[
+                                'rounded-full border px-3.5 py-2 text-sm font-medium transition-colors',
+                                active
+                                    ? 'border-[var(--color-primary)] bg-[var(--color-secondary)] text-[var(--color-primary-hover)]'
+                                    : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary-hover)]',
+                            ].join(' ')}
+                            onClick={() =>
+                                updateFilters({
+                                    content_type: tab.value,
+                                    page: 1,
+                                })
+                            }
+                        >
+                            {tab.label}
+                        </button>
+                    );
+                })}
             </div>
 
             {blogsQuery.isLoading ? (

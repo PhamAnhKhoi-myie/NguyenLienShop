@@ -8,6 +8,7 @@ const objectIdSchema = z
     });
 
 const blogStatusSchema = z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']);
+const blogContentTypeSchema = z.enum(['POLICY', 'GUIDE', 'FAQ', 'ARTICLE', 'SUPPORT_PAGE']);
 
 const slugSchema = z
     .string()
@@ -33,6 +34,16 @@ const seoSchema = z
     .strict()
     .optional();
 
+const faqItemSchema = z
+    .object({
+        question: z.string().trim().min(3).max(240),
+        answer: z.string().trim().min(1).max(2000),
+        sort_order: z.coerce.number().int().min(0).max(9999).default(0),
+    })
+    .strict();
+
+const objectIdArraySchema = z.array(objectIdSchema).max(50).optional();
+
 const createBlogBodySchema = z
     .object({
         title: z.string().trim().min(3).max(180),
@@ -42,6 +53,12 @@ const createBlogBodySchema = z
         thumbnail: thumbnailSchema,
         category: z.string().trim().max(100).optional().or(z.literal('')),
         tags: z.array(z.string().trim().min(1).max(40)).max(12).optional(),
+        content_type: blogContentTypeSchema.default('ARTICLE'),
+        is_pinned: z.boolean().default(false),
+        sort_order: z.coerce.number().int().min(0).max(9999).default(0),
+        related_product_ids: objectIdArraySchema,
+        related_category_ids: objectIdArraySchema,
+        faq_items: z.array(faqItemSchema).max(50).optional(),
         status: blogStatusSchema.default('DRAFT'),
         seo: seoSchema,
     })
@@ -56,6 +73,12 @@ const updateBlogBodySchema = z
         thumbnail: thumbnailSchema,
         category: z.string().trim().max(100).optional().or(z.literal('')),
         tags: z.array(z.string().trim().min(1).max(40)).max(12).optional(),
+        content_type: blogContentTypeSchema.optional(),
+        is_pinned: z.boolean().optional(),
+        sort_order: z.coerce.number().int().min(0).max(9999).optional(),
+        related_product_ids: objectIdArraySchema,
+        related_category_ids: objectIdArraySchema,
+        faq_items: z.array(faqItemSchema).max(50).optional(),
         status: blogStatusSchema.optional(),
         seo: seoSchema,
     })
@@ -81,6 +104,7 @@ const publicBlogQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(50).default(12),
     category: z.string().trim().max(100).optional(),
     tag: z.string().trim().max(40).optional(),
+    content_type: blogContentTypeSchema.optional(),
     search: z.string().trim().max(100).optional(),
 }).strict();
 
@@ -88,6 +112,7 @@ const adminBlogQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     status: blogStatusSchema.optional(),
+    content_type: blogContentTypeSchema.optional(),
     category: z.string().trim().max(100).optional(),
     tag: z.string().trim().max(40).optional(),
     search: z.string().trim().max(100).optional(),

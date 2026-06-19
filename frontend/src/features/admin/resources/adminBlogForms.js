@@ -1,6 +1,7 @@
 import { translate } from '../../../shared/i18n/index';
 import { z } from 'zod';
 import { uploadApi } from '../../uploads/api/upload.api';
+import { blogContentTypeOptions } from '../../blogs/constants/blogContentTypes';
 
 export const blogStatusOptions = [
     { value: '', label: translate('text.all_statuses') },
@@ -29,6 +30,35 @@ const parseTags = (value) =>
         .filter(Boolean)
         .slice(0, 12);
 
+const parseIds = (value) =>
+    value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 50);
+
+const parseFaqItems = (value) =>
+    value
+        .split('\n')
+        .map((line, index) => {
+            const [question, ...answerParts] = line.split('|');
+            const answer = answerParts.join('|').trim();
+
+            return {
+                question: question?.trim() || '',
+                answer,
+                sort_order: index,
+            };
+        })
+        .filter((item) => item.question && item.answer)
+        .slice(0, 50);
+
+const formatFaqItems = (items = []) =>
+    items
+        .map((item) => `${item.question || ''} | ${item.answer || ''}`)
+        .filter((line) => line.trim() !== '|')
+        .join('\n');
+
 export const blogFormConfig = {
     title: translate('text.article_eda8942f'),
     schema: z.object({
@@ -42,6 +72,12 @@ export const blogFormConfig = {
         thumbnail_alt: z.string().trim().max(200).optional(),
         category: z.string().trim().max(100).optional(),
         tags: z.string().trim().optional(),
+        content_type: z.enum(['POLICY', 'GUIDE', 'FAQ', 'ARTICLE', 'SUPPORT_PAGE']),
+        is_pinned: z.enum(['true', 'false']),
+        sort_order: z.coerce.number().int().min(0).max(9999),
+        related_product_ids: z.string().trim().optional(),
+        related_category_ids: z.string().trim().optional(),
+        faq_items_text: z.string().trim().max(20000).optional(),
         status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']),
         meta_title: z.string().trim().max(160).optional(),
         meta_description: z.string().trim().max(300).optional(),
@@ -61,6 +97,12 @@ export const blogFormConfig = {
         thumbnail_alt: '',
         category: '',
         tags: '',
+        content_type: 'ARTICLE',
+        is_pinned: 'false',
+        sort_order: 0,
+        related_product_ids: '',
+        related_category_ids: '',
+        faq_items_text: '',
         status: 'DRAFT',
         meta_title: '',
         meta_description: '',
@@ -77,6 +119,12 @@ export const blogFormConfig = {
         thumbnail_alt: blog.thumbnail?.alt || '',
         category: blog.category || '',
         tags: (blog.tags || []).join(', '),
+        content_type: blog.content_type || 'ARTICLE',
+        is_pinned: blog.is_pinned ? 'true' : 'false',
+        sort_order: blog.sort_order || 0,
+        related_product_ids: (blog.related_product_ids || []).join(', '),
+        related_category_ids: (blog.related_category_ids || []).join(', '),
+        faq_items_text: formatFaqItems(blog.faq_items || []),
         status: blog.status || 'DRAFT',
         meta_title: blog.seo?.meta_title || '',
         meta_description: blog.seo?.meta_description || '',
@@ -104,6 +152,12 @@ export const blogFormConfig = {
             },
             category: values.category?.trim() || '',
             tags: parseTags(values.tags || ''),
+            content_type: values.content_type,
+            is_pinned: values.is_pinned === 'true',
+            sort_order: Number(values.sort_order) || 0,
+            related_product_ids: parseIds(values.related_product_ids || ''),
+            related_category_ids: parseIds(values.related_category_ids || ''),
+            faq_items: parseFaqItems(values.faq_items_text || ''),
             status: values.status,
             seo: {
                 meta_title: values.meta_title?.trim() || '',
@@ -126,6 +180,26 @@ export const blogFormConfig = {
             label: translate('text.status'),
             type: 'select',
             options: blogStatusOptions.filter((option) => option.value),
+        },
+        {
+            name: 'content_type',
+            label: translate('text.content_type'),
+            type: 'select',
+            options: blogContentTypeOptions,
+        },
+        {
+            name: 'is_pinned',
+            label: translate('text.pinned_content'),
+            type: 'select',
+            options: [
+                { value: 'false', label: translate('text.not_pinned') },
+                { value: 'true', label: translate('text.pinned') },
+            ],
+        },
+        {
+            name: 'sort_order',
+            label: translate('text.sort_order'),
+            type: 'number',
         },
         {
             name: 'excerpt',
@@ -154,6 +228,27 @@ export const blogFormConfig = {
         { name: 'thumbnail_public_id', label: translate('text.cloudinary_public_id') },
         { name: 'category', label: translate('text.category'), placeholder: translate('text.instructions_for_use') },
         { name: 'tags', label: translate('text.tags'), placeholder: translate('text.bag_grapefruit_instructions'), className: 'md:col-span-2' },
+        {
+            name: 'related_product_ids',
+            label: translate('text.related_product_ids'),
+            placeholder: translate('text.related_ids_placeholder'),
+            className: 'md:col-span-2',
+        },
+        {
+            name: 'related_category_ids',
+            label: translate('text.related_category_ids'),
+            placeholder: translate('text.related_ids_placeholder'),
+            className: 'md:col-span-2',
+        },
+        {
+            name: 'faq_items_text',
+            label: translate('text.faq_items'),
+            type: 'textarea',
+            rows: 5,
+            placeholder: translate('text.question_answer_placeholder'),
+            helperText: translate('text.faq_items_helper'),
+            className: 'md:col-span-2',
+        },
         { name: 'meta_title', label: translate('text.meta_title') },
         { name: 'meta_description', label: translate('text.meta_description') },
         { name: 'seo_keywords', label: translate('text.seo_keywords'), placeholder: translate('text.fruit_bags_grapefruit_bags'), className: 'md:col-span-2' },

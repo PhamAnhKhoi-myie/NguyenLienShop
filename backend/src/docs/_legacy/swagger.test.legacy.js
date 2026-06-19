@@ -3283,6 +3283,7 @@ describe("swaggerSpec", () => {
             "silver",
             "gold",
             "platinum",
+            "diamond",
         ]);
     });
 

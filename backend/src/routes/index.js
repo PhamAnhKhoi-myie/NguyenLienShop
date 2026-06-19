@@ -8,12 +8,14 @@ const userAddressRoutes = require("../modules/user_addresses/user_addresses.rout
 const categoryRoutes = require("../modules/categories/category.routes");
 const productModuleRoutes = require("../modules/products/routes");
 const discountRoutes = require("../modules/discounts/discount.routes");
+const loyaltyRoutes = require("../modules/loyalty/loyalty.routes");
 const cartRoutes = require("../modules/carts/cart.routes");
 const orderRoutes = require("../modules/orders/order.routes");
 const shipmentRoutes = require("../modules/shipments/shipment.routes");
 const reviewRoutes = require("../modules/reviews/review.routes");
 const bannerRoutes = require("../modules/banners/banner.routes");
 const announcementRoutes = require("../modules/announcements/announcement.routes");
+const analyticsRoutes = require("../modules/analytics/analytics.routes");
 const shopInfoRoutes = require("../modules/shop_info/shop_info.routes");
 const notificationRoutes = require("../modules/notifications/notification.routes");
 const chatRoutes = require("../modules/chats/chat.routes");
@@ -47,6 +49,8 @@ router.use("/carts", cartRoutes);
 
 router.use("/discounts", discountRoutes);
 
+router.use("/loyalty", loyaltyRoutes);
+
 
 router.use("/orders", orderRoutes);
 
@@ -61,6 +65,8 @@ router.use("/banners", bannerRoutes);
 
 
 router.use("/announcements", announcementRoutes);
+
+router.use("/admin/dashboard", analyticsRoutes);
 
 
 router.use("/shop-info", shopInfoRoutes);

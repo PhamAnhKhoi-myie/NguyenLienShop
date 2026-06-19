@@ -17,6 +17,8 @@ class AuthMapper {
                 email: user.email,
                 profile: user.profile,
                 roles: user.roles,
+                tier: user.tier,
+                loyalty: user.loyalty,
                 status: user.status,
                 is_phone_verified: user.is_phone_verified,
                 phone_verified_at: user.phone_verified_at,

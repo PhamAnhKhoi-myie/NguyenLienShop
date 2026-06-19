@@ -15,6 +15,7 @@ const User = require('../users/user.model');
 const DiscountService = require('../discounts/discount.service');
 const CartService = require('../carts/cart.service');
 const ReviewService = require('../reviews/review.service');
+const LoyaltyService = require('../loyalty/loyalty.service');
 const LocationProvince = require('../locations/location_province.model');
 const LocationWard = require('../locations/location_ward.model');
 const {
@@ -25,11 +26,31 @@ const {
     getReviewExpiresAt,
     isReviewWindowOpen,
 } = require('./order_review_window.util');
+const {
+    ORDER_HISTORY_KEYS,
+    buildOrderHistoryManualNote,
+    buildOrderHistorySystemNote,
+} = require('./order_history_notes');
 
 class OrderService {
-    static getCheckoutSettings() {
+    static async getCheckoutSettings(userId = null) {
+        const baseShippingFee = getDefaultShippingFee();
+
+        if (!userId) {
+            return {
+                shipping_fee: baseShippingFee,
+                base_shipping_fee: baseShippingFee,
+                shipping_discount_amount: 0,
+                shipping_discount_percent: 0,
+                currency: DEFAULT_CURRENCY,
+            };
+        }
+
         return {
-            shipping_fee: getDefaultShippingFee(),
+            ...(await LoyaltyService.getCheckoutShippingQuote(
+                userId,
+                baseShippingFee
+            )),
             currency: DEFAULT_CURRENCY,
         };
     }
@@ -159,7 +180,15 @@ class OrderService {
                 subtotal
             );
 
-            const shippingFee = getDefaultShippingFee();
+            const shippingQuote =
+                await LoyaltyService.getCheckoutShippingQuote(
+                    userId,
+                    getDefaultShippingFee(),
+                    { session }
+                );
+            const shippingFee = shippingQuote.shipping_fee;
+            const shippingDiscountAmount =
+                shippingQuote.shipping_discount_amount || 0;
 
             const totalAmount = subtotal - discountAmount + shippingFee;
 
@@ -209,6 +238,8 @@ class OrderService {
                         promotionDiscountAmount,
                     subtotal,
                     shipping_fee: shippingFee,
+                    shipping_discount_amount:
+                        shippingDiscountAmount,
                     discount_amount: discountAmount,
                     total_amount: totalAmount,
                 },
@@ -240,7 +271,9 @@ class OrderService {
                 to: 'PENDING',
                 changed_at: new Date(),
                 changed_by: null,
-                note: 'Order created',
+                ...buildOrderHistorySystemNote(
+                    ORDER_HISTORY_KEYS.ORDER_CREATED
+                ),
             });
 
             await order.save({ session });
@@ -442,10 +475,22 @@ class OrderService {
             order.payment_id = paymentData.payment_id;
         }
 
+        const paymentNote = paymentData.note_key
+            ? buildOrderHistorySystemNote(
+                paymentData.note_key,
+                paymentData.note_params || {}
+            )
+            : paymentData.note
+                ? buildOrderHistoryManualNote(paymentData.note)
+                : buildOrderHistorySystemNote(
+                    ORDER_HISTORY_KEYS.PAYMENT_CONFIRMED
+                );
+
         order.addStatusTransition(
             'PAID',
             paymentData.changed_by || null,
-            paymentData.note || 'Đã thanh toán'
+            paymentNote.note,
+            paymentNote
         );
 
         await order.save({ session: options.session });
@@ -502,10 +547,15 @@ class OrderService {
             }
 
             order.payment.status = 'FAILED';
+            const paymentFailedNote = buildOrderHistorySystemNote(
+                ORDER_HISTORY_KEYS.PAYMENT_FAILED
+            );
+
             order.addStatusTransition(
                 'FAILED',
                 null,
-                'Thanh toán thất bại'
+                paymentFailedNote.note,
+                paymentFailedNote
             );
 
             await order.save({ session });
@@ -538,10 +588,15 @@ class OrderService {
             order.payment_expires_at = undefined;
         }
 
+        const processingNote = buildOrderHistorySystemNote(
+            ORDER_HISTORY_KEYS.STARTED_BY_ADMIN
+        );
+
         order.addStatusTransition(
             'PROCESSING',
             adminUserId,
-            'Started by admin'
+            processingNote.note,
+            processingNote
         );
 
         await order.save();
@@ -704,10 +759,16 @@ class OrderService {
             shipped_at: shippedAt,
         };
 
+        const shippedNote = buildOrderHistorySystemNote(
+            ORDER_HISTORY_KEYS.SHIPPED_VIA,
+            { carrier }
+        );
+
         order.addStatusTransition(
             'SHIPPED',
             actorId,
-            `Đơn vị vận chuyển: ${carrier}`
+            shippedNote.note,
+            shippedNote
         );
 
         await order.save();
@@ -769,7 +830,16 @@ class OrderService {
             order.payment_expires_at = undefined;
         }
 
-        order.addStatusTransition('DELIVERED', actorId, 'Đã giao hàng');
+        const deliveredNote = buildOrderHistorySystemNote(
+            ORDER_HISTORY_KEYS.DELIVERY_CONFIRMED
+        );
+
+        order.addStatusTransition(
+            'DELIVERED',
+            actorId,
+            deliveredNote.note,
+            deliveredNote
+        );
 
         await order.save();
 
@@ -835,6 +905,9 @@ class OrderService {
 
         await order.save();
 
+        const loyaltyRewards =
+            await LoyaltyService.awardOrderReceivedRewards(order);
+
         await this._createOrderAuditLog({
             action: AUDIT_ACTIONS.CONFIRM_ORDER_RECEIPT,
             order,
@@ -855,7 +928,10 @@ class OrderService {
             expires_at: getReviewExpiresAt(order),
         });
 
-        return OrderMapper.toDetailDTO(order);
+        const detail = OrderMapper.toDetailDTO(order);
+        detail.loyalty_rewards = loyaltyRewards;
+
+        return detail;
     }
 
     static async cancelCustomerOrder(orderId, reason, userId, metadata = {}) {
@@ -1090,7 +1166,14 @@ class OrderService {
                 }
             }
 
-            order.addStatusTransition('CANCELED', cancelledBy, reason);
+            const cancellationNote = buildOrderHistoryManualNote(reason);
+
+            order.addStatusTransition(
+                'CANCELED',
+                cancelledBy,
+                cancellationNote.note,
+                cancellationNote
+            );
 
             await order.save({ session });
             await session.commitTransaction();
@@ -1177,7 +1260,17 @@ class OrderService {
             );
         }
 
-        order.addStatusTransition(toStatus, adminUserId, note);
+        const trimmedNote = typeof note === 'string' ? note.trim() : '';
+        const statusNote = trimmedNote
+            ? buildOrderHistoryManualNote(trimmedNote)
+            : buildOrderHistorySystemNote(ORDER_HISTORY_KEYS.ADMIN_UPDATE);
+
+        order.addStatusTransition(
+            toStatus,
+            adminUserId,
+            statusNote.note,
+            statusNote
+        );
 
         await order.save();
 
@@ -1365,10 +1458,15 @@ class OrderService {
             }
 
             if (fromStatus !== updateData.status) {
+                const adminUpdateNote = buildOrderHistorySystemNote(
+                    ORDER_HISTORY_KEYS.ADMIN_UPDATE
+                );
+
                 order.addStatusTransition(
                     updateData.status,
                     adminUserId,
-                    'Admin update'
+                    adminUpdateNote.note,
+                    adminUpdateNote
                 );
 
                 changes.status = {

@@ -9,6 +9,11 @@ const { AUDIT_ACTIONS } = require('../../constants/audit');
 
 const Order = require('../orders/order.model');
 const NotificationEventService = require('../notifications/notification_event.service');
+const {
+    ORDER_HISTORY_KEYS,
+    buildOrderHistoryManualNote,
+    buildOrderHistorySystemNote,
+} = require('../orders/order_history_notes');
 
 const logger = {
     info: (data) => console.log(JSON.stringify({
@@ -1311,10 +1316,16 @@ class ShipmentService {
         };
         order.shipment_id = shipment._id;
 
+        const shippedNote = buildOrderHistorySystemNote(
+            ORDER_HISTORY_KEYS.SHIPPED_VIA,
+            { carrier: shipment.carrier }
+        );
+
         order.addStatusTransition(
             'SHIPPED',
             changedBy,
-            `Đơn vị vận chuyển: ${shipment.carrier}`
+            shippedNote.note,
+            shippedNote
         );
 
         await order.save({ session: options.session });
@@ -1366,7 +1377,9 @@ class ShipmentService {
                 to: order.status,
                 changed_at: new Date(),
                 changed_by: changedBy,
-                note: 'Shipment tracking details updated',
+                ...buildOrderHistorySystemNote(
+                    ORDER_HISTORY_KEYS.SHIPMENT_TRACKING_UPDATED
+                ),
             });
         }
 
@@ -1409,10 +1422,15 @@ class ShipmentService {
         }
 
         order.shipment.delivered_at = new Date();
+        const deliveredNote = buildOrderHistorySystemNote(
+            ORDER_HISTORY_KEYS.DELIVERY_CONFIRMED
+        );
+
         order.addStatusTransition(
             'DELIVERED',
             changedBy,
-            'Delivery confirmed'
+            deliveredNote.note,
+            deliveredNote
         );
 
         await order.save({ session: options.session });
@@ -1454,10 +1472,15 @@ class ShipmentService {
             );
         }
 
+        const returnNote = reason
+            ? buildOrderHistoryManualNote(reason)
+            : buildOrderHistorySystemNote(ORDER_HISTORY_KEYS.SHIPMENT_CANCELLED);
+
         order.addStatusTransition(
             'PROCESSING',
             changedBy,
-            reason || 'Shipment cancelled'
+            returnNote.note,
+            returnNote
         );
 
         await order.save({ session: options.session });

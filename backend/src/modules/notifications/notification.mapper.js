@@ -8,7 +8,10 @@ class NotificationMapper {
 
             type: doc.type,
             title: doc.title,
+            title_key: doc.title_key || null,
             message: doc.message,
+            message_key: doc.message_key || null,
+            message_params: doc.message_params || null,
 
             data: doc.data
                 ? {

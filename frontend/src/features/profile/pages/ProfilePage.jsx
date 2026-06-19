@@ -1,6 +1,6 @@
 import { translate } from '../../../shared/i18n/index';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Camera, LogOut, Pencil, Save, UserRound, X } from 'lucide-react';
+import { Camera, Coins, Gem, LogOut, Pencil, Save, Trophy, UserRound, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -70,6 +70,32 @@ function getDisplayGender(user) {
     return genderLabels[user?.profile?.gender] || genderLabels.UNSPECIFIED;
 }
 
+function formatNumber(value) {
+    return new Intl.NumberFormat().format(Number(value) || 0);
+}
+
+function getLoyaltyProgress(loyalty = {}) {
+    const tier = loyalty.current_tier || 'bronze';
+    const lifetimePoints = loyalty.lifetime_points || loyalty.points || 0;
+    const thresholds = loyalty.tier_thresholds || {};
+    const currentThreshold = thresholds[tier] || 0;
+    const nextThreshold = loyalty.next_tier_points;
+
+    if (!nextThreshold || nextThreshold <= currentThreshold) {
+        return 100;
+    }
+
+    return Math.min(
+        Math.max(
+            ((lifetimePoints - currentThreshold) /
+                (nextThreshold - currentThreshold)) *
+                100,
+            0
+        ),
+        100
+    );
+}
+
 export default function ProfilePage() {
     const user = useAuthStore((state) => state.user);
     const meQuery = useMe();
@@ -98,6 +124,9 @@ export default function ProfilePage() {
         avatarPreview.userId === displayUser?.id ? avatarPreview.url : '';
     const avatarSrc = uploadedAvatarUrl || displayUser?.profile?.avatar_url || '';
     const avatarUploadInputId = 'profile-avatar-upload';
+    const loyalty = displayUser?.loyalty || {};
+    const loyaltyTier = loyalty.current_tier || displayUser?.tier || 'bronze';
+    const loyaltyProgress = getLoyaltyProgress(loyalty);
 
     useEffect(() => {
         if (displayUser && !isEditing) {
@@ -281,6 +310,48 @@ export default function ProfilePage() {
                                     </Badge>
                                 )}
                             </div>
+
+                            <div className="mt-6 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-4 text-left">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <Trophy className="h-4 w-4 text-[var(--color-primary)]" />
+                                        <span className="text-sm font-semibold text-[var(--color-text-main)]">
+                                            {loyaltyTier}
+                                        </span>
+                                    </div>
+                                    <span className="text-xs text-[var(--color-text-muted)]">
+                                        {loyalty.next_tier
+                                            ? `${formatNumber(loyalty.points_to_next_tier)} điểm nữa`
+                                            : 'Hạng cao nhất'}
+                                    </span>
+                                </div>
+                                <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--color-border)]">
+                                    <div
+                                        className="h-full rounded-full bg-[var(--color-primary)]"
+                                        style={{ width: `${loyaltyProgress}%` }}
+                                    />
+                                </div>
+                                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                    <div className="rounded-md bg-[var(--color-surface)] p-3">
+                                        <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
+                                            <Gem className="h-4 w-4" />
+                                            <span>Điểm hạng</span>
+                                        </div>
+                                        <p className="mt-1 font-semibold text-[var(--color-text-main)]">
+                                            {formatNumber(loyalty.lifetime_points)}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md bg-[var(--color-surface)] p-3">
+                                        <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
+                                            <Coins className="h-4 w-4" />
+                                            <span>Xu thưởng</span>
+                                        </div>
+                                        <p className="mt-1 font-semibold text-[var(--color-text-main)]">
+                                            {formatNumber(loyalty.coins_balance)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="mt-6 border-t border-[var(--color-border)] pt-5">
@@ -339,6 +410,31 @@ export default function ProfilePage() {
                                             {displayUser?.tier || '-'}
                                         </dd>
                                     </div>
+
+                                    <div className="rounded-md border border-[var(--color-border)] p-4">
+                                        <dt className="text-sm text-[var(--color-text-muted)]"> Điểm hạng </dt>
+                                        <dd className="mt-1 font-medium text-[var(--color-text-main)]">
+                                            {formatNumber(loyalty.lifetime_points)}
+                                        </dd>
+                                    </div>
+
+                                    <div className="rounded-md border border-[var(--color-border)] p-4">
+                                        <dt className="text-sm text-[var(--color-text-muted)]"> Xu thưởng </dt>
+                                        <dd className="mt-1 font-medium text-[var(--color-text-main)]">
+                                            {formatNumber(loyalty.coins_balance)}
+                                        </dd>
+                                    </div>
+
+                                    {loyalty.next_tier_review_at && (
+                                        <div className="rounded-md border border-[var(--color-border)] p-4">
+                                            <dt className="text-sm text-[var(--color-text-muted)]"> Mốc giữ hạng </dt>
+                                            <dd className="mt-1 font-medium text-[var(--color-text-main)]">
+                                                {new Date(
+                                                    loyalty.next_tier_review_at
+                                                ).toLocaleDateString()}
+                                            </dd>
+                                        </div>
+                                    )}
                                 </dl>
 
                                 {updateProfileMutation.isSuccess && (

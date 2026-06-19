@@ -43,6 +43,7 @@ export function useConfirmOrderReceived() {
             queryClient.invalidateQueries({
                 queryKey: [...ORDER_QUERY_KEY, orderId],
             });
+            queryClient.invalidateQueries({ queryKey: ['me'] });
         },
     });
 }
@@ -58,6 +59,7 @@ export function useWriteOrderReview() {
                 queryKey: [...ORDER_QUERY_KEY, variables.orderId],
             });
             queryClient.invalidateQueries({ queryKey: REVIEW_QUERY_KEY });
+            queryClient.invalidateQueries({ queryKey: ['me'] });
         },
     });
 }

@@ -23,12 +23,26 @@ const notificationSchema = new mongoose.Schema(
             maxlength: 200
         },
 
+        title_key: {
+            type: String,
+            trim: true,
+            maxlength: 200
+        },
+
         message: {
             type: String,
             required: true,
             trim: true,
             maxlength: 1000
         },
+
+        message_key: {
+            type: String,
+            trim: true,
+            maxlength: 200
+        },
+
+        message_params: mongoose.Schema.Types.Mixed,
 
         data: {
             ref_type: {

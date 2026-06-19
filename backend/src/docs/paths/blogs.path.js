@@ -49,6 +49,7 @@ module.exports = {
                 ...paginationParams,
                 { in: "query", name: "category", schema: { type: "string" } },
                 { in: "query", name: "tag", schema: { type: "string" } },
+                { in: "query", name: "content_type", schema: { $ref: "#/components/schemas/BlogContentType" } },
                 { in: "query", name: "search", schema: { type: "string" } },
             ],
             responses: {
@@ -99,7 +100,13 @@ module.exports = {
         get: {
             tags: ["Blogs"],
             summary: "List published blogs by category",
-            parameters: [blogCategoryParam, ...paginationParams],
+            parameters: [
+                blogCategoryParam,
+                ...paginationParams,
+                { in: "query", name: "tag", schema: { type: "string" } },
+                { in: "query", name: "content_type", schema: { $ref: "#/components/schemas/BlogContentType" } },
+                { in: "query", name: "search", schema: { type: "string" } },
+            ],
             responses: {
                 200: {
                     description: "OK",
@@ -157,6 +164,11 @@ module.exports = {
                     in: "query",
                     name: "status",
                     schema: { $ref: "#/components/schemas/BlogStatus" },
+                },
+                {
+                    in: "query",
+                    name: "content_type",
+                    schema: { $ref: "#/components/schemas/BlogContentType" },
                 },
                 { in: "query", name: "category", schema: { type: "string" } },
                 { in: "query", name: "tag", schema: { type: "string" } },

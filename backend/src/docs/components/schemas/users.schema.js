@@ -42,7 +42,7 @@ module.exports = {
             },
             tier: {
                 type: "string",
-                enum: ["bronze", "silver", "gold", "platinum"],
+                enum: ["bronze", "silver", "gold", "platinum", "diamond"],
                 nullable: true,
                 example: "bronze",
             },

@@ -445,8 +445,15 @@ export default function CheckoutPage() {
     const cart = cartQuery.data?.data;
     const items = cart?.items || [];
     const totals = cart?.totals || {};
-    const shippingFee =
-        checkoutSettingsQuery.data?.data?.shipping_fee || 0;
+    const checkoutSettings = checkoutSettingsQuery.data?.data || {};
+    const shippingFee = checkoutSettings.shipping_fee || 0;
+    const baseShippingFee =
+        checkoutSettings.base_shipping_fee ?? shippingFee;
+    const shippingDiscountAmount =
+        checkoutSettings.shipping_discount_amount || 0;
+    const shippingDiscountPercent =
+        checkoutSettings.shipping_discount_percent || 0;
+    const shippingTier = checkoutSettings.tier || null;
     const claimedDiscounts = claimedDiscountsQuery.data?.data || [];
     const addresses = useMemo(
         () => addressesQuery.data?.data || [],
@@ -888,8 +895,21 @@ export default function CheckoutPage() {
                                     </div>
                                     <div className="flex justify-between gap-4">
                                         <span className="text-[var(--color-text-muted)]"> {translate('text.shipping_fee')} </span>
-                                        <span>{formatCurrency(shippingFee)}</span>
+                                        <span>{formatCurrency(baseShippingFee)}</span>
                                     </div>
+                                    {shippingDiscountAmount > 0 && (
+                                        <div className="flex justify-between gap-4">
+                                            <span className="text-[var(--color-text-muted)]">
+                                                Giảm ship hạng {shippingTier}
+                                                {shippingDiscountPercent
+                                                    ? ` (${shippingDiscountPercent}%)`
+                                                    : ''}
+                                            </span>
+                                            <span className="text-[var(--color-error)]">
+                                                -{formatCurrency(shippingDiscountAmount)}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between gap-4">
                                         <span className="text-[var(--color-text-muted)]"> {translate('text.current_total')} </span>
                                         <span className="font-semibold text-[var(--color-primary-hover)]">

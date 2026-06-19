@@ -3,6 +3,7 @@ const Order = require('../../modules/orders/order.model');
 const OrderService = require('../../modules/orders/order.service');
 const ReviewService = require('../../modules/reviews/review.service');
 const NotificationEventService = require('../../modules/notifications/notification_event.service');
+const LoyaltyService = require('../../modules/loyalty/loyalty.service');
 
 function buildOrder(overrides = {}) {
     const orderId = new mongoose.Types.ObjectId();
@@ -119,6 +120,10 @@ describe('OrderService customer receipt confirmation', () => {
         jest.spyOn(Order, 'findOne').mockResolvedValue(order);
         jest.spyOn(OrderService, '_createOrderAuditLog').mockResolvedValue();
         jest.spyOn(NotificationEventService, 'reviewReminder').mockResolvedValue();
+        jest.spyOn(LoyaltyService, 'awardOrderReceivedRewards').mockResolvedValue({
+            points: { awarded: true },
+            coins: { awarded: true },
+        });
 
         const result = await OrderService.confirmCustomerReceived(
             order._id.toString(),
@@ -141,6 +146,13 @@ describe('OrderService customer receipt confirmation', () => {
                 expires_at: expect.any(Date),
             })
         );
+        expect(LoyaltyService.awardOrderReceivedRewards).toHaveBeenCalledWith(
+            order
+        );
+        expect(result.loyalty_rewards).toEqual({
+            points: { awarded: true },
+            coins: { awarded: true },
+        });
         expect(result.customer_receipt.confirmed).toBe(true);
     });
 
@@ -154,6 +166,7 @@ describe('OrderService customer receipt confirmation', () => {
 
         jest.spyOn(Order, 'findOne').mockResolvedValue(order);
         jest.spyOn(NotificationEventService, 'reviewReminder').mockResolvedValue();
+        jest.spyOn(LoyaltyService, 'awardOrderReceivedRewards').mockResolvedValue();
 
         await OrderService.confirmCustomerReceived(
             order._id.toString(),
@@ -162,6 +175,7 @@ describe('OrderService customer receipt confirmation', () => {
 
         expect(order.save).not.toHaveBeenCalled();
         expect(NotificationEventService.reviewReminder).not.toHaveBeenCalled();
+        expect(LoyaltyService.awardOrderReceivedRewards).not.toHaveBeenCalled();
     });
 
     it('rejects customer receipt confirmation before delivery', async () => {

@@ -4,7 +4,7 @@ const discountStatusEnum = ["active", "inactive", "paused", "expired"];
 const applicationStrategyEnum = ["apply_all", "apply_once", "apply_cheapest", "apply_most_expensive"];
 const applicableTargetTypeEnum = ["all", "specific_products", "specific_categories", "specific_variants"];
 const userEligibilityTypeEnum = ["all", "first_time_only", "specific_users", "vip_users"];
-const userTierEnum = ["bronze", "silver", "gold", "platinum"];
+const userTierEnum = ["bronze", "silver", "gold", "platinum", "diamond"];
 
 const objectId = (example = "507f1f77bcf86cd799439011") => ({
     type: "string",

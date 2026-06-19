@@ -4,6 +4,7 @@ const AppError = require('../../utils/appError.util');
 const { ALL_ROLES } = require('../../constants/roles');
 const UserAuditLogService = require('../audit_logs/user_audit_log/user_audit_log.service');
 const { AUDIT_ACTIONS } = require('../../constants/audit');
+const LoyaltyService = require('../loyalty/loyalty.service');
 
 class UserService {
     static async getUserById(userId) {
@@ -17,6 +18,7 @@ class UserService {
     }
 
     static async getMe(userId) {
+        await LoyaltyService.applyTierDecayForUser(userId);
         return UserService.getUserById(userId);
     }
 

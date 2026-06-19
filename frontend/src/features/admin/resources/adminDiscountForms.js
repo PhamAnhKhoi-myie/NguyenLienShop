@@ -89,7 +89,7 @@ const discountBaseSchema = z
             'vip_users',
         ]),
         user_ids_text: optionalIdsTextSchema,
-        min_user_tier: z.enum(['', 'bronze', 'silver', 'gold', 'platinum']),
+        min_user_tier: z.enum(['', 'bronze', 'silver', 'gold', 'platinum', 'diamond']),
         min_order_value: z.coerce.number().min(0, translate('text.minimum_order_cannot_be_negative')),
         usage_limit: z.coerce.number().int().min(1, translate('text.usage_limit_must_be_1')),
         usage_per_user_limit: z.coerce
@@ -523,6 +523,7 @@ export const discountFormConfig = {
                 { value: 'silver', label: translate('text.silver') },
                 { value: 'gold', label: translate('text.gold') },
                 { value: 'platinum', label: translate('text.platinum') },
+                { value: 'diamond', label: translate('text.diamond') },
             ],
         },
         {

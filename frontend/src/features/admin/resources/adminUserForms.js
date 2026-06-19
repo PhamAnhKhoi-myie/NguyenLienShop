@@ -20,6 +20,7 @@ export const userTierOptions = [
     { value: 'silver', label: translate('text.silver') },
     { value: 'gold', label: translate('text.gold') },
     { value: 'platinum', label: translate('text.platinum') },
+    { value: 'diamond', label: translate('text.diamond') },
 ];
 
 export const userGenderOptions = [
