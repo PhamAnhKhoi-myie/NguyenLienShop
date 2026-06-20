@@ -107,9 +107,10 @@ export default function BlogDetailPage() {
                                 <h3 className="text-base font-semibold text-[var(--color-text-main)]">
                                     {item.question}
                                 </h3>
-                                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[var(--color-text-muted)]">
-                                    {item.answer}
-                                </p>
+                                <div
+                                    className="mt-2 text-sm leading-6 text-[var(--color-text-muted)] [&_a]:text-[var(--color-primary-hover)] [&_a]:underline [&_em]:italic [&_li]:ml-5 [&_ol]:list-decimal [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_ul]:list-disc"
+                                    dangerouslySetInnerHTML={{ __html: item.answer }}
+                                />
                             </div>
                         ))}
                     </div>

@@ -5,7 +5,7 @@ import zaloIcon from '../../assets/images/zalo-icon.png';
 import phoneIcon from '../../assets/images/phone-icon.png';
 import chatbotIcon from '../../assets/images/chatbot-icon.png';
 
-function FloatingActions() {
+function FloatingActions({ onChatClick }) {
     const phoneNumber = '0900000000';
     const zaloLink = 'https://zalo.me/0900000000';
 
@@ -14,10 +14,6 @@ function FloatingActions() {
             top: 0,
             behavior: 'smooth',
         });
-    };
-
-    const openChatBot = () => {
-        console.log('Open chatbot');
     };
 
     return (
@@ -61,7 +57,7 @@ function FloatingActions() {
 
             <button
                 type="button"
-                onClick={openChatBot}
+                onClick={onChatClick}
                 title={translate('text.chat_with_ai')}
                 className="fixed bottom-4 right-3 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-xl transition hover:scale-105 hover:shadow-2xl sm:bottom-12 sm:right-12 sm:h-20 sm:w-20"
             >

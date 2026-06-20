@@ -1,5 +1,14 @@
 const objectIdPattern = "^[a-fA-F0-9]{24}$";
-const chatIntentEnum = ["GREETING", "ASK_PRICE", "SEARCH_PRODUCT", "ORDER_STATUS", "UNKNOWN"];
+const chatIntentEnum = [
+    "GREETING",
+    "ASK_PRICE",
+    "SEARCH_PRODUCT",
+    "ORDER_STATUS",
+    "SHIPPING_POLICY",
+    "PAYMENT_POLICY",
+    "RETURN_POLICY",
+    "UNKNOWN",
+];
 
 module.exports = {
     CreateChatSessionInput: {
@@ -29,7 +38,7 @@ module.exports = {
                 type: "string",
                 minLength: 1,
                 maxLength: 1000,
-                example: "How much is the food wrapping bag?",
+                example: "Túi bao xoài còn hàng không?",
             },
         },
     },
@@ -89,8 +98,18 @@ module.exports = {
 
     ChatAssistantMessage: {
         type: "object",
-        required: ["role", "content", "intent", "related_data"],
+        required: ["role", "content", "intent", "related_data", "quick_replies"],
         properties: {
+            id: {
+                type: "string",
+                pattern: objectIdPattern,
+                example: "507f1f77bcf86cd799439013",
+            },
+            session_id: {
+                type: "string",
+                pattern: objectIdPattern,
+                example: "507f1f77bcf86cd799439011",
+            },
             role: {
                 type: "string",
                 enum: ["assistant"],
@@ -98,24 +117,52 @@ module.exports = {
             },
             content: {
                 type: "string",
-                example: "I found some matching products for you.",
+                example: "Mình tìm thấy một vài sản phẩm phù hợp. Bạn xem nhanh các lựa chọn bên dưới nhé.",
             },
             intent: {
                 type: "string",
                 enum: chatIntentEnum,
                 example: "SEARCH_PRODUCT",
             },
+            confidence: {
+                type: "number",
+                minimum: 0,
+                maximum: 1,
+                example: 0.86,
+            },
             related_data: {
                 nullable: true,
-                description: "Product, order, array of products, or null depending on the detected intent.",
+                description: "Structured data for frontend cards.",
                 oneOf: [
-                    { type: "object", additionalProperties: true },
                     {
-                        type: "array",
-                        items: { type: "object", additionalProperties: true },
+                        type: "object",
+                        additionalProperties: true,
+                        properties: {
+                            type: {
+                                type: "string",
+                                enum: ["products", "order", "policy", "support"],
+                            },
+                            items: {
+                                type: "array",
+                                items: { type: "object", additionalProperties: true },
+                            },
+                            item: {
+                                type: "object",
+                                additionalProperties: true,
+                            },
+                        },
                     },
                     { type: "null" },
                 ],
+            },
+            quick_replies: {
+                type: "array",
+                items: { type: "string" },
+                example: ["Hỏi phí ship", "Kiểm tra đơn hàng"],
+            },
+            created_at: {
+                type: "string",
+                format: "date-time",
             },
         },
     },

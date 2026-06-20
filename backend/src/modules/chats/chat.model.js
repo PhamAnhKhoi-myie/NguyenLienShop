@@ -27,7 +27,9 @@ const messageSchema = new mongoose.Schema({
         model: { type: String, default: CHAT_CONFIG.DEFAULT_MODEL },
         parse_success: { type: Boolean, default: false },
         latency_ms: Number,
-        tokens_used: Number
+        tokens_used: Number,
+        intent_source: String,
+        ai_error: String
     },
 
     created_at: { type: Date, default: Date.now }

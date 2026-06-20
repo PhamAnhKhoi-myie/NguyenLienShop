@@ -1,12 +1,16 @@
 import { Outlet } from 'react-router-dom';
+import { useState } from 'react';
 
 import Header from './Header';
 import Footer from './Footer';
 import Breadcrumb from '../shared/components/Breadcrumb';
 import FloatingActions from '../shared/components/FloatingActions';
+import ChatWidget from '../features/chats/components/ChatWidget';
 import backgroundImage from '../assets/images/background.png';
 
 function MainLayout() {
+    const [isChatOpen, setIsChatOpen] = useState(false);
+
     return (
         <div
             className="relative flex min-h-screen flex-col bg-[var(--color-background)] text-[var(--color-text-main)]"
@@ -29,7 +33,8 @@ function MainLayout() {
                 </main>
 
                 <Footer />
-                <FloatingActions />
+                <FloatingActions onChatClick={() => setIsChatOpen(true)} />
+                <ChatWidget open={isChatOpen} onOpenChange={setIsChatOpen} />
             </div>
         </div>
     );

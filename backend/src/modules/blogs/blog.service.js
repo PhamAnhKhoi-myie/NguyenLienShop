@@ -51,6 +51,35 @@ class BlogService {
         });
     }
 
+    static sanitizeFaqAnswer(answer = '') {
+        return sanitizeHtml(answer, {
+            allowedTags: [
+                'p',
+                'br',
+                'strong',
+                'em',
+                'u',
+                'ul',
+                'ol',
+                'li',
+                'a',
+            ],
+            allowedAttributes: {
+                a: ['href', 'target', 'rel'],
+            },
+            allowedSchemes: ['http', 'https', 'mailto'],
+            transformTags: {
+                a: sanitizeHtml.simpleTransform(
+                    'a',
+                    {
+                        rel: 'noopener noreferrer',
+                    },
+                    true
+                ),
+            },
+        });
+    }
+
     static normalizeSlug(slug, title) {
         return (slug || slugify(title, { lower: true, strict: true, locale: 'en' }))
             .trim()
@@ -100,7 +129,7 @@ class BlogService {
         return (items || [])
             .map((item, index) => ({
                 question: item.question.trim(),
-                answer: item.answer.trim(),
+                answer: this.sanitizeFaqAnswer(item.answer.trim()),
                 sort_order: Number.isInteger(Number(item.sort_order))
                     ? Number(item.sort_order)
                     : index,

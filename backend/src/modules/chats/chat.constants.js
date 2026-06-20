@@ -6,6 +6,9 @@ const CHAT_INTENTS = {
     ASK_PRICE: 'ASK_PRICE',
     SEARCH_PRODUCT: 'SEARCH_PRODUCT',
     ORDER_STATUS: 'ORDER_STATUS',
+    SHIPPING_POLICY: 'SHIPPING_POLICY',
+    PAYMENT_POLICY: 'PAYMENT_POLICY',
+    RETURN_POLICY: 'RETURN_POLICY',
     UNKNOWN: 'UNKNOWN'
 };
 
@@ -15,4 +18,11 @@ const CHAT_CONFIG = {
     DEFAULT_MODEL: 'gemini-1.5-flash'
 };
 
-module.exports = { CHAT_INTENTS, CHAT_CONFIG };
+const CHAT_RELATED_TYPES = {
+    PRODUCTS: 'products',
+    ORDER: 'order',
+    POLICY: 'policy',
+    SUPPORT: 'support'
+};
+
+module.exports = { CHAT_INTENTS, CHAT_CONFIG, CHAT_RELATED_TYPES };
